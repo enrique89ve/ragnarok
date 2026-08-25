@@ -5,6 +5,8 @@ import {
 	type GameEffectHandle,
 	type GameEffectPriority,
 } from '@/game/effects/core/gameEffectCoordinator';
+import { occupyCinema } from '../feedback/combatFeedbackStore';
+import { cinemaHoldMs } from './pokerEventFx';
 
 /**
  * Stable motion vocabulary for poker feedback. The intent is deliberately
@@ -66,8 +68,8 @@ export const POKER_MOTION_SPECS: Readonly<Record<PokerMotionIntent, PokerMotionS
 	},
 	'hand-rank': {
 		intent: 'hand-rank',
-		zone: 'feedbackStack',
-		priority: 'impact',
+		zone: 'vfxFocus',
+		priority: 'cinema',
 		enterMs: 220,
 		exitMs: 180,
 	},
@@ -134,6 +136,7 @@ export function schedulePokerMotion(
 ): GameEffectHandle {
 	if (spec.priority === 'cinema') {
 		gameEffectCoordinator.cancelOwnerLane('poker', 'cinema');
+		occupyCinema('poker-cinema', cinemaHoldMs(spec.enterMs, spec.exitMs));
 	}
 	const handle = gameEffectCoordinator.scheduleSequence({
 		owner: 'poker',

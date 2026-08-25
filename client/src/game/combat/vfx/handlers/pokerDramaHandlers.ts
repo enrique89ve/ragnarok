@@ -37,6 +37,7 @@ import {
 	schedulePokerMotion,
 	showdownImpactMotion,
 	} from '@/game/effects/poker';
+import { shouldAnnounceHandRank } from '../pokerEventFx';
 import {
 	emitStreakAnnounced,
 	type BettingActionEvent,
@@ -144,31 +145,24 @@ function handleHandRankAnnounced(event: HandRankAnnouncedEvent): EffectHandle | 
 	const isPlayer = event.side === 'player';
 	const rankName = HAND_RANK_NAMES[event.rank] || '';
 	if (isPlayer) {
-		// A new showdown supersedes any queued choreography from the previous one.
 		cancelPokerMotionSchedules();
-		// Player announcement anchors the burst: capture the full showdown
-		// picture for the damage step, then replay the legacy timing.
 		showdownContext = { playerRank: event.rank, opponentRank: event.rank, winner: event.winner };
 		updateShowdownStreaks(event.winner);
-		return schedulePokerMotion(POKER_MOTION_SPECS['hand-rank'], [400], () => {
-			if (event.rank === PokerHandRank.THORS_HAMMER) {
-				playThorHammerIfNeeded(event.side, event.id, event.timestamp);
-				return;
-			}
-			playHandRankAnnouncement(rankName, event.rank, event.winner === 'player', true);
-		}, `hand-rank-${event.side}`);
-	} else {
-		if (showdownContext) {
-			showdownContext.opponentRank = event.rank;
-		}
-		return schedulePokerMotion(POKER_MOTION_SPECS['hand-rank'], [900], () => {
-			if (event.rank === PokerHandRank.THORS_HAMMER) {
-				playThorHammerIfNeeded(event.side, event.id, event.timestamp);
-				return;
-			}
-			playHandRankAnnouncement(rankName, event.rank, event.winner === 'opponent', false);
-		}, `hand-rank-${event.side}`);
+	} else if (showdownContext) {
+		showdownContext.opponentRank = event.rank;
 	}
+
+	if (!shouldAnnounceHandRank(event)) {
+		return COMPLETED_HANDLE;
+	}
+
+	return schedulePokerMotion(POKER_MOTION_SPECS['hand-rank'], [isPlayer ? 400 : 900], () => {
+		if (event.rank === PokerHandRank.THORS_HAMMER) {
+			playThorHammerIfNeeded(event.side, event.id, event.timestamp);
+			return;
+		}
+		playHandRankAnnouncement(rankName, event.rank, true, isPlayer);
+	}, 'hand-rank');
 }
 
 function handleShowdownDamage(event: ShowdownDamageEvent): EffectHandle | null {

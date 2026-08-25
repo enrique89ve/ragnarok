@@ -4,6 +4,7 @@ import {
 	deriveSpellcraftDecision,
 	getSpellcraftReadyCopy,
 	shouldPrepareLocalAiSpellcraftOpponent,
+	shouldTickSpellcraftClock,
 	submitSpellcraftReadyIntent,
 } from './spellcraftDecision';
 
@@ -28,7 +29,7 @@ describe('Spellcraft decision policy', () => {
 		});
 		expect(getSpellcraftReadyCopy(view)).toEqual({
 			label: 'Ready',
-			detail: 'Play any affordable cards, then finish Spellcraft.',
+			detail: 'Play any affordable cards before the clock ends, then Ready.',
 		});
 	});
 
@@ -87,6 +88,21 @@ describe('Spellcraft decision policy', () => {
 			isMulliganActive: false,
 			processMode: 'local_ai',
 			setupAlreadyApplied: true,
+		})).toBe(false);
+	});
+
+	it('keeps the Spellcraft clock ticking until the local Ready intent', () => {
+		expect(shouldTickSpellcraftClock({
+			phase: CombatPhase.SPELL_PET,
+			isPlayerReady: false,
+		})).toBe(true);
+		expect(shouldTickSpellcraftClock({
+			phase: CombatPhase.SPELL_PET,
+			isPlayerReady: true,
+		})).toBe(false);
+		expect(shouldTickSpellcraftClock({
+			phase: CombatPhase.FAITH,
+			isPlayerReady: false,
 		})).toBe(false);
 	});
 

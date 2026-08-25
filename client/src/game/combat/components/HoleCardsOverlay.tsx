@@ -5,7 +5,10 @@ import {
 	CardRankSuit,
 	CardCardBack,
 } from '../../components/card';
-import type { NorseSuit } from '../../utils/cards/norsePokerCard';
+
+interface HoleCard extends PokerCard {
+	isRevealed?: boolean;
+}
 
 interface HoleCardsOverlayProps {
 	cards: PokerCard[];
@@ -14,22 +17,49 @@ interface HoleCardsOverlayProps {
 	winningCards?: PokerCard[];
 	isShowdown?: boolean;
 	activeTurn?: boolean;
-	positionAbsolute?: boolean;
-	embedded?: boolean;
 }
 
-const FACE_DOWN_CARD: PokerCard = {
-	suit: 'spades',
-	value: 'A',
-	numericValue: 14
-};
+const FACE_DOWN_PLACEHOLDERS: HoleCard[] = [
+	{ suit: 'spades', value: 'A', numericValue: 14 },
+	{ suit: 'spades', value: 'A', numericValue: 14 },
+];
 
-const isCardInWinningHand = (card: PokerCard, winningCards?: PokerCard[]): boolean => {
+const isWinningHoleCard = (card: HoleCard, winningCards?: PokerCard[]): boolean => {
 	if (!winningCards) return false;
-	return winningCards.some(wc => wc.suit === card.suit && wc.value === card.value);
+	return winningCards.some((wc) => wc.suit === card.suit && wc.value === card.value);
 };
 
-const cardIsRevealed = (card: PokerCard): boolean => Boolean((card as { isRevealed?: boolean }).isRevealed);
+const isHoleCardFaceDown = (
+	card: HoleCard,
+	args: { hasCards: boolean; faceDown: boolean; isShowdown: boolean },
+): boolean => {
+	if (!args.hasCards) return true;
+	if (card.isRevealed) return false;
+	if (!args.faceDown) return false;
+	return !args.isShowdown;
+};
+
+const holeSlotClassName = (args: {
+	isFirst: boolean;
+	isWinning: boolean;
+	isPressed: boolean;
+}): string => [
+	'hole-card-slot',
+	args.isFirst ? 'hole-card-slot--first' : 'hole-card-slot--second',
+	args.isWinning ? 'winning-card-glow celebration' : '',
+	args.isPressed ? 'hole-card-slot--pressed' : '',
+].filter(Boolean).join(' ');
+
+const HoleCardFace: React.FC<{ card: HoleCard; isFaceDown: boolean }> = ({
+	card,
+	isFaceDown,
+}) => (
+	<PokerCardFrame size="small" variant={isFaceDown ? 'face-down' : 'face-up'}>
+		{isFaceDown
+			? <CardCardBack />
+			: <CardRankSuit suit={card.suit} value={card.value} />}
+	</PokerCardFrame>
+);
 
 export const HoleCardsOverlay: React.FC<HoleCardsOverlayProps> = ({
 	cards,
@@ -38,41 +68,33 @@ export const HoleCardsOverlay: React.FC<HoleCardsOverlayProps> = ({
 	winningCards,
 	isShowdown = false,
 	activeTurn = false,
-	positionAbsolute = true,
-	embedded = false,
 }) => {
 	const isOpponent = variant === 'opponent';
-	const displayCards = cards.length > 0 ? cards : [FACE_DOWN_CARD, FACE_DOWN_CARD];
+	const hasCards = cards.length > 0;
+	const displayCards: HoleCard[] = hasCards ? cards : FACE_DOWN_PLACEHOLDERS;
 	const [pressedIndex, setPressedIndex] = useState<number | null>(null);
-	const canInspect = embedded && !isOpponent;
+	const canInspect = !isOpponent;
 
-	const renderCards = () => displayCards.map((card, idx) => {
-		const isWinning = isCardInWinningHand(card, winningCards);
-		const isFirst = idx === 0;
-		const isFaceDown = faceDown && (!isShowdown || cards.length === 0) && !cardIsRevealed(card);
-		const isInspectable = canInspect && !isFaceDown;
-		const isPressed = pressedIndex === idx;
-		const slotClassName = [
-			'hole-card-slot',
-			isFirst ? 'hole-card-slot--first' : 'hole-card-slot--second',
-			isWinning ? 'winning-card-glow celebration' : '',
-			isPressed ? 'hole-card-slot--pressed' : '',
-		].filter(Boolean).join(' ');
-		const cardFrame = (
-			<PokerCardFrame
-				size="small"
-				variant={isFaceDown ? 'face-down' : 'face-up'}
-			>
-				{isFaceDown
-					? <CardCardBack />
-					: <CardRankSuit suit={card.suit as NorseSuit} value={card.value} />}
-			</PokerCardFrame>
-		);
+	const releaseInspect = () => setPressedIndex(null);
 
-		if (!isInspectable) {
+	const renderSlot = (card: HoleCard, idx: number) => {
+		const isFaceDown = isHoleCardFaceDown(card, { hasCards, faceDown, isShowdown });
+		const slotClassName = holeSlotClassName({
+			isFirst: idx === 0,
+			isWinning: isWinningHoleCard(card, winningCards),
+			isPressed: pressedIndex === idx,
+		});
+		const slotProps = {
+			className: slotClassName,
+			'data-hole-slot': idx,
+			'data-face': isFaceDown ? 'down' : 'up',
+		} as const;
+		const face = <HoleCardFace card={card} isFaceDown={isFaceDown} />;
+
+		if (!canInspect || isFaceDown) {
 			return (
-				<div key={`${variant}-hole-${idx}`} className={slotClassName}>
-					{cardFrame}
+				<div key={`${variant}-hole-${idx}`} {...slotProps}>
+					{face}
 				</div>
 			);
 		}
@@ -81,9 +103,9 @@ export const HoleCardsOverlay: React.FC<HoleCardsOverlayProps> = ({
 			<button
 				key={`${variant}-hole-${idx}`}
 				type="button"
-				className={slotClassName}
-				aria-label={`${isPressed ? 'Release' : 'Hold to inspect'} poker card ${card.value} of ${card.suit}`}
-				aria-pressed={isPressed}
+				{...slotProps}
+				aria-label={`${pressedIndex === idx ? 'Release' : 'Hold to inspect'} poker card ${card.value} of ${card.suit}`}
+				aria-pressed={pressedIndex === idx}
 				onPointerDown={(event) => {
 					event.stopPropagation();
 					event.currentTarget.setPointerCapture(event.pointerId);
@@ -91,11 +113,11 @@ export const HoleCardsOverlay: React.FC<HoleCardsOverlayProps> = ({
 				}}
 				onPointerUp={(event) => {
 					event.stopPropagation();
-					setPressedIndex(null);
+					releaseInspect();
 				}}
-				onPointerCancel={() => setPressedIndex(null)}
-				onLostPointerCapture={() => setPressedIndex(null)}
-				onBlur={() => setPressedIndex(null)}
+				onPointerCancel={releaseInspect}
+				onLostPointerCapture={releaseInspect}
+				onBlur={releaseInspect}
 				onKeyDown={(event) => {
 					if (event.key !== 'Enter' && event.key !== ' ') return;
 					event.preventDefault();
@@ -106,64 +128,29 @@ export const HoleCardsOverlay: React.FC<HoleCardsOverlayProps> = ({
 					if (event.key !== 'Enter' && event.key !== ' ') return;
 					event.preventDefault();
 					event.stopPropagation();
-					setPressedIndex(null);
+					releaseInspect();
 				}}
 				onClick={(event) => {
 					event.stopPropagation();
 				}}
 			>
-				{cardFrame}
+				{face}
 			</button>
 		);
-	});
-
-	if (embedded) {
-		return (
-			<div
-				className={[
-					`hero-pocket-cards hero-pocket-cards--${variant}`,
-					pressedIndex !== null ? 'is-pressing' : '',
-					activeTurn ? 'hole-cards-active-turn' : '',
-				].filter(Boolean).join(' ')}
-			>
-				{renderCards()}
-			</div>
-		);
-	}
-
-	const positionClass = isOpponent ? 'top-full' : 'top-0';
-
-	if (!positionAbsolute) {
-		return (
-			<div
-				className={[
-					'flex flex-row items-center justify-center pointer-events-none z-10 gap-1',
-					`hole-cards--${variant}`,
-					activeTurn ? 'hole-cards-active-turn' : '',
-				].filter(Boolean).join(' ')}
-				style={{ transform: 'scale(var(--zone-poker-card-scale, 1))' }}
-			>
-				{renderCards()}
-			</div>
-		);
-	}
+	};
 
 	return (
 		<div
 			className={[
-				'absolute left-1/2 -translate-x-1/2 flex flex-row items-center justify-center pointer-events-none z-0 gap-1',
-				`hole-cards--${variant}`,
-				positionClass,
+				`hero-pocket-cards hero-pocket-cards--${variant}`,
+				pressedIndex !== null ? 'is-pressing' : '',
 				activeTurn ? 'hole-cards-active-turn' : '',
 			].filter(Boolean).join(' ')}
-			style={{
-				marginTop: isOpponent ? 'var(--zone-hole-cards-opponent-offset, -80px)' : undefined,
-				transform: isOpponent
-					? 'translateX(-50%) scale(var(--zone-poker-card-scale, 1))'
-					: 'translate(-50%, -50%) scale(var(--zone-poker-card-scale, 1))',
-			}}
+			role="group"
+			data-hole-owner={variant}
+			aria-label={isOpponent ? 'Opponent hole cards' : 'Your hole cards'}
 		>
-			{renderCards()}
+			{displayCards.map(renderSlot)}
 		</div>
 	);
 };

@@ -10,7 +10,7 @@
 export const DEFAULT_POKER_TURN_DURATION_MS = 60_000;
 export const POKER_TURN_TIMER_TICK_MS = 1_000;
 
-const TIMED_POKER_PHASES = new Set(['pre_flop', 'faith', 'foresight', 'destiny']);
+const TIMED_POKER_PHASES = new Set(['spell_pet', 'pre_flop', 'faith', 'foresight', 'destiny']);
 
 export type PokerTurnClock = Readonly<{
 	turnId: string;

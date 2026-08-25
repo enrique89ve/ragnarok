@@ -192,6 +192,7 @@ export function useRagnarokCombatController(
   }, []);
 
   const aiResponseInProgressRef = useRef(false);
+  const spellcraftTimeoutRef = useRef<() => void>(() => undefined);
   const p2pActions = useP2PActions();
   const activeMatch = useMatchStore(state => state.activeMatch);
   const connectionState = usePeerStore(state => state.connectionState);
@@ -223,6 +224,7 @@ export function useRagnarokCombatController(
     sendPokerAction: p2pActions.sendPokerAction,
     sendPokerTurnStarted: p2pActions.sendPokerTurnStarted,
     addHeroBattlePopup,
+    onSpellcraftTimeout: () => spellcraftTimeoutRef.current(),
   });
   
   useCombatEvents({
@@ -1160,6 +1162,7 @@ export function useRagnarokCombatController(
 		});
 	}
   }, [isActive, isP2PCombat, p2pActions, p2pTransportConnected, pokerTurnProcessMode]);
+  spellcraftTimeoutRef.current = handleSpellcraftReady;
 
   return {
     combatState,

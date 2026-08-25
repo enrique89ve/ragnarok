@@ -319,7 +319,7 @@ describe('gameCoordinatorRules', () => {
     })).toBeNull();
   });
 
-  it('holds chess-to-poker combat flow until the attack animation marker is cleared', () => {
+  it('holds chess-to-poker combat until the attack animation marker is cleared', () => {
     expect(shouldTriggerChessCombatFlow({
       hasPendingCombat: true,
       chessGameStatus: 'combat',

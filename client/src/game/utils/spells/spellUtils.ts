@@ -11,7 +11,7 @@ import allCards, { getCardById } from '../../data/allCards';
 import { useAnimationStore } from '../../animations/AnimationManager';
 import { logActivity } from '../../stores/activityLogStore';
 import { GameEventBus } from '@/core/events/GameEventBus';
-import { scheduleSpellEffect, SpellEffectType } from '../../animations/UnifiedAnimationOrchestrator';
+
 // Lazy access to break game-engine <-> game-store circular dependency
 const useGameStore = {
 	getState: () => ((globalThis as Record<string, unknown>).__ragnarokGameStore as
@@ -25,25 +25,6 @@ import { checkPetEvolutionTrigger } from '../petEvolutionTriggers';
 import { addKeyword, removeKeyword, hasKeyword } from '../cards/keywordUtils';
 import { shuffleInPlace, shuffleArray, cryptoIdGen } from '../seededRng';
 import { cardsRng, getCardsRng, withCardsRng } from '../cardsCommandRng';
-
-function getSpellEffectType(effectType: string): SpellEffectType {
-  const typeMap: Record<string, SpellEffectType> = {
-    'damage': 'damage',
-    'heal': 'heal',
-    'buff': 'buff',
-    'debuff': 'debuff',
-    'summon': 'summon',
-    'aoe_damage': 'aoe',
-    'cleave_damage': 'aoe',
-    'draw': 'draw',
-    'quest': 'quest',
-    'transform': 'transform',
-    'damage_submerged': 'void',
-    'freeze': 'debuff',
-    'silence': 'debuff',
-  };
-  return typeMap[effectType] || 'default';
-}
 
 /**
  * Queue a spell damage popup animation
@@ -151,13 +132,8 @@ function executeSpellUnbound(
     { cardName: spellCard.card.name, cardId: Number(spellCard.card.id) }
   );
   
-  try {
-    const spellType = getSpellEffectType(effect.type);
-    const description = spellCard.card.description || '';
-    scheduleSpellEffect(spellCard.card.name, description, spellType);
-  } catch (error) {
-    debug.error('[SpellAnimation] Failed to schedule spell effect:', error);
-  }
+  // Overlay for spells is CombatFeedbackStack via the combat log.
+  // Do not also slam a center plate — one event, one FX.
   
   // Execute the appropriate effect based on the type
   let resultState: GameState;

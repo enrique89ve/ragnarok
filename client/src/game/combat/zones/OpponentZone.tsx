@@ -135,7 +135,6 @@ export const OpponentZone: React.FC<OpponentZoneProps> = ({
 						winningCards={showdownCelebration?.winningCards}
 						isShowdown={isShowdown}
 						activeTurn={waitingForOpponent}
-						embedded
 					/>
 				</div>
 			)}

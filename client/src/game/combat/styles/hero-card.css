@@ -12,6 +12,10 @@
 /* Poker hole cards tucked behind the hero frame. The frame covers the lower
    half, leaving the top half visibly protruding like cards in a pocket. */
 .hero-pocket-cards {
+  --pocket-card-width: 112px;
+  --pocket-card-height: 157px;
+  --pocket-card-overlap: -15px;
+  --pocket-card-rotate: 8deg;
   position: absolute;
   left: 50%;
   top: -86px;
@@ -27,9 +31,8 @@
   transform-origin: center bottom;
 }
 
-/* Player pocket cards sit behind the avatar and need a small readability lift.
-   Keep the opponent treatment independent so both avatars retain their visual
-   balance. 0.86 = one more 5% lift over the previous 0.819 scale. */
+/* Player pocket cards sit behind the avatar. Arena placement/scale is owned
+   by canvas.css; this fallback only applies outside .ragnarok-combat-arena. */
 .hero-pocket-cards--player {
   pointer-events: auto;
   transform: translateX(-50%) scale(0.86);
@@ -46,34 +49,38 @@
   --pocket-card-scale: 1;
   position: relative;
   display: block;
-  flex: 0 0 112px;
-  width: 112px;
-  height: 157px;
+  flex: 0 0 var(--pocket-card-width);
+  width: var(--pocket-card-width);
+  height: var(--pocket-card-height);
   margin: 0;
   padding: 0;
   border: 0;
   border-radius: 8px;
   background: transparent;
   color: inherit;
-  cursor: pointer;
+  cursor: default;
   transform: rotate(var(--pocket-card-rotation)) translateY(var(--pocket-card-lift)) scale(var(--pocket-card-scale));
   transform-origin: center bottom;
   transition: transform 180ms ease, filter 180ms ease;
 }
 
 .hero-pocket-cards .hole-card-slot--first {
-  --pocket-card-rotation: -8deg;
+  --pocket-card-rotation: calc(var(--pocket-card-rotate) * -1);
   z-index: 1;
 }
 
 .hero-pocket-cards .hole-card-slot--second {
-  --pocket-card-rotation: 8deg;
-  margin-left: -15px;
+  --pocket-card-rotation: var(--pocket-card-rotate);
+  margin-left: var(--pocket-card-overlap);
   z-index: 2;
 }
 
 .hero-pocket-cards--player.is-pressing {
   z-index: 60;
+}
+
+.hero-pocket-cards--player .hole-card-slot {
+  cursor: pointer;
 }
 
 .hero-pocket-cards--player .hole-card-slot:hover,
@@ -102,15 +109,6 @@
   .hero-pocket-cards .hole-card-slot {
     transition: none;
   }
-}
-
-.hero-pocket-cards .arena-poker-card.norse {
-  width: 108px;
-  height: 151px;
-}
-
-.hero-pocket-cards .arena-poker-card.norse:hover {
-  transform: none;
 }
 
 .hero-card-frame .hero-name-plate {
@@ -142,24 +140,32 @@
 
 .hero-portrait-interactive.power-ready {
   box-shadow:
-    inset 0 0 32px rgba(59, 130, 246, 0.85),
-    0 0 22px rgba(59, 130, 246, 0.5),
-    0 0 40px rgba(59, 130, 246, 0.2);
+    inset 0 0 32px color-mix(in srgb, var(--rune-cyan, #38bdf8) 55%, transparent),
+    0 0 22px color-mix(in srgb, var(--rune-cyan, #38bdf8) 40%, transparent),
+    0 0 40px color-mix(in srgb, var(--rune-cyan, #38bdf8) 18%, transparent);
   animation: heroPowerPulse 1.8s ease-in-out infinite;
 }
 
 .hero-portrait-interactive.power-ready:hover {
   animation: none;
-  opacity: 1;
   box-shadow:
-    inset 0 0 30px rgba(59, 130, 246, 0.8),
-    0 0 20px rgba(59, 130, 246, 0.5),
-    0 0 40px rgba(59, 130, 246, 0.25);
+    inset 0 0 30px color-mix(in srgb, var(--rune-cyan, #38bdf8) 70%, transparent),
+    0 0 20px color-mix(in srgb, var(--rune-cyan, #38bdf8) 50%, transparent),
+    0 0 40px color-mix(in srgb, var(--rune-cyan, #38bdf8) 22%, transparent);
 }
 
 @keyframes heroPowerPulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
+  0%, 100% {
+    box-shadow:
+      inset 0 0 24px color-mix(in srgb, var(--rune-cyan, #38bdf8) 40%, transparent),
+      0 0 14px color-mix(in srgb, var(--rune-cyan, #38bdf8) 28%, transparent);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 32px color-mix(in srgb, var(--rune-cyan, #38bdf8) 70%, transparent),
+      0 0 22px color-mix(in srgb, var(--rune-cyan, #38bdf8) 50%, transparent),
+      0 0 40px color-mix(in srgb, var(--rune-cyan, #38bdf8) 20%, transparent);
+  }
 }
 
 .hero-portrait-interactive.upgrade-ready {
@@ -242,14 +248,6 @@
   background: color-mix(in srgb, var(--bifrost-500) 24%, var(--obsidian-950));
 }
 
-.portrait-power-badge:hover {
-  transform: translateY(-1px);
-}
-
-.portrait-power-badge:active {
-  transform: translateY(1px) scale(0.96);
-}
-
 .portrait-power-badge:focus-visible {
   outline: 2px solid var(--gold-300);
   outline-offset: 2px;
@@ -270,13 +268,14 @@
   bottom: -8px;
   left: 50%;
   transform: translateX(-50%);
-  background: linear-gradient(135deg, #6b21a8, #9333ea);
-  border-radius: 12px;
+  background: linear-gradient(135deg, var(--obsidian-950), var(--iron-850, #111827));
+  border: 1px solid var(--gold-500);
+  border-radius: 6px;
   padding: var(--space-2) 8px;
   font-size: var(--text-11);
-  color: #fff;
+  color: var(--gold-300);
   font-weight: bold;
-  box-shadow: 0 0 10px rgba(147, 51, 234, 0.6);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--gold-500) 35%, transparent);
   white-space: nowrap;
   z-index: 40;
 }
@@ -311,15 +310,15 @@
 }
 
 .portrait-tooltip-content {
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.98));
-  border: 2px solid rgba(59, 130, 246, 0.5);
-  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(5, 7, 13, 0.98), rgba(17, 24, 39, 0.98));
+  border: 1px solid var(--gold-500);
+  border-radius: 6px;
   padding: 12px 16px;
   min-width: 220px;
   max-width: 280px;
   box-shadow:
     0 8px 24px rgba(0, 0, 0, 0.5),
-    0 0 20px rgba(59, 130, 246, 0.2);
+    0 0 12px color-mix(in srgb, var(--gold-300) 16%, transparent);
 }
 
 .tooltip-power-header {
@@ -328,21 +327,21 @@
   align-items: center;
   margin-bottom: 8px;
   padding-bottom: var(--space-6);
-  border-bottom: 1px solid rgba(59, 130, 246, 0.3);
+  border-bottom: 1px solid color-mix(in srgb, var(--gold-500) 35%, transparent);
 }
 
 .tooltip-power-header .power-name {
   font-weight: 700;
-  color: #60a5fa;
+  color: var(--gold-300);
   font-size: 0.95rem;
 }
 
 .tooltip-power-header .power-cost-display {
   font-size: 0.8rem;
-  color: #93c5fd;
-  background: rgba(59, 130, 246, 0.2);
+  color: var(--ink-100, #e5e7eb);
+  background: color-mix(in srgb, var(--gold-500) 18%, transparent);
   padding: var(--space-2) 8px;
-  border-radius: 8px;
+  border-radius: 4px;
 }
 
 .tooltip-power-desc {
@@ -354,7 +353,7 @@
 
 .tooltip-power-hint {
   font-size: 0.75rem;
-  color: rgba(147, 197, 253, 0.8);
+  color: color-mix(in srgb, var(--rune-cyan, #38bdf8) 80%, var(--ink-100));
   font-style: italic;
   text-align: center;
   padding: 4px 0;
@@ -370,14 +369,14 @@
   background: rgba(234, 179, 8, 0.1);
   margin: var(--space-10) -16px -12px;
   padding: var(--space-10) 16px 12px;
-  border-radius: 0 0 10px 10px;
+  border-radius: 0 0 6px 6px;
 }
 
 .tooltip-upgrade-section.is-upgraded {
   background: rgba(34, 197, 94, 0.1);
   margin: var(--space-10) -16px -12px;
   padding: var(--space-10) 16px 12px;
-  border-radius: 0 0 10px 10px;
+  border-radius: 0 0 6px 6px;
   border-top-color: rgba(34, 197, 94, 0.3);
 }
 
@@ -529,6 +528,11 @@
 @media (prefers-reduced-motion: reduce) {
   .hero-stamina-fill {
     transition: none;
+  }
+
+  .hero-portrait-interactive.power-ready,
+  .hero-portrait-interactive.upgrade-ready {
+    animation: none;
   }
 }
 

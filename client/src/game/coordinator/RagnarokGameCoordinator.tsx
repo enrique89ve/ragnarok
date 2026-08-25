@@ -841,7 +841,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       flowTag: flowState?.tag ?? null,
       hasPendingAttackAnimation: pendingAttackAnimation !== null,
     })) {
-      debug.chess('pendingCombat detected (AI attack), triggering combat flow');
+      debug.chess('pendingCombat detected, triggering combat flow');
       if (!pendingCombat) return;
       const { attacker, defender } = pendingCombat;
 

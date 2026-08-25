@@ -2,8 +2,8 @@
  * Contract tests for `createChessAITurnDriver`.
  *
  * The driver's job is to plan an opponent move, request a delayed attempt,
- * retry on pending animation, and — crucially — early-return when the
- * slice state has flipped between scheduling and firing. The early-return
+ * and — crucially — early-return when the slice state has flipped between
+ * scheduling and firing. The early-return
  * gates are what prevent the "doble movimiento" symptom: a stray callback
  * that fires after a turn change must not commit a second move.
  *
@@ -17,7 +17,6 @@ import { describe, expect, it, vi } from 'vitest';
 import {
 	createChessAITurnDriver,
 	CHESS_AI_POST_SELECT_DELAY_MS,
-	CHESS_AI_ANIMATION_RETRY_DELAY_MS,
 	type ChessAIDriverSlice,
 } from './chessAITurnDriver';
 import type { ChessPiece, ChessGameStatus } from '../../types/ChessTypes';
@@ -27,7 +26,6 @@ interface FakeSliceState {
 	currentTurn: 'player' | 'opponent';
 	gameStatus: ChessGameStatus;
 	pieces: ChessPiece[];
-	pendingAttackAnimation: boolean;
 }
 
 interface FakeSliceWithSpies {
@@ -70,11 +68,6 @@ const makeFakeSlice = (initial: FakeSliceState): FakeSliceWithSpies => {
 				pieces: state.pieces,
 			};
 		},
-		get pendingAttackAnimation() {
-			return state.pendingAttackAnimation
-				? ({} as unknown as ChessAIDriverSlice['pendingAttackAnimation'])
-				: null;
-		},
 		_chessRng: () => 0.42,
 		getValidMoves: (piece) => {
 			if (piece.id !== 'opp-queen') return { moves: [], attacks: [] };
@@ -108,7 +101,6 @@ describe('createChessAITurnDriver', () => {
 			currentTurn: 'opponent',
 			gameStatus: 'playing',
 			pieces: [makeOpponentQueen()],
-			pendingAttackAnimation: false,
 		});
 		const sched = makeFakeScheduler();
 
@@ -132,7 +124,6 @@ describe('createChessAITurnDriver', () => {
 			currentTurn: 'player',
 			gameStatus: 'playing',
 			pieces: [makeOpponentQueen()],
-			pendingAttackAnimation: false,
 		});
 		const sched = makeFakeScheduler();
 
@@ -153,7 +144,6 @@ describe('createChessAITurnDriver', () => {
 			currentTurn: 'opponent',
 			gameStatus: 'player_wins',
 			pieces: [makeOpponentQueen()],
-			pendingAttackAnimation: false,
 		});
 		const sched = makeFakeScheduler();
 
@@ -174,7 +164,6 @@ describe('createChessAITurnDriver', () => {
 			currentTurn: 'opponent',
 			gameStatus: 'playing',
 			pieces: [makeOpponentQueen()],
-			pendingAttackAnimation: false,
 		});
 		const sched = makeFakeScheduler();
 
@@ -195,39 +184,11 @@ describe('createChessAITurnDriver', () => {
 		expect(sched.calls).toHaveLength(1);
 	});
 
-	it('attemptMove re-schedules at retry delay when pendingAttackAnimation is set', () => {
-		const fake = makeFakeSlice({
-			currentTurn: 'opponent',
-			gameStatus: 'playing',
-			pieces: [makeOpponentQueen()],
-			pendingAttackAnimation: false,
-		});
-		const sched = makeFakeScheduler();
-
-		const driver = createChessAITurnDriver({
-			getSlice: () => fake.slice,
-			rngFallback: () => 0,
-			schedule: sched.schedule,
-		});
-
-		driver.runAITurn();
-		expect(sched.calls).toHaveLength(1);
-
-		fake.state.pendingAttackAnimation = true;
-		const attemptCallback = sched.calls[0]?.fn;
-		attemptCallback?.();
-
-		expect(fake.movePiece).not.toHaveBeenCalled();
-		expect(sched.calls).toHaveLength(2);
-		expect(sched.calls[1]?.ms).toBe(CHESS_AI_ANIMATION_RETRY_DELAY_MS);
-	});
-
 	it('attemptMove commits movePiece when slice still allows the planned target', () => {
 		const fake = makeFakeSlice({
 			currentTurn: 'opponent',
 			gameStatus: 'playing',
 			pieces: [makeOpponentQueen()],
-			pendingAttackAnimation: false,
 		});
 		const sched = makeFakeScheduler();
 
@@ -249,7 +210,6 @@ describe('createChessAITurnDriver', () => {
 			currentTurn: 'opponent',
 			gameStatus: 'playing',
 			pieces: [],
-			pendingAttackAnimation: false,
 		});
 		const sched = makeFakeScheduler();
 

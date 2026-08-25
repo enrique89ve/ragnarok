@@ -3,8 +3,8 @@
  *
  * The hook (`useChessAITurn`) owns React lifecycle and the timeout array;
  * this factory owns *what happens* on each tick: pick a move, request a
- * delayed attempt, retry on pending animation, early-return when the slice
- * state has moved on. Splitting the two lets us test the early-return
+ * delayed attempt, and early-return when the slice state has moved on.
+ * Splitting the two lets us test the early-return
  * discipline (the lever behind the "doble movimiento" symptom) without a
  * React harness — the bug is "schedule fires after slice has flipped"; the
  * defenses are the early returns at the top of `runAITurn`/`attemptMove`.
@@ -24,10 +24,8 @@ import type {
 	ChessGameStatus,
 	ChessCollision,
 } from '../../types/ChessTypes';
-import type { PendingAttackAnimation } from '../../stores/combat/types';
 
 export const CHESS_AI_FIRST_ATTEMPT_DELAY_MS = 2000;
-export const CHESS_AI_ANIMATION_RETRY_DELAY_MS = 200;
 export const CHESS_AI_POST_SELECT_DELAY_MS = 700;
 export const CHESS_AI_POST_SELECT_DELAY_MS_JITTER = 0;
 const CHESS_AI_STYLE_DELAY_MULTIPLIER_BY_DIFFICULTY: Record<
@@ -103,7 +101,6 @@ export interface ChessAIDriverSlice {
 		readonly gameStatus: ChessGameStatus;
 		readonly pieces: ReadonlyArray<ChessPiece>;
 	};
-	readonly pendingAttackAnimation: PendingAttackAnimation | null;
 	readonly _chessRng: (() => number) | null;
 	getValidMoves(piece: ChessPiece): { moves: ChessBoardPosition[]; attacks: ChessBoardPosition[] };
 	getPieceAt(position: ChessBoardPosition): ChessPiece | null;
@@ -146,12 +143,6 @@ export function createChessAITurnDriver(deps: ChessAIDriverDeps): ChessAITurnDri
 		const slice = deps.getSlice();
 		if (slice.boardState.gameStatus !== 'playing') return;
 		if (slice.boardState.currentTurn !== 'opponent') return;
-
-		if (slice.pendingAttackAnimation) {
-			log('[AI] Waiting for animation to complete, retrying...');
-			deps.schedule(() => attemptMove(plan), CHESS_AI_ANIMATION_RETRY_DELAY_MS);
-			return;
-		}
 
 		const piece = slice.boardState.pieces.find((p) => p.id === plan.piece.id);
 		if (!piece) {

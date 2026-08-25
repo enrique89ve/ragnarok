@@ -40,7 +40,7 @@
 	position: relative;
 	isolation: isolate;
 	overflow: hidden;
-	border-radius: var(--cf-radius, 12px);
+	border-radius: var(--cf-radius, 8px);
 	background: linear-gradient(180deg, var(--obsidian-900) 0%, var(--obsidian-950) 100%);
 	color: var(--text-near-white);
 	transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;

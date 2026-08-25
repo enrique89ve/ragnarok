@@ -154,6 +154,11 @@
 /* ============================================================
    LOW TIME — Urgency state (<=10 seconds)
    ============================================================ */
+.hourglass-timer--parked .hg-stream,
+.hourglass-timer--parked .hg-particle {
+  animation: none;
+}
+
 .hourglass-timer.low-time .hg-countdown-svg {
   animation: hg-urgency-pulse 1.2s ease-in-out infinite;
 }

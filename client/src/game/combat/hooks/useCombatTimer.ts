@@ -9,6 +9,7 @@ import { getPokerTurnRemainingSeconds } from '../../../../../shared/p2p-wire/pok
 import { derivePokerDecisionView } from '../decision/pokerDecisionView';
 import { getPokerActionDefinition } from '../decision/pokerActionCatalog';
 import { derivePokerTurnPolicy, type PokerOpponentKind } from '../decision/pokerTurnPolicy';
+import { shouldTickSpellcraftClock } from '../decision/spellcraftDecision';
 
 interface UseCombatTimerOptions {
   combatState: PokerCombatState | null;
@@ -32,10 +33,11 @@ interface UseCombatTimerOptions {
     remainingMs?: number;
   }) => void;
   addHeroBattlePopup?: (params: { action: BattlePopupAction; target: BattlePopupTarget; text: string; subtitle?: string }) => void;
+  onSpellcraftTimeout?: () => void;
 }
 
 export function useCombatTimer(options: UseCombatTimerOptions): void {
-  const { combatState, isActive, updateTimer, isP2PCombat = false, opponentKind = null, sendPokerAction, sendPokerTurnStarted, addHeroBattlePopup } = options;
+  const { combatState, isActive, updateTimer, isP2PCombat = false, opponentKind = null, sendPokerAction, sendPokerTurnStarted, addHeroBattlePopup, onSpellcraftTimeout } = options;
   const announcedTurnIdRef = useRef<string | null>(null);
   const expiredTurnIdRef = useRef<string | null>(null);
 
@@ -44,7 +46,6 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
   useEffect(() => {
     if (!combatState || !isActive) return;
     if (combatState.phase === CombatPhase.MULLIGAN) return;
-    if (combatState.phase === CombatPhase.SPELL_PET) return;
     if (cardGameMulliganActive) return;
 
     if (combatState.isAllInShowdown) {
@@ -87,11 +88,15 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
       }
     }
 
-    if (turnPolicy.shouldSkipTimerAfterLocalReady) {
+    const spellcraftClock = shouldTickSpellcraftClock({
+      phase: combatState.phase,
+      isPlayerReady: Boolean(combatState.player.isReady),
+    });
+    if (!spellcraftClock && turnPolicy.shouldSkipTimerAfterLocalReady) {
       debug.combat('[Timer] SKIP: Player already ready (isReady=true)');
       return;
     }
-    if (!turnPolicy.shouldTickTimer) return;
+    if (!spellcraftClock && !turnPolicy.shouldTickTimer) return;
 
     const timer = setInterval(() => {
       const mulliganStillActive = useGameStore.getState().gameState?.mulligan?.active;
@@ -100,10 +105,16 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
       const freshState = getPokerCombatAdapterState().combatState;
       if (!freshState) return;
       
-      if (freshState.phase === CombatPhase.MULLIGAN ||
-          freshState.phase === CombatPhase.SPELL_PET ||
-          freshState.isAllInShowdown) {
-        debug.combat('[Timer] SKIP in interval: phase=', freshState.phase, 'playerReady=', freshState.player.isReady, 'allIn=', freshState.isAllInShowdown);
+      if (freshState.phase === CombatPhase.MULLIGAN || freshState.isAllInShowdown) {
+        debug.combat('[Timer] SKIP in interval: phase=', freshState.phase, 'allIn=', freshState.isAllInShowdown);
+        return;
+      }
+
+      const freshSpellcraftClock = shouldTickSpellcraftClock({
+        phase: freshState.phase,
+        isPlayerReady: Boolean(freshState.player.isReady),
+      });
+      if (freshState.phase === CombatPhase.SPELL_PET && !freshSpellcraftClock) {
         return;
       }
 
@@ -116,11 +127,11 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
         opponentKind,
       });
 
-      if (freshTurnPolicy.shouldSkipTimerAfterLocalReady) {
+      if (!freshSpellcraftClock && freshTurnPolicy.shouldSkipTimerAfterLocalReady) {
         debug.combat('[Timer] SKIP in interval: playerReady=', freshState.player.isReady, 'activePlayerId=', freshState.activePlayerId);
         return;
       }
-      if (!freshTurnPolicy.shouldTickTimer) return;
+      if (!freshSpellcraftClock && !freshTurnPolicy.shouldTickTimer) return;
 
       const newTime = freshState.turnDeadlineAtMs !== null
         ? getPokerTurnRemainingSeconds({ nowMs: Date.now(), deadlineAtMs: freshState.turnDeadlineAtMs })
@@ -133,6 +144,12 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
         updateTimer(newTime);
       } else {
         updateTimer(0);
+        if (freshState.phase === CombatPhase.SPELL_PET) {
+          if (freshState.turnId && expiredTurnIdRef.current === freshState.turnId) return;
+          if (freshState.turnId) expiredTurnIdRef.current = freshState.turnId;
+          onSpellcraftTimeout?.();
+          return;
+        }
         if (!freshTurnPolicy.shouldAutoActOnTimeout) return;
         if (isP2PCombat && freshState.turnId && expiredTurnIdRef.current === freshState.turnId) {
           return;
@@ -193,5 +210,6 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
     sendPokerTurnStarted,
     cardGameMulliganActive,
     addHeroBattlePopup,
+    onSpellcraftTimeout,
   ]);
 }

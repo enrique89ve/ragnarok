@@ -108,10 +108,23 @@ describe('poker turn clock contract', () => {
 
 	it('creates deadlines only for timed decision phases', () => {
 		expect(isTimedPokerDecisionPhase('faith')).toBe(true);
-		expect(isTimedPokerDecisionPhase('spell_pet')).toBe(false);
+		expect(isTimedPokerDecisionPhase('spell_pet')).toBe(true);
 		expect(createPokerTurnClock({
 			combatId: 'combat-a',
 			phase: 'spell_pet',
+			activePlayerId: 'piece-1',
+			actionsThisRound: 0,
+			nowMs: 1_000,
+			durationMs: 60_000,
+		})).toEqual({
+			turnId: 'combat-a:spell_pet:piece-1:0',
+			startedAtMs: 1_000,
+			deadlineAtMs: 61_000,
+			durationMs: 60_000,
+		});
+		expect(createPokerTurnClock({
+			combatId: 'combat-a',
+			phase: 'mulligan',
 			activePlayerId: 'piece-1',
 			actionsThisRound: 0,
 			nowMs: 1_000,

@@ -1700,10 +1700,6 @@ export function useWireSync() {
 							reject('cannot_attack_own_piece');
 							break;
 						}
-						if (cs.pendingAttackAnimation) {
-							reject('attack_animation_in_progress');
-							break;
-						}
 						if (!cs.beginChessAttack) {
 							reject('begin_chess_attack_unavailable');
 							break;

@@ -280,10 +280,6 @@
   }
 }
 
-.opponent-hole-cards.showdown-reveal .arena-poker-card.face-down {
-  display: none;
-}
-
 .community-slot.winning-card {
   position: relative;
 }

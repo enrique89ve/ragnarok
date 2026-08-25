@@ -93,6 +93,11 @@ __tests__/
 *.test.ts
 !**/protocolConformance.test.ts
 !client/src/game/poker/layout/pokerViewportLayout.test.ts
+!client/src/game/combat/components/HoleCardsOverlay.render.test.ts
+!client/src/game/combat/components/holeCardsChrome.test.ts
+!client/src/game/combat/vfx/pokerEventFx.test.ts
+!client/src/game/combat/vfx/handlers/pokerDramaHandlers.test.ts
+!client/src/game/combat/feedback/combatFeedbackStore.test.ts
 !client/src/game/utils/pokerHeroComposition.test.ts
 !client/src/game/utils/pokerHeroFrameAdapter.test.ts
 !client/src/data/blockchain/cardXPRewards.test.ts

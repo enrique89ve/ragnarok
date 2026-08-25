@@ -50,7 +50,7 @@
    own these pseudo-elements, so keep this base layer out of realm screens. */
 .ragnarok-chess-game:not([class*="realm-"])::before {
   content: '';
-  position: fixed;
+  position: absolute;
   inset: 0;
   background: radial-gradient(circle at 50% 50%, transparent 30%, rgba(0, 0, 0, 0.7) 100%);
   pointer-events: none;
@@ -60,7 +60,7 @@
 /* Falling ember particles for non-realm chess routes. */
 .ragnarok-chess-game:not([class*="realm-"])::after {
   content: '';
-  position: fixed;
+  position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 1;

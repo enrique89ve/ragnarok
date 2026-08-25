@@ -6,9 +6,8 @@
  */
 
 import { CombatEventBus, CombatEvent, AttackBlockedEvent } from './CombatEventBus';
-import { useUnifiedUIStore } from '../stores/unifiedUIStore';
 import { debug } from '../config/debugConfig';
-import type { IconName } from '../utils/ui/iconMap';
+import { showStatus } from '../combat/feedback/combatFeedbackStore';
 import { adaptCombatBusToVisual } from '../combat/vfx/adaptCombatBusToVisual';
 
 let initialized = false;
@@ -87,30 +86,17 @@ function subscribeCombatLog(): () => void {
 function subscribeBlockedAttackNotifications(): () => void {
   return CombatEventBus.subscribe<AttackBlockedEvent>('ATTACK_BLOCKED', (event) => {
     debug.warn(`[AttackBlocked] ${event.message}`);
-    
-    // Show visual notification to user
-    const animationStore = useUnifiedUIStore.getState();
-    
-    // Map block reasons to user-friendly messages and icons
-    const reasonMessages: Record<string, { title: string; iconName: IconName }> = {
-      'taunt': { title: 'Blocked by Taunt!', iconName: 'shield' },
-      'summoning_sickness': { title: 'Must wait a turn!', iconName: 'sparkles' },
-      'stealth': { title: 'Target is Stealthed!', iconName: 'eye' },
-      'immune': { title: 'Target is Immune!', iconName: 'sparkles' },
-      'invalid_target': { title: 'Invalid Target!', iconName: 'x' },
-      'no_attack': { title: 'Cannot Attack!', iconName: 'warning' },
-      'already_attacked': { title: 'Already Attacked!', iconName: 'refresh' }
+    const titles: Record<string, string> = {
+      taunt: 'Blocked by Taunt',
+      summoning_sickness: 'Must wait a turn',
+      stealth: 'Target is Stealthed',
+      immune: 'Target is Immune',
+      invalid_target: 'Invalid Target',
+      no_attack: 'Cannot Attack',
+      already_attacked: 'Already Attacked',
     };
-    
-    const messageInfo = reasonMessages[event.reason] || { title: 'Attack Blocked!', iconName: 'ban' as IconName };
-    
-    animationStore.addAnnouncement({
-      type: 'blocked',
-      title: messageInfo.title,
-      subtitle: event.message,
-      iconName: messageInfo.iconName,
-      duration: 1500
-    });
+    const title = titles[event.reason] ?? 'Attack Blocked';
+    showStatus(`${title}: ${event.message}`, 'warning', 1500);
   }, 50);
 }
 

@@ -484,12 +484,11 @@ export function playHandRankAnnouncement(
 	const fontSize = Math.min(2 + rank * 0.3, 5);
 	const glowIntensity = Math.min(0.3 + rank * 0.1, 1);
 
-	// Color by tier
-	let color = '#e2e8f0'; // white (low)
-	if (rank >= 3) color = '#60a5fa'; // blue (mid)
-	if (rank >= 5) color = '#a855f7'; // purple (strong)
-	if (rank >= 7) color = '#fbbf24'; // gold (powerful)
-	if (rank >= 9) color = '#ef4444'; // red (devastating)
+	let color = '#e5e7eb';
+	if (rank >= 3) color = '#38bdf8';
+	if (rank >= 5) color = '#f5c542';
+	if (rank >= 7) color = '#b7791f';
+	if (rank >= 9) color = '#dc2626';
 
 	const yPos = isPlayer ? '65%' : '35%';
 
@@ -859,10 +858,10 @@ export function playStreakAnnouncementVFX(
  */
 export function playHandImprovementVFX(tier: 'low' | 'mid' | 'high' | 'godly') {
 	const colors: Record<string, string> = {
-		low: '#e2e8f0',
-		mid: '#60a5fa',
-		high: '#a855f7',
-		godly: '#fbbf24'
+		low: '#e5e7eb',
+		mid: '#38bdf8',
+		high: '#f5c542',
+		godly: '#b7791f',
 	};
 	const color = colors[tier] || '#e2e8f0';
 
@@ -1025,21 +1024,21 @@ export function playClashSound() {
 import type { PokerSpellEffectType } from '../../types/CardTypes';
 
 const POKER_SPELL_PALETTES: Record<PokerSpellEffectType, ParticleColor> = {
-	bluff_rune:       { primary: '#7c3aed', secondary: '#a78bfa', glow: 'rgba(124,58,237,0.6)' },
-	fate_peek:        { primary: '#6366f1', secondary: '#a5b4fc', glow: 'rgba(99,102,241,0.6)' },
-	stamina_shield:   { primary: '#0ea5e9', secondary: '#7dd3fc', glow: 'rgba(14,165,233,0.6)' },
-	hole_swap:        { primary: '#8b5cf6', secondary: '#c4b5fd', glow: 'rgba(139,92,246,0.6)' },
-	echo_bet:         { primary: '#3b82f6', secondary: '#93c5fd', glow: 'rgba(59,130,246,0.6)' },
-	shadow_fold:      { primary: '#1e293b', secondary: '#64748b', glow: 'rgba(100,116,139,0.6)' },
-	run_twice:        { primary: '#a78bfa', secondary: '#ddd6fe', glow: 'rgba(167,139,250,0.6)' },
-	river_rewrite:    { primary: '#06b6d4', secondary: '#67e8f9', glow: 'rgba(6,182,212,0.6)' },
-	norns_glimpse:    { primary: '#d946ef', secondary: '#f0abfc', glow: 'rgba(217,70,239,0.6)' },
-	fold_curse:       { primary: '#be123c', secondary: '#fda4af', glow: 'rgba(190,18,60,0.6)' },
+	bluff_rune:       { primary: '#38bdf8', secondary: '#7dd3fc', glow: 'rgba(56,189,248,0.55)' },
+	fate_peek:        { primary: '#38bdf8', secondary: '#e5e7eb', glow: 'rgba(56,189,248,0.55)' },
+	stamina_shield:   { primary: '#38bdf8', secondary: '#7dd3fc', glow: 'rgba(56,189,248,0.55)' },
+	hole_swap:        { primary: '#f5c542', secondary: '#b7791f', glow: 'rgba(245,197,66,0.5)' },
+	echo_bet:         { primary: '#38bdf8', secondary: '#7dd3fc', glow: 'rgba(56,189,248,0.5)' },
+	shadow_fold:      { primary: '#334155', secondary: '#111827', glow: 'rgba(51,65,85,0.55)' },
+	run_twice:        { primary: '#38bdf8', secondary: '#e5e7eb', glow: 'rgba(56,189,248,0.45)' },
+	river_rewrite:    { primary: '#38bdf8', secondary: '#7dd3fc', glow: 'rgba(56,189,248,0.55)' },
+	norns_glimpse:    { primary: '#f5c542', secondary: '#f59e0b', glow: 'rgba(245,197,66,0.5)' },
+	fold_curse:       { primary: '#dc2626', secondary: '#fca5a5', glow: 'rgba(220,38,38,0.55)' },
 	blood_bet:        { primary: '#dc2626', secondary: '#fca5a5', glow: 'rgba(220,38,38,0.6)' },
-	void_stare:       { primary: '#312e81', secondary: '#6366f1', glow: 'rgba(49,46,129,0.6)' },
-	all_in_aura:      { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
-	ragnarok_gambit:  { primary: '#ef4444', secondary: '#fca5a5', glow: 'rgba(239,68,68,0.6)' },
-	destiny_override: { primary: '#fbbf24', secondary: '#fef3c7', glow: 'rgba(251,191,36,0.6)' },
+	void_stare:       { primary: '#05070d', secondary: '#38bdf8', glow: 'rgba(56,189,248,0.4)' },
+	all_in_aura:      { primary: '#f5c542', secondary: '#fde68a', glow: 'rgba(245,197,66,0.55)' },
+	ragnarok_gambit:  { primary: '#dc2626', secondary: '#fca5a5', glow: 'rgba(220,38,38,0.6)' },
+	destiny_override: { primary: '#f5c542', secondary: '#fef3c7', glow: 'rgba(245,197,66,0.55)' },
 };
 
 const WAGER_PALETTES: Record<string, ParticleColor> = {
@@ -1079,14 +1078,6 @@ export function playPokerSpellCast(
 
 	spawnParticleBurst(burst.x, burst.y, 22, palette);
 	spawnImpactRing(burst.x, burst.y, palette);
-
-	const vignette = createDiv({
-		inset: '0',
-		background: `radial-gradient(ellipse at center, ${palette.primary}22 0%, transparent 50%)`,
-		zIndex: '1',
-	});
-	container.appendChild(vignette);
-	gsap.to(vignette, { opacity: 0, duration: 0.9, onComplete: () => cleanup(vignette) });
 
 	getArenaVfxSpellTrayCards().forEach((el, index) => {
 		el.classList.remove('is-casting');

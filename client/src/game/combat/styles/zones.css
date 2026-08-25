@@ -1,23 +1,9 @@
 /**
- * ZONE TOKENS — leftover CSS variables consumed by sibling files.
+ * ZONE TOKENS — retired.
  *
- * Most former tokens here (opponent/hero/hand coordinates, sizing)
- * are now hardcoded in JSX via Tailwind utilities in
- * RagnarokCombatArena.tsx. Only tokens that are still read by other
- * CSS / components remain:
+ * Hole-card geometry is owned by `pokerViewportLayout.ts` and applied in
+ * `client/src/game/poker/styles/canvas.css`. Visual pocket chrome lives in
+ * `hero-card.css` and `hole-cards.css`.
  *
- *   --zone-hole-cards-*-offset  → components/HoleCardsOverlay.tsx
- *   --zone-poker-card-scale     → components/HoleCardsOverlay.tsx
- *
- * If you need to relocate any of those, update the consumer at the
- * same time and you can drop the matching variable here.
+ * This file remains imported by `poker-core.css` so the cascade slot stays.
  */
-
-:root {
-	/* Hole cards — applied via inline style in HoleCardsOverlay.tsx */
-	--zone-hole-cards-player-offset: -20px;
-	--zone-hole-cards-opponent-offset: 12px;
-
-	/* Poker card scaling — inline style in HoleCardsOverlay.tsx */
-	--zone-poker-card-scale: 1;
-}

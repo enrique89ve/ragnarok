@@ -20,10 +20,14 @@ import {
 	CardRankSuit,
 	PokerCardFrame,
 } from '../card';
+import { HoleCardsOverlay } from '../../combat/components/HoleCardsOverlay';
 import type { NorseSuit } from '../../utils/cards/norsePokerCard';
+import type { PokerCard } from '../../types/PokerCombatTypes';
 import type { Rarity } from '@shared/schemas/rarity';
 import '../../combat/styles/opponent-hand.css';
 import '../../combat/styles/community-cards.css';
+import '../../combat/styles/hero-card.css';
+import '../../combat/styles/hole-cards.css';
 import '../card/CardFrame.css';
 import './FrameTestPage.css';
 
@@ -32,6 +36,11 @@ const POKER_SAMPLES: ReadonlyArray<{ suit: NorseSuit; value: string }> = [
 	{ suit: 'spades', value: 'A' },
 	{ suit: 'hearts', value: 'K' },
 	{ suit: 'diamonds', value: '9' },
+];
+
+const PLAYER_HOLE: PokerCard[] = [
+	{ suit: 'spades', value: 'A', numericValue: 14 },
+	{ suit: 'hearts', value: 'K', numericValue: 13 },
 ];
 
 function makeCard(rarity: Rarity, id: number, withArt: boolean) {
@@ -127,6 +136,25 @@ export default function FrameTestPage() {
 					<PokerCardFrame size="medium" variant="face-down">
 						<CardCardBack />
 					</PokerCardFrame>
+				</div>
+			</section>
+
+			<section className="frame-test-page__row" data-test="hero-pocket">
+				<h2>Hero pocket hole cards</h2>
+				<div className="frame-test-page__pockets">
+					<div className="frame-test-page__pocket-stage">
+						<div className="frame-test-page__hero-stub">Player</div>
+						<HoleCardsOverlay cards={PLAYER_HOLE} variant="player" activeTurn />
+					</div>
+					<div className="frame-test-page__pocket-stage">
+						<div className="frame-test-page__hero-stub">Opponent</div>
+						<HoleCardsOverlay
+							cards={PLAYER_HOLE}
+							variant="opponent"
+							faceDown
+							activeTurn
+						/>
+					</div>
 				</div>
 			</section>
 		</div>

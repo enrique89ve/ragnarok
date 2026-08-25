@@ -17,7 +17,6 @@
   flex-shrink: 0;
 }
 
-.community-slot .arena-poker-card.norse,
 .community-slot .poker-card-frame {
   width: var(--community-card-width, 132px) !important;
   max-width: var(--community-card-width, 132px) !important;

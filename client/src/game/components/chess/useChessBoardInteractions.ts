@@ -63,7 +63,7 @@ const createPositionSet = (positions: readonly ChessBoardPosition[]): ReadonlySe
 };
 
 export function useChessBoardInteractions(input: UseChessBoardInteractionsInput) {
-  const { disabled } = input;
+  const { disabled, onCombatTriggered } = input;
   const { playSoundEffect } = useAudio();
   const [noMovesMessage, setNoMovesMessage] = useState<string | null>(null);
   const [instantKillFlash, setInstantKillFlash] = useState<InstantKillFlash | null>(null);
@@ -85,6 +85,7 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
     getValidMoves,
     lastInstantKill,
     pendingAttackAnimation,
+    pendingCombat,
     completeAttackAnimation,
   } = useChessCombatAdapter();
 
@@ -185,7 +186,16 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
     }
 
     completeAttackAnimation();
-  }, [pendingAttackAnimation, completeAttackAnimation, playSoundEffect]);
+
+    // The animation owns its cycle: only after the strike fully resolves on
+    // the board do we hand off to the VS screen. `pendingCombat` is the
+    // discriminator — it is staged only for poker captures (instant kills
+    // resolve on the board and leave it null), so a resolved-here capture
+    // never emits the combat handoff.
+    if (pendingCombat) {
+      onCombatTriggered?.(pendingCombat.attacker.id, pendingCombat.defender.id);
+    }
+  }, [pendingAttackAnimation, pendingCombat, completeAttackAnimation, playSoundEffect, onCombatTriggered]);
 
   useEffect(() => {
     if (!lastInstantKill) return undefined;
@@ -265,20 +275,9 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
       // Read fresh slice state (NOT React-subscribed) for the gating
       // decisions below. React subscriptions lag the zustand slice by
       // one render frame, so a click handler firing during that window
-      // sees stale `selectedPiece` / `validMoves` / `pendingAttackAnimation`
-      // and would happily emit a phantom envelope based on values the
-      // slice has already moved past. The post-strike + double-click
-      // freeze cascades both traced back to this race.
+      // sees stale `selectedPiece` / `validMoves` and would emit a
+      // phantom envelope based on values the slice has already moved past.
       const freshSlice = useUnifiedCombatStore.getState();
-
-      // Animation guard: while the previous attack's animation is still
-      // running, the slice's movePiece silently no-ops (chessCombatSlice
-      // line 673-676). Reading from the slice (not React) catches the
-      // case where the animation just started but React hasn't propagated
-      // the flag yet.
-      if (freshSlice.pendingAttackAnimation) {
-        return;
-      }
 
       // Stale-React-state guard: confirm that the slice agrees the
       // selected piece is still at the position React thinks it is. If
@@ -340,9 +339,7 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
       // was applied successfully AND when it silently rejected (no
       // selected piece, position not in validMoves, ambient state
       // mismatch). Without this check we could emit a phantom envelope
-      // for a move the local store never executed — exactly the bug
-      // chain that produced the post-strike freeze before the
-      // pendingAttackAnimation guard above.
+      // for a move the local store never executed.
       const movedPiece = movingPiece ? getPieceAtFromStore(position) : null;
       if (!didMoveApply({ movingPiece, pieceAtDestination: movedPiece })) {
         return;

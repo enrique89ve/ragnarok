@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { CombatPhase } from '../../types/PokerCombatTypes';
-import { getPokerDecisionView, type PokerDecisionStateInput } from './pokerDecisionView';
+import {
+	derivePokerDecisionView,
+	getPokerDecisionView,
+	type PokerDecisionStateInput,
+} from './pokerDecisionView';
 
 function makeDecisionState(overrides: Partial<PokerDecisionStateInput> = {}): PokerDecisionStateInput {
 	return {
@@ -127,5 +131,50 @@ describe('getPokerDecisionView', () => {
 		expect(view.remainingSeconds).toBeNull();
 		expect(view.clockLabel).toBe('No clock');
 		expect(view.turnLabel).toBe('No clock');
+	});
+
+	it('runs the Spellcraft window clock from the same deadline contract as betting', () => {
+		const view = getPokerDecisionView({
+			combatState: makeDecisionState({
+				phase: CombatPhase.SPELL_PET,
+				turnId: 'combat-test:spell_pet:local-piece:0',
+				turnDeadlineAtMs: 61_000,
+			}),
+			connectionState: 'connected',
+			nowMs: 1_001,
+		});
+
+		expect(view.phaseLabel).toBe('Spellcraft');
+		expect(view.remainingSeconds).toBe(60);
+		expect(view.clockLabel).toBe('60s');
+		expect(view.status).toBe('local_decision');
+	});
+});
+
+describe('derivePokerDecisionView clock parking', () => {
+	it('parks the hourglass only when Spellcraft has no deadline yet', () => {
+		const parked = derivePokerDecisionView({
+			combatState: makeDecisionState({
+				phase: CombatPhase.SPELL_PET,
+				turnId: null,
+				turnDeadlineAtMs: null,
+				turnTimer: 60,
+			}),
+			nowMs: 10_000,
+		});
+		const live = derivePokerDecisionView({
+			combatState: makeDecisionState({
+				phase: CombatPhase.SPELL_PET,
+				turnId: 'combat-test:spell_pet:local-piece:0',
+				turnDeadlineAtMs: 61_000,
+			}),
+			nowMs: 1_001,
+		});
+
+		expect(parked.hasClock).toBe(false);
+		expect(parked.clockLabel).toBe('—');
+		expect(live.hasClock).toBe(true);
+		expect(live.remainingSeconds).toBe(60);
+		expect(live.timerTone).toBe('normal');
 	});
 });

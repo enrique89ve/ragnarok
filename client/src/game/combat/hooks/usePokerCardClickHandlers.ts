@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useGameStore } from '../../stores/gameStore';
-import { useUnifiedUIStore } from '../../stores/unifiedUIStore';
+import { showStatus } from '../feedback/combatFeedbackStore';
 import { ALL_NORSE_HEROES } from '../../data/norseHeroes';
 import { canCardAttack as canCardAttackCheck } from '../attackUtils';
 import { emitBattlecryTriggered } from '../../actions/gameActions';
@@ -199,14 +199,7 @@ export function usePokerCardClickHandlers({
 			}
 
 			if (!hasValidTargets) {
-				const { addAnnouncement } = useUnifiedUIStore.getState();
-				addAnnouncement({
-					type: 'warning',
-					title: 'No Valid Targets',
-					subtitle: `${card.card.name} requires a minion to target`,
-					iconName: 'swords',
-					duration: 2000
-				});
+				showStatus(`${card.card.name} requires a minion to target`, 'warning', 2000);
 				return;
 			}
 

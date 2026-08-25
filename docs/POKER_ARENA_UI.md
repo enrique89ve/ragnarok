@@ -16,7 +16,9 @@ The poker arena is a **fixed-ratio game board**, not a responsive document layou
 | Runtime scaler | `GameViewport.tsx` computes `scale = min(windowWidth / 1920, windowHeight / 1080)` |
 | Mobile target | Landscape. Portrait is not a poker layout target; do not reflow zones into a vertical board. |
 | Large screens | Preserve `16:9`; wrapper art fills letterbox/pillarbox space. Do not stretch the board. |
-| Ultra-large option | If the board feels too large on wall-sized displays, add a `maxScale`/presentation cap to `GameViewport`, not a second CSS layout. |
+| Ultra-large option | `POKER_VIEWPORT_SAFE_AREA.maxScale` (1.08) caps wall-sized displays. Wrapper art fills leftover letterbox/pillarbox/windowbox. No second CSS layout. |
+
+Presentation sizes locked in `GAME_VIEWPORT_PRESENTATION_CASES`: 844×390 landscape, 1366×768, 1920×1080, 2560×1440, 2560×1080 ultrawide, 3440×1440 ultrawide, 3840×2160.
 | Coordinate system | All gameplay positions are authored inside the 1920×1080 board. Use board tokens/areas, not `vw`/`vh`, for pieces. |
 
 **Grammar**:
@@ -99,12 +101,13 @@ Gameplay events write `gameLogStore` always (practice, campaign, P2P). Overlay i
 
 | Lane | Occupant | Rule |
 |---|---|---|
-| Cinema | `PhaseBanner`, `ActionAnnouncement` | Exclusive. Stack waits. |
-| Stack | `CombatFeedbackStack` chips | Max 3, horizontal above the flop. Reading dwell = enter 200ms + words + exit 160ms. |
-| Floater | `HeroBattlePopup`, `DamageIndicator` | On the actor, not the center. |
+| Cinema | `PhaseBanner`, winner hand-rank slam, Ragnarok/streak slam | Exclusive. Stack waits. One visual event occupies this pixel. |
+| Stack | `CombatFeedbackStack` chips | Max 3, horizontal above the flop. Spells, blocked attacks, status. Reading dwell = enter 200ms + words + exit 160ms. |
+| Floater | `HeroBattlePopup`, `DamageIndicator`, showdown HP hit | On the actor, not the center. |
+| Zone | hole/community/hero motion | Lives on the card or hero that changed. |
 | Log | `GameLog` dock | Persistent. If the flash is missed, the dock still has it. |
 
-`showStatus` / `NOTIFICATION` enqueue the stack, not Sonner. Sonner stays out of the poker canvas.
+Mapping: `client/src/game/combat/vfx/pokerEventFx.ts`. `showStatus` / `NOTIFICATION` enqueue the stack, not Sonner. Sonner stays out of the poker canvas. `ActionAnnouncement` is not a poker-lane occupant.
 
 ### VFX target contract
 

@@ -15,4 +15,13 @@ export {
 	type PokerMotionZone,
 } from '@/game/combat/vfx/pokerMotionContract';
 
+export {
+	cinemaHoldMs,
+	pokerEventFx,
+	shouldAnnounceHandRank,
+	POKER_EVENT_FX,
+	type PokerEventFxSpec,
+	type PokerFxLane,
+} from '@/game/combat/vfx/pokerEventFx';
+
 export { attackIntentsFromImpact } from './attackEffectAdapter';

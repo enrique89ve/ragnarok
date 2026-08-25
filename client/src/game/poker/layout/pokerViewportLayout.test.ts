@@ -70,6 +70,11 @@ describe('pokerViewportLayout', () => {
 		expect(canvasCss).toMatch(/\.opponent-hero-container \.hero-pocket-cards--opponent\s*\{[\s\S]*?transform-origin:\s*center top/);
 	});
 
+	it('keeps player pocket cards on the hero-pocket path with canvas-owned placement', () => {
+		expect(canvasCss).toMatch(/\.poker-hero-container \.hero-pocket-cards--player\s*\{[\s\S]*?top:\s*calc\([\s\S]*?var\(--poker-zone-playerHeroCards-y\)[\s\S]*?-\s*var\(--poker-zone-playerHero-y\)[\s\S]*?\)/);
+		expect(canvasCss).toMatch(/\.poker-hero-container \.hero-pocket-cards--player\s*\{[\s\S]*?transform-origin:\s*center bottom/);
+	});
+
 	it('raises the lower player hand by the requested 15 percent', () => {
 		expect(POKER_VIEWPORT_LAYOUT.zones.playerHand.height).toBe(192);
 		expect(POKER_VIEWPORT_LAYOUT_STYLE['--poker-player-hand-card-rise']).toBe('96px');

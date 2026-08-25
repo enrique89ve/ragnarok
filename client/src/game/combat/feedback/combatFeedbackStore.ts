@@ -37,6 +37,7 @@ interface CombatFeedbackState {
 
 let chipSeq = 0;
 const dismissTimers = new Map<string, GameEffectHandle>();
+const cinemaHoldTimers = new Map<string, GameEffectHandle>();
 let flushTimer: GameEffectHandle | null = null;
 
 function nextChipId(): string {
@@ -146,6 +147,8 @@ export const useCombatFeedbackStore = create<CombatFeedbackState>((set, get) => 
 		reset: () => {
 			dismissTimers.forEach((timer) => timer.cancel());
 			dismissTimers.clear();
+			cinemaHoldTimers.forEach((timer) => timer.cancel());
+			cinemaHoldTimers.clear();
 			if (flushTimer) {
 				flushTimer.cancel();
 				flushTimer = null;
@@ -186,4 +189,22 @@ export function showStatus(
 		tone: type,
 		holdMs: duration ?? overlayHoldMs(text),
 	});
+}
+
+/** Cinema occupancy for GSAP slams so the stack waits on the same pixel. */
+export function occupyCinema(holder: string, holdMs: number): void {
+	const store = useCombatFeedbackStore.getState();
+	store.holdCinema(holder);
+	cinemaHoldTimers.get(holder)?.cancel();
+	cinemaHoldTimers.set(holder, gameEffectCoordinator.schedule({
+		owner: 'feedback',
+		lane: 'cinema-hold',
+		key: holder,
+		priority: 'critical',
+		delayMs: Math.max(0, holdMs),
+		run: () => {
+			cinemaHoldTimers.delete(holder);
+			useCombatFeedbackStore.getState().releaseCinema(holder);
+		},
+	}));
 }

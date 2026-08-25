@@ -20,7 +20,7 @@
 }
 
 .frame-test-page__back {
-	color: #60a5fa;
+	color: var(--gold-300, #f5c542);
 	text-decoration: none;
 }
 
@@ -54,4 +54,35 @@
 
 .frame-test-page__poker > .card-frame {
 	flex: 0 0 100px;
+}
+
+.frame-test-page__pockets {
+	display: flex;
+	gap: 96px;
+	padding: 96px 24px 24px;
+	overflow: visible;
+}
+
+.frame-test-page__pocket-stage {
+	position: relative;
+	width: 176px;
+	height: 240px;
+	overflow: visible;
+}
+
+.frame-test-page__hero-stub {
+	position: absolute;
+	inset: 72px 8px 0;
+	z-index: 2;
+	display: flex;
+	align-items: flex-end;
+	justify-content: center;
+	padding-bottom: 10px;
+	background: linear-gradient(180deg, #111827, #05070d);
+	border: 1px solid var(--gold-500, #b7791f);
+	border-radius: 4px;
+	color: var(--gold-300, #f5c542);
+	font-size: 0.75rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
 }

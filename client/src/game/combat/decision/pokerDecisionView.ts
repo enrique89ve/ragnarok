@@ -1,7 +1,10 @@
 import { CombatPhase, type PokerCombatState } from '../../types/PokerCombatTypes';
 import type { P2PConnectionState } from '../../stores/peerStore';
 import type { ActionPermissions } from '../rules/pokerActionRules';
-import { getPokerTurnRemainingSeconds } from '../../../../../shared/p2p-wire/pokerTurnClock';
+import {
+	getPokerTurnRemainingSeconds,
+	isTimedPokerDecisionPhase,
+} from '../../../../../shared/p2p-wire/pokerTurnClock';
 
 export type PokerDecisionStatus =
 	| 'inactive'
@@ -86,6 +89,7 @@ export interface PokerDecisionView {
 	readonly durationSeconds: number;
 	readonly timerProgress: number;
 	readonly timerTone: PokerTimerTone;
+	readonly hasClock: boolean;
 	readonly displayTurn: 'player' | 'opponent' | undefined;
 	readonly cssTurnClass: 'player-turn' | 'opponent-turn';
 	readonly statusLabel: string;
@@ -95,6 +99,8 @@ export interface PokerDecisionView {
 }
 
 const PHASE_LABELS: Partial<Record<CombatPhase, string>> = {
+	[CombatPhase.MULLIGAN]: 'Mulligan',
+	[CombatPhase.SPELL_PET]: 'Spellcraft',
 	[CombatPhase.PRE_FLOP]: 'First Blood',
 	[CombatPhase.FAITH]: 'Faith',
 	[CombatPhase.FORESIGHT]: 'Foresight',
@@ -133,7 +139,8 @@ export function getPokerDecisionView(input: {
 	const phaseLabel = formatPhaseLabel(combatState.phase);
 	const turnLabel = formatTurnLabel(combatState.turnId);
 	const activeSide = getActiveSide(combatState);
-	const hasClock = hasActiveDecisionClock(combatState);
+	const timedPhase = isTimedPokerDecisionPhase(combatState.phase);
+	const hasClock = timedPhase && hasActiveDecisionClock(combatState);
 	const remainingSeconds = hasClock ? getRemainingSeconds(combatState, nowMs) : null;
 	const clockLabel = remainingSeconds === null ? 'No clock' : `${remainingSeconds}s`;
 	const terminal = isTerminalDecisionState(combatState);
@@ -257,13 +264,15 @@ export function derivePokerDecisionView(input: {
 		connectionState: isP2PCombat ? connectionState : 'connected',
 		nowMs,
 	});
-	const remainingSeconds = protocolView.remainingSeconds ?? 0;
 	const durationSeconds = Math.max(1, Math.ceil(combatState.maxTurnTime || 1));
-	const timerProgress = clamp(remainingSeconds / durationSeconds, 0, 1);
-	const timerTone = getTimerTone(remainingSeconds);
+	const protocolSeconds = protocolView.remainingSeconds;
+	const hasClock = protocolSeconds !== null;
+	const remainingSeconds = hasClock ? protocolSeconds : durationSeconds;
+	const timerProgress = hasClock ? clamp(remainingSeconds / durationSeconds, 0, 1) : 1;
+	const timerTone = hasClock ? getTimerTone(remainingSeconds) : 'normal';
 	const phaseLabel = protocolView.phaseLabel;
 	const turnLabel = protocolView.turnLabel;
-	const clockLabel = protocolView.clockLabel;
+	const clockLabel = hasClock ? protocolView.clockLabel : '—';
 	const activeSide = protocolView.decisionSide;
 
 	if (protocolView.status === 'connection_paused') {
@@ -277,6 +286,7 @@ export function derivePokerDecisionView(input: {
 				durationSeconds,
 				timerProgress,
 				timerTone,
+				hasClock,
 			}),
 			status: 'reconnecting',
 			inputPaused: true,
@@ -298,6 +308,7 @@ export function derivePokerDecisionView(input: {
 				durationSeconds,
 				timerProgress,
 				timerTone,
+				hasClock,
 			}),
 			status: 'expired',
 			statusLabel: 'Time Expired',
@@ -318,6 +329,7 @@ export function derivePokerDecisionView(input: {
 				durationSeconds,
 				timerProgress,
 				timerTone,
+				hasClock,
 			}),
 			status: 'showdown',
 			statusLabel: 'Showdown',
@@ -338,6 +350,7 @@ export function derivePokerDecisionView(input: {
 				durationSeconds,
 				timerProgress,
 				timerTone,
+				hasClock,
 			}),
 			status: 'syncing',
 			statusLabel: 'Syncing',
@@ -360,6 +373,7 @@ export function derivePokerDecisionView(input: {
 				durationSeconds,
 				timerProgress,
 				timerTone,
+				hasClock,
 			}),
 			status: 'local_decision',
 			localCanAct,
@@ -382,6 +396,7 @@ export function derivePokerDecisionView(input: {
 			durationSeconds,
 			timerProgress,
 			timerTone,
+			hasClock,
 		}),
 		status: 'remote_decision',
 		waitingForPeer: true,
@@ -440,8 +455,9 @@ function createInactiveView(): PokerDecisionView {
 		clockLabel: '0s',
 		remainingSeconds: 0,
 		durationSeconds: 1,
-		timerProgress: 0,
-		timerTone: 'expired',
+		timerProgress: 1,
+		timerTone: 'normal',
+		hasClock: false,
 		displayTurn: undefined,
 		cssTurnClass: 'opponent-turn',
 		statusLabel: 'Inactive',
@@ -460,6 +476,7 @@ function createBaseView(input: {
 	readonly durationSeconds: number;
 	readonly timerProgress: number;
 	readonly timerTone: PokerTimerTone;
+	readonly hasClock: boolean;
 }): PokerDecisionView {
 	return {
 		status: 'syncing',
@@ -474,6 +491,7 @@ function createBaseView(input: {
 		durationSeconds: input.durationSeconds,
 		timerProgress: input.timerProgress,
 		timerTone: input.timerTone,
+		hasClock: input.hasClock,
 		displayTurn: undefined,
 		cssTurnClass: input.activeSide === 'local' ? 'player-turn' : 'opponent-turn',
 		statusLabel: 'Syncing',

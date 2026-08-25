@@ -44,6 +44,13 @@ describe('landscape-first mobile experience contract', () => {
 		expect(deckCss).toMatch(/\.deck-builder \.db-main-container\s*\{\s*display:\s*none;/s);
 	});
 
+	it('keeps chess atmosphere inside the match shell, not position:fixed', () => {
+		const chessCss = source('client/src/game/components/chess/ChessBoardEnhanced.css');
+		expect(chessCss).toMatch(/\.ragnarok-chess-game:not\(\[class\*="realm-"\]\)::before\s*\{[^}]*position:\s*absolute;/s);
+		expect(chessCss).toMatch(/\.ragnarok-chess-game:not\(\[class\*="realm-"\]\)::after\s*\{[^}]*position:\s*absolute;/s);
+		expect(chessCss).not.toMatch(/\.ragnarok-chess-game:not\(\[class\*="realm-"\]\)::before\s*\{[^}]*position:\s*fixed;/s);
+	});
+
 	it('uses a side-by-side Atlas workspace on short landscape viewports', () => {
 		const map = source('client/src/game/components/map/MapPage.tsx');
 		const panel = source('client/src/game/components/map/MapLaunchPanel.tsx');

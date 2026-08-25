@@ -553,11 +553,6 @@ export const createChessCombatSlice: StateCreator<
     const { selectedPiece, validMoves, attackMoves } = state.boardState;
 
     if (!selectedPiece) return null;
-    
-    if (state.pendingAttackAnimation) {
-      debug.chess('[Chess] Move blocked - attack animation in progress');
-      return null;
-    }
 
     const isValidMove = validMoves.some(m => m.row === to.row && m.col === to.col);
     const isAttackMove = attackMoves.some(m => m.row === to.row && m.col === to.col);

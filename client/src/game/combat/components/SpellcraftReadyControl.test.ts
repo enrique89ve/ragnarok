@@ -15,7 +15,7 @@ describe('SpellcraftReadyControl', () => {
 		expect(html).toContain('data-zone="betting-panel"');
 		expect(html).toContain('class="spellcraft-ready-panel"');
 		expect(html).not.toContain('class="betting-panel');
-		expect(html).toContain('Play any affordable cards, then finish Spellcraft.');
+		expect(html).toContain('Play any affordable cards before the clock ends, then Ready.');
 		expect(html).not.toContain('disabled=""');
 	});
 

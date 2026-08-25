@@ -85,6 +85,13 @@ export function submitSpellcraftReadyIntent(input: {
 	return 'local_applied';
 }
 
+export function shouldTickSpellcraftClock(input: {
+	readonly phase: CombatPhase | null | undefined;
+	readonly isPlayerReady: boolean;
+}): boolean {
+	return input.phase === CombatPhase.SPELL_PET && !input.isPlayerReady;
+}
+
 export function getSpellcraftReadyCopy(view: SpellcraftDecisionView): {
 	readonly label: string;
 	readonly detail: string;
@@ -94,7 +101,7 @@ export function getSpellcraftReadyCopy(view: SpellcraftDecisionView): {
 			return view.canSubmitReady
 				? {
 					label: 'Ready',
-					detail: 'Play any affordable cards, then finish Spellcraft.',
+					detail: 'Play any affordable cards before the clock ends, then Ready.',
 				}
 				: {
 					label: 'Ready sync pending',

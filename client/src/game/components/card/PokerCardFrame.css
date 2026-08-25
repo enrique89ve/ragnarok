@@ -4,11 +4,12 @@
 
 .poker-card-frame {
 	box-sizing: border-box;
+	--cf-radius: 8px;
 }
 
 .poker-card-frame--face-up {
-	--collection-frame-color: #d9a844;
-	--collection-frame-glow: rgba(217, 168, 68, 0.28);
+	--collection-frame-color: var(--gold-500, #b7791f);
+	--collection-frame-glow: color-mix(in srgb, var(--gold-300) 28%, transparent);
 }
 
 .poker-card-frame--face-down {

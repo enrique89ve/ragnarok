@@ -1152,7 +1152,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
           const topH = pct * 30;
           const botH = (1 - pct) * 30;
           return (
-            <div className={`hourglass-timer ${outerDecisionView.timerTone === 'low' ? 'low-time' : ''} ${outerDecisionView.timerTone === 'critical' || outerDecisionView.timerTone === 'expired' ? 'critical' : ''}`}>
+            <div className={`hourglass-timer ${outerDecisionView.hasClock && outerDecisionView.timerTone === 'low' ? 'low-time' : ''} ${outerDecisionView.hasClock && (outerDecisionView.timerTone === 'critical' || outerDecisionView.timerTone === 'expired') ? 'critical' : ''} ${outerDecisionView.hasClock ? '' : 'hourglass-timer--parked'}`}>
               <svg className="hourglass-svg" viewBox="0 0 60 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <defs>
                   <linearGradient id="hg-gold" x1="0" y1="0" x2="1" y2="1">
@@ -1271,7 +1271,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
                 />
 
                 {/* Falling sand stream — thin line through the neck */}
-                {t > 0 && t < maxT && (
+                {outerDecisionView.hasClock && t > 0 && t < maxT && (
                   <g className="hg-stream-group">
                     <line x1="30" y1="36" x2="30" y2="48" stroke="#f5d060" strokeWidth="1.2" className="hg-stream" />
                     {/* Sand particles falling */}
@@ -1301,9 +1301,9 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
                   className="hg-countdown-text"
                   x="30"
                   y="96"
-                  aria-label={`${t} seconds remaining`}
+                  aria-label={outerDecisionView.hasClock ? `${t} seconds remaining` : 'No betting clock'}
                 >
-                  {t}
+                  {outerDecisionView.hasClock ? t : '—'}
                 </text>
               </svg>
             </div>

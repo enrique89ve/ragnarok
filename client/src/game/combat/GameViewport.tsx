@@ -24,13 +24,43 @@ export type GameViewportFitInput = {
   readonly maxScale?: number;
 };
 
+export type GameViewportBars = 'flush' | 'letterbox' | 'pillarbox' | 'windowbox';
+
 export type GameViewportFit = {
   readonly scale: number;
   readonly offsetX: number;
   readonly offsetY: number;
   readonly effectiveSafeY: number;
   readonly compactLandscape: boolean;
+  readonly bars: GameViewportBars;
 };
+
+/** DESIGN.md QA sizes. One 1920x1080 board; never a second layout path. */
+export const GAME_VIEWPORT_PRESENTATION_CASES = [
+  { id: 'mobile-landscape', width: 844, height: 390 },
+  { id: 'laptop-1366', width: 1366, height: 768 },
+  { id: 'fhd-1920', width: 1920, height: 1080 },
+  { id: 'qhd-2560', width: 2560, height: 1440 },
+  { id: 'ultrawide-2560x1080', width: 2560, height: 1080 },
+  { id: 'ultrawide-3440', width: 3440, height: 1440 },
+  { id: 'uhd-3840', width: 3840, height: 2160 },
+] as const;
+
+export function classifyGameViewportBars(input: {
+  readonly offsetX: number;
+  readonly offsetY: number;
+  readonly safeX: number;
+  readonly effectiveSafeY: number;
+}): GameViewportBars {
+  const extraX = input.offsetX - input.safeX;
+  const extraY = input.offsetY - input.effectiveSafeY;
+  const hasX = extraX >= 8;
+  const hasY = extraY >= 8;
+  if (hasX && hasY) return 'windowbox';
+  if (hasX) return 'pillarbox';
+  if (hasY) return 'letterbox';
+  return 'flush';
+}
 
 const REF_W = 1920;
 const REF_H = 1080;
@@ -55,13 +85,21 @@ export function computeGameViewportFit(input: GameViewportFitInput): GameViewpor
     availableHeight / input.referenceHeight,
   );
   const scale = input.maxScale === undefined ? rawScale : Math.min(rawScale, input.maxScale);
+  const offsetX = input.safeX + (availableWidth - input.referenceWidth * scale) / 2;
+  const offsetY = effectiveSafeY + (availableHeight - input.referenceHeight * scale) / 2;
 
   return {
     scale,
-    offsetX: input.safeX + (availableWidth - input.referenceWidth * scale) / 2,
-    offsetY: effectiveSafeY + (availableHeight - input.referenceHeight * scale) / 2,
+    offsetX,
+    offsetY,
     effectiveSafeY,
     compactLandscape,
+    bars: classifyGameViewportBars({
+      offsetX,
+      offsetY,
+      safeX: input.safeX,
+      effectiveSafeY,
+    }),
   };
 }
 
@@ -79,6 +117,7 @@ function computeWindowFit(
       offsetY: 0,
       effectiveSafeY: safeY,
       compactLandscape: false,
+      bars: 'flush',
     };
   }
 
@@ -165,6 +204,7 @@ export const GameViewport: React.FC<GameViewportProps> = ({
     <div
       className={`game-viewport-wrapper ${shakeClasses}`.trim()}
       data-compact-landscape={fit.compactLandscape ? 'true' : 'false'}
+      data-viewport-bars={fit.bars}
       {...arenaVfxLayerProps(ARENA_VFX_LAYERS.viewportWrapper)}
     >
       <div className={`game-viewport ${innerClasses}`.trim()} style={style} {...arenaVfxLayerProps(ARENA_VFX_LAYERS.viewport)}>

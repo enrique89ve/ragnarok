@@ -150,7 +150,6 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({
 									winningCards={showdownCelebration?.winningCards}
 									isShowdown={isShowdown}
 									activeTurn={isMyTurnToAct}
-									embedded
 								/>
 							)}
 						/>
