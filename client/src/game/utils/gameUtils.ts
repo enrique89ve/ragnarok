@@ -3667,7 +3667,11 @@ export function applyDamage(
  * @deprecated Use manual attack system (attackStore.ts + AttackSystem.tsx) instead.
  * This auto-attack function is kept for backwards compatibility only.
  */
-export function autoAttackWithAllCards(state: GameState, mode: 'minion' | 'hero' = 'minion'): GameState {
+export function autoAttackWithAllCards(
+  state: GameState,
+  mode: 'minion' | 'hero' = 'minion',
+  rng: () => number = cryptoRng,
+): GameState {
   try {
     if (state.currentTurn !== 'player') {
       return state;
@@ -3695,18 +3699,18 @@ export function autoAttackWithAllCards(state: GameState, mode: 'minion' | 'hero'
         const target = tauntMinions.reduce((low, cur) =>
           (cur.currentHealth || 999) < (low.currentHealth || 999) ? cur : low
         );
-        newState = processAttack(newState, card.instanceId, target.instanceId);
+			newState = processAttack(newState, card.instanceId, target.instanceId, rng);
       } else if (mode === 'hero' || opponentField.length === 0) {
         // Hero mode or no minions — go face
         if (isValidRushTarget(attacker, 'hero')) {
-          newState = processAttack(newState, card.instanceId);
+			newState = processAttack(newState, card.instanceId, undefined, rng);
         }
       } else {
         // Minion mode — attack lowest HP enemy minion
         const target = opponentField.reduce((low, cur) =>
           (cur.currentHealth || 999) < (low.currentHealth || 999) ? cur : low
         );
-        newState = processAttack(newState, card.instanceId, target.instanceId);
+			newState = processAttack(newState, card.instanceId, target.instanceId, rng);
       }
     }
 

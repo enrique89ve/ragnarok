@@ -15,6 +15,35 @@ import { addKeyword, clearKeywords, hasKeyword } from './cards/keywordUtils';
 import { MAX_BATTLEFIELD_SIZE, MAX_HAND_SIZE } from '../constants/gameConstants';
 import { cryptoRng, cryptoIdGen } from './seededRng';
 
+type NorseHeroPowerRandomness = Readonly<{
+  rng: () => number;
+  idGen: () => string;
+}>;
+
+let activeNorseHeroPowerRandomness: NorseHeroPowerRandomness | null = null;
+
+/** Bind the match command RNG while a Norse action is resolved. */
+export function withNorseHeroPowerRandomness<T>(
+  randomness: NorseHeroPowerRandomness,
+  run: () => T,
+): T {
+  const previous = activeNorseHeroPowerRandomness;
+  activeNorseHeroPowerRandomness = randomness;
+  try {
+    return run();
+  } finally {
+    activeNorseHeroPowerRandomness = previous;
+  }
+}
+
+function norseHeroPowerRng(): number {
+  return (activeNorseHeroPowerRandomness?.rng ?? cryptoRng)();
+}
+
+function norseHeroPowerIdGen(): string {
+  return (activeNorseHeroPowerRandomness?.idGen ?? cryptoIdGen)();
+}
+
 /**
  * Helper to safely get attack from card data
  */
@@ -304,7 +333,7 @@ function executeDamageRandom(
   const opponent = state.players[opponentType];
 
   if (opponent.battlefield.length > 0) {
-    const randomIndex = Math.floor(cryptoRng() * opponent.battlefield.length);
+    const randomIndex = Math.floor(norseHeroPowerRng() * opponent.battlefield.length);
     const target = opponent.battlefield[randomIndex];
     target.currentHealth = (target.currentHealth || getCardHealth(target.card)) - (power.value || 0);
 
@@ -327,8 +356,8 @@ function executeRollTheDice(
   const opponent = state.players[opponentType];
 
   // Roll the dice
-  const roll1 = Math.floor(cryptoRng() * 6) + 1;
-  const roll2 = rollTwice ? Math.floor(cryptoRng() * 6) + 1 : 0;
+  const roll1 = Math.floor(norseHeroPowerRng() * 6) + 1;
+  const roll2 = rollTwice ? Math.floor(norseHeroPowerRng() * 6) + 1 : 0;
   const damage = rollTwice ? Math.max(roll1, roll2) : roll1;
 
   debug.log(`[Gefjon] Roll: ${roll1}${rollTwice ? ` / ${roll2} → keep ${damage}` : ` → ${damage} damage`}`);
@@ -340,7 +369,7 @@ function executeRollTheDice(
 
   if (targets.length === 0) return state;
 
-  const chosen = targets[Math.floor(cryptoRng() * targets.length)];
+  const chosen = targets[Math.floor(norseHeroPowerRng() * targets.length)];
 
   if (chosen.type === 'hero') {
     opponent.heroHealth = (opponent.heroHealth ?? opponent.health) - damage;
@@ -391,7 +420,7 @@ function executeGenerateFateStrand(
   } as CardData;
 
   const instance: CardInstance = {
-    instanceId: `fate_strand_${cryptoIdGen()}_${cryptoRng().toString(36).slice(2, 9)}`,
+    instanceId: `fate_strand_${norseHeroPowerIdGen()}_${norseHeroPowerRng().toString(36).slice(2, 9)}`,
     card: fateStrand,
     currentHealth: 0,
     currentAttack: 0,
@@ -436,7 +465,7 @@ function executeEscalatingDamage(
     }
   } else if (opponent.battlefield.length > 0) {
     // Fallback: random enemy minion
-    const idx = Math.floor(cryptoRng() * opponent.battlefield.length);
+    const idx = Math.floor(norseHeroPowerRng() * opponent.battlefield.length);
     const target = opponent.battlefield[idx];
     target.currentHealth = (target.currentHealth || getCardHealth(target.card)) - totalDamage;
     opponent.battlefield = opponent.battlefield.filter(m => (m.currentHealth || 0) > 0);
@@ -502,7 +531,7 @@ function executeBuffSingle(
   if (!targetId) {
     // Random friendly target
     if (player.battlefield.length > 0) {
-      const randomIndex = Math.floor(cryptoRng() * player.battlefield.length);
+      const randomIndex = Math.floor(norseHeroPowerRng() * player.battlefield.length);
       const target = player.battlefield[randomIndex];
       target.currentAttack = (target.currentAttack || getCardAttack(target.card)) + (power.value || 0);
       target.currentHealth = (target.currentHealth || getCardHealth(target.card)) + (power.value || 0);
@@ -586,7 +615,7 @@ function executeReveal(
   if (opponent.hand.length > 0) {
     const revealed: string[] = [];
     for (let i = 0; i < Math.min(revealCount, opponent.hand.length); i++) {
-      const randomIndex = Math.floor(cryptoRng() * opponent.hand.length);
+      const randomIndex = Math.floor(norseHeroPowerRng() * opponent.hand.length);
       const card = opponent.hand[randomIndex];
       revealed.push(card.card.name);
       (card as any).isRevealed = true;
@@ -606,7 +635,7 @@ function executeSummon(
   if (!power.summonData || player.battlefield.length >= MAX_BATTLEFIELD_SIZE) return state;
 
   const token: CardInstance = {
-    instanceId: `${playerType}_hero_summon_${cryptoIdGen()}`,
+    instanceId: `${playerType}_hero_summon_${norseHeroPowerIdGen()}`,
     card: {
       id: 99998,
       name: power.summonData.name,
@@ -696,7 +725,7 @@ function executeDraw(
       const drawnCardData = player.deck.shift();
       if (drawnCardData) {
         const cardInstance: CardInstance = {
-          instanceId: `${playerType}_draw_${cryptoIdGen()}`,
+        instanceId: `${playerType}_draw_${norseHeroPowerIdGen()}`,
           card: drawnCardData,
           currentHealth: getCardHealth(drawnCardData),
           currentAttack: getCardAttack(drawnCardData),
@@ -733,9 +762,9 @@ function executeCopy(
   const copyCount = power.value || 1;
   for (let i = 0; i < copyCount; i++) {
     if (opponent.hand.length > 0 && player.hand.length < MAX_HAND_SIZE) {
-      const randomIndex = Math.floor(cryptoRng() * opponent.hand.length);
+      const randomIndex = Math.floor(norseHeroPowerRng() * opponent.hand.length);
       const copiedCard = { ...opponent.hand[randomIndex] };
-      copiedCard.instanceId = `${playerType}_copy_${cryptoIdGen()}`;
+      copiedCard.instanceId = `${playerType}_copy_${norseHeroPowerIdGen()}`;
       player.hand.push(copiedCard);
     }
   }
@@ -877,7 +906,7 @@ function executeSummonRandom(
     return state;
   }
 
-  const randomIndex = Math.floor(cryptoRng() * power.summonPool.length);
+  const randomIndex = Math.floor(norseHeroPowerRng() * power.summonPool.length);
   const summonName = power.summonPool[randomIndex];
 
   const bonusAttack = power.bonusStats?.attack || 0;
@@ -887,7 +916,7 @@ function executeSummonRandom(
   const baseHealth = 1;
 
   const token: CardInstance = {
-    instanceId: `${playerType}_random_summon_${cryptoIdGen()}`,
+    instanceId: `${playerType}_random_summon_${norseHeroPowerIdGen()}`,
     card: {
       id: 99997,
       name: summonName,
@@ -1012,7 +1041,7 @@ function executeSelfDamageAndSummon(
 
   if (power.summonData && player.battlefield.length < MAX_BATTLEFIELD_SIZE) {
     const token: CardInstance = {
-      instanceId: `${playerType}_selfdmg_summon_${cryptoIdGen()}`,
+    instanceId: `${playerType}_selfdmg_summon_${norseHeroPowerIdGen()}`,
       card: {
         id: 99996,
         name: power.summonData.name,
@@ -1053,7 +1082,7 @@ function executeSacrificeSummon(
 
   if (!targetId) {
     if (player.battlefield.length === 0) return state;
-    const randomIndex = Math.floor(cryptoRng() * player.battlefield.length);
+    const randomIndex = Math.floor(norseHeroPowerRng() * player.battlefield.length);
     const sacrificed = player.battlefield[randomIndex];
     state = destroyCard(state, sacrificed.instanceId, playerType);
   } else {
@@ -1065,7 +1094,7 @@ function executeSacrificeSummon(
 
   if (power.summonData && player.battlefield.length < MAX_BATTLEFIELD_SIZE) {
     const token: CardInstance = {
-      instanceId: `${playerType}_sacrifice_summon_${cryptoIdGen()}`,
+    instanceId: `${playerType}_sacrifice_summon_${norseHeroPowerIdGen()}`,
       card: {
         id: 99995,
         name: power.summonData.name,
@@ -1171,11 +1200,11 @@ function executeGenerateEnemyClassCard(
   const enemyClass = opponent.heroClass || (opponent as any).class || 'neutral';
   
   const generatedCard: CardInstance = {
-    instanceId: `${playerType}_generated_${cryptoIdGen()}`,
+    instanceId: `${playerType}_generated_${norseHeroPowerIdGen()}`,
     card: {
       id: 99990,
       name: `${enemyClass} Card`,
-      manaCost: Math.floor(cryptoRng() * 5) + 1,
+      manaCost: Math.floor(norseHeroPowerRng() * 5) + 1,
       description: `Generated from ${enemyClass} class`,
       rarity: 'common',
       type: 'spell',
@@ -1242,7 +1271,7 @@ function executeEquipRandomWeapon(
   const player = state.players[playerType];
 
   const weaponPool = (power as any).weaponPool || power.summonPool || ['Random Axe', 'Random Sword', 'Random Mace'];
-  const randomIndex = Math.floor(cryptoRng() * weaponPool.length);
+  const randomIndex = Math.floor(norseHeroPowerRng() * weaponPool.length);
   const weaponName = weaponPool[randomIndex];
 
   const baseAttack = power.weaponData?.attack || 2;
@@ -1289,17 +1318,17 @@ function executeDiscover(
   
   const choices: string[] = [];
   for (let i = 0; i < 3 && i < discoverPool.length; i++) {
-    const randomIndex = Math.floor(cryptoRng() * discoverPool.length);
+  const randomIndex = Math.floor(norseHeroPowerRng() * discoverPool.length);
     choices.push(discoverPool[randomIndex]);
   }
 
-  const selectedCard = choices[Math.floor(cryptoRng() * choices.length)];
+  const selectedCard = choices[Math.floor(norseHeroPowerRng() * choices.length)];
 
   const costReduction = power.costReduction || 0;
-  const baseCost = Math.max(0, Math.floor(cryptoRng() * 5) + 1 - costReduction);
+  const baseCost = Math.max(0, Math.floor(norseHeroPowerRng() * 5) + 1 - costReduction);
 
   const discoveredCard: CardInstance = {
-    instanceId: `${playerType}_discover_${cryptoIdGen()}`,
+    instanceId: `${playerType}_discover_${norseHeroPowerIdGen()}`,
     card: {
       id: 99993,
       name: selectedCard,
@@ -1473,7 +1502,7 @@ function executeBounce(
 
     const returnedCard: CardInstance = {
       ...targetMinion,
-      instanceId: `${targetOwner === player ? playerType : opponentType}_bounced_${cryptoIdGen()}`,
+      instanceId: `${targetOwner === player ? playerType : opponentType}_bounced_${norseHeroPowerIdGen()}`,
       currentHealth: getCardHealth(targetMinion.card),
       currentAttack: getCardAttack(targetMinion.card),
       isPlayed: false,
@@ -1520,7 +1549,7 @@ function executeBounceDamage(
 
       const returnedCard: CardInstance = {
         ...targetMinion,
-        instanceId: `bounced_${cryptoIdGen()}`,
+        instanceId: `bounced_${norseHeroPowerIdGen()}`,
         currentHealth: getCardHealth(targetMinion.card),
         currentAttack: getCardAttack(targetMinion.card),
         isPlayed: false,
@@ -1578,7 +1607,7 @@ function executeBounceAndDamageHero(
 
     const returnedCard: CardInstance = {
       ...targetMinion,
-      instanceId: `bounced_${cryptoIdGen()}`,
+      instanceId: `bounced_${norseHeroPowerIdGen()}`,
       currentHealth: getCardHealth(targetMinion.card),
       currentAttack: getCardAttack(targetMinion.card),
       isPlayed: false,
@@ -1690,7 +1719,7 @@ function executeDrawAndDamage(
       const drawnCardData = player.deck.shift();
       if (drawnCardData) {
         const cardInstance: CardInstance = {
-          instanceId: `${playerType}_draw_${cryptoIdGen()}`,
+        instanceId: `${playerType}_draw_${norseHeroPowerIdGen()}`,
           card: drawnCardData,
           currentHealth: getCardHealth(drawnCardData),
           currentAttack: getCardAttack(drawnCardData),
@@ -1751,10 +1780,10 @@ export function applyWeaponUpgrade(
   const player = newState.players[playerType];
 
   // Check mana
-  if (player.mana.current < 5) return state;
+  if (player.mana.current < hero.weaponUpgrade.manaCost) return state;
 
   // Deduct mana
-  player.mana.current -= 5;
+  player.mana.current -= hero.weaponUpgrade.manaCost;
 
 
   // Execute immediate effect (simplified - would need full effect system)
@@ -1912,16 +1941,16 @@ export function executeHeroPassive(
       break;
     case 'reveal':
       if (opponent.hand.length > 0) {
-        const randomIndex = Math.floor(cryptoRng() * opponent.hand.length);
+        const randomIndex = Math.floor(norseHeroPowerRng() * opponent.hand.length);
         (opponent.hand[randomIndex] as any).isRevealed = true;
       }
       break;
     case 'copy':
       if (opponent.deck.length > 0 && owner.hand.length < MAX_HAND_SIZE) {
-        const randomIndex = Math.floor(cryptoRng() * opponent.deck.length);
+        const randomIndex = Math.floor(norseHeroPowerRng() * opponent.deck.length);
         const copiedCardData = opponent.deck[randomIndex];
         const copiedCardInstance: CardInstance = {
-          instanceId: `${ownerType}_passive_copy_${cryptoIdGen()}`,
+          instanceId: `${ownerType}_passive_copy_${norseHeroPowerIdGen()}`,
           card: { ...copiedCardData },
           currentHealth: getCardHealth(copiedCardData),
           currentAttack: getCardAttack(copiedCardData),

@@ -9,6 +9,7 @@
 
 import { createContext } from 'react';
 import type { GameCommand } from '../core/commands';
+import type { FrontlineAttackMode } from '../core/commands';
 import type { CombatAction } from '../types/PokerCombatTypes';
 import type { GameState } from '../types';
 import type { Hash256 } from '@shared/p2p-wire/integrity';
@@ -20,6 +21,9 @@ export interface P2PActions {
 	attackWithCard: (attackerId: string, defenderId?: string) => void;
 	endTurn: () => void;
 	performHeroPower: (targetId?: string) => void;
+	frontlineAttack: (mode: FrontlineAttackMode) => void;
+	performNorseHeroPower: (norseHeroId: string, targetId?: string, targetType?: 'minion' | 'hero') => void;
+	weaponUpgrade: (norseHeroId: string) => void;
 	dispatchGameCommand: (command: GameCommand) => void;
 	sendPokerAction: (input: {
 		playerId: string;

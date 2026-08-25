@@ -249,6 +249,9 @@ export function useWireSync() {
 	const attackWithCard = useGameStore(state => state.attackWithCard);
 	const endTurn = useGameStore(state => state.endTurn);
 	const performHeroPower = useGameStore(state => state.performHeroPower);
+	const frontlineAttack = useGameStore(state => state.frontlineAttack);
+	const performNorseHeroPower = useGameStore(state => state.performNorseHeroPower);
+	const weaponUpgrade = useGameStore(state => state.weaponUpgrade);
 	const toggleMulliganCard = useGameStore(state => state.toggleMulliganCard);
 	const confirmMulligan = useGameStore(state => state.confirmMulligan);
 	const skipMulligan = useGameStore(state => state.skipMulligan);
@@ -1231,12 +1234,16 @@ export function useWireSync() {
 						}
 
 						const gs = useGameStore.getState().gameState;
+						const pokerStateForCommand = getP2PPokerCombatAdapter().getPokerState();
+						const remoteOwnsPokerTurn = pokerStateForCommand !== null
+							&& pokerStateForCommand.turnId !== null
+							&& pokerStateForCommand.activePlayerId === pokerStateForCommand.opponent.playerId;
 						const isMulliganCommand = wireCommand.type === GAME_COMMAND_TYPES.toggleMulliganCard
 							|| wireCommand.type === GAME_COMMAND_TYPES.confirmMulligan
 							|| wireCommand.type === GAME_COMMAND_TYPES.skipMulligan;
 						const isActiveMulligan = gs.gamePhase === 'mulligan' && gs.mulligan?.active === true;
 						if (gs.gamePhase === 'game_over'
-							|| (!isMulliganCommand && gs.currentTurn !== 'opponent')
+							|| (!isMulliganCommand && !remoteOwnsPokerTurn && gs.currentTurn !== 'opponent')
 							|| (isMulliganCommand && !isActiveMulligan)) {
 							reject('not_opponent_turn_or_game_over');
 							break;
@@ -1343,7 +1350,7 @@ export function useWireSync() {
 									onUnapplied: (reason) => reject(reason),
 								});
 								break;
-							case GAME_COMMAND_TYPES.useHeroPower:
+						case GAME_COMMAND_TYPES.useHeroPower:
 								if (wireCommand.targetId !== undefined
 									&& !HERO_TARGET_IDS.has(wireCommand.targetId)
 									&& !isMinionInBattlefield(wireCommand.targetId)) {
@@ -1361,9 +1368,62 @@ export function useWireSync() {
 										debouncedSyncRef.current?.();
 									},
 									onUnapplied: (reason) => reject(reason),
-								});
-								break;
-							case GAME_COMMAND_TYPES.toggleMulliganCard:
+									});
+									break;
+								case GAME_COMMAND_TYPES.frontlineAttack:
+									settleRemoteCommand(applyOpponentCommandToStore(wireCommand), {
+										onApplied: () => {
+											recordMove('frontlineAttack', {
+												mode: wireCommand.mode,
+												actionId: wireCommand.actionId,
+												commandId: data.commandId,
+												seq: data.seq,
+											}, remoteTranscriptId);
+										markCommandApplied();
+										debouncedSyncRef.current?.();
+									},
+										onUnapplied: (reason) => reject(reason),
+									});
+									break;
+								case GAME_COMMAND_TYPES.norseHeroPower:
+									if (wireCommand.targetId !== undefined
+										&& !HERO_TARGET_IDS.has(wireCommand.targetId)
+										&& !isMinionInBattlefield(wireCommand.targetId)) {
+										reject('hero_power_target_not_found');
+										break;
+									}
+									settleRemoteCommand(applyOpponentCommandToStore(wireCommand), {
+										onApplied: () => {
+											recordMove('norseHeroPower', {
+												norseHeroId: wireCommand.norseHeroId,
+												targetId: wireCommand.targetId,
+												targetType: wireCommand.targetType,
+												actionId: wireCommand.actionId,
+												commandId: data.commandId,
+												seq: data.seq,
+											}, remoteTranscriptId);
+										markCommandApplied();
+										debouncedSyncRef.current?.();
+									},
+										onUnapplied: (reason) => reject(reason),
+									});
+									break;
+								case GAME_COMMAND_TYPES.weaponUpgrade:
+									settleRemoteCommand(applyOpponentCommandToStore(wireCommand), {
+										onApplied: () => {
+											recordMove('weaponUpgrade', {
+												norseHeroId: wireCommand.norseHeroId,
+												actionId: wireCommand.actionId,
+												commandId: data.commandId,
+												seq: data.seq,
+											}, remoteTranscriptId);
+										markCommandApplied();
+										debouncedSyncRef.current?.();
+									},
+										onUnapplied: (reason) => reject(reason),
+									});
+									break;
+								case GAME_COMMAND_TYPES.toggleMulliganCard:
 								if (typeof wireCommand.cardId !== 'string' || wireCommand.cardId.length > 64) {
 									reject('invalid_mulligan_payload');
 									break;
@@ -2600,6 +2660,34 @@ export function useWireSync() {
 		}, () => performHeroPower(targetId, 'card'));
 	}, [performHeroPower, runCardsLocalAction, appendAndSendActionEnvelope]);
 
+	const wrappedFrontlineAttack = useCallback((mode: 'minion' | 'hero') => {
+		const actionId = crypto.randomUUID();
+		const command = { type: GAME_COMMAND_TYPES.frontlineAttack, mode, actionId } as const;
+		recordMove('frontlineAttack', { mode, actionId }, buildLocalTranscriptId());
+		void appendAndSendActionEnvelope(buildTranscriptAction(command.type, { mode, actionId }));
+		runCardsLocalAction(command, () => frontlineAttack(mode, actionId));
+	}, [frontlineAttack, runCardsLocalAction, appendAndSendActionEnvelope]);
+
+	const wrappedPerformNorseHeroPower = useCallback((
+		norseHeroId: string,
+		targetId?: string,
+		targetType?: 'minion' | 'hero',
+	) => {
+		const actionId = crypto.randomUUID();
+		const command = { type: GAME_COMMAND_TYPES.norseHeroPower, norseHeroId, targetId, targetType, actionId } as const;
+		recordMove('norseHeroPower', { norseHeroId, targetId, targetType, actionId }, buildLocalTranscriptId());
+		void appendAndSendActionEnvelope(buildTranscriptAction(command.type, { norseHeroId, targetId, targetType, actionId }));
+		runCardsLocalAction(command, () => performNorseHeroPower(norseHeroId, targetId, targetType, actionId));
+	}, [performNorseHeroPower, runCardsLocalAction, appendAndSendActionEnvelope]);
+
+	const wrappedWeaponUpgrade = useCallback((norseHeroId: string) => {
+		const actionId = crypto.randomUUID();
+		const command = { type: GAME_COMMAND_TYPES.weaponUpgrade, norseHeroId, actionId } as const;
+		recordMove('weaponUpgrade', { norseHeroId, actionId }, buildLocalTranscriptId());
+		void appendAndSendActionEnvelope(buildTranscriptAction(command.type, { norseHeroId, actionId }));
+		runCardsLocalAction(command, () => weaponUpgrade(norseHeroId, actionId));
+	}, [weaponUpgrade, runCardsLocalAction, appendAndSendActionEnvelope]);
+
 	const wrappedToggleMulliganCard = useCallback((cardId: string) => {
 		runCardsLocalAction(
 			{ type: GAME_COMMAND_TYPES.toggleMulliganCard, cardId },
@@ -2834,6 +2922,9 @@ export function useWireSync() {
 		attackWithCard: wrappedAttack,
 		endTurn: wrappedEndTurn,
 		performHeroPower: wrappedUseHeroPower,
+		frontlineAttack: wrappedFrontlineAttack,
+		performNorseHeroPower: wrappedPerformNorseHeroPower,
+		weaponUpgrade: wrappedWeaponUpgrade,
 		toggleMulliganCard: wrappedToggleMulliganCard,
 		confirmMulligan: wrappedConfirmMulligan,
 		skipMulligan: wrappedSkipMulligan,

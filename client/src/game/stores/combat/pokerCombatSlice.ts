@@ -1626,6 +1626,38 @@ export const createPokerCombatSlice: StateCreator<
     });
   },
 
+  setOpponentHeroBuffs: (buffs: { attack?: number; health?: number; armor?: number }) => {
+    const state = get();
+    if (!state.pokerCombatState) return;
+
+    const currentArmor = state.pokerCombatState.opponent.heroArmor || 0;
+    let combat = state.pokerCombatState;
+    if (buffs.health !== undefined) {
+      const grown = growPokerHpMax(combat, combat.opponent.playerId, buffs.health);
+      if (grown) {
+        combat = grown.state;
+      }
+    }
+    const newArmor = buffs.armor !== undefined ? currentArmor + buffs.armor : currentArmor;
+    const newAttack = buffs.attack !== undefined
+      ? combat.opponent.pet.stats.attack + buffs.attack
+      : combat.opponent.pet.stats.attack;
+
+    set({
+      pokerCombatState: {
+        ...combat,
+        opponent: {
+          ...combat.opponent,
+          heroArmor: newArmor,
+          pet: {
+            ...combat.opponent.pet,
+            stats: { ...combat.opponent.pet.stats, attack: newAttack },
+          },
+        },
+      },
+    });
+  },
+
   addPlayerArmor: (amount: number) => {
     const state = get();
     if (!state.pokerCombatState) return;

@@ -3,12 +3,13 @@ import type { CardInstance, GameState } from '../../types';
 import { findCardInstance } from '../../utils/cards/cardUtils';
 import { hasKeyword } from '../../utils/cards/keywordUtils';
 import { getAttack } from '../../utils/cards/typeGuards';
-import { processAttack, playCard, endTurn } from '../../utils/gameUtils';
+import { autoAttackWithAllCards, processAttack, playCard, endTurn } from '../../utils/gameUtils';
 import { executeHeroPower } from '../../utils/heroPowerUtils';
+import { applyWeaponUpgrade, executeNorseHeroPower, getNorseHeroById, withNorseHeroPowerRandomness } from '../../utils/norseHeroPowerUtils';
 import { confirmMulligan, skipMulligan, toggleCardSelection } from '../../utils/mulliganUtils';
 import { getArtifactSpellCostReduction } from '../../utils/artifactTriggerProcessor';
 import { MAX_BATTLEFIELD_SIZE } from '../../constants/gameConstants';
-import { cryptoRng } from '../../utils/seededRng';
+import { createSeededIdGen, cryptoRng } from '../../utils/seededRng';
 import { withCardsRng } from '../../utils/cardsCommandRng';
 import {
 	appliedGameCommand,
@@ -203,6 +204,12 @@ function applyGameCommandUnbound(
 			return applyEndTurnCommand(state);
 		case GAME_COMMAND_TYPES.useHeroPower:
 			return applyUseHeroPowerCommand(state, command, deps);
+		case GAME_COMMAND_TYPES.frontlineAttack:
+			return applyFrontlineAttackCommand(state, command, deps);
+		case GAME_COMMAND_TYPES.norseHeroPower:
+			return applyNorseHeroPowerCommand(state, command, deps);
+		case GAME_COMMAND_TYPES.weaponUpgrade:
+			return applyWeaponUpgradeCommand(state, command, deps);
 		case GAME_COMMAND_TYPES.toggleMulliganCard:
 			return applyToggleMulliganCardCommand(state, command.cardId);
 		case GAME_COMMAND_TYPES.confirmMulligan:
@@ -422,6 +429,131 @@ function applyUseHeroPowerCommandInPerspective(
 			message: `Used ${player.heroPower.name}`,
 		},
 		{ type: 'clear_selection', selection: 'hero_target_mode' },
+	]));
+}
+
+function pokerTimingRejection(
+	state: GameState,
+	deps: ApplyGameCommandDeps,
+): string | null {
+	if (!deps.pokerCombat) return null;
+	const timing = canActInPokerWindow({
+		combatState: deps.pokerCombat,
+		actor: deps.pokerCombat.playerId,
+		nowMs: deps.nowMs,
+	});
+	return timing.ok ? null : timing.reason;
+}
+
+function applyFrontlineAttackCommand(
+	state: GameState,
+	command: Extract<GameCommand, { type: typeof GAME_COMMAND_TYPES.frontlineAttack }>,
+	deps: ApplyGameCommandDeps,
+): ApplyGameCommandResult {
+	const commandState = toPokerCommandPerspective(state, deps);
+	const finish = (result: ApplyGameCommandResult) => restorePokerCommandPerspective(state, commandState, result, deps);
+	if (!isPlayerCommandAllowed(commandState, deps)) return finish(rejectedGameCommand(commandState, 'not player turn'));
+	const timingRejection = pokerTimingRejection(commandState, deps);
+	if (timingRejection) return finish(rejectedGameCommand(commandState, timingRejection));
+
+	const newState = autoAttackWithAllCards(commandState, command.mode, deps.rng);
+	if (newState === commandState) return finish(ignoredGameCommand(commandState, 'frontline attack produced no state change'));
+	return finish(appliedGameCommand(newState, [
+		{ type: 'play_sound', sound: 'attack' },
+		{ type: 'clear_selection', selection: 'all' },
+	]));
+}
+
+function applyNorseHeroPowerCommand(
+	state: GameState,
+	command: Extract<GameCommand, { type: typeof GAME_COMMAND_TYPES.norseHeroPower }>,
+	deps: ApplyGameCommandDeps,
+): ApplyGameCommandResult {
+	const commandState = toPokerCommandPerspective(state, deps);
+	const finish = (result: ApplyGameCommandResult) => restorePokerCommandPerspective(state, commandState, result, deps);
+	if (!isPlayerCommandAllowed(commandState, deps)) return finish(rejectedGameCommand(commandState, 'not player turn'));
+	const timingRejection = pokerTimingRejection(commandState, deps);
+	if (timingRejection) return finish(rejectedGameCommand(commandState, timingRejection));
+
+	const hero = getNorseHeroById(command.norseHeroId);
+	if (!hero) return finish(rejectedGameCommand(commandState, 'norse hero not found'));
+	const player = commandState.players.player;
+	if (player.heroPower.used) return finish(rejectedGameCommand(commandState, 'hero power already used'));
+	if (player.mana.current < hero.heroPower.cost) return finish(rejectedGameCommand(commandState, 'not enough mana'));
+
+	const minionAffectingEffects = new Set([
+		'damage_aoe', 'damage_random', 'buff_aoe', 'buff_single', 'debuff_aoe',
+		'debuff_single', 'summon', 'freeze', 'stealth', 'draw', 'copy', 'scry',
+		'reveal', 'grant_keyword', 'self_damage_and_summon', 'draw_and_damage',
+	]);
+	const shouldResolveGameState = command.targetType === 'minion'
+		|| minionAffectingEffects.has(hero.heroPower.effectType);
+	const resolved = shouldResolveGameState
+		? withNorseHeroPowerRandomness({
+			rng: deps.rng ?? cryptoRng,
+			idGen: createSeededIdGen(command.actionId, 'norse-hero-power'),
+		}, () => executeNorseHeroPower(
+			commandState,
+			'player',
+			command.norseHeroId,
+			command.targetType === 'minion' ? command.targetId : undefined,
+			false,
+		))
+		: commandState;
+	const newState: GameState = {
+		...resolved,
+		players: {
+			...resolved.players,
+			player: {
+				...resolved.players.player,
+				mana: { ...resolved.players.player.mana, current: resolved.players.player.mana.current - hero.heroPower.cost },
+				heroPower: { ...resolved.players.player.heroPower, used: true },
+			},
+		},
+	};
+	return finish(appliedGameCommand(newState, [
+		{ type: 'play_sound', sound: 'hero_power' },
+		{ type: 'clear_selection', selection: 'hero_target_mode' },
+		{
+			type: 'log_activity',
+			activityType: 'buff',
+			actor: 'player',
+			message: `Used ${hero.heroPower.name}`,
+		},
+	]));
+}
+
+function applyWeaponUpgradeCommand(
+	state: GameState,
+	command: Extract<GameCommand, { type: typeof GAME_COMMAND_TYPES.weaponUpgrade }>,
+	deps: ApplyGameCommandDeps,
+): ApplyGameCommandResult {
+	const commandState = toPokerCommandPerspective(state, deps);
+	const finish = (result: ApplyGameCommandResult) => restorePokerCommandPerspective(state, commandState, result, deps);
+	if (!isPlayerCommandAllowed(commandState, deps)) return finish(rejectedGameCommand(commandState, 'not player turn'));
+	const timingRejection = pokerTimingRejection(commandState, deps);
+	if (timingRejection) return finish(rejectedGameCommand(commandState, timingRejection));
+
+	const hero = getNorseHeroById(command.norseHeroId);
+	if (!hero) return finish(rejectedGameCommand(commandState, 'norse hero not found'));
+	const player = commandState.players.player as typeof commandState.players.player & { heroPowerUpgraded?: boolean };
+	if (player.heroPowerUpgraded) return finish(rejectedGameCommand(commandState, 'weapon already upgraded'));
+	if (player.mana.current < hero.weaponUpgrade.manaCost) return finish(rejectedGameCommand(commandState, 'not enough mana'));
+
+	const newState = withNorseHeroPowerRandomness({
+		rng: deps.rng ?? cryptoRng,
+		idGen: createSeededIdGen(command.actionId, 'norse-weapon-upgrade'),
+	}, () => applyWeaponUpgrade(commandState, 'player', command.norseHeroId));
+	if (newState === commandState) return finish(ignoredGameCommand(commandState, 'weapon upgrade produced no state change'));
+	return finish(appliedGameCommand(newState, [
+		{ type: 'play_sound', sound: 'weapon_equip' },
+		{ type: 'clear_selection', selection: 'hero_target_mode' },
+		{
+			type: 'log_activity',
+			activityType: 'buff',
+			actor: 'player',
+			message: `Equipped ${hero.weaponUpgrade.name}`,
+		},
 	]));
 }
 

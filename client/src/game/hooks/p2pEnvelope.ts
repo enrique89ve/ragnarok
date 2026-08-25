@@ -2,10 +2,13 @@ import type {
 	AttackCommand,
 	ConfirmMulliganCommand,
 	EndTurnCommand,
+	FrontlineAttackCommand,
+	NorseHeroPowerCommand,
 	PlayCardCommand,
 	SkipMulliganCommand,
 	ToggleMulliganCardCommand,
 	UseHeroPowerCommand,
+	WeaponUpgradeCommand,
 } from '../core/commands';
 
 export type WireGameCommand =
@@ -15,7 +18,10 @@ export type WireGameCommand =
 	| UseHeroPowerCommand
 	| ToggleMulliganCardCommand
 	| ConfirmMulliganCommand
-	| SkipMulliganCommand;
+	| SkipMulliganCommand
+	| FrontlineAttackCommand
+	| NorseHeroPowerCommand
+	| WeaponUpgradeCommand;
 
 export interface GameCommandEnvelope {
 	type: 'game_command';

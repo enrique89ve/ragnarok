@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePokerCombatAdapter, getActionPermissions, getPokerCombatAdapterState } from '../hooks/usePokerCombatAdapter';
 import { useGameStore } from '../stores/gameStore';
+import { useP2PActions } from '../context/useP2PActions';
+import { GAME_COMMAND_TYPES } from '../core/commands';
 import { usePeerStore } from '../stores/peerStore';
 import { useMatchStore } from '../match/store';
 import {
@@ -252,9 +254,9 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
   
   // Game state for battlefield — use individual selectors to avoid unnecessary re-renders
   const gameState = useGameStore(s => s.gameState);
-  const autoAttackAll = useGameStore(s => s.autoAttackAll);
   const selectAttacker = useGameStore(s => s.selectAttacker);
-  const selectedHandCard = useGameStore(s => s.selectedCard);
+	const selectedHandCard = useGameStore(s => s.selectedCard);
+	const p2pActions = useP2PActions();
 	const activeMatch = useMatchStore(s => s.activeMatch);
 	const connectionState = usePeerStore(s => s.connectionState);
 
@@ -718,7 +720,13 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
           onBetAmountChange={setBetAmount}
           onAction={wrappedOnAction}
           onAutoAttackFrontline={() => {
-            if (isPlayerTurn) autoAttackAll('minion');
+            if (isPlayerTurn) {
+              p2pActions.dispatchGameCommand({
+                type: GAME_COMMAND_TYPES.frontlineAttack,
+                mode: 'minion',
+                actionId: crypto.randomUUID(),
+              });
+            }
           }}
           showFrontlineButton={isPlayerTurn && playerBattlefield.length > 0}
         />

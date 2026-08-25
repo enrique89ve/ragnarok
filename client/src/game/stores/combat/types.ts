@@ -179,7 +179,8 @@ export interface PokerCombatSliceActions {
   setPlayerReady: (playerId: string) => void;
   healPlayerHero: (amount: number) => void;
   healOpponentHero: (amount: number) => void;
-  setPlayerHeroBuffs: (buffs: { attack?: number; health?: number; armor?: number }) => void;
+	setPlayerHeroBuffs: (buffs: { attack?: number; health?: number; armor?: number }) => void;
+	setOpponentHeroBuffs: (buffs: { attack?: number; health?: number; armor?: number }) => void;
   addPlayerArmor: (amount: number) => void;
   addOpponentArmor: (amount: number) => void;
   markBothPlayersReady: () => void;

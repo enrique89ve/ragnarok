@@ -10,6 +10,9 @@ export function useP2PActions(): P2PActions {
 	const gsAttackWithCard = useGameStore(s => s.attackWithCard);
 	const gsEndTurn = useGameStore(s => s.endTurn);
 	const gsPerformHeroPower = useGameStore(s => s.performHeroPower);
+	const gsFrontlineAttack = useGameStore(s => s.frontlineAttack);
+	const gsPerformNorseHeroPower = useGameStore(s => s.performNorseHeroPower);
+	const gsWeaponUpgrade = useGameStore(s => s.weaponUpgrade);
 	const gsGameState = useGameStore(s => s.gameState);
 
 	if (context) return context;
@@ -19,12 +22,18 @@ export function useP2PActions(): P2PActions {
 		attackWithCard: gsAttackWithCard,
 		endTurn: gsEndTurn,
 		performHeroPower: gsPerformHeroPower,
+		frontlineAttack: gsFrontlineAttack,
+		performNorseHeroPower: gsPerformNorseHeroPower,
+		weaponUpgrade: gsWeaponUpgrade,
 		dispatchGameCommand: (command: GameCommand) => {
 			dispatchGameCommand(command, {
 				playCard: gsPlayCard,
 				attackWithCard: gsAttackWithCard,
 				endTurn: gsEndTurn,
 				performHeroPower: gsPerformHeroPower,
+				frontlineAttack: gsFrontlineAttack,
+				performNorseHeroPower: gsPerformNorseHeroPower,
+				weaponUpgrade: gsWeaponUpgrade,
 				toggleMulliganCard: useGameStore.getState().toggleMulliganCard,
 				confirmMulligan: useGameStore.getState().confirmMulligan,
 				skipMulligan: useGameStore.getState().skipMulligan,

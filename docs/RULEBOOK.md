@@ -120,8 +120,8 @@ combat inside chess remains the only combat arena.
 
 Each hero has three unique abilities:
 
-1. **Hero Power** (2 mana) - Repeatable ability usable once per turn
-2. **Weapon Upgrade** (one-time) - Equips a weapon to the hero
+1. **Hero Power** (2 mana) - Repeatable auxiliary ability usable once per Poker turn
+2. **Weapon Upgrade** (one-time) - One-time auxiliary action that equips a weapon
 3. **Passive Ability** - Always-active effect
 
 ### Mythological Factions
@@ -336,12 +336,32 @@ The attacking piece deals **15 damage** before poker betting begins:
 |-------|------------------|-------------|
 | **First Strike** | - | Attacker deals 15 damage to defender |
 | **Mulligan** | - | Replace cards from hand (optional) |
-| **Spell/Pet** | Pre-deal | Cast spells, activate abilities, stage the board |
+| **Poker turn window** | Pre-flop onward | Play legal auxiliary cards and use auxiliary abilities before the terminal Poker action |
 | **First Blood** | Pre-Flop | Opening betting round before community cards reveal |
 | **Faith** | Flop | 3 community cards revealed |
 | **Foresight** | Turn | 4th community card revealed |
 | **Destiny** | River | 5th community card revealed |
 | **Resolution** | Showdown | Compare hands, resolve damage |
+
+### Universal Poker Turn
+
+Campaign, VS AI and P2P give each human decision one absolute **60-second**
+window. `activePlayerId` owns the window and the terminal Poker action—CHECK,
+CALL, BET, RAISE or FOLD—ends it. If the deadline is reached, the engine
+resolves CHECK when there is no bet to answer and FOLD when there is.
+
+During the active window, a player may play multiple legal cards and use other
+auxiliary abilities. Mana is the primary practical budget, but phase/timing,
+valid targets, once-per-turn rules, battlefield capacity and the same deadline
+also apply. Auxiliary actions do not pause or restart the clock, change the
+`turnId`, or end the turn.
+
+The `PRE_FLOP`, `FAITH`, `FORESIGHT` and `DESTINY` phases share the same
+per-player mana, draw and progression scope for the current Poker hand.
+Changing phase or active player does not refill or increase mana. Before a
+minion is played, `battlefield.length >= MAX_BATTLEFIELD_SIZE` rejects the
+command; `MAX_BATTLEFIELD_SIZE` is exactly **5**, so a sixth minion is never
+legal.
 
 ### Hand Rankings (Norse Theme)
 
@@ -425,11 +445,15 @@ Poker Spells are a special card type that affects the psychological and informat
 
 #### Casting Timing
 
-Poker Spells are cast during the **Spell/Pet Phase**. The dedicated wager rounds begin afterward, starting with **First Blood** (the pre-flop betting round) and then moving into Faith / Foresight / Destiny. Each spell has a timing property:
+Poker Spells are auxiliary actions inside the active player's universal Poker
+turn. Their timing property determines the legal point in the hand; the
+`pre_deal` timing is limited to `PRE_FLOP`. The wager rounds use the same turn
+window, starting with **First Blood** and then moving into Faith / Foresight /
+Destiny.
 
 | Timing | When Effect Applies |
 |--------|---------------------|
-| **pre_deal** | During Spell/Pet phase, before community cards |
+| **pre_deal** | During PRE_FLOP, before community cards |
 | **on_bet** | When a betting action occurs |
 | **on_fold** | When a player folds |
 | **on_all_in** | When all-in is declared |

@@ -33,7 +33,6 @@ import { CombatPhase, CombatAction } from '../../types/PokerCombatTypes';
 import type { CardInstance } from '../../types';
 import { fireAnnouncement } from '../../stores/unifiedUIStore';
 import { ALL_NORSE_HEROES } from '../../data/norseHeroes';
-import { executeNorseHeroPower } from '../../utils/norseHeroPowerUtils';
 import { isValidTargetForHeroPower } from '../../utils/combatUtils';
 import { usePokerAI } from './usePokerAI';
 import { usePokerPhases } from './usePokerPhases';
@@ -362,184 +361,33 @@ export function useRagnarokCombatController(
   
   const executeHeroPowerEffect = useCallback((norseHero: any, heroPower: any, target: any) => {
     if (combatState && !isPlayerTurn) return;
-    
-    const heroPowerGameState = useGameStore.getState();
-    const playerState = heroPowerGameState.gameState?.players?.player;
-    if (playerState) {
-      const newMana = Math.max(0, (playerState.mana?.current || 0) - heroPower.cost);
-      useGameStore.setState(prev => ({
-        ...prev,
-        gameState: {
-          ...prev.gameState!,
-          players: {
-            ...prev.gameState!.players,
-            player: {
-              ...prev.gameState!.players.player,
-              mana: {
-                ...prev.gameState!.players.player.mana,
-                current: newMana
-              },
-              heroPower: {
-                ...prev.gameState!.players.player.heroPower,
-                used: true
-              }
-            }
-          }
-        }
-      }));
-    }
-    
-    const isHeroTarget = target?.isHero === true;
-    const isOpponentHeroTarget = isHeroTarget && target?.isOpponent === true;
-    const isPlayerHeroTarget = isHeroTarget && target?.isOpponent === false;
-    const targetMinion = isHeroTarget ? null : target;
-    
-    const targetName = isHeroTarget 
-      ? (isOpponentHeroTarget ? ' on enemy hero' : ' on your hero')
-      : (targetMinion?.card?.name ? ` on ${targetMinion.card.name}` : '');
+
+    const targetId = target?.isHero === true
+      ? (target.isOpponent === true ? 'opponent-hero' : 'player-hero')
+      : target?.instanceId;
+    const targetType = target?.isHero === true ? 'hero' : targetId ? 'minion' : undefined;
+    const actionId = crypto.randomUUID();
+
+    p2pActions.dispatchGameCommand({
+      type: GAME_COMMAND_TYPES.norseHeroPower,
+      norseHeroId: norseHero.id,
+      targetId,
+      targetType,
+      actionId,
+    });
+
+    const targetName = target?.isHero === true
+      ? (target.isOpponent === true ? ' on enemy hero' : ' on your hero')
+      : target?.card?.name ? ` on ${target.card.name}` : '';
     fireAnnouncement('spell', `${norseHero.name} uses ${heroPower.name}${targetName}!`, { duration: 2000 });
     emitHeroPowerUsed({
       player: 'player',
       heroPowerName: typeof heroPower?.name === 'string' ? heroPower.name : 'Hero Power',
       cost: typeof heroPower?.cost === 'number' ? heroPower.cost : 0,
     });
-    
     setHeroPowerUsedThisTurn(true);
     setHeroPowerTargeting(null);
-    
-    const effectValue = heroPower.value || 2;
-    const secondaryValue = heroPower.secondaryValue || 0;
-    const effectType = heroPower.effectType as string;
-    
-    const healPlayerHero = (amount: number) => {
-      getPokerCombatAdapterState().healPlayerHero(amount);
-    };
-    
-    const healOpponentHero = (amount: number) => {
-      getPokerCombatAdapterState().healOpponentHero(amount);
-    };
-    
-    if (isHeroTarget) {
-      switch (effectType) {
-        case 'damage_single':
-        case 'damage':
-          if (isOpponentHeroTarget) {
-            applyDirectDamage('opponent', effectValue, `${norseHero.name}'s ${heroPower.name}`);
-          } else if (isPlayerHeroTarget) {
-            applyDirectDamage('player', effectValue, `${norseHero.name}'s ${heroPower.name}`);
-          }
-          break;
-        
-        case 'heal_single':
-        case 'heal':
-          if (isPlayerHeroTarget) {
-            healPlayerHero(effectValue);
-          } else if (isOpponentHeroTarget) {
-            healOpponentHero(effectValue);
-          }
-          break;
-        
-        case 'damage_and_heal':
-          if (isOpponentHeroTarget) {
-            applyDirectDamage('opponent', effectValue, `${norseHero.name}'s ${heroPower.name}`);
-            healPlayerHero(secondaryValue || effectValue);
-          }
-          break;
-        
-        case 'buff_single':
-        case 'buff':
-          break;
-        
-        default:
-          break;
-      }
-      return;
-    }
-    
-    if (targetMinion) {
-      const currentGameState = useGameStore.getState().gameState;
-      if (currentGameState) {
-        const newGameState = executeNorseHeroPower(
-          currentGameState,
-          'player',
-          norseHero.id,
-          targetMinion.instanceId,
-          false
-        );
-        useGameStore.setState(state => ({ ...state, gameState: newGameState }));
-      }
-      return;
-    }
-    
-    const currentGameState = useGameStore.getState().gameState;
-    
-    const minionAffectingEffects = [
-      'damage_aoe', 'damage_random', 'buff_aoe', 'buff_single', 'debuff_aoe', 
-      'debuff_single', 'summon', 'freeze', 'stealth', 'draw', 'copy', 'scry', 
-      'reveal', 'grant_keyword'
-    ];
-    
-    if (minionAffectingEffects.includes(effectType) && currentGameState) {
-      const newGameState = executeNorseHeroPower(
-        currentGameState,
-        'player',
-        norseHero.id,
-        undefined,
-        false
-      );
-      useGameStore.setState(state => ({ ...state, gameState: newGameState }));
-    }
-    
-    switch (effectType) {
-      case 'heal_aoe':
-        healPlayerHero(effectValue);
-        break;
-        
-      case 'damage_and_heal':
-        applyDirectDamage('opponent', effectValue, `${norseHero.name}'s ${heroPower.name}`);
-        healPlayerHero(secondaryValue || effectValue);
-        break;
-        
-      case 'self_damage_and_summon':
-        applyDirectDamage('player', heroPower.value || 0, `${norseHero.name}'s ${heroPower.name}`);
-        if (currentGameState) {
-          const newGameState = executeNorseHeroPower(
-            currentGameState,
-            'player',
-            norseHero.id,
-            undefined,
-            false
-          );
-          useGameStore.setState(state => ({ ...state, gameState: newGameState }));
-        }
-        break;
-        
-      case 'draw_and_damage':
-        applyDirectDamage('player', heroPower.selfDamage || heroPower.value || 0, `${norseHero.name}'s ${heroPower.name}`);
-        if (currentGameState) {
-          const newGameState = executeNorseHeroPower(
-            currentGameState,
-            'player',
-            norseHero.id,
-            undefined,
-            false
-          );
-          useGameStore.setState(state => ({ ...state, gameState: newGameState }));
-        }
-        break;
-        
-      case 'buff_hero':
-        getPokerCombatAdapterState().setPlayerHeroBuffs(effectValue, heroPower.armorValue || 0);
-        break;
-        
-      case 'buff_single':
-        if (secondaryValue > 0) {
-          healPlayerHero(secondaryValue);
-        }
-        break;
-    }
-    
-  }, [applyDirectDamage, combatState, isPlayerTurn, setHeroPowerUsedThisTurn, setHeroPowerTargeting]);
+  }, [combatState, isPlayerTurn, p2pActions, setHeroPowerTargeting]);
   
   const handleHeroPower = useCallback(() => {
     if (heroPowerProcessingRef.current) return;
@@ -669,10 +517,10 @@ export function useRagnarokCombatController(
       return;
     }
 
-    const WEAPON_COST = 5;
+    const weaponCost = norseHero.weaponUpgrade.manaCost;
     const currentMana = playerMana;
 
-    if (currentMana < WEAPON_COST) {
+    if (currentMana < weaponCost) {
       weaponUpgradeProcessingRef.current = false;
       return;
     }
@@ -682,49 +530,16 @@ export function useRagnarokCombatController(
       return;
     }
 
+    p2pActions.dispatchGameCommand({
+      type: GAME_COMMAND_TYPES.weaponUpgrade,
+      norseHeroId,
+      actionId: crypto.randomUUID(),
+    });
     fireAnnouncement('spell', `${norseHero.name} equips ${norseHero.weaponUpgrade.name}!`, { duration: 2500 });
-
     setWeaponUpgraded(true);
 
-    useGameStore.setState(state => {
-      if (!state.gameState?.players?.player?.mana) return state;
-      return {
-        ...state,
-        gameState: {
-          ...state.gameState,
-          players: {
-            ...state.gameState.players,
-            player: {
-              ...state.gameState.players.player,
-              mana: {
-                ...state.gameState.players.player.mana,
-                current: Math.max(0, state.gameState.players.player.mana.current - WEAPON_COST)
-              }
-            }
-          }
-        }
-      };
-    });
-
-    const immediateEffect = norseHero.weaponUpgrade.immediateEffect;
-
-    if (immediateEffect.value) {
-      switch (immediateEffect.type) {
-        case 'damage':
-          applyDirectDamage('opponent', immediateEffect.value, `${norseHero.weaponUpgrade.name}`);
-          break;
-        case 'heal':
-          getPokerCombatAdapterState().healPlayerHero(immediateEffect.value || 0);
-          break;
-        case 'armor':
-          getPokerCombatAdapterState().addPlayerArmor(immediateEffect.value || 0);
-          break;
-        default:
-      }
-    }
-
     weaponUpgradeProcessingRef.current = false;
-  }, [combatState, isPlayerTurn, weaponUpgraded, applyDirectDamage, playerMana]);
+  }, [combatState, isPlayerTurn, weaponUpgraded, p2pActions, playerMana]);
   
   const handleOpponentHeroClick = useCallback(() => {
     if (heroPowerTargeting?.active) {

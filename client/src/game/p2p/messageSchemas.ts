@@ -84,6 +84,26 @@ const UseHeroPowerSchema = z.object({
 	targetType: z.enum(['card', 'hero']).optional(),
 }).strict();
 
+const FrontlineAttackSchema = z.object({
+	type: z.literal('frontline_attack'),
+	mode: z.enum(['minion', 'hero']),
+	actionId: NonEmptyString(128),
+}).strict();
+
+const NorseHeroPowerSchema = z.object({
+	type: z.literal('norse_hero_power'),
+	norseHeroId: NonEmptyString(128),
+	targetId: z.string().max(128).optional(),
+	targetType: z.enum(['minion', 'hero']).optional(),
+	actionId: NonEmptyString(128),
+}).strict();
+
+const WeaponUpgradeSchema = z.object({
+	type: z.literal('weapon_upgrade'),
+	norseHeroId: NonEmptyString(128),
+	actionId: NonEmptyString(128),
+}).strict();
+
 const ToggleMulliganCardSchema = z.object({
 	type: z.literal('toggle_mulligan_card'),
 	cardId: NonEmptyString(64),
@@ -102,6 +122,9 @@ const WireGameCommandSchema = z.discriminatedUnion('type', [
 	AttackSchema,
 	EndTurnSchema,
 	UseHeroPowerSchema,
+	FrontlineAttackSchema,
+	NorseHeroPowerSchema,
+	WeaponUpgradeSchema,
 	ToggleMulliganCardSchema,
 	ConfirmMulliganSchema,
 	SkipMulliganSchema,

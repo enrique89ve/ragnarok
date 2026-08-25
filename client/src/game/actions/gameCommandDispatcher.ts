@@ -1,5 +1,5 @@
 import type { CardData } from '../types';
-import { GAME_COMMAND_TYPES, assertNeverCommand, type GameCommand, type GameTargetType, type HeroPowerTargetType } from '../core/commands';
+import { GAME_COMMAND_TYPES, assertNeverCommand, type GameCommand, type GameTargetType, type HeroPowerTargetType, type FrontlineAttackMode } from '../core/commands';
 
 export interface GameCommandHandlers {
 	readonly playCard: (
@@ -12,6 +12,9 @@ export interface GameCommandHandlers {
 	readonly attackWithCard: (attackerId: string, defenderId?: string) => void;
 	readonly endTurn: () => void;
 	readonly performHeroPower: (targetId?: string, targetType?: HeroPowerTargetType) => void;
+	readonly frontlineAttack: (mode: FrontlineAttackMode, actionId: string) => void;
+	readonly performNorseHeroPower: (norseHeroId: string, targetId?: string, targetType?: 'minion' | 'hero', actionId?: string) => void;
+	readonly weaponUpgrade: (norseHeroId: string, actionId: string) => void;
 	readonly toggleMulliganCard: (cardId: string) => void;
 	readonly confirmMulligan: () => void;
 	readonly skipMulligan: () => void;
@@ -31,6 +34,15 @@ export function dispatchGameCommand(command: GameCommand, handlers: GameCommandH
 			return;
 		case GAME_COMMAND_TYPES.useHeroPower:
 			handlers.performHeroPower(command.targetId, command.targetType);
+			return;
+		case GAME_COMMAND_TYPES.frontlineAttack:
+			handlers.frontlineAttack(command.mode, command.actionId);
+			return;
+		case GAME_COMMAND_TYPES.norseHeroPower:
+			handlers.performNorseHeroPower(command.norseHeroId, command.targetId, command.targetType, command.actionId);
+			return;
+		case GAME_COMMAND_TYPES.weaponUpgrade:
+			handlers.weaponUpgrade(command.norseHeroId, command.actionId);
 			return;
 		case GAME_COMMAND_TYPES.toggleMulliganCard:
 			handlers.toggleMulliganCard(command.cardId);

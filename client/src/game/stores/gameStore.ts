@@ -6,8 +6,7 @@ import {
   initializeGame,
   initializeGameSeeded,
   processAITurn,
-  processOpponentSpellPetSetup,
-  autoAttackWithAllCards
+  processOpponentSpellPetSetup
 } from '../utils/gameUtils';
 import { cryptoRng, cryptoIdGen, createSeededRng, createSeededIdGen, seededRngFromString } from '../utils/seededRng';
 import type { SeededRng } from '@shared/p2p-wire/rng';
@@ -33,6 +32,8 @@ import { computeStateHash } from '../engine/engineBridge';
 import { GAME_COMMAND_TYPES, applyGameCommand, applyOpponentCommand, canActInPokerWindow, type ApplyGameCommandResult, type GameCommand, type PokerCardTimingContext } from '../core/commands';
 import { applyGameCommandToStore } from './gameCommandStoreAdapter';
 import { buildHandshakeGameState, type CardsDeckAnnounce } from '../p2p/cardsDeckHandshake';
+import { applyPokerAuxiliaryEffects } from '../combat/pokerAuxiliaryEffects';
+import type { FrontlineAttackMode } from '../core/commands';
 
 // ============== BATTLEFIELD DEBUG MONITOR ==============
 // Track battlefield changes with stack traces to identify root cause of minion disappearance
@@ -136,8 +137,11 @@ interface GameStore {
   applyOpponentCommand: (command: GameCommand) => ApplyGameCommandResult;
   attackWithCard: (attackerId: string, defenderId?: string) => void; // If defenderId is undefined, attack hero
   autoAttackAll: (mode?: 'minion' | 'hero') => void; // Auto-attack with all minions
+  frontlineAttack: (mode: FrontlineAttackMode, actionId?: string) => void;
   selectAttacker: (card: CardInstance | CardInstanceWithCardData | null) => void; // Select card to attack with
   performHeroPower: (targetId?: string, targetType?: 'card' | 'hero') => void; // Renamed to avoid hook errors
+  performNorseHeroPower: (norseHeroId: string, targetId?: string, targetType?: 'minion' | 'hero', actionId?: string) => void;
+  weaponUpgrade: (norseHeroId: string, actionId?: string) => void;
   toggleHeroTargetMode: () => void; // Toggle hero power targeting mode
   endTurn: () => void;
   selectCard: (card: CardInstance | CardInstanceWithCardData | null) => void;
@@ -357,6 +361,12 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       result,
       setState: set,
     });
+	if (result.status === 'applied'
+		&& (command.type === GAME_COMMAND_TYPES.frontlineAttack
+			|| command.type === GAME_COMMAND_TYPES.norseHeroPower
+			|| command.type === GAME_COMMAND_TYPES.weaponUpgrade)) {
+		applyPokerAuxiliaryEffects(command, 'opponent');
+	}
 
     return result;
   },
@@ -587,31 +597,19 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
   },
 
   autoAttackAll: (mode: 'minion' | 'hero' = 'minion') => {
+    get().frontlineAttack(mode);
+  },
+
+  frontlineAttack: (mode: FrontlineAttackMode = 'minion', actionId = crypto.randomUUID()) => {
     const { gameState } = get();
-    const pokerCombat = getPokerCardTimingContext();
-    if (pokerCombat) {
-      const timing = canActInPokerWindow({ combatState: pokerCombat, actor: pokerCombat.playerId });
-      if (!timing.ok) return;
-      const commandState = gameState.currentTurn === 'player'
-        ? gameState
-        : { ...gameState, currentTurn: 'player' as const };
-      const newState = autoAttackWithAllCards(commandState, mode);
-      if (newState !== commandState) {
-        set({
-          gameState: commandState === gameState
-            ? newState
-            : { ...newState, currentTurn: gameState.currentTurn },
-          attackingCard: null,
-          selectedCard: null,
-        });
-      }
-      return;
-    }
-    if (gameState.currentTurn !== 'player') return;
-    const newState = autoAttackWithAllCards(gameState, mode);
-    if (newState !== gameState) {
-      set({ gameState: newState, attackingCard: null, selectedCard: null });
-    }
+    const command = { type: GAME_COMMAND_TYPES.frontlineAttack, mode, actionId } as const;
+    const result = applyGameCommand(gameState, command, {
+      isAiSimulationMode: isAISimulationMode,
+      rng: commandRng(),
+      pokerCombat: getPokerCardTimingContext(),
+    });
+    applyGameCommandToStore({ command, beforeState: gameState, result, setState: set });
+    if (result.status === 'applied') applyPokerAuxiliaryEffects(command, 'player');
   },
 
   selectCard: (card: CardInstance | CardInstanceWithCardData | null) => {
@@ -759,10 +757,9 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
   // Use hero power on a target (or no target for some powers like Armor Up).
   // Note: this covers the GENERIC hero power path (mage fireblast, warrior armor, etc.,
   // including Norse heroes whose powers route through `executeNorseHeroPower` inside
-  // the canonical `executeHeroPower`). The poker-combat-coupled hero power flow in
-  // `useRagnarokCombatController.executeHeroPowerEffect` remains a separate path —
-  // it carries poker-combat context (applyDirectDamage, healPlayerHero, setPlayerHeroBuffs)
-  // that does not yet fit the `UseHeroPowerCommand` contract.
+  // the canonical `executeHeroPower`). Poker-combat Norse powers use the separate
+  // `norse_hero_power` auxiliary command so their Poker-slot effects can be mirrored
+  // deterministically on both peers.
   performHeroPower: (targetId?: string, targetType?: 'card' | 'hero') => {
     const { gameState, heroTargetMode } = get();
     const player = gameState.players.player;
@@ -824,6 +821,41 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       params: { heroClass, effectType: player.heroPower.name },
     });
   },
+
+  performNorseHeroPower: (
+		norseHeroId: string,
+		targetId?: string,
+		targetType?: 'minion' | 'hero',
+		actionId = crypto.randomUUID(),
+	) => {
+		const { gameState } = get();
+		const command = {
+			type: GAME_COMMAND_TYPES.norseHeroPower,
+			norseHeroId,
+			targetId,
+			targetType,
+			actionId,
+		} as const;
+		const result = applyGameCommand(gameState, command, {
+			isAiSimulationMode: isAISimulationMode,
+			rng: commandRng(),
+			pokerCombat: getPokerCardTimingContext(),
+		});
+		applyGameCommandToStore({ command, beforeState: gameState, result, setState: set });
+		if (result.status === 'applied') applyPokerAuxiliaryEffects(command, 'player');
+	},
+
+	weaponUpgrade: (norseHeroId: string, actionId = crypto.randomUUID()) => {
+		const { gameState } = get();
+		const command = { type: GAME_COMMAND_TYPES.weaponUpgrade, norseHeroId, actionId } as const;
+		const result = applyGameCommand(gameState, command, {
+			isAiSimulationMode: isAISimulationMode,
+			rng: commandRng(),
+			pokerCombat: getPokerCardTimingContext(),
+		});
+		applyGameCommandToStore({ command, beforeState: gameState, result, setState: set });
+		if (result.status === 'applied') applyPokerAuxiliaryEffects(command, 'player');
+	},
 
   grantPokerHandRewards: () => {
     const { gameState } = get();

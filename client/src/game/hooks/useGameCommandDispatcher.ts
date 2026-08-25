@@ -10,6 +10,9 @@ export function useGameCommandDispatcher(): GameCommandDispatch {
 	const attackWithCard = useGameStore(state => state.attackWithCard);
 	const endTurn = useGameStore(state => state.endTurn);
 	const performHeroPower = useGameStore(state => state.performHeroPower);
+	const frontlineAttack = useGameStore(state => state.frontlineAttack);
+	const performNorseHeroPower = useGameStore(state => state.performNorseHeroPower);
+	const weaponUpgrade = useGameStore(state => state.weaponUpgrade);
 	const toggleMulliganCard = useGameStore(state => state.toggleMulliganCard);
 	const confirmMulligan = useGameStore(state => state.confirmMulligan);
 	const skipMulligan = useGameStore(state => state.skipMulligan);
@@ -21,6 +24,9 @@ export function useGameCommandDispatcher(): GameCommandDispatch {
 			attackWithCard,
 			endTurn,
 			performHeroPower,
+			frontlineAttack,
+			performNorseHeroPower,
+			weaponUpgrade,
 			toggleMulliganCard,
 			confirmMulligan,
 			skipMulligan,
@@ -31,6 +37,9 @@ export function useGameCommandDispatcher(): GameCommandDispatch {
 		attackWithCard,
 		endTurn,
 		performHeroPower,
+		frontlineAttack,
+		performNorseHeroPower,
+		weaponUpgrade,
 		toggleMulliganCard,
 		confirmMulligan,
 		skipMulligan,

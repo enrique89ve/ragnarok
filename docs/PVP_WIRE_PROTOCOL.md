@@ -362,7 +362,7 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `cards_deck` | both | both | Phase 2: announce the deck half of the immutable deck+claims snapshot |
 | `deck_verify` | both | both | Phase 2: bind source-aware `protocolVersion: 2` claims to the announced deck; shared-network init waits for identity + IndexedDB + server approval |
 | `init` | host → client | legacy | Phase 2 leftover: ignored after handshake init |
-| `game_command` (envelope) | both | both | Phase 3 cards: intent; both peers apply locally |
+| `game_command` (envelope) | both | both | Phase 3 cards and Poker auxiliary intents: both peers apply locally |
 | `gameState` | host → client | host recovery | `hash_mismatch` recovery snapshot only, compressed as `json+gzip+base64url@1` |
 | `chess_command` (envelope) | both | both (symmetric) | Phase 3 chess: discriminated union of `chess_move` (quiet), `chess_attack` (instant-kill capture), and `chess_combat_initiated` (non-instant capture into poker) — see §5 |
 | `transition_receipt_v1` | receiver → command sender | both (symmetric) | Post-commit chess receipt binding the command intent to the receiver's pre/post chess+cards integrity roots. A rejection or root mismatch quarantines further local chess actions. |
@@ -442,6 +442,12 @@ Implementation:
 - Cards-side command RNG is `commandRng()` / `cardsRng()` from
   `${matchSeed}:cards`. `cryptoRng` is the SP fallback when `matchSeed`
   is null.
+- `game_command` includes the repeatable Poker auxiliary intents
+  `play_card`, `frontline_attack`, `norse_hero_power` and `weapon_upgrade`.
+  Both peers validate and apply them locally; an auxiliary command does not
+  advance the Poker `turnId`, `activePlayerId` or absolute deadline. The
+  Poker actor and deadline are read from the Poker combat state, not from the
+  legacy cards-only `gameState.currentTurn` field.
 
 ### Chess Phase — Symmetric (canonical)
 
