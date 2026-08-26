@@ -45,5 +45,7 @@ export function isGameOver(state: RoundFlowState): boolean {
   exactly once per match before play starts.
 */
 export function isPreMatch(state: RoundFlowState): boolean {
-	return state.tag === 'cinematic' || state.tag === 'mission_intro';
+	return state.tag === 'cinematic'
+		|| state.tag === 'mission_intro'
+		|| state.tag === 'chess_intro';
 }

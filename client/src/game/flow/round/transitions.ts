@@ -25,11 +25,16 @@ export function nextState(
 			if (event.type !== 'CINEMATIC_DONE') return state;
 			return state.then.kind === 'intro'
 				? { tag: 'mission_intro', mission: state.then.mission }
-				: { tag: 'chess' };
+				: { tag: 'chess_intro' };
 		}
 
 		case 'mission_intro': {
 			if (event.type !== 'INTRO_DONE') return state;
+			return { tag: 'chess_intro' };
+		}
+
+		case 'chess_intro': {
+			if (event.type !== 'CHESS_INTRO_DONE') return state;
 			return { tag: 'chess' };
 		}
 

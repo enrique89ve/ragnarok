@@ -304,7 +304,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
         >
           <div className="chess-turn-toast">
             <span className="chess-turn-toast-rune">ᚱ</span>
-            <span>TU TURNO</span>
+            <span>YOUR TURN</span>
             <span className="chess-turn-toast-rune">ᚱ</span>
           </div>
         </div>

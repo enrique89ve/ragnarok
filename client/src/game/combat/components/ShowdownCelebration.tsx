@@ -40,7 +40,7 @@ const NorseResultFrame = () => (
 	>
 		<path className="winner-badge-frame-outer" d="M28 8h584l24 24v116l-24 24H28L4 148V32L28 8Z" />
 		<path className="winner-badge-frame-inner" d="M36 18h568l18 18v100l-18 18H36l-18-18V36l18-18Z" />
-		<path className="winner-badge-frame-knot" d="M320 8v18l-10 10 10 10 10-10-10-10M320 154v18l-10-10 10-10 10 10" />
+		<path className="winner-badge-frame-knot" d="M320 8v7M320 154v18l-10-10 10-10 10 10" />
 		<path className="winner-badge-frame-rune" d="M4 90h30l12-12M636 90h-30l-12 12M40 20l18 18M600 20l-18 18M40 160l18-18M600 160l-18-18" />
 	</svg>
 );
@@ -159,6 +159,8 @@ export const ShowdownCelebration: React.FC<ShowdownCelebrationProps> = ({
 		return damage > 0 ? `-${damage} HP` : '';
 	};
 
+	const damageText = getDamageText();
+
 	if (!ready) return null;
 
 	const animProps = getAnimationProps();
@@ -227,24 +229,29 @@ export const ShowdownCelebration: React.FC<ShowdownCelebrationProps> = ({
 								</>
 							)}
 							{!isShowdown && (
-								<motion.div
-									className="fold-message"
-									initial={{ opacity: 0, y: 10 }}
-									animate={{ opacity: 1, y: 0 }}
-									transition={{ delay: 0.2 }}
-								>
-									{getHandName()}
-								</motion.div>
-							)}
-							{getDamageText() && (
-								<motion.div
-									className="showdown-damage-text"
-									initial={{ opacity: 0, scale: 0.8 }}
-									animate={{ opacity: 1, scale: 1 }}
-									transition={{ delay: 0.5 }}
-								>
-									{getDamageText()}
-								</motion.div>
+								<div className={`winner-badge-detail-row${damageText ? ' has-damage' : ''}`}>
+									<motion.div
+										className="fold-message"
+										initial={{ opacity: 0, y: 10 }}
+										animate={{ opacity: 1, y: 0 }}
+										transition={{ delay: 0.2 }}
+									>
+										{getHandName()}
+									</motion.div>
+									{damageText && (
+										<>
+											<span className="winner-badge-detail-divider" aria-hidden="true" />
+											<motion.div
+												className="showdown-damage-text"
+												initial={{ opacity: 0, scale: 0.8 }}
+												animate={{ opacity: 1, scale: 1 }}
+												transition={{ delay: 0.5 }}
+											>
+												{damageText}
+											</motion.div>
+										</>
+									)}
+								</div>
 							)}
 						</div>
 					</motion.div>

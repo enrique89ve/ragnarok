@@ -1663,11 +1663,11 @@
 .norse-card-frame.norse-card-frame--surface-mulligan
   .card-frame__keyword-chip--icon-only {
   box-sizing: border-box;
-  flex: 0 0 calc(16px * 1.5);
-  width: calc(16px * 1.5);
-  min-width: calc(16px * 1.5);
-  max-width: calc(16px * 1.5);
-  height: calc(16px * 1.5);
+  flex: 0 0 var(--norse-card-mulligan-keyword-size);
+  width: var(--norse-card-mulligan-keyword-size);
+  min-width: var(--norse-card-mulligan-keyword-size);
+  max-width: var(--norse-card-mulligan-keyword-size);
+  height: var(--norse-card-mulligan-keyword-size);
   padding: 1px;
   overflow: hidden;
   border: 1px solid color-mix(

@@ -2,7 +2,7 @@
   Round-level flow — pure discriminated union types.
 
   This module is the single source of truth for the *intra-match*
-  state machine: cinematic → mission_intro → chess → vs_screen →
+  state machine: cinematic → mission_intro → chess_intro → chess → vs_screen →
   poker_combat → chess (loop) → game_over. Match-level concerns
   (menu, route navigation, post-match rewards) live in HashRouter,
   not here.
@@ -103,6 +103,7 @@ export type RoundFlowState =
 			readonly then: PostCinematicPlan;
 	  }
 	| { readonly tag: 'mission_intro'; readonly mission: MissionIntroData }
+	| { readonly tag: 'chess_intro' }
 	| { readonly tag: 'chess' }
 	| { readonly tag: 'vs_screen'; readonly pieces: CombatPieces }
 	| { readonly tag: 'poker_combat'; readonly handoff: CombatHandoff }
@@ -121,6 +122,7 @@ export type RoundFlowState =
 export type FlowEvent =
 	| { readonly type: 'CINEMATIC_DONE' }
 	| { readonly type: 'INTRO_DONE' }
+	| { readonly type: 'CHESS_INTRO_DONE' }
 	| {
 			readonly type: 'COMBAT_TRIGGERED';
 			readonly pieces: CombatPieces;
@@ -151,6 +153,7 @@ export type InitialFlowInput =
 			readonly then: PostCinematicPlan;
 	  }
 	| { readonly kind: 'mission_intro'; readonly mission: MissionIntroData }
+	| { readonly kind: 'chess_intro' }
 	| { readonly kind: 'chess' };
 
 export function initialState(input: InitialFlowInput): RoundFlowState {
@@ -163,6 +166,8 @@ export function initialState(input: InitialFlowInput): RoundFlowState {
 			};
 		case 'mission_intro':
 			return { tag: 'mission_intro', mission: input.mission };
+		case 'chess_intro':
+			return { tag: 'chess_intro' };
 		case 'chess':
 			return { tag: 'chess' };
 	}

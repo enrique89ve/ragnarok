@@ -225,6 +225,7 @@ function isDeckLoadout(value: unknown): value is HeroDeckLoadout {
 function isFlowState(value: unknown): value is RoundFlowState {
 	if (!isRecord(value) || typeof value.tag !== 'string') return false;
 	return value.tag === 'chess'
+		|| value.tag === 'chess_intro'
 		|| value.tag === 'vs_screen'
 		|| value.tag === 'poker_combat'
 		|| value.tag === 'game_over'

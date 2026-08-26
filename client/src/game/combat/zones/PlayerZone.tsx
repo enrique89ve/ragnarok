@@ -52,8 +52,7 @@ export interface PlayerZoneProps {
 	readonly showdownCelebration: ShowdownCelebration | null | undefined;
 	readonly isMyTurnToAct: boolean;
 	readonly playerHandEval: { rank: PokerHandRank; displayName: string } | null | undefined;
-	readonly handStrengthClass: string;
-	readonly handStrengthPercent: number;
+	readonly handVisualClass: string;
 	readonly shakingHero: boolean;
 	readonly isPlayerTurn: boolean;
 	readonly onPlayerHeroClick: (() => void) | undefined;
@@ -92,8 +91,7 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({
 	showdownCelebration,
 	isMyTurnToAct,
 	playerHandEval,
-	handStrengthClass,
-	handStrengthPercent,
+	handVisualClass,
 	shakingHero,
 	isPlayerTurn,
 	onPlayerHeroClick,
@@ -155,14 +153,15 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({
 						/>
 						<HeroResourceDock owner="player" currentMana={playerMana} maxMana={playerMaxMana} />
 						{playerHandEval && playerHandEval.rank > PokerHandRank.HIGH_CARD && (
-							<div className="hand-strength-compact absolute -bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 pointer-events-none whitespace-nowrap">
+							<div
+								className={`hand-strength-compact ${handVisualClass} absolute -bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 pointer-events-none whitespace-nowrap`}
+								data-hand-rank={playerHandEval.rank}
+								aria-label={`Current hand: ${playerHandEval.displayName}`}
+							>
 								<span className="strength-icon" aria-hidden="true">
 									<CardFanIcon />
 								</span>
-								<span className={`strength-name ${handStrengthClass}`}>{playerHandEval.displayName}</span>
-								<div className="hand-strength-bar">
-									<div className={`hand-strength-fill ${handStrengthClass}`} style={{ transform: `scaleX(${handStrengthPercent / 100})` }} />
-								</div>
+								<span className="strength-name">{playerHandEval.displayName}</span>
 							</div>
 						)}
 					</div>

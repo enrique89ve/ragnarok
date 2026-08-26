@@ -167,9 +167,35 @@
   flex-direction: row;
   align-items: flex-start;
   justify-content: flex-start;
-  gap: 2px;
+  gap: 0;
   width: 100%;
   min-width: 0;
+}
+
+/* Keep terminal Poker decisions and auxiliary Frontline in one rail while
+   making their semantic boundary visible without adding another label row. */
+.poker-terminal-actions,
+.poker-tactical-actions {
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 0;
+  gap: 2px;
+  align-items: flex-start;
+}
+
+.poker-action-divider {
+  align-self: stretch;
+  flex: 0 0 2px;
+  inline-size: 2px;
+  margin-block: var(--space-10);
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(246, 194, 74, 0.68) 24%,
+    rgba(246, 194, 74, 0.68) 76%,
+    transparent 100%
+  );
+  opacity: 0.82;
 }
 
 /* ─── Poker action buttons container ─── */
@@ -360,29 +386,6 @@
     0 0 3px rgba(0, 0, 0, 0.96);
 }
 
-.poker-btn .btn-action-label {
-  position: absolute;
-  left: 50%;
-  bottom: 28px;
-  z-index: 4;
-  inline-size: 82px;
-  min-block-size: 14px;
-  transform: translateX(-50%);
-  color: #fff;
-  font-family: var(--type-display), "Cinzel", serif;
-  font-size: 0.66rem;
-  font-weight: 900;
-  line-height: 1.1;
-  letter-spacing: 0.035em;
-  text-align: center;
-  text-transform: uppercase;
-  white-space: nowrap;
-  opacity: 1;
-  text-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.98),
-    0 0 3px rgba(0, 0, 0, 0.92);
-}
-
 .poker-btn .btn-icon-frame {
   position: absolute;
   left: 50%;
@@ -533,10 +536,6 @@
 }
 
 .poker-btn:disabled .btn-hp {
-  opacity: 1;
-}
-
-.poker-btn:disabled .btn-action-label {
   opacity: 1;
 }
 

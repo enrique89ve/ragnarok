@@ -219,21 +219,21 @@
 
 /* ========================================
    HAND STRENGTH INDICATOR
-   Persistent display near player hole cards
+   Persistent display beside the bottom action rail
    ======================================== */
 .hand-strength-indicator {
 	position: absolute;
-	bottom: 195px;
-	left: 50%;
-	transform: translateX(-50%);
-	z-index: 100;
+	left: calc(var(--poker-zone-bettingControls-x) + var(--poker-zone-bettingControls-w) + 16px);
+	top: calc(var(--poker-zone-bettingControls-y) + var(--poker-betting-controls-drop) + 54px);
+	bottom: auto;
+	z-index: var(--arena-z-hand-strength, 761);
 	display: grid;
-	grid-template-columns: 28px minmax(0, 1fr) auto;
+	grid-template-columns: 54px minmax(0, 1fr);
 	align-items: center;
-	gap: 8px;
-	inline-size: min(188px, calc(100% - 24px));
-	min-block-size: 42px;
-	padding: 6px 9px 6px 7px;
+	gap: 12px;
+	inline-size: min(340px, calc(100% - 24px));
+	min-block-size: 74px;
+	padding: 7px 12px 7px 8px;
 	background: linear-gradient(115deg, rgba(7, 12, 22, 0.97), rgba(21, 27, 39, 0.94));
 	border: 1px solid color-mix(in srgb, var(--ink-400) 42%, transparent);
 	clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 7px, 100% calc(100% - 7px), calc(100% - 7px) 100%, 7px 100%, 0 calc(100% - 7px), 0 7px);
@@ -283,12 +283,13 @@
 .hand-strength-sigil {
 	display: grid;
 	place-items: center;
-	inline-size: 28px;
-	block-size: 28px;
-	font-family: var(--type-mono, 'IBM Plex Mono', monospace);
-	font-size: 0.58rem;
+	inline-size: 54px;
+	block-size: 54px;
+	padding: 0;
+	font-family: Georgia, serif;
+	font-size: 2rem;
 	font-weight: 800;
-	letter-spacing: -0.04em;
+	line-height: 1;
 	color: var(--gold-100, #fff4c2);
 	background: linear-gradient(145deg, rgba(86, 104, 129, 0.62), rgba(11, 18, 31, 0.96));
 	border: 1px solid color-mix(in srgb, var(--gold-300) 55%, transparent);
@@ -304,16 +305,11 @@
 
 .hand-strength-copy > span {
 	font-family: var(--type-mono, 'IBM Plex Mono', monospace);
-	font-size: 0.48rem;
+	font-size: 0.62rem;
 	font-weight: 700;
-	letter-spacing: 0.12em;
-	line-height: 1;
+	letter-spacing: 0.14em;
+	line-height: 1.15;
 	color: color-mix(in srgb, var(--ink-300) 82%, transparent);
-}
-
-.hand-strength-rank {
-	align-self: center;
-	color: color-mix(in srgb, var(--gold-300) 78%, transparent);
 }
 
 .hand-strength-name {
@@ -322,11 +318,21 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	font-size: clamp(0.58rem, 0.75vw, 0.7rem);
+	font-size: clamp(1.22rem, 1.53vw, 1.53rem);
 	font-weight: 700;
-	letter-spacing: 0.07em;
+	letter-spacing: 0.06em;
+	line-height: 1;
 	text-transform: uppercase;
 	transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+
+.hand-strength-meta {
+	font-family: var(--type-mono, 'IBM Plex Mono', monospace);
+	font-size: 0.92rem !important;
+	font-weight: 600 !important;
+	letter-spacing: 0.08em !important;
+	color: color-mix(in srgb, var(--ink-300) 70%, transparent) !important;
+	text-transform: uppercase;
 }
 
 .tier-low .hand-strength-name { color: var(--ink-400); }
@@ -340,9 +346,9 @@
 }
 
 @keyframes handImproved {
-	0% { transform: translateX(-50%) scale(1.08); }
-	50% { transform: translateX(-50%) scale(1.02); }
-	100% { transform: translateX(-50%) scale(1); }
+	0% { transform: scale(1.08); }
+	50% { transform: scale(1.02); }
+	100% { transform: scale(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -38,7 +38,6 @@ function PokerActionButton({
 	readonly reason: string | null;
 }): React.ReactElement {
 	const hasValue = hp != null && hp > 0;
-	const visibleLabel = pokerLabel ?? label;
 	const actionName = pokerLabel ? `${label} (${pokerLabel})` : label;
 	const aria = hasValue ? `${actionName} ${hp} HP` : actionName;
 	return (
@@ -53,7 +52,6 @@ function PokerActionButton({
 		>
 			<ButtonIconFrame>
 				{icon}
-				<span className="btn-action-label">{visibleLabel}</span>
 				{hasValue ? <span className="btn-hp">{hp}</span> : null}
 			</ButtonIconFrame>
 		</button>
@@ -222,47 +220,62 @@ export const BettingPanel: React.FC<BettingPanelProps> = ({
 
 			<div className="unified-betting-actions poker-actions">
 				<div className="action-buttons-group">
-					<PokerActionButton
-						actionId={commitKind}
-						className="raise-btn"
-						label={commitDefinition.buttonLabel}
-						pokerLabel={commitDefinition.pokerLabel}
-						hp={commitHP}
-						icon={<PokerActionIcon glyph={commitDefinition.glyph} className="btn-icon" />}
-						disabled={isDisabled || !commitAllowed}
-						reason={commitReason}
-						onClick={() => onAction(commitAction, effectiveBet)}
-					/>
-					<PokerActionButton
-						actionId={matchKind}
-						className="call-btn"
-						label={matchDefinition.buttonLabel}
-						pokerLabel={matchDefinition.pokerLabel}
-						hp={matchKind === 'call' ? callHP : undefined}
-						icon={<PokerActionIcon glyph={matchDefinition.glyph} className="btn-icon" />}
-						disabled={isDisabled || !matchAllowed}
-						reason={matchReason}
-						onClick={() => onAction(matchAction)}
-					/>
-					<PokerActionButton
-						actionId="fold"
-						className="fold-btn"
-						label={braceDefinition.buttonLabel}
-						pokerLabel={braceDefinition.pokerLabel}
-						icon={<PokerActionIcon glyph={braceDefinition.glyph} className="btn-icon" />}
-						disabled={isDisabled || !canFold}
-						reason={foldReason}
-						onClick={() => onAction(CombatAction.BRACE)}
-					/>
-					<PokerActionButton
-						actionId="frontline"
-						className="auto-attack-btn"
-						label={FRONTLINE_CONTROL_DEFINITION.buttonLabel}
-						icon={<PokerActionIcon glyph={FRONTLINE_CONTROL_DEFINITION.glyph} className="btn-icon" />}
-						disabled={isDisabled || !showFrontlineButton}
-						reason={frontlineReason}
-						onClick={onAutoAttackFrontline}
-					/>
+					<div
+						className="poker-terminal-actions"
+						data-action-category="terminal"
+						role="group"
+						aria-label="Poker terminal actions"
+					>
+						<PokerActionButton
+							actionId={commitKind}
+							className="raise-btn"
+							label={commitDefinition.buttonLabel}
+							pokerLabel={commitDefinition.pokerLabel}
+							hp={commitHP}
+							icon={<PokerActionIcon glyph={commitDefinition.glyph} className="btn-icon" />}
+							disabled={isDisabled || !commitAllowed}
+							reason={commitReason}
+							onClick={() => onAction(commitAction, effectiveBet)}
+						/>
+						<PokerActionButton
+							actionId={matchKind}
+							className="call-btn"
+							label={matchDefinition.buttonLabel}
+							pokerLabel={matchDefinition.pokerLabel}
+							hp={matchKind === 'call' ? callHP : undefined}
+							icon={<PokerActionIcon glyph={matchDefinition.glyph} className="btn-icon" />}
+							disabled={isDisabled || !matchAllowed}
+							reason={matchReason}
+							onClick={() => onAction(matchAction)}
+						/>
+						<PokerActionButton
+							actionId="fold"
+							className="fold-btn"
+							label={braceDefinition.buttonLabel}
+							pokerLabel={braceDefinition.pokerLabel}
+							icon={<PokerActionIcon glyph={braceDefinition.glyph} className="btn-icon" />}
+							disabled={isDisabled || !canFold}
+							reason={foldReason}
+							onClick={() => onAction(CombatAction.BRACE)}
+						/>
+					</div>
+					<div className="poker-action-divider" aria-hidden="true" />
+					<div
+						className="poker-tactical-actions"
+						data-action-category="tactical"
+						role="group"
+						aria-label="Tactical action"
+					>
+						<PokerActionButton
+							actionId="frontline"
+							className="auto-attack-btn"
+							label={FRONTLINE_CONTROL_DEFINITION.buttonLabel}
+							icon={<PokerActionIcon glyph={FRONTLINE_CONTROL_DEFINITION.glyph} className="btn-icon" />}
+							disabled={isDisabled || !showFrontlineButton}
+							reason={frontlineReason}
+							onClick={onAutoAttackFrontline}
+						/>
+					</div>
 				</div>
 			</div>
 		</div>

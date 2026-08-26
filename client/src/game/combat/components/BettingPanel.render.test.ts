@@ -22,14 +22,17 @@ const BASE_PERMISSIONS: ActionPermissions = {
 	waitingForOpponent: false,
 };
 
-function renderPanel(overrides: Partial<ActionPermissions> = {}): string {
+function renderPanel(
+	overrides: Partial<ActionPermissions> = {},
+	showFrontlineButton = true,
+): string {
 	return renderToStaticMarkup(React.createElement(BettingPanel, {
 		permissions: { ...BASE_PERMISSIONS, ...overrides },
 		betAmount: 12,
 		onBetAmountChange: vi.fn(),
 		onAction: vi.fn(),
 		onAutoAttackFrontline: vi.fn(),
-		showFrontlineButton: true,
+		showFrontlineButton,
 	}));
 }
 
@@ -38,21 +41,20 @@ function buttonMarkup(markup: string, action: string): string {
 }
 
 describe('BettingPanel action comprehension contract', () => {
-	it('renders visible Bet, Check, Fold, Frontline and All in copy with HP and accessible names', () => {
+	it('renders icon-only actions with contextual HP and accessible hover names', () => {
 		const markup = renderPanel();
 
 		expect(markup).toContain('data-poker-action="bet"');
-		expect(markup).toContain('<span class="btn-action-label">Bet</span>');
-		expect(markup).toContain('<span class="btn-action-label">Check</span>');
-		expect(markup).toContain('<span class="btn-action-label">Fold</span>');
-		expect(markup).toContain('<span class="btn-action-label">Frontline</span>');
+		expect(markup).not.toContain('btn-action-label');
 		expect(markup).toContain('>All in</button>');
 		expect(markup).toContain('<span class="btn-hp">12</span>');
 		expect(buttonMarkup(markup, 'bet')).toContain('aria-label="Attack (Bet) 12 HP"');
 		expect(buttonMarkup(markup, 'bet')).toContain('title="Attack (Bet) 12 HP"');
+		expect(buttonMarkup(markup, 'frontline')).toContain('aria-label="Frontline"');
+		expect(buttonMarkup(markup, 'frontline')).toContain('title="Frontline"');
 	});
 
-	it('switches visible labels from Bet to Raise and Check to Call', () => {
+	it('switches accessible action names from Bet to Raise and Check to Call', () => {
 		const markup = renderPanel({
 			hasBetToCall: true,
 			toCall: 7,
@@ -63,15 +65,43 @@ describe('BettingPanel action comprehension contract', () => {
 			canFold: true,
 		});
 
-		expect(markup).toContain('<span class="btn-action-label">Raise</span>');
-		expect(markup).toContain('<span class="btn-action-label">Call</span>');
-		expect(markup).not.toContain('<span class="btn-action-label">Bet</span>');
-		expect(markup).not.toContain('<span class="btn-action-label">Check</span>');
+		expect(buttonMarkup(markup, 'raise')).toContain('aria-label="Counter (Raise) 19 HP"');
+		expect(buttonMarkup(markup, 'call')).toContain('aria-label="Engage (Call) 7 HP"');
 		expect(markup).toContain('<span class="btn-hp">19</span>');
 		expect(markup).toContain('<span class="btn-hp">7</span>');
 	});
 
-	it('keeps disabled reasons in title without hiding labels', () => {
+	it('keeps terminal actions grouped before the tactical Frontline action', () => {
+		const markup = renderPanel();
+		const actionIds = ['bet', 'check', 'fold', 'frontline'];
+
+		expect(markup).toContain('data-action-category="terminal"');
+		expect(markup).toContain('data-action-category="tactical"');
+		expect(markup).toContain('class="poker-action-divider" aria-hidden="true"');
+
+		let previousIndex = -1;
+		for (const actionId of actionIds) {
+			const actionIndex = markup.indexOf(`data-poker-action="${actionId}"`);
+			expect(actionIndex).toBeGreaterThan(previousIndex);
+			previousIndex = actionIndex;
+		}
+	});
+
+	it('keeps Frontline visible but disabled when it is unavailable or not my turn', () => {
+		const unavailableMarkup = renderPanel({}, false);
+		const unavailableFrontline = buttonMarkup(unavailableMarkup, 'frontline');
+
+		expect(unavailableFrontline).toContain('disabled=""');
+		expect(unavailableFrontline).toContain('title="No frontline units are ready to attack."');
+
+		const opponentMarkup = renderPanel({ isMyTurnToAct: false, waitingForOpponent: true });
+		const opponentFrontline = buttonMarkup(opponentMarkup, 'frontline');
+
+		expect(opponentFrontline).toContain('disabled=""');
+		expect(buttonMarkup(opponentMarkup, 'fold')).toContain('disabled=""');
+	});
+
+	it('keeps disabled reasons in title while preserving accessible names', () => {
 		const markup = renderPanel({
 			isMyTurnToAct: false,
 			waitingForOpponent: true,
@@ -80,7 +110,7 @@ describe('BettingPanel action comprehension contract', () => {
 
 		expect(betButton).toContain('disabled=""');
 		expect(betButton).toContain('title="Waiting for the opponent."');
-		expect(markup).toContain('<span class="btn-action-label">Bet</span>');
+		expect(betButton).toContain('aria-label="Attack (Bet) 12 HP"');
 	});
 
 	it('locks fixed geometry and grayscale-without-opacity styling', () => {
@@ -88,6 +118,6 @@ describe('BettingPanel action comprehension contract', () => {
 
 		expect(css).toMatch(/\.poker-btn\s*\{[\s\S]*?inline-size:\s*117px;[\s\S]*?block-size:\s*99px;/);
 		expect(css).toMatch(/\.poker-btn:disabled\s*\{[\s\S]*?opacity:\s*1;[\s\S]*?filter:\s*grayscale\(1\)/);
-		expect(css).toMatch(/\.poker-btn \.btn-action-label\s*\{[\s\S]*?color:\s*#fff;[\s\S]*?white-space:\s*nowrap;/);
+		expect(css).toMatch(/\.poker-action-divider\s*\{[\s\S]*?inline-size:\s*2px;/);
 	});
 });

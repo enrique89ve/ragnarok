@@ -550,7 +550,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
     showDestiny,
     isMulligan,
   ]);
-  const handStrengthClass = !playerHandEval
+  const handVisualClass = !playerHandEval
     ? 'weak'
     : playerHandEval.rank >= PokerHandRank.DIVINE_ALIGNMENT
       ? 'royal'
@@ -561,9 +561,6 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
           : playerHandEval.rank >= PokerHandRank.THORS_HAMMER
             ? 'medium'
             : 'weak';
-  const handStrengthPercent = playerHandEval
-    ? Math.min(100, (playerHandEval.rank / PokerHandRank.RAGNAROK) * 100)
-    : 0;
 
   // Early return if no combat state
   if (!combatState) {
@@ -656,8 +653,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
         showdownCelebration={showdownCelebration}
         isMyTurnToAct={!!basePermissions?.isMyTurnToAct}
         playerHandEval={playerHandEval}
-        handStrengthClass={handStrengthClass}
-        handStrengthPercent={handStrengthPercent}
+        handVisualClass={handVisualClass}
         shakingHero={shakingTargets.has('player-hero')}
         isPlayerTurn={isPlayerTurn}
         onPlayerHeroClick={onPlayerHeroClick}

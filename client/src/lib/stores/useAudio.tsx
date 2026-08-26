@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Howl } from 'howler';
 import { proceduralAudio, type SoundType } from '../../game/audio/proceduralAudio';
 import { assetPath } from '../../game/utils/assetPath';
+import { GAME_AUDIO_CUES, type GameAudioCueId } from '../../game/audio/gameAudioCues';
 
 /*
   Background music tracks. The four "core" tracks (main_menu, battle_theme,
@@ -10,16 +11,17 @@ import { assetPath } from '../../game/utils/assetPath';
   cinematic system + per-mission combat music can request thematic tracks
   by name.
 
-  All Howler tracks are loaded with `preload: false` and wrapped in
-  try/catch — playback fails silently if the mp3 isn't on disk yet. This
-  is intentional: the wiring is ready, the content (recorded music) is
-  shipping later. The game never crashes from a missing track.
+  Core Howler music tracks are loaded with `preload: false` and wrapped in
+  try/catch. Authored battle cues opt into preload only when their first-use
+  timing needs it (the chess intro); playback still fails silently if an
+  optional asset is missing.
 */
 export type BackgroundMusicTrack =
 	| 'main_menu'
 	| 'battle_theme'
 	| 'victory'
 	| 'defeat'
+	| 'runes_first_move_transition'
 	// Cinematic / mission cues — match MusicCueId in campaignTypes.ts
 	| 'primordial_dread'
 	| 'forge_anvil'
@@ -90,6 +92,29 @@ function createMusicTrack(src: string, loop: boolean, volume: number): Howl | nu
 	}
 }
 
+function createMusicTrackSources(sources: readonly string[], loop: boolean, volume: number): Howl | null {
+	try {
+		return new Howl({ src: sources.map(assetPath), volume, loop, preload: false });
+	} catch {
+		return null;
+	}
+}
+
+function createGameAudioCue(sources: readonly string[], volume: number, preload: boolean): Howl | null {
+	try {
+		return new Howl({
+			src: sources.map(assetPath),
+			volume,
+			preload,
+			loop: false,
+		});
+	} catch {
+		return null;
+	}
+}
+
+let activeGameCueCancel: (() => void) | null = null;
+
 interface AudioState {
 	soundEnabled: boolean;
 	musicEnabled: boolean;
@@ -98,12 +123,14 @@ interface AudioState {
 	currentMusic?: Howl | null;
 	currentMusicTrack?: BackgroundMusicTrack;
 	musicTracks: Record<BackgroundMusicTrack, Howl | null>;
+	gameAudioCues: Record<GameAudioCueId, Howl | null>;
 
 	toggleSound: () => void;
 	toggleMusic: () => void;
 	setSoundVolume: (volume: number) => void;
 	setMusicVolume: (volume: number) => void;
 	playSoundEffect: (type: SoundEffectType) => void;
+	playAudioCue: (cue: GameAudioCueId, onComplete?: () => void) => () => void;
 	playBackgroundMusic: (track: BackgroundMusicTrack) => void;
 	stopBackgroundMusic: () => void;
 }
@@ -114,13 +141,45 @@ export const useAudio = create<AudioState>((set, get) => ({
 	soundVolume: 0.7,
 	musicVolume: 0.5,
 
+	gameAudioCues: {
+		chess_battle_intro: createGameAudioCue(
+			GAME_AUDIO_CUES.chess_battle_intro.sources,
+			GAME_AUDIO_CUES.chess_battle_intro.volume,
+			GAME_AUDIO_CUES.chess_battle_intro.preload,
+		),
+		frontline_tactical_sting: createGameAudioCue(
+			GAME_AUDIO_CUES.frontline_tactical_sting.sources,
+			GAME_AUDIO_CUES.frontline_tactical_sting.volume,
+			GAME_AUDIO_CUES.frontline_tactical_sting.preload,
+		),
+		new_phase_sting: createGameAudioCue(
+			GAME_AUDIO_CUES.new_phase_sting.sources,
+			GAME_AUDIO_CUES.new_phase_sting.volume,
+			GAME_AUDIO_CUES.new_phase_sting.preload,
+		),
+		showdown_escalation: createGameAudioCue(
+			GAME_AUDIO_CUES.showdown_escalation.sources,
+			GAME_AUDIO_CUES.showdown_escalation.volume,
+			GAME_AUDIO_CUES.showdown_escalation.preload,
+		),
+		final_battle_cadence: createGameAudioCue(
+			GAME_AUDIO_CUES.final_battle_cadence.sources,
+			GAME_AUDIO_CUES.final_battle_cadence.volume,
+			GAME_AUDIO_CUES.final_battle_cadence.preload,
+		),
+	},
+
 	musicTracks: {
 		main_menu: createMusicTrack(assetPath('/assets/audio/main_menu.mp3'), true, 0.5),
 		battle_theme: createMusicTrack(assetPath('/assets/audio/battle_theme.mp3'), true, 0.5),
 		victory: createMusicTrack(assetPath('/assets/audio/victory_music.mp3'), false, 0.5),
 		defeat: createMusicTrack(assetPath('/assets/audio/defeat_music.mp3'), false, 0.5),
-		// Cinematic / per-mission cues. Files are placeholders until composer
-		// delivers — Howler swallows missing-file errors thanks to preload:false.
+		runes_first_move_transition: createMusicTrackSources([
+			'/assets/audio/runa-de-guerra/runes_first_move_transition.ogg',
+			'/assets/audio/runa-de-guerra/runes_first_move_transition.mp3',
+		], false, 0.44),
+		// Cinematic / per-mission cues. Files remain optional — Howler swallows
+		// missing-file errors thanks to preload:false.
 		primordial_dread: createMusicTrack(assetPath('/assets/audio/cue_primordial_dread.mp3'), true, 0.45),
 		forge_anvil: createMusicTrack(assetPath('/assets/audio/cue_forge_anvil.mp3'), true, 0.45),
 		aesir_triumph: createMusicTrack(assetPath('/assets/audio/cue_aesir_triumph.mp3'), true, 0.45),
@@ -176,6 +235,60 @@ export const useAudio = create<AudioState>((set, get) => ({
 	playSoundEffect: (type: SoundEffectType) => {
 		if (!get().soundEnabled) return;
 		proceduralAudio.play(type as SoundType);
+	},
+
+	playAudioCue: (cueId: GameAudioCueId, onComplete?: () => void) => {
+		const finish = onComplete ?? (() => undefined);
+		const definition = GAME_AUDIO_CUES[cueId];
+		const howl = get().gameAudioCues[cueId];
+		activeGameCueCancel?.();
+		activeGameCueCancel = null;
+		if (!get().soundEnabled || !definition || !howl) {
+			queueMicrotask(finish);
+			return () => undefined;
+		}
+
+		let settled = false;
+		let soundId: number | null = null;
+		const fallbackTimer = globalThis.setTimeout(() => {
+			if (settled) return;
+			settled = true;
+			finish();
+		}, definition.durationMs + 250);
+		const settle = (): void => {
+			if (settled) return;
+			settled = true;
+			globalThis.clearTimeout(fallbackTimer);
+			if (activeGameCueCancel === cancel) activeGameCueCancel = null;
+			finish();
+		};
+		const cancel = (): void => {
+			settled = true;
+			globalThis.clearTimeout(fallbackTimer);
+			if (soundId !== null) {
+				try {
+					howl.stop(soundId);
+				} catch {
+					// Audio cleanup is best-effort.
+				}
+			}
+			if (activeGameCueCancel === cancel) activeGameCueCancel = null;
+		};
+		activeGameCueCancel = cancel;
+
+		howl.once('loaderror', settle);
+		try {
+			howl.volume(get().soundVolume * definition.volume);
+			soundId = howl.play();
+			howl.once('end', settle, soundId);
+			howl.once('playerror', settle, soundId);
+		} catch {
+			settle();
+		}
+
+		return () => {
+			cancel();
+		};
 	},
 
 	playBackgroundMusic: (track: BackgroundMusicTrack) => {

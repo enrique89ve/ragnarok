@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { PokerHandRank } from '../../types/PokerCombatTypes';
+import { PokerHandRank, TRADITIONAL_HAND_NAMES } from '../../types/PokerCombatTypes';
 
 interface HandStrengthIndicatorProps {
 	handRank: PokerHandRank;
@@ -33,18 +33,25 @@ export const HandStrengthIndicator: React.FC<HandStrengthIndicatorProps> = ({
 
 	if (handRank <= PokerHandRank.HIGH_CARD || !handName) return null;
 
+	const traditionalHandName = TRADITIONAL_HAND_NAMES[handRank] || handName;
+	const tierLabel = {
+		low: 'TIER I',
+		mid: 'TIER II',
+		high: 'TIER III',
+		godly: 'TIER IV',
+	}[tier];
+
 	return (
-		<div
-			className={`hand-strength-indicator tier-${tier} ${improved ? 'improved' : ''}`}
-			data-hand-rank={handRank}
-			aria-label={`Current hand: ${handName}`}
-		>
-			<span className="hand-strength-sigil" aria-hidden="true">TH</span>
-			<span className="hand-strength-copy">
-				<span className="hand-strength-kicker">HAND RUNE</span>
-				<span className="hand-strength-name">{handName}</span>
-			</span>
-			<span className="hand-strength-rank" aria-hidden="true">{String(handRank).padStart(2, '0')}</span>
-		</div>
+			<div
+				className={`hand-strength-indicator tier-${tier} ${improved ? 'improved' : ''}`}
+				data-hand-rank={handRank}
+				aria-label={`Current hand: ${traditionalHandName}, ${handName}, ${tierLabel}`}
+			>
+				<span className="hand-strength-sigil" aria-hidden="true">♠</span>
+				<span className="hand-strength-copy">
+					<strong className="hand-strength-name">{handName}</strong>
+					<span className="hand-strength-meta">{traditionalHandName} · {tierLabel}</span>
+				</span>
+			</div>
 	);
 };

@@ -77,6 +77,7 @@ const CinematicPhase = lazy(() => import('../components/chess/phases/CinematicPh
 const MissionIntroPhase = lazy(() => import('../components/chess/phases/MissionIntroPhase'));
 const GameOverPhase = lazy(() => import('../components/chess/phases/GameOverPhase'));
 const VsScreenPhase = lazy(() => import('../components/chess/phases/VsScreenPhase'));
+const ChessBattleIntroPhase = lazy(() => import('../components/chess/phases/ChessBattleIntroPhase'));
 const PokerCombatPhase = lazy(() => import('../components/chess/phases/PokerCombatPhase'));
 const ChessPhase = lazy(() => import('../components/chess/phases/ChessPhase'));
 
@@ -168,7 +169,12 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   // public mode created the match.
   const ctx = useMatchStore((s) => s.activeMatch);
 
-  const { playSoundEffect } = useAudio();
+  const {
+    playSoundEffect,
+    playAudioCue,
+    playBackgroundMusic,
+    stopBackgroundMusic,
+  } = useAudio();
   const p2pActions = useP2PActions();
   const navigate = useNavigate();
 
@@ -420,8 +426,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     if (warbandDeck.length > 0) {
       setSharedDeck([...warbandDeck]);
     }
-    playSoundEffect('game_start');
-  }, [warbandArmy, warbandDeck, warbandDeckLoadout, flow?.bootstrapsWarband, initialArmy, opponentArmy, initializeBoard, setSharedDeck, playSoundEffect, isP2PConnected]);
+  }, [warbandArmy, warbandDeck, warbandDeckLoadout, flow?.bootstrapsWarband, initialArmy, opponentArmy, initializeBoard, setSharedDeck, isP2PConnected]);
 
   // P2P chess board bootstrap. Both peers compute identical piece ids
   // from `matchSeed + 'chess-pieces'`, so any future move reference (by
@@ -490,7 +495,6 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     setPlayerArmy,
     initializeBoard,
     resetBossRulesApplied,
-    playSoundEffect,
     startFlow,
   });
 
@@ -499,18 +503,30 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       markCinematicSeen(campaignData.chapter.id);
     }
     // FSM reads `state.then` — set at cinematic entry — to decide whether
-    // mission_intro or chess comes next. The sound cue still fires here
-    // because the bare event has no payload context.
+    // mission_intro or chess_intro comes next. The chess intro owns its
+    // authored audio and does not leak a generic game-start cue here.
     dispatchFlow({ type: 'CINEMATIC_DONE' });
-    if (!campaignData?.mission?.narrativeBefore) {
-      playSoundEffect('game_start');
-    }
-  }, [playSoundEffect, campaignData, markCinematicSeen, dispatchFlow]);
+  }, [campaignData, markCinematicSeen, dispatchFlow]);
 
   const handleMissionIntroComplete = useCallback(() => {
     dispatchFlow({ type: 'INTRO_DONE' });
-    playSoundEffect('game_start');
-  }, [playSoundEffect, dispatchFlow]);
+  }, [dispatchFlow]);
+
+  const handleChessIntroComplete = useCallback(() => {
+    dispatchFlow({ type: 'CHESS_INTRO_DONE' });
+  }, [dispatchFlow]);
+
+  useEffect(() => {
+    if (flowState?.tag !== 'vs_screen') return;
+
+    playBackgroundMusic('runes_first_move_transition');
+    return () => {
+      // Do not stop a newer combat track if the child arena mounted first.
+      if (useAudio.getState().currentMusicTrack === 'runes_first_move_transition') {
+        stopBackgroundMusic();
+      }
+    };
+  }, [flowState?.tag, playBackgroundMusic, stopBackgroundMusic]);
 
   useBossRuleEffects({
     campaignData,
@@ -587,11 +603,12 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       fromPhase: 'chess',
       toPhase: 'poker_combat',
       apply: () => {
+        stopBackgroundMusic();
         dispatchFlow({ type: 'VS_COMPLETE', handoff });
-        playSoundEffect('game_start');
+        playAudioCue('frontline_tactical_sting');
       },
     });
-  }, [flowState, pendingCombat, playerArmy, opponentArmy, boardState.pieces, boardState.moveCount, initializeCombatFromPayload, playSoundEffect, setPokerSlotsSwapped, dispatchFlow, matchSeed, p2pPerspective, runPhaseTransition]);
+  }, [flowState, pendingCombat, playerArmy, opponentArmy, boardState.pieces, boardState.moveCount, initializeCombatFromPayload, playAudioCue, stopBackgroundMusic, setPokerSlotsSwapped, dispatchFlow, matchSeed, p2pPerspective, runPhaseTransition]);
 
   const resumeHandoffKeyRef = useRef<string | null>(null);
   useEffect(() => {
@@ -780,10 +797,11 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     };
     if (!matchEndController.requestGameEnd(request)) return;
     playSoundEffect(isDraw ? 'defeat' : iWon ? 'victory' : 'defeat');
+    playAudioCue('final_battle_cadence');
     // Trigger signals only. Request snapshots lifecycle inputs so later
     // renders cannot cancel the delay (the previous inline timer did).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [boardState.gameStatus, viewerChessResult, playSoundEffect]);
+  }, [boardState.gameStatus, viewerChessResult, playSoundEffect, playAudioCue]);
 
   // Cards-victory (hero HP=0). Without a terminal claim the FSM stays in
   // poker_combat and handleCombatEnd would send chess back into limbo.
@@ -809,8 +827,9 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     };
     if (!matchEndController.requestGameEnd(request)) return;
     playSoundEffect(iWon ? 'victory' : 'defeat');
+    playAudioCue('final_battle_cadence');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cardsGamePhase, cardsWinner, playSoundEffect]);
+  }, [cardsGamePhase, cardsWinner, playSoundEffect, playAudioCue]);
 
   useEffect(() => {
     if (flowState?.tag === 'chess' && boardState.currentTurn === 'player' && boardState.gameStatus === 'playing') {
@@ -983,9 +1002,8 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     setPlayerArmy(defaultArmy);
     initializeBoard(defaultArmy, opponentArmy, cryptoIdGen);
     clearFlow();
-    startFlow({ kind: 'chess' });
-    playSoundEffect('game_start');
-  }, [resetBoard, opponentArmy, initializeBoard, playSoundEffect, resetPlayerTurnCount, resetBossRulesApplied, clearFlow, startFlow, matchEndController]);
+    startFlow({ kind: 'chess_intro' });
+  }, [resetBoard, opponentArmy, initializeBoard, resetPlayerTurnCount, resetBossRulesApplied, clearFlow, startFlow, matchEndController]);
 
   const handleBattleMode = useCallback(() => {
     // Dev-only Battle Sandbox: hero vs hero so poker has a deck on both sides.
@@ -1051,6 +1069,10 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
             chapterName={campaignData.chapter.name}
             onComplete={handleMissionIntroComplete}
           />
+        )}
+
+        {flowState !== null && flowState.tag === 'chess_intro' && (
+          <ChessBattleIntroPhase onComplete={handleChessIntroComplete} />
         )}
       </Suspense>
 

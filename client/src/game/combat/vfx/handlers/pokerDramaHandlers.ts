@@ -28,6 +28,8 @@ import {
 } from '../../animations/PokerDramaVFX';
 import { playThorHammerVFX } from '../../../animations/ThorHammerVFX';
 import { CombatAction, CombatPhase, HAND_RANK_NAMES, PokerHandRank } from '../../../types/PokerCombatTypes';
+import { useAudio } from '@/lib/stores/useAudio';
+import type { GameAudioCueId } from '@/game/audio/gameAudioCues';
 import { registerVisualEffect, type EffectHandle, type VisualEffectUnregister } from '../registry';
 import { registerCombatImpactVisualEffect } from './combatImpactHandler';
 import {
@@ -53,9 +55,17 @@ import type { ArenaVfxOwner } from '../../arenaVfxTargets';
 
 const COMPLETED_HANDLE: EffectHandle = { cancel() {} };
 
+const PHASE_AUDIO_CUE: Partial<Record<CombatPhase, GameAudioCueId>> = {
+	[CombatPhase.FAITH]: 'new_phase_sting',
+	[CombatPhase.FORESIGHT]: 'new_phase_sting',
+	[CombatPhase.DESTINY]: 'new_phase_sting',
+	[CombatPhase.RESOLUTION]: 'showdown_escalation',
+};
+
 let bettingPressureLevel = 0;
 let playerStreak = 0;
 let opponentStreak = 0;
+let phaseAudioCueCancel: (() => void) | null = null;
 let showdownContext: {
 	playerRank: PokerHandRank;
 	opponentRank: PokerHandRank;
@@ -193,6 +203,11 @@ function handlePhaseEntered(event: PhaseEnteredEvent): EffectHandle | null {
 	// Legacy behavior: every phase change reset the re-raise pressure
 	// counter; keep that here so the counter lives with its handler.
 	resetPokerBettingPressure();
+	const audioCue = PHASE_AUDIO_CUE[event.phase];
+	if (audioCue) {
+		phaseAudioCueCancel?.();
+		phaseAudioCueCancel = useAudio.getState().playAudioCue(audioCue);
+	}
 	return schedulePokerMotion(POKER_MOTION_SPECS['phase-reveal'], [0], () => playPhaseDramaVFX(event.phase), 'phase');
 }
 
@@ -216,6 +231,7 @@ export function registerPokerDramaVisualEffects(): VisualEffectUnregister {
 	bettingPressureLevel = 0;
 	playerStreak = 0;
 	opponentStreak = 0;
+	phaseAudioCueCancel = null;
 	showdownContext = null;
 	delete lastThorHammerPlayedAt.player;
 	delete lastThorHammerPlayedAt.opponent;
@@ -232,6 +248,8 @@ export function registerPokerDramaVisualEffects(): VisualEffectUnregister {
 		registerCombatImpactVisualEffect(),
 	];
 	return () => {
+		phaseAudioCueCancel?.();
+		phaseAudioCueCancel = null;
 		cancelPokerMotionSchedules();
 		for (const unregister of unregisterFns) {
 			unregister();

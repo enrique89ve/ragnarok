@@ -34,7 +34,7 @@ Parent: `position: relative; width:100%; height:100%; overflow:hidden`. Gameplay
 |---|---|---|---|---|
 | 1 | `.hourglass-timer` | absolute (top: 8px) | always | ✓ no |
 | 2 | `<PhaseBanner>` | absolute → **PORTAL** to `.game-viewport` since 2026-05-13 | conditional (phase changes) | ✓ no (now portaled) |
-| 3 | `<HandStrengthIndicator>` (.hand-strength-indicator) | absolute (bottom: 195px; left: 50%) | always (gated by hand rank tier) | ✓ no |
+| 3 | `<HandStrengthIndicator>` (.hand-strength-indicator) | absolute HUD badge anchored to the right of `bettingControls` | always (gated by hand rank tier) | ✓ no |
 | 4 | `.opponent-thinking-indicator` | absolute | conditional (`!isPlayerTurn`) | ✓ no |
 | 5 | `.board-ambient-dust` | absolute (decoration) | always | ✓ no |
 | 6 | `.board-torch-glow` | absolute (decoration) | always | ✓ no |

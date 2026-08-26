@@ -200,9 +200,10 @@
    The current CardFrame surface keeps attack/health sockets inside the frame,
    so this wrapper must not reserve a second, invisible lower rail. */
 .mulligan-card-wrapper {
+  --mulligan-card-width: 280px;
   position: relative;
   cursor: pointer;
-  width: 200px;
+  width: var(--mulligan-card-width);
   padding-bottom: 0;
 }
 

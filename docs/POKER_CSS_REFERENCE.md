@@ -71,8 +71,8 @@ combat/styles/index.css                  ← legacy backward-compat aggregate
 | [client/src/game/combat/styles/game-hud.css](../client/src/game/combat/styles/game-hud.css) | 262 | deck count, hand count, turn counter |
 | [client/src/game/combat/styles/game-over.css](../client/src/game/combat/styles/game-over.css) | 451 | victory/defeat overlay; one `105vh` use |
 | [client/src/game/combat/styles/glow-effects.css](../client/src/game/combat/styles/glow-effects.css) | 225 | premium AAA glows; particle-drift tokens |
-| [client/src/game/combat/styles/hand-strength-indicator.css](../client/src/game/combat/styles/hand-strength-indicator.css) | 49 | compact bar + label |
-| [client/src/game/combat/styles/hand-strength.css](../client/src/game/combat/styles/hand-strength.css) | 74 | fill bar state classes `.weak` / `.medium` / `.strong` / `.very-strong` / `.royal` |
+| [client/src/game/combat/styles/hand-strength.css](../client/src/game/combat/styles/hand-strength.css) | 74 | categorical compact hand-rank badge; no probability fill |
+| [client/src/game/combat/styles/poker-drama.css](../client/src/game/combat/styles/poker-drama.css) | 450 | HUD hand-rank badge, discrete tier styling, betting-rail anchor |
 | [client/src/game/combat/styles/hero-card-frame.css](../client/src/game/combat/styles/hero-card-frame.css) | 298 | frame + premium-glow variants; particle-drift tokens |
 | [client/src/game/combat/styles/hero-card.css](../client/src/game/combat/styles/hero-card.css) | 469 | pocket cards + tooltip + stats |
 | [client/src/game/combat/styles/hero-death.css](../client/src/game/combat/styles/hero-death.css) | 125 | death overlay |
@@ -178,8 +178,8 @@ This is the audit gold: every rendered thing in the arena, what game value it di
 | Player hero card | `BattlefieldHero.tsx` | [battlefield-hero.css](../client/src/game/combat/styles/battlefield-hero.css) | `.battlefield-hero` | player hero portrait | `.clickable`, `.targetable`, `.turn-active` |
 | Player HP / STA bars | `BattlefieldHero.tsx` | [hp-bar.css](../client/src/game/combat/styles/hp-bar.css) + [fighting-hp-bars.css](../client/src/game/combat/styles/fighting-hp-bars.css) | `.hp-bar`, `.player-hp-bar` | current/max HP, current/max STA, % fill | `.hero-low-hp`, `.hero-critical-hp` |
 | Player hand fan | `PlayerZone.tsx` | [hole-cards.css](../client/src/game/combat/styles/hole-cards.css) | `.player-hole-cards` | 2 face-up hole cards | `.hole-cards-active-turn` |
-| Hand-strength bar (full) | `HandStrengthIndicator.tsx` | [hand-strength.css](../client/src/game/combat/styles/hand-strength.css) | `.hand-strength-bar`, `.hand-strength-fill` | fill % of current best hand tier | `.weak` / `.medium` / `.strong` / `.very-strong` / `.royal` |
-| Hand-strength compact | `PlayerZone.tsx` | [hand-strength-indicator.css](../client/src/game/combat/styles/hand-strength-indicator.css) | `.hand-strength-compact`, `.strength-name` | compact hand name + bar | — |
+| Hand-rank indicator | `HandStrengthIndicator.tsx` | [poker-drama.css](../client/src/game/combat/styles/poker-drama.css) | `.hand-strength-indicator`, `.hand-strength-name` | readable current hand + traditional poker alias + categorical tier, anchored to the betting rail | `.tier-low` / `.tier-mid` / `.tier-high` / `.tier-godly` |
+| Hand-rank compact | `PlayerZone.tsx` | [hand-strength.css](../client/src/game/combat/styles/hand-strength.css) | `.hand-strength-compact`, `.strength-name` | compact categorical hand name; no probability bar | `.weak` / `.medium` / `.strong` / `.very-strong` / `.royal` |
 | Player resource dock | `HeroResourceDock.tsx` | `hero-resource.css` (port) | `.hero-resource-dock` | mana gem, eitr | — |
 
 ### 3.5 Betting surface (`[data-zone="betting-panel"]`, `[data-zone="wager-info-panel"]`)
@@ -216,7 +216,7 @@ This is the audit gold: every rendered thing in the arena, what game value it di
 | Element matchup banner | `ElementMatchupBanner.tsx` | [element-matchup-banner.css](../client/src/game/combat/styles/element-matchup-banner.css) | `.element-matchup-overlay`, `.matchup-element-badge`, `.matchup-result` | elemental matchup diagram | `.mutual`, `.advantage`, `.disadvantage`, `.neutral` |
 | Realm indicator | (RealmIndicator) | `norse-atmosphere.css` | `.realm-indicator`, `.realm-indicator-name` | active realm | — |
 | Realm announcement | (transient) | `norse-atmosphere.css` | `.realm-announcement` | realm name + description | — |
-| Hand-strength tier (full) | `HandStrengthIndicator.tsx` | [poker-drama.css](../client/src/game/combat/styles/poker-drama.css) | (tier color tokens) | tier-tinted hand-strength bar | `.tier-low`, `.tier-mid`, `.tier-high`, `.tier-godly` |
+| Hand-strength tier (full) | `HandStrengthIndicator.tsx` | [poker-drama.css](../client/src/game/combat/styles/poker-drama.css) | (tier color tokens) | readable categorical hand-rank badge beside the betting rail | `.tier-low`, `.tier-mid`, `.tier-high`, `.tier-godly` |
 
 ### 3.8 Minion / spell / targeting UI
 
@@ -473,7 +473,7 @@ On `.hud-matchup-badge` / `.matchup-result`:
 | `.unified-hero-section` / `.unified-hand-section` | CSS has `transform: translateY(10px)` magic | name the purpose (`--player-zone-y`?) or delete |
 | `WagerInfoPanel.tsx` | Tailwind positions + `board.css` `[data-zone='wager-info-panel']` | keep CSS, drop Tailwind |
 | `OpponentZone.tsx` | Tailwind `scale-[0.4] -mx-8` + `opponent-hand.css` `.opponent-revealed-card` | keep CSS, drop Tailwind |
-| `PlayerZone.tsx` `.hand-strength-compact` | Tailwind stack overrides `hand-strength-indicator.css` | pick one — recommend CSS for spacing, Tailwind for layout |
+| `PlayerZone.tsx` `.hand-strength-compact` | Tailwind stack controls local placement while `hand-strength.css` owns categorical chrome | keep CSS for chrome, Tailwind for local layout |
 | `HoleCardsOverlay.tsx` non-`positionAbsolute` branch | Tailwind `flex flex-row items-center justify-center pointer-events-none z-10 gap-1` | move to `hole-cards.css` |
 | `RagnarokCombatArena.tsx` `mulligan-notice` | Tailwind positions + CSS styles | consolidate into CSS |
 

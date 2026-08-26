@@ -7,7 +7,6 @@ import type { RealmId } from '../../types/NorseTypes';
 import type { RealmState } from '../../types';
 import { useGameStore } from '../../stores/gameStore';
 import { cryptoIdGen } from '../../utils/seededRng';
-import type { SoundEffectType } from '../../../lib/stores/useAudio';
 
 type CampaignData = {
   readonly mission: CampaignMission;
@@ -39,7 +38,6 @@ type BoardBootstrapInput = {
   readonly setPlayerArmy: Dispatch<SetStateAction<ArmySelection | null>>;
   readonly initializeBoard: (playerArmy: ArmySelection, opponentArmy: ArmySelection, idGen: () => string) => void;
   readonly resetBossRulesApplied: () => void;
-  readonly playSoundEffect: (sound: SoundEffectType) => void;
 };
 
 export type CampaignBoardBootstrapGuardInput = {
@@ -121,7 +119,6 @@ export function useCampaignGameBootstrap(input: CampaignGameBootstrapInput): voi
     setPlayerArmy,
     initializeBoard,
     resetBossRulesApplied,
-    playSoundEffect,
   } = input;
   const boardBootstrappedRef = useRef(false);
   const isCampaign = campaignData !== null;
@@ -134,7 +131,7 @@ export function useCampaignGameBootstrap(input: CampaignGameBootstrapInput): voi
     if (flowState !== null) return;
 
     if (effectiveInitialArmy && !isCampaign) {
-      startFlow({ kind: 'chess' });
+      startFlow({ kind: 'chess_intro' });
       return;
     }
 
@@ -165,7 +162,7 @@ export function useCampaignGameBootstrap(input: CampaignGameBootstrapInput): voi
       return;
     }
 
-    startFlow({ kind: 'chess' });
+    startFlow({ kind: 'chess_intro' });
   }, [
     campaignData,
     effectiveInitialArmy,
@@ -194,10 +191,6 @@ export function useCampaignGameBootstrap(input: CampaignGameBootstrapInput): voi
     setPlayerArmy(defaultArmy);
     initializeBoard(defaultArmy, opponentArmy, cryptoIdGen);
     resetBossRulesApplied();
-
-    if (!hasCinematic && !campaignData?.mission.narrativeBefore) {
-      playSoundEffect('game_start');
-    }
   }, [
     campaignData,
     hasCinematic,
@@ -205,7 +198,6 @@ export function useCampaignGameBootstrap(input: CampaignGameBootstrapInput): voi
     initializeBoard,
     isCampaign,
     opponentArmy,
-    playSoundEffect,
     playerArmy,
     resetBossRulesApplied,
     setPlayerArmy,
