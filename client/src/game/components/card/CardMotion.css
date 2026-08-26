@@ -2,6 +2,10 @@
  * Motion host for applyCardMotion / [data-card-motion].
  * Geometry (.card-frame) must not set transform.
  *
+ * Two transform channels compose on this node:
+ *   BASE (--card-motion-*)  position / hover / interaction
+ *   FX   (--card-fx-*)      cast / wager / impact punch
+ *
  * Local clipped FX (shine, flash, local glow) stay in CardFX.css /.card-fx-layer.
  * Leaving-the-card FX (smoke, trails, particles) stay on battle-fx-layer / Pixi.
  */
@@ -30,17 +34,51 @@
 	initial-value: 1;
 }
 
+@property --card-fx-x {
+	syntax: '<length>';
+	inherits: false;
+	initial-value: 0px;
+}
+
+@property --card-fx-y {
+	syntax: '<length>';
+	inherits: false;
+	initial-value: 0px;
+}
+
+@property --card-fx-rotate {
+	syntax: '<angle>';
+	inherits: false;
+	initial-value: 0deg;
+}
+
+@property --card-fx-scale {
+	syntax: '<number>';
+	inherits: false;
+	initial-value: 1;
+}
+
 [data-card-motion] {
 	--card-motion-x: 0px;
 	--card-motion-y: 0px;
 	--card-motion-rotate: 0deg;
 	--card-motion-scale: 1;
+	--card-fx-x: 0px;
+	--card-fx-y: 0px;
+	--card-fx-rotate: 0deg;
+	--card-fx-scale: 1;
 	--card-motion-duration: 150ms;
 	--card-motion-ease: ease-out;
 	transform:
-		translate3d(var(--card-motion-x), var(--card-motion-y), 0)
+		translate3d(
+			calc(var(--card-motion-x) + var(--card-fx-x)),
+			calc(var(--card-motion-y) + var(--card-fx-y)),
+			0
+		)
 		rotate(var(--card-motion-rotate))
-		scale(var(--card-motion-scale));
+		rotate(var(--card-fx-rotate))
+		scale(var(--card-motion-scale))
+		scale(var(--card-fx-scale));
 	transition:
 		--card-motion-x var(--card-motion-duration) var(--card-motion-ease),
 		--card-motion-y var(--card-motion-duration) var(--card-motion-ease),
@@ -49,32 +87,40 @@
 }
 
 /* Spell cast / wager: VFX stamps .is-casting / .is-activating on the frame
- * and on the nearest motion host. Glow stays on CardFrame; punch lives here. */
+ * and on the nearest motion host. Glow stays on CardFrame; punch lives here
+ * on the FX channel so hover/base motion is not replaced. */
 [data-card-motion].is-casting,
 [data-card-motion].is-activating {
 	transition: none;
 }
 
 [data-card-motion].is-casting {
-	animation: card-motion-spell-cast 1.4s ease-out;
+	animation: card-fx-spell-cast 1.4s ease-out;
 }
 
 [data-card-motion].is-activating {
-	animation: card-motion-wager-activate 1s ease-out;
+	animation: card-fx-wager-activate 1s ease-out;
 }
 
-@keyframes card-motion-spell-cast {
-	0% { --card-motion-scale: 1; }
-	20% { --card-motion-scale: 1.06; }
-	60% { --card-motion-scale: 1.02; }
-	100% { --card-motion-scale: 1; }
+/* Combined shorthand — CSS does not merge competing `animation:` rules. */
+[data-card-motion].is-casting.is-activating {
+	animation:
+		card-fx-spell-cast 1.4s ease-out,
+		card-fx-wager-activate 1s ease-out;
 }
 
-@keyframes card-motion-wager-activate {
-	0% { --card-motion-rotate: 0deg; --card-motion-scale: 1; }
-	20% { --card-motion-rotate: -3deg; --card-motion-scale: 1.05; }
-	50% { --card-motion-rotate: 2deg; --card-motion-scale: 1.04; }
-	100% { --card-motion-rotate: 0deg; --card-motion-scale: 1; }
+@keyframes card-fx-spell-cast {
+	0% { --card-fx-scale: 1; }
+	20% { --card-fx-scale: 1.06; }
+	60% { --card-fx-scale: 1.02; }
+	100% { --card-fx-scale: 1; }
+}
+
+@keyframes card-fx-wager-activate {
+	0% { --card-fx-rotate: 0deg; --card-fx-scale: 1; }
+	20% { --card-fx-rotate: -3deg; --card-fx-scale: 1.05; }
+	50% { --card-fx-rotate: 2deg; --card-fx-scale: 1.04; }
+	100% { --card-fx-rotate: 0deg; --card-fx-scale: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -83,7 +129,8 @@
 	}
 
 	[data-card-motion].is-casting,
-	[data-card-motion].is-activating {
+	[data-card-motion].is-activating,
+	[data-card-motion].is-casting.is-activating {
 		animation-duration: 1ms;
 		animation-iteration-count: 1;
 	}

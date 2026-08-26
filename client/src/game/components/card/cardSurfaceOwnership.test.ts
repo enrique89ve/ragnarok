@@ -73,9 +73,14 @@ describe('card surface CSS ownership', () => {
 		expect(keyframeBody('wagerActivateGlow')).not.toContain('transform');
 		expect(motionCss).toContain('[data-card-motion]');
 		expect(motionCss).toContain('var(--card-motion-x)');
+		expect(motionCss).toContain('var(--card-fx-x)');
 		expect(motionCss).toContain('--card-motion-duration');
-		expect(motionCss).toContain('card-motion-spell-cast');
-		expect(motionCss).toContain('card-motion-wager-activate');
+		expect(motionCss).toContain('card-fx-spell-cast');
+		expect(motionCss).toContain('card-fx-wager-activate');
+		expect(motionCss).toContain('scale(var(--card-fx-scale))');
+		expect(motionCss).not.toMatch(
+			/@keyframes\s+card-fx-spell-cast\s*\{[^}]*--card-motion-scale/,
+		);
 	});
 
 	it('writes card motion through CSS variables, not element.style.transform', () => {
@@ -91,12 +96,33 @@ describe('card surface CSS ownership', () => {
 
 	it('composes battlefield hover and shake on CSS variables, not competing transform writes', () => {
 		const hoverRule = battlefieldCss.match(/\.bf-card-wrapper:hover\s*\{[^}]+\}/)?.[0] ?? '';
+		const hitXBody = (() => {
+			const start = battlefieldCss.search(/@keyframes\s+bf-hit-x\s*\{/);
+			if (start < 0) return '';
+			const open = battlefieldCss.indexOf('{', start);
+			let depth = 0;
+			for (let i = open; i < battlefieldCss.length; i += 1) {
+				const ch = battlefieldCss[i];
+				if (ch === '{') depth += 1;
+				else if (ch === '}') {
+					depth -= 1;
+					if (depth === 0) return battlefieldCss.slice(open + 1, i);
+				}
+			}
+			return '';
+		})();
 		expect(battlefieldCss).toMatch(/\.bf-card-position\s*\{/);
 		expect(battlefieldCss).toContain('var(--bf-motion-x)');
+		expect(battlefieldCss).toContain('var(--bf-fx-x)');
 		expect(battlefieldCss).toContain('@keyframes bf-hit-x');
 		expect(battlefieldCss).toContain('@keyframes bf-hit-rotate');
+		expect(battlefieldCss).toContain('@keyframes bf-fx-wager-activate');
+		expect(battlefieldCss).toContain('.bf-card-wrapper.shake.is-activating');
 		expect(hoverRule).toContain('--bf-motion-y: -14px');
 		expect(hoverRule).not.toContain('transform:');
+		expect(hoverRule).not.toContain('--bf-fx-');
+		expect(hitXBody).toContain('--bf-fx-x');
+		expect(hitXBody).not.toContain('--bf-motion-x');
 		expect(battlefieldCss).not.toContain('@keyframes damageShake');
 		expect(battlefieldCss).not.toContain('@keyframes invalidShake');
 	});
@@ -136,6 +162,7 @@ describe('card surface CSS ownership', () => {
 		expect(cardsBarrel).not.toContain('CardTransformBridge');
 		expect(animationLayer).toContain('battle-fx-layer');
 		expect(motionCss).toContain('scale(var(--card-motion-scale))');
+		expect(motionCss).toContain('scale(var(--card-fx-scale))');
 		expect(frameSource).toContain('card-state-layer');
 		expect(frameSource).toContain('card-fx-layer');
 		expect(frameSource).toContain('card-fx-layer__flash');
