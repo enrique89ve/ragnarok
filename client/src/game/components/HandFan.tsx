@@ -142,16 +142,12 @@ export const HandFan = React.memo<HandFanProps>(({
     : -1;
   const activeIndex = hoveredIndex ?? (selectedIndex >= 0 ? selectedIndex : null);
 
-  const getCardTransform = (index: number): React.CSSProperties => {
+  const getFanMotion = (index: number) => {
     const offset = index - centerIndex;
     const normalizedOffset = cardCount > 1 ? offset / centerIndex : 0;
-    
-    const rotation = normalizedOffset * MAX_ROTATION;
-    const yOffset = Math.abs(normalizedOffset) * MAX_Y_OFFSET;
-    
     return {
-      transform: `translateY(${yOffset}px) rotate(${rotation}deg)`,
-      zIndex: 10 + index
+      rotation: normalizedOffset * MAX_ROTATION,
+      yOffset: Math.abs(normalizedOffset) * MAX_Y_OFFSET,
     };
   };
 
@@ -167,41 +163,24 @@ export const HandFan = React.memo<HandFanProps>(({
 
   // Calculate dynamic positioning for spread effect
   const getCardStyle = (index: number): React.CSSProperties => {
-    const baseTransform = getCardTransform(index);
+    const { rotation, yOffset } = getFanMotion(index);
     const isHovered = activeIndex === index;
-    const springTransition = 'transform 0.35s cubic-bezier(0.34, 1.18, 0.64, 1)';
-    const smoothTransition = 'transform 0.3s cubic-bezier(0.19, 1, 0.22, 1)';
-    
-    // Hovered card gets lifted and scaled - z-index must exceed betting zone (200)
-    if (isHovered) {
-      return {
-        zIndex: 9000,
-        transform: 'translateY(-55px) scale(1.25) rotate(0deg)',
-        transition: springTransition
-      };
-    }
-    
-    // When a card is hovered, push ALL other cards with weighted distance
-    if (activeIndex !== null) {
-      const distance = index - activeIndex; // Signed distance (negative = left, positive = right)
+    let pushX = 0;
+    if (!isHovered && activeIndex !== null) {
+      const distance = index - activeIndex;
       const absDistance = Math.abs(distance);
-      
-      // Push cards with decreasing intensity based on distance (up to 3 cards away)
       if (absDistance > 0 && absDistance <= 3) {
-        const pushDirection = distance < 0 ? -1 : 1;
-        const pushAmount = pushDirection * PUSH_AMOUNTS[absDistance];
-        
-        return {
-          ...baseTransform,
-          transform: `${baseTransform.transform} translateX(${pushAmount}px)`,
-          transition: smoothTransition
-        };
+        pushX = (distance < 0 ? -1 : 1) * PUSH_AMOUNTS[absDistance];
       }
     }
-    
+
     return {
-      ...baseTransform,
-      transition: smoothTransition
+      zIndex: isHovered ? 9000 : 10 + index,
+      ['--hand-fan-y' as string]: `${isHovered ? 0 : yOffset}px`,
+      ['--hand-fan-lift' as string]: isHovered ? '-55px' : '0px',
+      ['--hand-fan-rotate' as string]: `${isHovered ? 0 : rotation}deg`,
+      ['--hand-fan-scale' as string]: isHovered ? '1.25' : '1',
+      ['--hand-fan-push-x' as string]: `${pushX}px`,
     };
   };
 

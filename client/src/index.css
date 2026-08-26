@@ -229,8 +229,7 @@ canvas {
   50% { opacity: 1; }
 }
 
-/* REMOVED: Card hover effect styling is now fully managed by CardTransformationManager */
-/* This comment kept as documentation of where the styling was previously defined */
+/* Card hover lift is owned by motion hosts (HandFan / battlefield / applyCardMotion). */
 
 /* CRITICAL FIX: Make sure parent container hover only affects the exact card element */
 .card-hover-parent:hover > * {
@@ -247,20 +246,6 @@ canvas {
   z-index: 2000 !important; /* Even higher than hover state */
   pointer-events: auto;
   transition: none; /* No transition while dragging for responsiveness */
-}
-
-/*
- * Special class for cards being played/placed on the battlefield
- * NOTE: This style has been moved to CardTransformationManager.ts
- * and is kept here only as a fallback. Optimized for GPU.
- */
-.card-being-played {
-  z-index: 3000 !important; /* Higher than dragging for the placement animation */
-  transition: transform 0.4s cubic-bezier(0.11, 0.65, 0.33, 1.5) !important;
-  pointer-events: none; /* Prevent any interactions during placement animation */
-  animation: card-play-pulse 0.6s ease-in-out !important;
-  will-change: transform;
-  transform: scale(var(--dragging-card-scale)) !important; /* Use consistent scale while animating */
 }
 
 @keyframes shine-gold {
@@ -290,15 +275,6 @@ canvas {
   z-index: 50;
   pointer-events: none;
   opacity: 0.35; /* GPU friendly */
-}
-
-/* Special animation for the card damage shake */
-@keyframes damage-shake {
-  0% { transform: translate(0, 0) rotate(0deg); }
-  25% { transform: translate(-2px, 1px) rotate(-1deg); }
-  50% { transform: translate(0, -2px) rotate(0.5deg); }
-  75% { transform: translate(2px, 1px) rotate(1deg); }
-  100% { transform: translate(0, 0) rotate(0deg); }
 }
 
 /* Size overrides for hand and battlefield positions */
@@ -830,7 +806,7 @@ canvas {
 .card-js-hover {
   position: relative;
   z-index: 1000 !important;
-  /* We'll let the CardTransformationManager apply all transforms */
+  /* Transform is owned by the motion host, not this hover class. */
 }
 
 /* New contained glow effect that doesn't leak outside card boundaries */
@@ -855,10 +831,7 @@ canvas {
   100% { opacity: 0.5; transform: scale(0.98); }
 }
 
-/* Responsive hover settings are now handled by CardTransformationManager
-   The media query CSS hover effects have been completely removed
-   to prevent conflicts with the React state management system.
-*/
+/* Viewport media queries must not rewrite card hover transform. */
 
 /* Hand container styling now controlled by RagnarokCombatArena.css via .player-hand-zone */
 

@@ -107,29 +107,23 @@ const FrameTestPage = lazy(async () => {
 
 const CardVisualRuntimeLayout = lazy(async () => {
 	const [
-		{ CardTransformProvider },
-		bridgeInitializerModule,
 		unifiedCardSystemModule,
 		goldenCardFilterModule,
 	] = await Promise.all([
-		import('./game/context/CardTransformContext'),
-		import('./game/components/CardTransformBridgeInitializer'),
 		import('./game/components/UnifiedCardSystem'),
 		import('./game/animations/GoldenCardFilter'),
 	]);
-	const CardTransformBridgeInitializer = bridgeInitializerModule.default;
 	const UnifiedCardSystem = unifiedCardSystemModule.default;
 	const GoldenCardFilter = goldenCardFilterModule.default;
 
 	return {
 		default: function CardVisualRuntimeLayout() {
 			return (
-				<CardTransformProvider>
-					<CardTransformBridgeInitializer />
+				<>
 					<UnifiedCardSystem />
 					<GoldenCardFilter />
 					<Outlet />
-				</CardTransformProvider>
+				</>
 			);
 		},
 	};

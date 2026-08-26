@@ -1,7 +1,13 @@
 /* AnimationLayer notification styles
  * Extracted from inline styles for maintainability.
  * Covers the card burn, card draw, and status notifications.
+ * `.battle-fx-layer` is the board-level FX host. It must not set
+ * CardFrame width/height or structural anchors.
  */
+
+.battle-fx-layer {
+	pointer-events: none;
+}
 
 .anim-notification-overlay {
 	position: absolute;

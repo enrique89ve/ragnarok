@@ -37,8 +37,11 @@ import CardRankSuit from './slots/CardRankSuit';
 import CardCardBack from './slots/CardCardBack';
 import CardKeywordTooltip from './slots/CardKeywordTooltip';
 import './CardFrame.css';
+import './CardFrameGeometry.css';
+import './CardMotion.css';
 import './NorseCardFrame.css';
 import './cardSurfaceContract.css';
+import './CardFrameState.css';
 
 const CardFrame: React.FC<CardFrameProps> = ({
 	shape = 'tile',

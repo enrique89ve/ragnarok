@@ -145,9 +145,17 @@
   }
 }
 
-/* Target shake effect */
+/* Target shake effect. Lives on a motion wrapper, never on CardFrame geometry. */
 .damage-shake {
   animation: damageShake 0.3s ease-out;
+}
+
+@keyframes damageShake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(-2px, 1px) rotate(-1deg); }
+  50% { transform: translate(0, -2px) rotate(0.5deg); }
+  75% { transform: translate(2px, 1px) rotate(1deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
 }
 
 /* Target flash/hit effect */

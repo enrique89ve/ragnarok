@@ -8,8 +8,7 @@ export {
   type RendererFeatures
 } from './cardRenderingRegistry';
 export * from './cardSchemaValidator';
-export * from './CardTransformationManager';
-export * from './CardTransformBridge';
+
 export { 
   isCardData as isCardDataAdapter,
   validateCard as validateCardAdapter,

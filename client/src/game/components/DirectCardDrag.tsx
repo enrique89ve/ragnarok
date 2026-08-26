@@ -6,6 +6,8 @@ import { canPlayCard } from '../utils/cards/cardUtils';
 import SimpleCardCompat from './card/SimpleCardCompat';
 import { toSimpleCardData } from './card/cardDataAdapter';
 import { debug } from '../config/debugConfig';
+import './card/CardMotion.css';
+import { applyCardMotion } from './card/applyCardMotion';
 
 interface DirectCardDragProps {
   cardInstance: CardInstanceWithCardData;
@@ -55,8 +57,7 @@ export const DirectCardDrag: React.FC<DirectCardDragProps> = ({
     
     if (isPlayable && !disableDrag) {
       cardRef.current.style.cursor = 'grab';
-      cardRef.current.style.transform = `scale(${scale * 1.05}) translateY(-4px)`;
-      cardRef.current.style.transition = 'transform 0.15s ease-out';
+      applyCardMotion(cardRef.current, { y: -4, scale: scale * 1.05 });
       cardRef.current.style.zIndex = '100';
     }
   }, [isPlayable, disableDrag, scale]);
@@ -65,8 +66,7 @@ export const DirectCardDrag: React.FC<DirectCardDragProps> = ({
     if (!cardRef.current || isDragging) return;
     
     cardRef.current.style.cursor = 'default';
-    cardRef.current.style.transform = `scale(${scale})`;
-    cardRef.current.style.transition = 'transform 0.15s ease-out';
+    applyCardMotion(cardRef.current, { scale });
     cardRef.current.style.zIndex = 'auto';
   }, [scale, isDragging]);
 
@@ -87,9 +87,8 @@ export const DirectCardDrag: React.FC<DirectCardDragProps> = ({
     
     // Immediate drag visual feedback
     cardRef.current.style.cursor = 'grabbing';
-    cardRef.current.style.transform = `scale(${scale * 1.1}) rotate(3deg)`;
+    applyCardMotion(cardRef.current, { rotate: 3, scale: scale * 1.1 });
     cardRef.current.style.zIndex = '600'; /* --z-drag */
-    cardRef.current.style.transition = 'transform 0.1s ease-out';
     
     debug.drag('Started dragging card', cardInstance.card.name);
   }, [isPlayable, disableDrag, scale, cardInstance.card.name]);
@@ -118,7 +117,7 @@ export const DirectCardDrag: React.FC<DirectCardDragProps> = ({
     cardRef.current.style.position = 'relative';
     cardRef.current.style.left = 'auto';
     cardRef.current.style.top = 'auto';
-    cardRef.current.style.transform = `scale(${scale})`;
+    applyCardMotion(cardRef.current, { scale });
     cardRef.current.style.cursor = 'grab';
     cardRef.current.style.zIndex = 'auto';
     cardRef.current.style.pointerEvents = 'auto';

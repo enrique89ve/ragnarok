@@ -166,6 +166,19 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
             {card && (
               <motion.div
                 key={card.instanceId}
+                className="bf-card-position"
+                initial={animateCardEntry ? { opacity: 0, scale: 0.15, y: side === 'player' ? 80 : -80 } : false}
+                animate={animateCardEntry ? { opacity: 1, scale: 1, y: 0 } : undefined}
+                exit={{
+                  opacity: 0,
+                  scale: 0.05,
+                  y: side === 'opponent' ? 25 : -25,
+                  filter: 'brightness(5) saturate(0)',
+                  transition: { duration: 0.35, ease: [0.55, 0, 1, 0.45] }
+                }}
+                transition={{ type: 'spring', stiffness: 420, damping: 24 }}
+              >
+              <div
                 data-instance-id={card.instanceId}
                 data-card-family="nft"
                 {...(hasWager ? arenaVfxWagerMinionProps(side) : null)}
@@ -198,16 +211,6 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
                 aria-label={`${card.card?.name || 'Minion'}, ${(card.card as any)?.attack ?? 0} attack, ${card.health ?? (card.card as any)?.health ?? 0} health${cardHasTaunt ? ', taunt' : ''}${canAttack ? ', ready to attack' : ''}`}
                 tabIndex={0}
                 onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); (e.currentTarget as HTMLElement).click(); } }}
-                initial={animateCardEntry ? { opacity: 0, scale: 0.15, y: side === 'player' ? 80 : -80 } : false}
-                animate={animateCardEntry ? { opacity: 1, scale: 1, y: 0 } : undefined}
-                exit={{
-                  opacity: 0,
-                  scale: 0.05,
-                  y: side === 'opponent' ? 25 : -25,
-                  filter: 'brightness(5) saturate(0)',
-                  transition: { duration: 0.35, ease: [0.55, 0, 1, 0.45] }
-                }}
-                transition={{ type: 'spring', stiffness: 420, damping: 24 }}
                 onClick={() => {
                   debug.combat('[SimpleBattlefield Click]', {
                     cardName: card.card?.name,
@@ -290,6 +293,7 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
                     <span className="flying-icon"><GameIcon name="feather" size={12} /></span>
                   </div>
                 )}
+              </div>
               </motion.div>
             )}
           </AnimatePresence>

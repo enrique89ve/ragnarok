@@ -138,15 +138,58 @@
   opacity: 1;
 }
 
+/* Framer Motion owns entry/exit on this node. CSS must not write transform here. */
+.bf-card-position {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+@property --bf-motion-x {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --bf-motion-y {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --bf-motion-rotate {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@property --bf-motion-scale {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 1;
+}
+
 /* Card wrapper - hover/click only triggers on the visible card, not gap dead space.
    pointer-events:none on wrapper, re-enabled on card children.
-   CSS :hover still activates on parent when a child is hovered (spec behavior). */
+   CSS :hover still activates on parent when a child is hovered (spec behavior).
+   One composed transform: hover/attack set Y+scale, shake sets X+rotate. */
 .bf-card-wrapper {
+  --bf-motion-x: 0px;
+  --bf-motion-y: 0px;
+  --bf-motion-rotate: 0deg;
+  --bf-motion-scale: 1;
   position: relative;
   width: 100%;
   height: 100%;
   cursor: pointer;
-  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), z-index 0s;
+  transform:
+    translate3d(var(--bf-motion-x), var(--bf-motion-y), 0)
+    rotate(var(--bf-motion-rotate))
+    scale(var(--bf-motion-scale));
+  transition:
+    --bf-motion-y 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    --bf-motion-scale 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    z-index 0s;
   transform-origin: bottom center;
   box-sizing: border-box;
   overflow: visible;
@@ -159,77 +202,37 @@
 }
 
 .bf-card-wrapper:hover {
-  transform: translateY(-14px) scale(1.08);
+  --bf-motion-y: -14px;
+  --bf-motion-scale: 1.08;
   z-index: var(--z-hover, 500);
-  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), z-index 0s;
+  transition:
+    --bf-motion-y 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    --bf-motion-scale 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    z-index 0s;
 }
 
 .bf-card-wrapper:has([data-chrome-inspecting]):hover {
-  transform: none;
+  --bf-motion-y: 0px;
+  --bf-motion-scale: 1;
   z-index: var(--z-hover, 500);
-}
-
-/* Card inside wrapper */
-.bf-card-wrapper .card-renderer-wrapper {
-  width: 100%;
-  height: 100%;
-}
-
-.bf-card-wrapper .simple-card {
-  width: auto !important;
-  height: 100% !important;
-  max-width: 100%;
-  aspect-ratio: 7 / 10;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-}
-
-/* Give description clearance above the hanging battlefield stat gems. */
-.bf-card-wrapper .card-description {
-  bottom: 18%;
-  background: transparent;
-  border: none;
-  align-items: flex-start;
-  padding: 1px 3px;
-  overflow: visible;
-  pointer-events: auto;
-  z-index: 30;
-}
-
-.bf-card-wrapper .keyword-icons-container {
-  gap: var(--space-3);
-  padding: 0;
-  flex-wrap: nowrap;
-  pointer-events: auto;
-  position: relative;
-  z-index: 40;
-}
-
-.bf-card-wrapper .keyword-icon-badge {
-  width: 18px;
-  height: 18px;
-  font-size: var(--text-10);
-  cursor: help;
-  pointer-events: auto;
-  position: relative;
-  z-index: 50;
 }
 
 /* Shake — invalid action or damage hit feedback */
 .bf-card-wrapper.shake {
   animation:
-    invalidShake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both,
-    damageShake 0.4s ease-in-out,
-    damageFlash 0.4s ease-out;
+    bf-hit-rotate 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both,
+    bf-hit-x 0.4s ease-in-out,
+    bf-hit-flash 0.4s ease-out;
 }
 
-@keyframes invalidShake {
-  0%, 100% { transform: translateX(0) rotate(0deg); }
-  15%       { transform: translateX(-7px) rotate(-2deg); }
-  30%       { transform: translateX(7px) rotate(2deg); }
-  45%       { transform: translateX(-5px) rotate(-1.5deg); }
-  60%       { transform: translateX(5px) rotate(1.5deg); }
-  75%       { transform: translateX(-3px) rotate(-1deg); }
-  90%       { transform: translateX(3px) rotate(1deg); }
+@keyframes bf-hit-rotate {
+  0%, 100% { --bf-motion-rotate: 0deg; }
+  15%       { --bf-motion-rotate: -2deg; }
+  30%       { --bf-motion-rotate: 2deg; }
+  45%       { --bf-motion-rotate: -1.5deg; }
+  60%       { --bf-motion-rotate: 1.5deg; }
+  75%       { --bf-motion-rotate: -1deg; }
+  90%       { --bf-motion-rotate: 1deg; }
 }
 
 /* Elemental buff — green card glow */
@@ -257,7 +260,8 @@
 }
 
 .bf-card-wrapper.can-attack:hover {
-  transform: translateY(-16px) scale(1.12);
+  --bf-motion-y: -16px;
+  --bf-motion-scale: 1.12;
 }
 
 .bf-card-wrapper.can-attack:hover::after {
@@ -281,20 +285,8 @@
 }
 
 .bf-card-wrapper.summoning-sick:hover {
-  transform: translateY(-4px) scale(1.02);
-}
-
-/* Keyword icons stay bright and interactive even on sleeping/exhausted minions */
-.bf-card-wrapper.summoning-sick .keyword-icon-badge,
-.bf-card-wrapper.exhausted .keyword-icon-badge {
-  filter: saturate(2.8) brightness(1.3);
-  pointer-events: auto;
-  z-index: 50;
-}
-
-.bf-card-wrapper.summoning-sick .keyword-icon-badge:hover,
-.bf-card-wrapper.exhausted .keyword-icon-badge:hover {
-  filter: saturate(3) brightness(1.5);
+  --bf-motion-y: -4px;
+  --bf-motion-scale: 1.02;
 }
 
 .bf-card-wrapper.summoning-sick::after {
@@ -329,7 +321,8 @@
 }
 
 .bf-card-wrapper.exhausted:hover {
-  transform: translateY(-4px) scale(1.02);
+  --bf-motion-y: -4px;
+  --bf-motion-scale: 1.02;
 }
 
 /* Ready to evolve — pet with petEvolutionMet=true */
@@ -486,7 +479,8 @@
 }
 
 .bf-card-wrapper.valid-target:hover {
-  transform: translateY(-16px) scale(1.12);
+  --bf-motion-y: -16px;
+  --bf-motion-scale: 1.12;
 }
 
 .bf-card-wrapper.valid-target:hover::before {
@@ -514,7 +508,8 @@
 
 /* Selected attacker — persistent pulsing glow + lift so player KNOWS it's selected */
 .bf-card-wrapper.attacking {
-  transform: translateY(-14px) scale(1.08);
+  --bf-motion-y: -14px;
+  --bf-motion-scale: 1.08;
   z-index: var(--z-modal, 50);
   box-shadow:
     0 0 20px 6px rgba(251, 191, 36, 0.85),
@@ -622,30 +617,21 @@
   }
 }
 
-@keyframes damageShake {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-8px); }
-  40% { transform: translateX(8px); }
-  60% { transform: translateX(-6px); }
-  80% { transform: translateX(6px); }
+@keyframes bf-hit-x {
+  0%, 100% { --bf-motion-x: 0px; }
+  20% { --bf-motion-x: -8px; }
+  40% { --bf-motion-x: 8px; }
+  60% { --bf-motion-x: -6px; }
+  80% { --bf-motion-x: 6px; }
 }
 
-@keyframes damageFlash {
+@keyframes bf-hit-flash {
   0%   { box-shadow: inset 0 0 0 3px rgba(255, 50, 50, 0); }
   20%  { box-shadow: inset 0 0 0 4px rgba(255, 50, 50, 0.9), 0 0 16px 4px rgba(255, 50, 50, 0.5); }
   100% { box-shadow: inset 0 0 0 3px rgba(255, 50, 50, 0); }
 }
 
-/* HP gem flashes bright when minion takes damage */
-.bf-card-wrapper.shake .simple-card[data-stats-mode="battlefield"] .card-health {
-  animation: hpFlash 0.5s ease-out;
-}
 
-@keyframes hpFlash {
-  0%   { color: #ffffff; box-shadow: 0 0 14px 4px rgba(255, 50, 50, 0.9), inset 0 0 8px rgba(255,255,255,0.5); }
-  50%  { color: #fca5a5; box-shadow: 0 0 8px 2px rgba(255, 50, 50, 0.5); }
-  100% { color: #ffffff; }
-}
 
 /* ==========================================================================
    STATUS EFFECT OVERLAYS — Visual feedback for 8 combat debuffs
@@ -967,11 +953,6 @@
   pointer-events: none;
 }
 
-.bf-card-wrapper.is-submerged .card-renderer-wrapper {
-  transform: rotateY(180deg);
-  transition: transform 0.4s ease;
-}
-
 .bf-submerge-overlay {
   position: absolute;
   inset: 0;
@@ -1099,21 +1080,13 @@
    ========================================================================== */
 
 @media (hover: none) {
-  .bf-card-wrapper:hover {
-    transform: none;
-    z-index: auto;
-  }
-
-  .bf-card-wrapper.can-attack:hover {
-    transform: none;
-  }
-
-  .bf-card-wrapper.summoning-sick:hover {
-    transform: none;
-  }
-
+  .bf-card-wrapper:hover,
+  .bf-card-wrapper.can-attack:hover,
+  .bf-card-wrapper.summoning-sick:hover,
   .bf-card-wrapper.exhausted:hover {
-    transform: none;
+    --bf-motion-y: 0px;
+    --bf-motion-scale: 1;
+    z-index: auto;
   }
 }
 
@@ -1147,11 +1120,6 @@
 
   .bf-card-wrapper.shake {
     animation: none;
-  }
-
-  .bf-card-wrapper.shake .simple-card[data-stats-mode="battlefield"] .card-health {
-    animation: none;
-    color: #fca5a5;
   }
 
   .bf-card-wrapper.attacking {

@@ -19,15 +19,38 @@
   overflow: visible;
 }
 
+@property --hand-fan-y { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --hand-fan-lift { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --hand-fan-push-x { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --hand-shake-x { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --hand-fan-rotate { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@property --hand-shake-rotate { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@property --hand-fan-scale { syntax: '<number>'; inherits: false; initial-value: 1; }
+
 .hand-fan-card {
+  --hand-fan-y: 0px;
+  --hand-fan-lift: 0px;
+  --hand-fan-push-x: 0px;
+  --hand-shake-x: 0px;
+  --hand-fan-rotate: 0deg;
+  --hand-shake-rotate: 0deg;
+  --hand-fan-scale: 1;
   width: var(--fan-card-width);
   height: var(--fan-card-height);
   position: relative;
   flex-shrink: 0;
   isolation: isolate;
-  /* Spring physics for smooth, satisfying motion */
+  transform:
+    translateX(calc(var(--hand-fan-push-x) + var(--hand-shake-x)))
+    translateY(calc(var(--hand-fan-y) + var(--hand-fan-lift)))
+    rotate(calc(var(--hand-fan-rotate) + var(--hand-shake-rotate)))
+    scale(var(--hand-fan-scale));
   transition:
-    transform 0.35s var(--spring-easing),
+    --hand-fan-y 0.35s var(--spring-easing),
+    --hand-fan-lift 0.35s var(--spring-easing),
+    --hand-fan-rotate 0.35s var(--spring-easing),
+    --hand-fan-scale 0.35s var(--spring-easing),
+    --hand-fan-push-x 0.3s var(--smooth-easing),
     z-index 0s,
     filter 0.2s ease;
   transform-origin: bottom center;
@@ -162,17 +185,17 @@
 
 /* Shake — unaffordable card click feedback */
 .hand-fan-card.shake {
-  animation: handCardShake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both !important;
+  animation: handCardShake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 
 @keyframes handCardShake {
-  0%, 100% { transform: translateX(0) rotate(0deg); }
-  15%       { transform: translateX(-8px) rotate(-3deg); }
-  30%       { transform: translateX(8px) rotate(3deg); }
-  45%       { transform: translateX(-6px) rotate(-2deg); }
-  60%       { transform: translateX(6px) rotate(2deg); }
-  75%       { transform: translateX(-3px) rotate(-1deg); }
-  90%       { transform: translateX(3px) rotate(1deg); }
+  0%, 100% { --hand-shake-x: 0px; --hand-shake-rotate: 0deg; }
+  15%       { --hand-shake-x: -8px; --hand-shake-rotate: -3deg; }
+  30%       { --hand-shake-x: 8px; --hand-shake-rotate: 3deg; }
+  45%       { --hand-shake-x: -6px; --hand-shake-rotate: -2deg; }
+  60%       { --hand-shake-x: 6px; --hand-shake-rotate: 2deg; }
+  75%       { --hand-shake-x: -3px; --hand-shake-rotate: -1deg; }
+  90%       { --hand-shake-x: 3px; --hand-shake-rotate: 1deg; }
 }
 
 /* Empty hand message */

@@ -210,7 +210,7 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
       className={`battlefield-hero-square ${elementClass} ${isOpponent ? 'opponent' : 'player'} ${isTargetable ? 'targetable' : ''} clickable`}
     >
       {pocketCardsOverlay}
-      <div className={`hero-card-wrapper ${damageReaction ? `hero-${damageReaction}` : ''} ${healthPercent <= 20 ? 'hero-critical-hp' : healthPercent <= 40 ? 'hero-low-hp' : ''}`}>
+      <div className={`hero-card-wrapper ${damageReaction ? `hero-${damageReaction}` : ''} ${healthPercent <= 20 ? 'hero-critical-hp' : healthPercent <= 40 ? 'hero-low-hp' : ''} ${shakingHero ? 'damage-shake damage-flash' : ''}`}>
         <div
           className="hero-stamina-rail"
           role="meter"
@@ -228,7 +228,7 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
         </div>
 
         <div
-          className={`hero-card-frame ${frameComposition === 'poker-v1' ? 'hero-card-frame--fusion' : ''} ${shakingHero ? 'damage-shake damage-flash' : ''}`}
+          className={`hero-card-frame ${frameComposition === 'poker-v1' ? 'hero-card-frame--fusion' : ''}`}
           style={frameComposition === 'poker-v1' ? pokerFramePlan.surfaceStyle : undefined}
         >
           <button

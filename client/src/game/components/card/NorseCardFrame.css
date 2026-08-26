@@ -1,6 +1,7 @@
 /* Shared Norse card chrome.
    Collection and poker both opt into this skin with `.norse-card-frame`.
-   Keep geometry and surface details here so frame changes land once. */
+   Shared tokens and skin live here. Per-surface overrides that used to
+   leak from collection.css belong in cardSurfaceContract.css. */
 
 :where(.norse-card-shell, .norse-card-frame.card-frame) {
   --norse-card-ui-scale: 1;
@@ -1575,9 +1576,8 @@
   display: none;
 }
 
-/* Surface boundary: this is intentionally the final Collection block. Older
- * shared rules still support gameplay and legacy cards, but cannot resize or
- * repaint the compact Collection symbol rail. */
+/* Collection keyword-rail fallback. cardSurfaceContract.css loads after this
+ * file and is the last word for surface-specific Collection/Mulligan geometry. */
 .norse-card-frame.norse-card-frame--surface-collection .card-frame__keywords {
   display: flex;
   flex-direction: column;

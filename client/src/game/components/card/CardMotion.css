@@ -1,0 +1,39 @@
+/*
+ * Motion host for applyCardMotion / [data-card-motion].
+ * Geometry (.card-frame) must not set transform.
+ */
+
+@property --card-motion-x {
+	syntax: '<length>';
+	inherits: false;
+	initial-value: 0px;
+}
+
+@property --card-motion-y {
+	syntax: '<length>';
+	inherits: false;
+	initial-value: 0px;
+}
+
+@property --card-motion-rotate {
+	syntax: '<angle>';
+	inherits: false;
+	initial-value: 0deg;
+}
+
+@property --card-motion-scale {
+	syntax: '<number>';
+	inherits: false;
+	initial-value: 1;
+}
+
+[data-card-motion] {
+	--card-motion-x: 0px;
+	--card-motion-y: 0px;
+	--card-motion-rotate: 0deg;
+	--card-motion-scale: 1;
+	transform:
+		translate3d(var(--card-motion-x), var(--card-motion-y), 0)
+		rotate(var(--card-motion-rotate))
+		scale(var(--card-motion-scale));
+}
