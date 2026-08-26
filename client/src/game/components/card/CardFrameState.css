@@ -1,6 +1,7 @@
 /*
  * CardFrame state decoration.
  * Must not modify structural anchor variables (--norse-card-*-bottom/size).
+ * Must not own motion transform or leaving-the-card FX.
  */
 
 .card-frame--unplayable {
@@ -18,34 +19,9 @@
 	z-index: 5;
 }
 
-.card-state-layer,
-.card-fx-layer {
-	position: absolute;
-	inset: 0;
-	pointer-events: none;
-}
-
 .card-state-layer {
-	z-index: 30;
-}
-
-.card-fx-layer {
-	z-index: 40;
-	overflow: hidden;
-}
-
-.card-fx-layer__flash {
 	position: absolute;
 	inset: 0;
-	opacity: 0;
-	background: rgba(255, 50, 50, 0.35);
+	z-index: 30;
 	pointer-events: none;
-}
-
-/* Local clipped FX only. Hand/battlefield/hero own their reduced-motion. */
-@media (prefers-reduced-motion: reduce) {
-	.card-fx-layer * {
-		animation-duration: 1ms !important;
-		animation-iteration-count: 1 !important;
-	}
 }

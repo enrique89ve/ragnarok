@@ -49,10 +49,21 @@ describe('card surface CSS ownership', () => {
 
 	it('keeps CardFrame hover off the geometry transform channel', () => {
 		const keyframeBody = (name: string): string => {
-			const match = cardFrameCss.match(
-				new RegExp(`@keyframes\\s+${name}\\s*\\{([^}]*)\\}`),
+			const start = cardFrameCss.search(
+				new RegExp(`@keyframes\\s+${name}\\s*\\{`),
 			);
-			return match?.[1] ?? '';
+			if (start < 0) return '';
+			const open = cardFrameCss.indexOf('{', start);
+			let depth = 0;
+			for (let i = open; i < cardFrameCss.length; i += 1) {
+				const ch = cardFrameCss[i];
+				if (ch === '{') depth += 1;
+				else if (ch === '}') {
+					depth -= 1;
+					if (depth === 0) return cardFrameCss.slice(open + 1, i);
+				}
+			}
+			return '';
 		};
 
 		expect(cardFrameCss).not.toMatch(
@@ -101,13 +112,17 @@ describe('card surface CSS ownership', () => {
 
 	it('enforces the testnet ownership gates from the architecture report', () => {
 		const stateCss = readCss('./CardFrameState.css');
+		const fxCss = readCss('./CardFX.css');
 		const pokerBoardCss = readCss('../../poker/styles/canvas.css');
 		const appSource = readFileSync(resolve(here, '../../../App.tsx'), 'utf8');
+		const frameSource = readFileSync(resolve(here, './CardFrame.tsx'), 'utf8');
 		const animationLayer = readFileSync(resolve(here, '../AnimationLayer.tsx'), 'utf8');
 		const cardsBarrel = readFileSync(resolve(here, '../../utils/cards/index.ts'), 'utf8');
 
 		expect(pokerBoardCss).not.toMatch(/\.card-frame__/);
 		expect(stateCss).not.toMatch(/\.card-frame[^{]*\{[^}]*(width|height)\s*:/);
+		expect(fxCss).not.toMatch(/\.card-frame[^{]*\{[^}]*(width|height)\s*:/);
+		expect(fxCss).not.toMatch(/\btransform\s*:/);
 		expect(stateCss).not.toMatch(/--norse-card-(name|keyword|mana|atk|hp)-/);
 		expect(stateCss).not.toContain('.bf-card-wrapper');
 		expect(stateCss).not.toContain('.hand-fan-card');
@@ -121,5 +136,10 @@ describe('card surface CSS ownership', () => {
 		expect(cardsBarrel).not.toContain('CardTransformBridge');
 		expect(animationLayer).toContain('battle-fx-layer');
 		expect(motionCss).toContain('scale(var(--card-motion-scale))');
+		expect(frameSource).toContain('card-state-layer');
+		expect(frameSource).toContain('card-fx-layer');
+		expect(frameSource).toContain('card-fx-layer__flash');
+		expect(frameSource).toContain('card-fx-layer__shine');
+		expect(frameSource).toContain('card-fx-layer__local-glow');
 	});
 });

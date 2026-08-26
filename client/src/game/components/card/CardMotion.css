@@ -2,7 +2,7 @@
  * Motion host for applyCardMotion / [data-card-motion].
  * Geometry (.card-frame) must not set transform.
  *
- * Local clipped FX (shine, flash) stay in CardFrameState .card-fx-layer.
+ * Local clipped FX (shine, flash, local glow) stay in CardFX.css /.card-fx-layer.
  * Leaving-the-card FX (smoke, trails, particles) stay on battle-fx-layer / Pixi.
  */
 

@@ -9,6 +9,8 @@
  *   z:4  rarity border             (::before, animated conic)
  *   z:5+ slot children render in tree order, each owns its z-index
  *   z:5/7  holo foil/glitter/glare  (only when <CardHolo> child present)
+ *   z:30 card-state-layer (status overlays; empty until wired)
+ *   z:40 card-fx-layer (local clipped flash/shine/glow; battle FX stays outside)
  *
  * Frame root owns:
  *   - ref (for parallax handlers)
@@ -42,6 +44,7 @@ import './CardMotion.css';
 import './NorseCardFrame.css';
 import './cardSurfaceContract.css';
 import './CardFrameState.css';
+import './CardFX.css';
 
 const CardFrame: React.FC<CardFrameProps> = ({
 	shape = 'tile',
@@ -220,6 +223,12 @@ const CardFrame: React.FC<CardFrameProps> = ({
 					</>
 				)}
 				<NonArtChildren>{children}</NonArtChildren>
+				<div className="card-state-layer" aria-hidden="true" />
+				<div className="card-fx-layer" aria-hidden="true">
+					<div className="card-fx-layer__flash" />
+					<div className="card-fx-layer__shine" />
+					<div className="card-fx-layer__local-glow" />
+				</div>
 			</div>
 			<CardKeywordTooltip />
 		</CardFrameContext.Provider>
