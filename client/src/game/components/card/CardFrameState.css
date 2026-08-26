@@ -42,11 +42,9 @@
 	pointer-events: none;
 }
 
+/* Local clipped FX only. Hand/battlefield/hero own their reduced-motion. */
 @media (prefers-reduced-motion: reduce) {
-	.card-fx-layer *,
-	.bf-card-wrapper.shake,
-	.hand-fan-card.shake,
-	.damage-shake {
+	.card-fx-layer * {
 		animation-duration: 1ms !important;
 		animation-iteration-count: 1 !important;
 	}

@@ -48,19 +48,34 @@ describe('card surface CSS ownership', () => {
 	});
 
 	it('keeps CardFrame hover off the geometry transform channel', () => {
+		const keyframeBody = (name: string): string => {
+			const match = cardFrameCss.match(
+				new RegExp(`@keyframes\\s+${name}\\s*\\{([^}]*)\\}`),
+			);
+			return match?.[1] ?? '';
+		};
+
 		expect(cardFrameCss).not.toMatch(
-			/\.card-frame\[data-interactive='true'\]:hover\s*\{[^}]*transform:/,
+			/\.card-frame(?!__)[^{]*\{[^}]*\btransform\s*:/,
 		);
+		expect(keyframeBody('pokerSpellCastGlow')).not.toContain('transform');
+		expect(keyframeBody('wagerActivateGlow')).not.toContain('transform');
 		expect(motionCss).toContain('[data-card-motion]');
 		expect(motionCss).toContain('var(--card-motion-x)');
+		expect(motionCss).toContain('--card-motion-duration');
+		expect(motionCss).toContain('card-motion-spell-cast');
+		expect(motionCss).toContain('card-motion-wager-activate');
 	});
 
 	it('writes card motion through CSS variables, not element.style.transform', () => {
 		expect(motionHelper).toContain("setProperty('--card-motion-x'");
 		expect(motionHelper).toContain("removeProperty('transform')");
+		expect(motionHelper).toContain('stampCardMotionClass');
 		expect(motionHelper).not.toMatch(/element\.style\.transform\s*=/);
 		expect(directDragSource).toContain('applyCardMotion');
-		expect(directDragSource).not.toMatch(/style\.transform\s*=/);
+		expect(directDragSource).toContain('data-card-motion');
+		expect(directDragSource).toContain('--card-motion-scale');
+		expect(directDragSource).not.toMatch(/\btransform\s*:/);
 	});
 
 	it('composes battlefield hover and shake on CSS variables, not competing transform writes', () => {
@@ -94,7 +109,10 @@ describe('card surface CSS ownership', () => {
 		expect(pokerBoardCss).not.toMatch(/\.card-frame__/);
 		expect(stateCss).not.toMatch(/\.card-frame[^{]*\{[^}]*(width|height)\s*:/);
 		expect(stateCss).not.toMatch(/--norse-card-(name|keyword|mana|atk|hp)-/);
-		expect(cardFrameCss).not.toMatch(/\.card-frame--highlighted\s*\{[^}]*transform:/);
+		expect(stateCss).not.toContain('.bf-card-wrapper');
+		expect(stateCss).not.toContain('.hand-fan-card');
+		expect(stateCss).not.toContain('.damage-shake');
+		expect(cardFrameCss).not.toMatch(/\.card-frame(?!__)[^{]*\{[^}]*\btransform\s*:/);
 		expect(surfaceCss).toContain('@container');
 		expect(surfaceCss).not.toMatch(/@media \(max-width:\s*640px\)/);
 		expect(appSource).not.toContain('CardTransformBridgeInitializer');

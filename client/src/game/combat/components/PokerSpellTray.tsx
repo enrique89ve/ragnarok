@@ -2,8 +2,9 @@
  * <PokerSpellTray> — Family 2 (poker-spell) in-arena surface.
  *
  * Renders the player's `pendingPokerSpells` queue as small CardFrame
- * instances with `cardFamily="poker-spell"` so the indigo accent +
- * cast-glow keyframe (defined in CardFrame.css) apply. The opponent
+ * instances with `cardFamily="poker-spell"` so indigo chrome applies.
+ * Cast glow lives on CardFrame; scale punch lives on the slot motion host.
+ * The opponent
  * tray mirrors the same queue today (the poker-spell state is shared
  * at the slice level — the queue is part of the active poker decision
  * window. When opponent-only spell tracking lands, split the
@@ -46,7 +47,7 @@ export const PokerSpellTray: React.FC<PokerSpellTrayProps> = ({ caster }) => {
 	return (
 		<div className={className} role="region" aria-label={`${caster} poker spell tray`}>
 			{visible.map((spell: PokerSpellCard) => (
-				<div key={spell.id} className="poker-spell-tray__slot">
+				<div key={spell.id} className="poker-spell-tray__slot" data-card-motion="">
 					<CardFrame
 						shape="tile"
 						size="small"

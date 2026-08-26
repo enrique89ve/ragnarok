@@ -24,6 +24,7 @@ import {
 	getArenaVfxWagerTargets,
 } from '../arenaVfxTargets';
 import { gameEffectCoordinator } from '@/game/effects/core/gameEffectCoordinator';
+import { stampCardMotionClass } from '../../components/card/applyCardMotion';
 
 const DRAMA_CONTAINER_ID = 'poker-drama-vfx-layer';
 const MAX_ORPHAN_AGE_MS = 6000;
@@ -1080,17 +1081,17 @@ export function playPokerSpellCast(
 	spawnImpactRing(burst.x, burst.y, palette);
 
 	getArenaVfxSpellTrayCards().forEach((el, index) => {
-		el.classList.remove('is-casting');
+		stampCardMotionClass(el, 'is-casting', false);
 		// Force reflow so the animation re-fires for repeat casts.
 		void el.offsetWidth;
-		el.classList.add('is-casting');
+		stampCardMotionClass(el, 'is-casting', true);
 		gameEffectCoordinator.schedule({
 			owner: 'poker-renderer',
 			lane: 'spell-state',
 			key: `spell-cast:${index}`,
 			priority: 'normal',
 			delayMs: 1_500,
-			run: () => el.classList.remove('is-casting'),
+			run: () => stampCardMotionClass(el, 'is-casting', false),
 		});
 	});
 }
@@ -1120,16 +1121,16 @@ export function playWagerActivate(
 	gsap.to(vignette, { opacity: 0, duration: 0.8, onComplete: () => cleanup(vignette) });
 
 	getArenaVfxWagerTargets(side).forEach((el, index) => {
-		el.classList.remove('is-activating');
+		stampCardMotionClass(el, 'is-activating', false);
 		void el.offsetWidth;
-		el.classList.add('is-activating');
+		stampCardMotionClass(el, 'is-activating', true);
 		gameEffectCoordinator.schedule({
 			owner: 'poker-renderer',
 			lane: 'wager-state',
 			key: `wager-activate:${side}:${index}`,
 			priority: 'normal',
 			delayMs: 1_100,
-			run: () => el.classList.remove('is-activating'),
+			run: () => stampCardMotionClass(el, 'is-activating', false),
 		});
 	});
 }

@@ -1,6 +1,9 @@
 /*
  * Motion host for applyCardMotion / [data-card-motion].
  * Geometry (.card-frame) must not set transform.
+ *
+ * Local clipped FX (shine, flash) stay in CardFrameState .card-fx-layer.
+ * Leaving-the-card FX (smoke, trails, particles) stay on battle-fx-layer / Pixi.
  */
 
 @property --card-motion-x {
@@ -32,8 +35,56 @@
 	--card-motion-y: 0px;
 	--card-motion-rotate: 0deg;
 	--card-motion-scale: 1;
+	--card-motion-duration: 150ms;
+	--card-motion-ease: ease-out;
 	transform:
 		translate3d(var(--card-motion-x), var(--card-motion-y), 0)
 		rotate(var(--card-motion-rotate))
 		scale(var(--card-motion-scale));
+	transition:
+		--card-motion-x var(--card-motion-duration) var(--card-motion-ease),
+		--card-motion-y var(--card-motion-duration) var(--card-motion-ease),
+		--card-motion-rotate var(--card-motion-duration) var(--card-motion-ease),
+		--card-motion-scale var(--card-motion-duration) var(--card-motion-ease);
+}
+
+/* Spell cast / wager: VFX stamps .is-casting / .is-activating on the frame
+ * and on the nearest motion host. Glow stays on CardFrame; punch lives here. */
+[data-card-motion].is-casting,
+[data-card-motion].is-activating {
+	transition: none;
+}
+
+[data-card-motion].is-casting {
+	animation: card-motion-spell-cast 1.4s ease-out;
+}
+
+[data-card-motion].is-activating {
+	animation: card-motion-wager-activate 1s ease-out;
+}
+
+@keyframes card-motion-spell-cast {
+	0% { --card-motion-scale: 1; }
+	20% { --card-motion-scale: 1.06; }
+	60% { --card-motion-scale: 1.02; }
+	100% { --card-motion-scale: 1; }
+}
+
+@keyframes card-motion-wager-activate {
+	0% { --card-motion-rotate: 0deg; --card-motion-scale: 1; }
+	20% { --card-motion-rotate: -3deg; --card-motion-scale: 1.05; }
+	50% { --card-motion-rotate: 2deg; --card-motion-scale: 1.04; }
+	100% { --card-motion-rotate: 0deg; --card-motion-scale: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	[data-card-motion] {
+		--card-motion-duration: 1ms;
+	}
+
+	[data-card-motion].is-casting,
+	[data-card-motion].is-activating {
+		animation-duration: 1ms;
+		animation-iteration-count: 1;
+	}
 }

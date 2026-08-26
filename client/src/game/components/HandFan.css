@@ -198,6 +198,13 @@
   90%       { --hand-shake-x: 3px; --hand-shake-rotate: 1deg; }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .hand-fan-card.shake {
+    animation-duration: 1ms;
+    animation-iteration-count: 1;
+  }
+}
+
 /* Empty hand message */
 .hand-fan-empty {
   color: #fcd34d;

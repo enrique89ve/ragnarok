@@ -57,7 +57,7 @@ export const DirectCardDrag: React.FC<DirectCardDragProps> = ({
     
     if (isPlayable && !disableDrag) {
       cardRef.current.style.cursor = 'grab';
-      applyCardMotion(cardRef.current, { y: -4, scale: scale * 1.05 });
+      applyCardMotion(cardRef.current, { y: -4, scale: scale * 1.05, durationMs: 150 });
       cardRef.current.style.zIndex = '100';
     }
   }, [isPlayable, disableDrag, scale]);
@@ -66,7 +66,7 @@ export const DirectCardDrag: React.FC<DirectCardDragProps> = ({
     if (!cardRef.current || isDragging) return;
     
     cardRef.current.style.cursor = 'default';
-    applyCardMotion(cardRef.current, { scale });
+    applyCardMotion(cardRef.current, { scale, durationMs: 150 });
     cardRef.current.style.zIndex = 'auto';
   }, [scale, isDragging]);
 
@@ -87,7 +87,7 @@ export const DirectCardDrag: React.FC<DirectCardDragProps> = ({
     
     // Immediate drag visual feedback
     cardRef.current.style.cursor = 'grabbing';
-    applyCardMotion(cardRef.current, { rotate: 3, scale: scale * 1.1 });
+    applyCardMotion(cardRef.current, { rotate: 3, scale: scale * 1.1, durationMs: 80 });
     cardRef.current.style.zIndex = '600'; /* --z-drag */
     
     debug.drag('Started dragging card', cardInstance.card.name);
@@ -117,7 +117,7 @@ export const DirectCardDrag: React.FC<DirectCardDragProps> = ({
     cardRef.current.style.position = 'relative';
     cardRef.current.style.left = 'auto';
     cardRef.current.style.top = 'auto';
-    applyCardMotion(cardRef.current, { scale });
+    applyCardMotion(cardRef.current, { scale, durationMs: 150 });
     cardRef.current.style.cursor = 'grab';
     cardRef.current.style.zIndex = 'auto';
     cardRef.current.style.pointerEvents = 'auto';
@@ -176,12 +176,14 @@ export const DirectCardDrag: React.FC<DirectCardDragProps> = ({
     <div
       ref={cardRef}
       className="relative select-none"
+      data-card-motion=""
       style={{
         width: '132px',
         height: '176px',
-        transform: `scale(${scale})`,
         transformOrigin: 'center',
-        cursor: isPlayable && !disableDrag ? 'grab' : 'default'
+        ['--card-motion-scale' as string]: String(scale),
+        ['--card-motion-duration' as string]: '150ms',
+        cursor: isPlayable && !disableDrag ? 'grab' : 'default',
       }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}

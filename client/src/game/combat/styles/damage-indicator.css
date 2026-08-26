@@ -158,6 +158,14 @@
   100% { transform: translate(0, 0) rotate(0deg); }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .damage-shake,
+  .damage-flash {
+    animation-duration: 1ms;
+    animation-iteration-count: 1;
+  }
+}
+
 /* Target flash/hit effect */
 .damage-flash {
   animation: damageFlash 0.3s ease-out;
