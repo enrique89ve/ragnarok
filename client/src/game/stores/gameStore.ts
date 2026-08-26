@@ -34,6 +34,8 @@ import { applyGameCommandToStore } from './gameCommandStoreAdapter';
 import { buildHandshakeGameState, type CardsDeckAnnounce } from '../p2p/cardsDeckHandshake';
 import { applyPokerAuxiliaryEffects } from '../combat/pokerAuxiliaryEffects';
 import type { FrontlineAttackMode } from '../core/commands';
+import { createCombatStep } from '../services/AttackResolutionService';
+import { buildCombatPresentation } from '../effects/presentation/CombatPresentation';
 
 // ============== BATTLEFIELD DEBUG MONITOR ==============
 // Track battlefield changes with stack traces to identify root cause of minion disappearance
@@ -556,12 +558,31 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
           ? (afterOpponent.heroHealth ?? afterOpponent.health ?? 0)
           : (afterTargetMinion?.currentHealth ?? 0);
         const targetDied = !isHeroTarget && defenderId !== undefined && afterTargetMinion === undefined;
+        const combatStep = createCombatStep(
+          attackerId,
+          attackerCard.card.name,
+          damage,
+          defenderId || 'opponent-hero',
+          targetMinion?.card.name || 'Opponent Hero',
+          isHeroTarget ? 'hero' : 'minion',
+          counterDamage,
+          attackerCard.hasDivineShield || false,
+          targetMinion?.hasDivineShield || false,
+          'player',
+        );
+        const targetLethal = isHeroTarget
+          ? (afterOpponent.heroHealth ?? afterOpponent.health ?? 0) <= 0
+          : targetDied;
+        const attackerLethal = !isHeroTarget && !result.state.players.player.battlefield.some(
+          card => card.instanceId === attackerId,
+        );
 
         CombatEventBus.emitImpactPhase({
           attackerId,
           targetId: defenderId || 'opponent-hero',
           damageToTarget: damage,
           damageToAttacker: isHeroTarget ? 0 : counterDamage,
+          presentation: buildCombatPresentation(combatStep, { targetLethal, attackerLethal }),
         });
 
         CombatEventBus.emitDamageResolved({

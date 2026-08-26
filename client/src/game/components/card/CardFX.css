@@ -24,11 +24,11 @@
 	opacity: 0;
 }
 
-.card-fx-layer__flash {
-	background: rgba(255, 50, 50, 0.35);
+.card-fx-layer:is(.card-fx-layer) .card-fx-layer__flash {
+	background: var(--card-fx-flash-color, rgba(255, 50, 50, 0.35));
 }
 
-.card-fx-layer__shine {
+.card-fx-layer:is(.card-fx-layer) .card-fx-layer__shine {
 	background: linear-gradient(
 		105deg,
 		transparent 35%,
@@ -37,12 +37,125 @@
 	);
 }
 
-.card-fx-layer__local-glow {
-	box-shadow: inset 0 0 24px rgba(255, 215, 0, 0.35);
+.card-fx-layer:is(.card-fx-layer) .card-fx-layer__local-glow {
+	box-shadow: inset 0 0 24px var(--card-fx-glow-color, rgba(255, 215, 0, 0.35));
+}
+
+/*
+ * Local impact primitives. These classes are presentation state only: they
+ * animate the already-mounted FX layer and never write CardFrame geometry or
+ * the motion transform owned by CardMotion.css.
+ */
+.card-fx--impact-light,
+	.card-fx--impact-normal,
+	.card-fx--impact-heavy,
+	.card-fx--white-flash,
+	.card-fx--shine {
+	--card-fx-flash-color: rgba(255, 72, 72, 0.34);
+	--card-fx-glow-color: rgba(255, 208, 96, 0.36);
+}
+
+.card-fx--impact-light .card-fx-layer__flash {
+	animation: card-fx-impact-light 220ms ease-out both;
+}
+
+.card-fx--impact-normal .card-fx-layer__flash {
+	animation: card-fx-impact-normal 300ms ease-out both;
+}
+
+.card-fx--impact-heavy .card-fx-layer__flash {
+	animation: card-fx-impact-heavy 420ms ease-out both;
+}
+
+.card-fx--white-flash .card-fx-layer__flash {
+	--card-fx-flash-color: rgba(255, 255, 255, 0.78);
+	animation: card-fx-white-flash 180ms ease-out both;
+}
+
+.card-fx--shine .card-fx-layer__shine {
+	animation: card-fx-shine 520ms ease-out both;
+}
+
+.card-fx--shield-flash {
+	--card-fx-flash-color: rgba(56, 189, 248, 0.62);
+	--card-fx-glow-color: rgba(56, 189, 248, 0.72);
+}
+
+.card-fx--shield-flash :is(.card-fx-layer__flash, .card-fx-layer__local-glow) {
+	animation: card-fx-shield-flash 360ms ease-out both;
+}
+
+@keyframes card-fx-impact-light {
+	0% { opacity: 0; }
+	22% { opacity: 0.7; }
+	100% { opacity: 0; }
+}
+
+@keyframes card-fx-impact-normal {
+	0% { opacity: 0; }
+	18% { opacity: 0.95; }
+	42% { opacity: 0.24; }
+	100% { opacity: 0; }
+}
+
+@keyframes card-fx-impact-heavy {
+	0% { opacity: 0; }
+	12% { opacity: 1; }
+	30% { opacity: 0.2; }
+	48% { opacity: 0.72; }
+	100% { opacity: 0; }
+}
+
+@keyframes card-fx-white-flash {
+	0% { opacity: 0; }
+	18% { opacity: 0.92; }
+	100% { opacity: 0; }
+}
+
+@keyframes card-fx-shine {
+	0% { opacity: 0; transform: translateX(-120%); }
+	22% { opacity: 0.8; }
+	100% { opacity: 0; transform: translateX(120%); }
+}
+
+@keyframes card-fx-shield-flash {
+	0% { opacity: 0; }
+	24% { opacity: 0.9; }
+	100% { opacity: 0; }
+}
+
+/* Heroes do not have CardFXLayer, but keep the same semantic primitives at
+ * the target wrapper so a shielded hero still receives local feedback. */
+.combat-fx-target--white-flash,
+.combat-fx-target--impact-light,
+.combat-fx-target--impact-normal,
+.combat-fx-target--impact-heavy {
+	animation: combat-fx-target-flash 260ms ease-out both;
+}
+
+.combat-fx-target--shield-flash {
+	box-shadow: 0 0 22px rgba(56, 189, 248, 0.72);
+}
+
+@keyframes combat-fx-target-flash {
+	0% { filter: brightness(1); }
+	22% { filter: brightness(1.9) saturate(0.8); }
+	100% { filter: brightness(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.card-fx-layer * {
+	.card-fx-layer *,
+	.card-fx--impact-light,
+	.card-fx--impact-normal,
+	.card-fx--impact-heavy,
+	.card-fx--white-flash,
+	.card-fx--shine,
+	.card-fx--shield-flash,
+	.combat-fx-target--white-flash,
+	.combat-fx-target--impact-light,
+	.combat-fx-target--impact-normal,
+	.combat-fx-target--impact-heavy,
+	.combat-fx-target--shield-flash {
 		animation-duration: 1ms !important;
 		animation-iteration-count: 1 !important;
 	}

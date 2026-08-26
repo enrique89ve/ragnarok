@@ -8,6 +8,7 @@ import { emitVisualEvent } from './emitter';
 import type { PokerSpellEffectType } from '../../types/CardTypes';
 import type { CombatAction, CombatPhase, PokerCard, PokerHandRank } from '../../types/PokerCombatTypes';
 import type { AttackEffectIntent } from '@/game/effects/core/effectIntentTypes';
+import type { CombatPresentation } from '@/game/effects/presentation/types';
 
 export type WagerType =
 	| 'all_in_bonus_with_cost'
@@ -108,6 +109,7 @@ export interface CombatImpactEvent extends VisualEventBase {
 	damage: number;
 	kind: 'hit' | 'counter';
 	intent?: AttackEffectIntent;
+	presentation?: CombatPresentation;
 }
 
 export interface VisualEventMap {

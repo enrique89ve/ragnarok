@@ -67,12 +67,20 @@ describe('resolveAIAttackEvent', () => {
     const result = resolveAIAttackEvent(event, deps);
 
     expect(result.status).toBe('applied');
-    expect(deps.emitImpactPhase).toHaveBeenCalledWith({
+    expect(deps.emitImpactPhase).toHaveBeenCalledWith(expect.objectContaining({
       attackerId: 'ai-minion-1',
       targetId: 'player-hero',
       damageToTarget: 4,
       damageToAttacker: 0
-    });
+    }));
+    expect(deps.emitImpactPhase).toHaveBeenCalledWith(expect.objectContaining({
+      presentation: expect.objectContaining({
+        action: 'melee-hit',
+        target: expect.objectContaining({
+          target: { type: 'hero', side: 'player' },
+        }),
+      }),
+    }));
     expect(applyDamageToGameState).toHaveBeenCalledWith(
       currentState,
       expect.objectContaining({
@@ -101,12 +109,22 @@ describe('resolveAIAttackEvent', () => {
     const result = resolveAIAttackEvent(event, deps);
 
     expect(result).toMatchObject({ status: 'applied', impactTargetId: 'player-minion-2' });
-    expect(deps.emitImpactPhase).toHaveBeenCalledWith({
+    expect(deps.emitImpactPhase).toHaveBeenCalledWith(expect.objectContaining({
       attackerId: 'ai-minion-1',
       targetId: 'player-minion-2',
       damageToTarget: 4,
       damageToAttacker: 2
-    });
+    }));
+    expect(deps.emitImpactPhase).toHaveBeenCalledWith(expect.objectContaining({
+      presentation: expect.objectContaining({
+        target: expect.objectContaining({
+          target: { type: 'card', instanceId: 'player-minion-2' },
+        }),
+        counter: expect.objectContaining({
+          target: { type: 'card', instanceId: 'ai-minion-1' },
+        }),
+      }),
+    }));
   });
 
   it('keeps legacy non-deferred damage mode as a mark-only skip', () => {

@@ -18,6 +18,7 @@ export function adaptCombatBusToVisual(): () => void {
 				damage: targetIntent.impact.amount,
 				kind: 'hit',
 				intent: targetIntent,
+				presentation: event.presentation,
 			});
 		}
 		if (counterIntent) {
@@ -26,6 +27,7 @@ export function adaptCombatBusToVisual(): () => void {
 				damage: counterIntent.impact.amount,
 				kind: 'counter',
 				intent: counterIntent,
+				presentation: event.presentation,
 			});
 		}
 	}, 75);

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Application, Graphics, Container } from 'pixi.js';
 import gsap from 'gsap';
 import { debug } from '../config/debugConfig';
+import { createEffectRandom } from '@/game/effects/core/effectRandom';
 import {
 	ARENA_CANVAS_SIZE,
 	ARENA_VFX_LAYERS,
@@ -29,8 +30,8 @@ function hexToNum(hex: string): number {
 	return parseInt(hex.replace('#', ''), 16);
 }
 
-function pickColor(palette: ParticleColor): number {
-	return Math.random() > 0.5 ? hexToNum(palette.primary) : hexToNum(palette.secondary);
+function pickColor(palette: ParticleColor, next: () => number = Math.random): number {
+	return next() > 0.5 ? hexToNum(palette.primary) : hexToNum(palette.secondary);
 }
 
 let pixiApp: Application | null = null;
@@ -196,9 +197,12 @@ export function spawnSlashTrail(
 	sx: number, sy: number,
 	tx: number, ty: number,
 	count: number,
-	palette: ParticleColor
+	palette: ParticleColor,
+	seed?: string,
 ) {
 	if (!pixiApp || !trailContainer) return;
+	const random = seed ? createEffectRandom(`slash-trail:${seed}`) : null;
+	const next = random?.next ?? Math.random;
 	const start = toArenaPoint(sx, sy);
 	const end = toArenaPoint(tx, ty);
 	if (!start || !end) return;
@@ -210,14 +214,14 @@ export function spawnSlashTrail(
 
 	for (let i = 0; i < count; i++) {
 		const t = i / count;
-		const spread = (Math.random() - 0.5) * 30;
+		const spread = (next() - 0.5) * 30;
 		const x = start.x + dx * t + nx * spread;
 		const y = start.y + dy * t + ny * spread;
-		const r = 2 + Math.random() * 3;
+		const r = 2 + next() * 3;
 
 		const g = new Graphics();
 		g.circle(0, 0, r);
-		g.fill(pickColor(palette));
+		g.fill(pickColor(palette, next));
 		g.position.set(x, y);
 		g.alpha = 0;
 		trailContainer.addChild(g);
@@ -250,22 +254,25 @@ export function spawnSlashTrail(
 export function spawnParticleBurst(
 	cx: number, cy: number,
 	count: number,
-	palette: ParticleColor
+	palette: ParticleColor,
+	seed?: string,
 ) {
 	if (!pixiApp || !burstContainer) return;
+	const random = seed ? createEffectRandom(`particle-burst:${seed}`) : null;
+	const next = random?.next ?? Math.random;
 	const center = toArenaPoint(cx, cy);
 	if (!center) return;
 
 	for (let i = 0; i < count; i++) {
-		const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
-		const dist = 30 + Math.random() * 90;
-		const r = 2 + Math.random() * 6;
+		const angle = (Math.PI * 2 * i) / count + (next() - 0.5) * 0.4;
+		const dist = 30 + next() * 90;
+		const r = 2 + next() * 6;
 		const endX = center.x + Math.cos(angle) * dist;
 		const endY = center.y + Math.sin(angle) * dist;
 
 		const g = new Graphics();
 		g.circle(0, 0, r);
-		g.fill(pickColor(palette));
+		g.fill(pickColor(palette, next));
 		g.position.set(center.x, center.y);
 		g.alpha = 1;
 		burstContainer.addChild(g);
@@ -274,7 +281,7 @@ export function spawnParticleBurst(
 			x: endX,
 			y: endY,
 			alpha: 0,
-			duration: 0.4 + Math.random() * 0.2,
+			duration: 0.4 + next() * 0.2,
 			ease: 'power2.out',
 			onComplete: () => {
 				burstContainer?.removeChild(g);
@@ -283,6 +290,9 @@ export function spawnParticleBurst(
 		});
 	}
 }
+
+/** Shared primitive name used by combat recipes. */
+export const spawnImpactBurst = spawnParticleBurst;
 
 export function spawnImpactRing(
 	cx: number, cy: number,
@@ -349,6 +359,88 @@ export function spawnEmbers(
 				burstContainer?.removeChild(g);
 				g.destroy();
 			}
+		});
+	}
+}
+
+export function spawnSmokePuff(
+	cx: number,
+	cy: number,
+	count: number,
+	palette: ParticleColor,
+	seed?: string,
+) {
+	if (!pixiApp || !burstContainer) return;
+	const center = toArenaPoint(cx, cy);
+	if (!center) return;
+	const random = seed ? createEffectRandom(`smoke-puff:${seed}`) : null;
+	const next = random?.next ?? Math.random;
+
+	for (let i = 0; i < count; i += 1) {
+		const size = 10 + next() * 18;
+		const startX = center.x + (next() - 0.5) * 24;
+		const startY = center.y + (next() - 0.5) * 18;
+		const puff = new Graphics();
+		puff.circle(0, 0, size);
+		puff.fill(i % 2 === 0 ? 0x667085 : hexToNum(palette.secondary));
+		puff.position.set(startX, startY);
+		puff.alpha = 0.32;
+		puff.scale.set(0.35);
+		burstContainer.addChild(puff);
+
+		gsap.to(puff, {
+			x: startX + (next() - 0.5) * 50,
+			y: startY - 24 - next() * 34,
+			alpha: 0,
+			duration: 0.55 + next() * 0.35,
+			ease: 'power1.out',
+			onComplete: () => {
+				burstContainer?.removeChild(puff);
+				puff.destroy();
+			},
+		});
+		gsap.to(puff.scale, {
+			x: 1.4,
+			y: 1.4,
+			duration: 0.65,
+			ease: 'power1.out',
+		});
+	}
+}
+
+export function spawnSparkBurst(
+	cx: number,
+	cy: number,
+	count: number,
+	palette: ParticleColor,
+	seed?: string,
+) {
+	if (!pixiApp || !burstContainer) return;
+	const center = toArenaPoint(cx, cy);
+	if (!center) return;
+	const random = seed ? createEffectRandom(`spark-burst:${seed}`) : null;
+	const next = random?.next ?? Math.random;
+
+	for (let i = 0; i < count; i += 1) {
+		const angle = next() * Math.PI * 2;
+		const distance = 22 + next() * 64;
+		const spark = new Graphics();
+		spark.rect(-1, -5, 2, 10);
+		spark.fill(pickColor(palette, next));
+		spark.position.set(center.x, center.y);
+		spark.rotation = angle;
+		burstContainer.addChild(spark);
+
+		gsap.to(spark, {
+			x: center.x + Math.cos(angle) * distance,
+			y: center.y + Math.sin(angle) * distance,
+			alpha: 0,
+			duration: 0.25 + next() * 0.2,
+			ease: 'power2.out',
+			onComplete: () => {
+				burstContainer?.removeChild(spark);
+				spark.destroy();
+			},
 		});
 	}
 }

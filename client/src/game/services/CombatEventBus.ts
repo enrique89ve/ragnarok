@@ -9,6 +9,7 @@
  */
 
 import { debug } from '../config/debugConfig';
+import type { CombatPresentation } from '../effects/presentation/types';
 
 export type CombatEventType = 
   | 'DAMAGE_INTENT'      // Something wants to deal damage
@@ -79,11 +80,12 @@ export interface AttackStartedEvent extends CombatEventBase {
 }
 
 export interface ImpactPhaseEvent extends CombatEventBase {
-  type: 'IMPACT_PHASE';
-  attackerId: string;
-  targetId: string;
-  damageToTarget: number;
-  damageToAttacker: number;
+	type: 'IMPACT_PHASE';
+	attackerId: string;
+	targetId: string;
+	damageToTarget: number;
+	damageToAttacker: number;
+	presentation?: CombatPresentation;
 }
 
 export interface AttackCompletedEvent extends CombatEventBase {
