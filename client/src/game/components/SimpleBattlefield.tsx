@@ -224,6 +224,7 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
                   if (!isInteractionDisabled || allowDisabledCardClick) onClick?.(card);
                 }}
               >
+                <span className="bf-summon-fx" aria-hidden="true" />
                 {(() => {
                   const simpleData = toSimpleCardData(card);
                   if (!simpleData) return null;

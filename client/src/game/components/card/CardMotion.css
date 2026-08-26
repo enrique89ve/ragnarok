@@ -2,9 +2,10 @@
  * Motion host for applyCardMotion / [data-card-motion].
  * Geometry (.card-frame) must not set transform.
  *
- * Two transform channels compose on this node:
- *   BASE (--card-motion-*)  position / hover / interaction
- *   FX   (--card-fx-*)      cast / wager / impact punch
+ * Three transform lanes compose on this node:
+ *   BASE     (--card-motion-*)    position / hover / interaction
+ *   REACTION (--card-reaction-*)  impact / damage / recoil
+ *   ACTION   (--card-action-*)    cast / summon / wager / attack punch
  *
  * Local clipped FX (shine, flash, local glow) stay in CardFX.css /.card-fx-layer.
  * Leaving-the-card FX (smoke, trails, particles) stay on battle-fx-layer / Pixi.
@@ -34,28 +35,52 @@
 	initial-value: 1;
 }
 
-@property --card-fx-x {
+@property --card-reaction-x {
 	syntax: '<length>';
 	inherits: false;
 	initial-value: 0px;
 }
 
-@property --card-fx-y {
+@property --card-reaction-y {
 	syntax: '<length>';
 	inherits: false;
 	initial-value: 0px;
 }
 
-@property --card-fx-rotate {
+@property --card-reaction-rotate {
 	syntax: '<angle>';
 	inherits: false;
 	initial-value: 0deg;
 }
 
-@property --card-fx-scale {
+@property --card-reaction-scale {
 	syntax: '<number>';
 	inherits: false;
-	initial-value: 1;
+	initial-value: 0;
+}
+
+@property --card-action-x {
+	syntax: '<length>';
+	inherits: false;
+	initial-value: 0px;
+}
+
+@property --card-action-y {
+	syntax: '<length>';
+	inherits: false;
+	initial-value: 0px;
+}
+
+@property --card-action-rotate {
+	syntax: '<angle>';
+	inherits: false;
+	initial-value: 0deg;
+}
+
+@property --card-action-scale {
+	syntax: '<number>';
+	inherits: false;
+	initial-value: 0;
 }
 
 [data-card-motion] {
@@ -63,22 +88,28 @@
 	--card-motion-y: 0px;
 	--card-motion-rotate: 0deg;
 	--card-motion-scale: 1;
-	--card-fx-x: 0px;
-	--card-fx-y: 0px;
-	--card-fx-rotate: 0deg;
-	--card-fx-scale: 1;
+	--card-reaction-x: 0px;
+	--card-reaction-y: 0px;
+	--card-reaction-rotate: 0deg;
+	--card-reaction-scale: 0;
+	--card-action-x: 0px;
+	--card-action-y: 0px;
+	--card-action-rotate: 0deg;
+	--card-action-scale: 0;
 	--card-motion-duration: 150ms;
 	--card-motion-ease: ease-out;
 	transform:
 		translate3d(
-			calc(var(--card-motion-x) + var(--card-fx-x)),
-			calc(var(--card-motion-y) + var(--card-fx-y)),
+			calc(var(--card-motion-x) + var(--card-reaction-x) + var(--card-action-x)),
+			calc(var(--card-motion-y) + var(--card-reaction-y) + var(--card-action-y)),
 			0
 		)
 		rotate(var(--card-motion-rotate))
-		rotate(var(--card-fx-rotate))
+		rotate(var(--card-reaction-rotate))
+		rotate(var(--card-action-rotate))
 		scale(var(--card-motion-scale))
-		scale(var(--card-fx-scale));
+		scale(calc(1 + var(--card-reaction-scale)))
+		scale(calc(1 + var(--card-action-scale)));
 	transition:
 		--card-motion-x var(--card-motion-duration) var(--card-motion-ease),
 		--card-motion-y var(--card-motion-duration) var(--card-motion-ease),
@@ -88,39 +119,40 @@
 
 /* Spell cast / wager: VFX stamps .is-casting / .is-activating on the frame
  * and on the nearest motion host. Glow stays on CardFrame; punch lives here
- * on the FX channel so hover/base motion is not replaced. */
-[data-card-motion].is-casting,
-[data-card-motion].is-activating {
+ * on the ACTION lane so hover/base motion is not replaced. */
+[data-card-motion]:is(.is-casting, .is-activating) {
 	transition: none;
+	animation-composition: add;
 }
 
 [data-card-motion].is-casting {
-	animation: card-fx-spell-cast 1.4s ease-out;
+	animation: card-action-spell-cast 1.4s ease-out;
 }
 
 [data-card-motion].is-activating {
-	animation: card-fx-wager-activate 1s ease-out;
+	animation: card-action-wager-activate 1s ease-out;
 }
 
 /* Combined shorthand — CSS does not merge competing `animation:` rules. */
 [data-card-motion].is-casting.is-activating {
 	animation:
-		card-fx-spell-cast 1.4s ease-out,
-		card-fx-wager-activate 1s ease-out;
+		card-action-spell-cast 1.4s ease-out,
+		card-action-wager-activate 1s ease-out;
+	animation-composition: add, add;
 }
 
-@keyframes card-fx-spell-cast {
-	0% { --card-fx-scale: 1; }
-	20% { --card-fx-scale: 1.06; }
-	60% { --card-fx-scale: 1.02; }
-	100% { --card-fx-scale: 1; }
+@keyframes card-action-spell-cast {
+	0% { --card-action-scale: 0; }
+	20% { --card-action-scale: 0.06; }
+	60% { --card-action-scale: 0.02; }
+	100% { --card-action-scale: 0; }
 }
 
-@keyframes card-fx-wager-activate {
-	0% { --card-fx-rotate: 0deg; --card-fx-scale: 1; }
-	20% { --card-fx-rotate: -3deg; --card-fx-scale: 1.05; }
-	50% { --card-fx-rotate: 2deg; --card-fx-scale: 1.04; }
-	100% { --card-fx-rotate: 0deg; --card-fx-scale: 1; }
+@keyframes card-action-wager-activate {
+	0% { --card-action-rotate: 0deg; --card-action-scale: 0; }
+	20% { --card-action-rotate: -3deg; --card-action-scale: 0.05; }
+	50% { --card-action-rotate: 2deg; --card-action-scale: 0.04; }
+	100% { --card-action-rotate: 0deg; --card-action-scale: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -128,9 +160,7 @@
 		--card-motion-duration: 1ms;
 	}
 
-	[data-card-motion].is-casting,
-	[data-card-motion].is-activating,
-	[data-card-motion].is-casting.is-activating {
+	[data-card-motion]:is(.is-casting, .is-activating) {
 		animation-duration: 1ms;
 		animation-iteration-count: 1;
 	}

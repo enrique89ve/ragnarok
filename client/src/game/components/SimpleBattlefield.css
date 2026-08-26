@@ -169,57 +169,89 @@
   initial-value: 1;
 }
 
-@property --bf-fx-x {
+@property --bf-reaction-x {
   syntax: '<length>';
   inherits: false;
   initial-value: 0px;
 }
 
-@property --bf-fx-y {
+@property --bf-reaction-y {
   syntax: '<length>';
   inherits: false;
   initial-value: 0px;
 }
 
-@property --bf-fx-rotate {
+@property --bf-reaction-rotate {
   syntax: '<angle>';
   inherits: false;
   initial-value: 0deg;
 }
 
-@property --bf-fx-scale {
+@property --bf-reaction-scale {
   syntax: '<number>';
   inherits: false;
-  initial-value: 1;
+  initial-value: 0;
+}
+
+@property --bf-action-x {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --bf-action-y {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --bf-action-rotate {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@property --bf-action-scale {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
 }
 
 /* Card wrapper - hover/click only triggers on the visible card, not gap dead space.
    pointer-events:none on wrapper, re-enabled on card children.
    CSS :hover still activates on parent when a child is hovered (spec behavior).
-   BASE (--bf-motion-*): hover / attack lift. FX (--bf-fx-*): shake / wager punch. */
+   BASE (--bf-motion-*): hover / attack lift.
+   REACTION (--bf-reaction-*): shake / impact.
+   ACTION (--bf-action-*): wager / attack punch. */
 .bf-card-wrapper {
   --bf-motion-x: 0px;
   --bf-motion-y: 0px;
   --bf-motion-rotate: 0deg;
   --bf-motion-scale: 1;
-  --bf-fx-x: 0px;
-  --bf-fx-y: 0px;
-  --bf-fx-rotate: 0deg;
-  --bf-fx-scale: 1;
+  --bf-reaction-x: 0px;
+  --bf-reaction-y: 0px;
+  --bf-reaction-rotate: 0deg;
+  --bf-reaction-scale: 0;
+  --bf-action-x: 0px;
+  --bf-action-y: 0px;
+  --bf-action-rotate: 0deg;
+  --bf-action-scale: 0;
   position: relative;
   width: 100%;
   height: 100%;
   cursor: pointer;
   transform:
     translate3d(
-      calc(var(--bf-motion-x) + var(--bf-fx-x)),
-      calc(var(--bf-motion-y) + var(--bf-fx-y)),
+      calc(var(--bf-motion-x) + var(--bf-reaction-x) + var(--bf-action-x)),
+      calc(var(--bf-motion-y) + var(--bf-reaction-y) + var(--bf-action-y)),
       0
     )
     rotate(var(--bf-motion-rotate))
-    rotate(var(--bf-fx-rotate))
+    rotate(var(--bf-reaction-rotate))
+    rotate(var(--bf-action-rotate))
     scale(var(--bf-motion-scale))
-    scale(var(--bf-fx-scale));
+    scale(calc(1 + var(--bf-reaction-scale)))
+    scale(calc(1 + var(--bf-action-scale)));
   transition:
     --bf-motion-y 0.35s cubic-bezier(0.22, 1, 0.36, 1),
     --bf-motion-scale 0.35s cubic-bezier(0.22, 1, 0.36, 1),
@@ -228,11 +260,21 @@
   box-sizing: border-box;
   overflow: visible;
   pointer-events: none;
-  animation: summonFlash 0.6s ease-out;
 }
 
 .bf-card-wrapper > * {
   pointer-events: auto;
+}
+
+/* Summon flash is visual-only. Keeping it on its own layer means shake and
+   action animations never replace its animation on the motion host. */
+.bf-summon-fx {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  border-radius: inherit;
+  pointer-events: none !important;
+  animation: summonFlash 0.6s ease-out;
 }
 
 .bf-card-wrapper:hover {
@@ -251,22 +293,22 @@
   z-index: var(--z-hover, 500);
 }
 
-/* Shake — invalid action or damage hit feedback (FX channel) */
+/* Shake — invalid action or damage hit feedback (REACTION lane) */
 .bf-card-wrapper.shake {
   animation:
-    bf-hit-rotate 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both,
-    bf-hit-x 0.4s ease-in-out,
-    bf-hit-flash 0.4s ease-out;
+    bf-reaction-hit-rotate 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both,
+    bf-reaction-hit-x 0.4s ease-in-out,
+    bf-reaction-hit-flash 0.4s ease-out;
 }
 
-@keyframes bf-hit-rotate {
-  0%, 100% { --bf-fx-rotate: 0deg; }
-  15%       { --bf-fx-rotate: -2deg; }
-  30%       { --bf-fx-rotate: 2deg; }
-  45%       { --bf-fx-rotate: -1.5deg; }
-  60%       { --bf-fx-rotate: 1.5deg; }
-  75%       { --bf-fx-rotate: -1deg; }
-  90%       { --bf-fx-rotate: 1deg; }
+@keyframes bf-reaction-hit-rotate {
+  0%, 100% { --bf-reaction-rotate: 0deg; }
+  15%       { --bf-reaction-rotate: -2deg; }
+  30%       { --bf-reaction-rotate: 2deg; }
+  45%       { --bf-reaction-rotate: -1.5deg; }
+  60%       { --bf-reaction-rotate: 1.5deg; }
+  75%       { --bf-reaction-rotate: -1deg; }
+  90%       { --bf-reaction-rotate: 1deg; }
 }
 
 /* Elemental buff — green card glow */
@@ -651,40 +693,42 @@
   }
 }
 
-@keyframes bf-hit-x {
-  0%, 100% { --bf-fx-x: 0px; }
-  20% { --bf-fx-x: -8px; }
-  40% { --bf-fx-x: 8px; }
-  60% { --bf-fx-x: -6px; }
-  80% { --bf-fx-x: 6px; }
+@keyframes bf-reaction-hit-x {
+  0%, 100% { --bf-reaction-x: 0px; }
+  20% { --bf-reaction-x: -8px; }
+  40% { --bf-reaction-x: 8px; }
+  60% { --bf-reaction-x: -6px; }
+  80% { --bf-reaction-x: 6px; }
 }
 
-@keyframes bf-hit-flash {
+@keyframes bf-reaction-hit-flash {
   0%   { box-shadow: inset 0 0 0 3px rgba(255, 50, 50, 0); }
   20%  { box-shadow: inset 0 0 0 4px rgba(255, 50, 50, 0.9), 0 0 16px 4px rgba(255, 50, 50, 0.5); }
   100% { box-shadow: inset 0 0 0 3px rgba(255, 50, 50, 0); }
 }
 
 /* Wager punch: VFX stamps .is-activating on the frame and this motion host.
-   Lives on the FX channel so hover/attack BASE motion is preserved. */
+   Lives on ACTION so hover/attack BASE and impact REACTION motion survive. */
 .bf-card-wrapper.is-activating {
-  animation: bf-fx-wager-activate 1s ease-out;
+  animation: bf-action-wager-activate 1s ease-out;
+  animation-composition: add;
 }
 
 /* Combined shorthand — CSS does not merge competing `animation:` rules. */
 .bf-card-wrapper.shake.is-activating {
   animation:
-    bf-hit-rotate 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both,
-    bf-hit-x 0.4s ease-in-out,
-    bf-hit-flash 0.4s ease-out,
-    bf-fx-wager-activate 1s ease-out;
+    bf-reaction-hit-rotate 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both,
+    bf-reaction-hit-x 0.4s ease-in-out,
+    bf-reaction-hit-flash 0.4s ease-out,
+    bf-action-wager-activate 1s ease-out;
+  animation-composition: add, add, replace, add;
 }
 
-@keyframes bf-fx-wager-activate {
-  0% { --bf-fx-rotate: 0deg; --bf-fx-scale: 1; }
-  20% { --bf-fx-rotate: -3deg; --bf-fx-scale: 1.05; }
-  50% { --bf-fx-rotate: 2deg; --bf-fx-scale: 1.04; }
-  100% { --bf-fx-rotate: 0deg; --bf-fx-scale: 1; }
+@keyframes bf-action-wager-activate {
+  0% { --bf-action-rotate: 0deg; --bf-action-scale: 0; }
+  20% { --bf-action-rotate: -3deg; --bf-action-scale: 0.05; }
+  50% { --bf-action-rotate: 2deg; --bf-action-scale: 0.04; }
+  100% { --bf-action-rotate: 0deg; --bf-action-scale: 0; }
 }
 
 
@@ -1155,8 +1199,12 @@
     transition: none;
   }
 
-  .bf-card-wrapper.is-activating,
-  .bf-card-wrapper.shake.is-activating {
+  .bf-card-wrapper.is-activating {
+    animation-duration: 1ms;
+    animation-iteration-count: 1;
+  }
+
+  .bf-summon-fx {
     animation-duration: 1ms;
     animation-iteration-count: 1;
   }
@@ -1180,8 +1228,7 @@
     box-shadow: 0 0 14px 4px rgba(251, 191, 36, 0.6);
   }
 
-  .bf-card-wrapper.shake,
-  .bf-card-wrapper.shake.is-activating {
+  .bf-card-wrapper.shake {
     animation: none;
   }
 
