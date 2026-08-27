@@ -16,13 +16,17 @@ import {
 	type GameEffectHandle,
 	type GameEffectPriority,
 } from '@/game/effects/core/gameEffectCoordinator';
-import { gameEffectMediator } from '@/game/effects/core/gameEffectMediator';
+import {
+	gameEffectMediator,
+	type GameEffectNode,
+} from '@/game/effects/core/gameEffectMediator';
 import type { EffectEndpoint } from '@/game/effects/core/effectIntentTypes';
 import {
 	buildCombatPresentationFromIntent,
 } from '@/game/effects/presentation/CombatPresentation';
 import {
 	captureVisualSnapshot,
+	targetEntityId,
 } from '@/game/effects/presentation/EffectTargetResolver';
 import {
 	recipeForCombatPresentation,
@@ -33,6 +37,7 @@ import type {
 	ImpactLevel,
 	LocalFxPrimitive,
 	PixiFxPrimitive,
+	PresentationImpact,
 	PresentationTarget,
 } from '@/game/effects/presentation/types';
 import { resolveArenaEffectPoint } from '@/game/effects/presentation';
@@ -111,36 +116,36 @@ function fallbackPresentation(event: CombatImpactEvent): CombatPresentation {
 	});
 }
 
-function getImpact(event: CombatImpactEvent): {
-	source: PresentationTarget | null;
-	target: PresentationTarget;
-	amount: number;
-	level: ImpactLevel;
-	outcome: 'damage' | 'shield';
-	lethal: boolean | null;
-} {
-	const presentation = event.presentation ?? fallbackPresentation(event);
-	const impact = event.kind === 'counter' ? presentation.counter : presentation.target;
-	if (impact) {
-		return {
-			source: event.kind === 'counter' && presentation.counter
-				? presentation.counter.source
-				: presentation.source,
-			target: impact.target,
-			amount: impact.amount,
-			level: impact.level,
-			outcome: impact.outcome,
-			lethal: impact.lethal,
-		};
+type ImpactPhase = {
+	readonly id: 'target' | 'counter';
+	readonly source: PresentationTarget | null;
+	readonly impact: PresentationImpact;
+};
+
+function impactPhases(
+	event: CombatImpactEvent,
+	presentation: CombatPresentation,
+): readonly ImpactPhase[] {
+	if (event.kind === 'counter' && presentation.counter) {
+		return [{
+			id: 'counter',
+			source: presentation.counter.source,
+			impact: presentation.counter,
+		}];
 	}
-	return {
+
+	const targetPhase: ImpactPhase = {
+		id: 'target',
 		source: presentation.source,
-		target: presentation.target.target,
-		amount: event.damage,
-		level: presentation.target.level,
-		outcome: presentation.target.outcome,
-		lethal: presentation.target.lethal,
+		impact: presentation.target,
 	};
+	if (event.kind !== 'hit' || !presentation.counter) return [targetPhase];
+
+	return [targetPhase, {
+		id: 'counter',
+		source: presentation.counter.source,
+		impact: presentation.counter,
+	}];
 }
 
 function travelDuration(event: CombatImpactEvent): number {
@@ -164,7 +169,7 @@ function primitiveCounts(level: ImpactLevel): {
 		case 'normal':
 			return { burst: 20, sparks: 8, smoke: 0, trail: 22 };
 		case 'heavy':
-			return { burst: 34, sparks: 14, smoke: 6, trail: 32 };
+			return { burst: 34, sparks: 14, smoke: 2, trail: 32 };
 		default: {
 			const exhaustive: never = level;
 			return exhaustive;
@@ -185,6 +190,44 @@ function scheduleVisualWindow(
 		delayMs,
 		run: () => {},
 	});
+}
+
+const PIXI_FX_DURATION_MS: Record<PixiFxPrimitive, number> = {
+	slashTrail: DEFAULT_TRAVEL_MS,
+	impactBurst: 320,
+	impactRing: 520,
+	smokePuff: 620,
+	sparkBurst: 360,
+};
+
+function scheduleDelayedChild(
+	key: string,
+	delayMs: number,
+	priority: GameEffectPriority,
+	start: () => GameEffectHandle | void,
+): GameEffectHandle {
+	let child: GameEffectHandle | undefined;
+	const scheduled = gameEffectCoordinator.schedule({
+		owner: 'visual-impact',
+		lane: 'impact',
+		key,
+		priority,
+		delayMs,
+		run: () => {
+			child = start() ?? undefined;
+		},
+	});
+	const onComplete = scheduled.onComplete
+		? scheduled.onComplete.then(() => child?.onComplete ?? Promise.resolve())
+		: Promise.resolve();
+
+	return {
+		cancel: () => {
+			scheduled.cancel();
+			child?.cancel();
+		},
+		onComplete,
+	};
 }
 
 function playPixiPrimitive(
@@ -220,80 +263,282 @@ function playPixiPrimitive(
 	}
 }
 
+function scheduleRecipeStep(
+	phase: ImpactPhase,
+	step: EffectRecipeStep,
+	stepIndex: number,
+	targetPoint: Point,
+	sourcePoint: Point | null,
+	counts: ReturnType<typeof primitiveCounts>,
+	palette: ParticleColor,
+	seed: string,
+	priority: GameEffectPriority,
+): GameEffectHandle {
+	return scheduleDelayedChild(
+		`${seed}:${phase.id}:recipe:${stepIndex}`,
+		step.delayMs,
+		priority,
+		() => {
+			const local = localPrimitive(step.primitive);
+			if (local) return playLocalFx(phase.impact.target, local, priority);
+
+			const pixi = pixiPrimitive(step.primitive);
+			if (!pixi) return undefined;
+			playPixiPrimitive(pixi, targetPoint, sourcePoint, counts, palette, seed);
+			return scheduleVisualWindow(
+				`${seed}:${phase.id}:recipe:${stepIndex}:duration`,
+				PIXI_FX_DURATION_MS[pixi],
+				priority,
+			);
+		},
+	);
+}
+
+function scheduleDamageNumber(
+	phase: ImpactPhase,
+	targetPoint: Point,
+	delayMs: number,
+	event: CombatImpactEvent,
+	priority: GameEffectPriority,
+	seed: string,
+): GameEffectHandle | null {
+	if (phase.impact.outcome !== 'damage' || phase.impact.amount <= 0) return null;
+
+	return scheduleDelayedChild(
+		`${seed}:${phase.id}:damage-number`,
+		delayMs,
+		priority,
+		() => {
+			const effectId = scheduleDamageEffect(
+				targetPoint,
+				phase.impact.amount,
+				event.kind === 'counter' || phase.id === 'counter'
+					? 'combat-counter'
+					: 'combat-damage',
+			);
+			const duration = scheduleVisualWindow(
+				`${seed}:${phase.id}:damage-number:duration`,
+				1_000,
+				priority,
+			);
+			return {
+				cancel: () => {
+					duration.cancel();
+					useAnimationOrchestrator.getState().cancelEffect(effectId);
+				},
+				onComplete: duration.onComplete,
+			};
+		},
+	);
+}
+
+function scheduleImpactPhase(
+	phase: ImpactPhase,
+	recipe: readonly EffectRecipeStep[],
+	targetPoint: Point,
+	sourcePoint: Point | null,
+	event: CombatImpactEvent,
+	priority: GameEffectPriority,
+	seed: string,
+	includeTrail: boolean,
+): GameEffectHandle {
+	const counts = primitiveCounts(phase.impact.level);
+	const scheduledSteps = recipe.filter(
+		step => includeTrail || pixiPrimitive(step.primitive) !== 'slashTrail',
+	);
+	const handles = scheduledSteps.map((step, index) => scheduleRecipeStep(
+		phase,
+		step,
+		index,
+		targetPoint,
+		sourcePoint,
+		counts,
+		ELEMENT_PALETTES.neutral,
+		seed,
+		priority,
+	));
+	const lastRecipeDelay = scheduledSteps.reduce(
+		(maxDelay, step) => Math.max(maxDelay, step.delayMs),
+		0,
+	);
+	const damageNumber = scheduleDamageNumber(
+		phase,
+		targetPoint,
+		lastRecipeDelay,
+		event,
+		priority,
+		seed,
+	);
+	if (damageNumber) handles.push(damageNumber);
+	return combineEffectHandles(handles);
+}
+
+function schedulePrimaryTravel(
+	phase: ImpactPhase,
+	recipe: readonly EffectRecipeStep[],
+	targetPoint: Point,
+	sourcePoint: Point | null,
+	event: CombatImpactEvent,
+	priority: GameEffectPriority,
+	seed: string,
+): GameEffectHandle {
+	const trail = recipe.find(step => pixiPrimitive(step.primitive) === 'slashTrail');
+	const travelHold = scheduleVisualWindow(
+		`${seed}:attack-travel:duration`,
+		travelDuration(event),
+		priority,
+	);
+	if (!trail) return travelHold;
+
+	const trailHandle = scheduleRecipeStep(
+		phase,
+		trail,
+		recipe.indexOf(trail),
+		targetPoint,
+		sourcePoint,
+		primitiveCounts(phase.impact.level),
+		ELEMENT_PALETTES.neutral,
+		seed,
+		priority,
+	);
+	return combineEffectHandles([travelHold, trailHandle]);
+}
+
+function pointForTarget(
+	target: PresentationTarget,
+	snapshots: ReadonlyMap<string, Point>,
+): Point | null {
+	return snapshots.get(targetEntityId(target)) ?? resolveArenaEffectPoint(endpointForTarget(target));
+}
+
+function captureImpactPoints(phases: readonly ImpactPhase[]): ReadonlyMap<string, Point> {
+	const snapshots = new Map<string, Point>();
+	for (const phase of phases) {
+		for (const target of [phase.source, phase.impact.target]) {
+			if (!target || snapshots.has(targetEntityId(target))) continue;
+			const snapshot = captureVisualSnapshot(target);
+			if (snapshot) snapshots.set(targetEntityId(target), snapshot.center);
+		}
+	}
+	return snapshots;
+}
+
+function buildImpactPlanNodes(
+	targetPhase: ImpactPhase,
+	targetPoint: Point,
+	targetSourcePoint: Point | null,
+	counterPhase: ImpactPhase | undefined,
+	counterPoint: Point | null,
+	counterSourcePoint: Point | null,
+	targetRecipe: readonly EffectRecipeStep[],
+	presentation: CombatPresentation,
+	event: CombatImpactEvent,
+	priority: GameEffectPriority,
+	seed: string,
+): GameEffectNode[] {
+	const nodes: GameEffectNode[] = [
+		{
+			id: 'attack-travel',
+			run: () => schedulePrimaryTravel(
+				targetPhase,
+				targetRecipe,
+				targetPoint,
+				targetSourcePoint,
+				event,
+				priority,
+				`${seed}:target`,
+			),
+		},
+		{
+			id: 'target-impact',
+			after: ['attack-travel'],
+			run: () => scheduleImpactPhase(
+				targetPhase,
+				targetRecipe,
+				targetPoint,
+				targetSourcePoint,
+				event,
+				priority,
+				`${seed}:target`,
+				false,
+			),
+		},
+	];
+
+	if (counterPhase && counterPoint) {
+		const counterRecipe = recipeForCombatPresentation(presentation, 'counter');
+		nodes.push({
+			id: 'counter-impact',
+			after: ['target-impact'],
+			run: () => scheduleImpactPhase(
+				counterPhase,
+				counterRecipe,
+				counterPoint,
+				counterSourcePoint,
+				event,
+				priority,
+				`${seed}:counter`,
+				true,
+			),
+		});
+	}
+
+	const aftermathAfter = counterPhase && counterPoint ? 'counter-impact' : 'target-impact';
+	nodes.push({
+		id: 'aftermath',
+		after: [aftermathAfter],
+		run: () => scheduleVisualWindow(`${seed}:aftermath`, 1_000, priority),
+	});
+	return nodes;
+}
+
 function handleCombatImpact(event: CombatImpactEvent): EffectHandle | null {
-	if (event.damage <= 0) return null;
-
-	const impact = getImpact(event);
-	const targetEndpoint = endpointForTarget(impact.target);
-	const targetSnapshot = captureVisualSnapshot(impact.target);
-	const targetPoint = targetSnapshot?.center ?? resolveArenaEffectPoint(targetEndpoint);
-	if (!targetPoint) return null;
-
-	const sourceSnapshot = impact.source ? captureVisualSnapshot(impact.source) : null;
-	const sourcePoint = sourceSnapshot?.center
-		?? (event.intent?.source ? resolveArenaEffectPoint(event.intent.source) : null);
 	const presentation = event.presentation ?? fallbackPresentation(event);
-	const recipe = recipeForCombatPresentation(
+	const phases = impactPhases(event, presentation);
+	if (phases.length === 0 || phases.every(phase => phase.impact.amount <= 0)) return null;
+
+	// Capture every endpoint synchronously while the combat state still owns
+	// both cards. The later counter/death phases can then render from geometry
+	// even when the primary impact removed a card from the DOM.
+	const snapshots = captureImpactPoints(phases);
+
+	const targetPhase = phases[0];
+	const targetPoint = pointForTarget(targetPhase.impact.target, snapshots);
+	if (!targetPoint) return null;
+	const targetSourcePoint = targetPhase.source
+		? pointForTarget(targetPhase.source, snapshots)
+		: null;
+	const targetRecipe = recipeForCombatPresentation(
 		presentation,
 		event.kind === 'counter' && presentation.counter ? 'counter' : 'target',
 	);
-	const counts = primitiveCounts(impact.level);
-	const palette = ELEMENT_PALETTES.neutral;
+	const counterPhase = phases.find(phase => phase.id === 'counter');
+	const counterPoint = counterPhase
+		? pointForTarget(counterPhase.impact.target, snapshots)
+		: null;
+	const counterSourcePoint = counterPhase?.source
+		? pointForTarget(counterPhase.source, snapshots)
+		: null;
 	const seed = event.intent?.id ?? event.id;
 	const priority = priorityFor(event);
 	return gameEffectMediator.dispatch({
-		id: `combat-impact:${event.id}`,
+		id: `combat-impact:${presentation.id}`,
 		owner: 'visual-impact',
 		lane: 'impact',
 		priority,
-		nodes: [
-			{
-				id: 'attack-travel',
-				run: () => {
-					const trail = recipe.some(recipeStep => pixiPrimitive(recipeStep.primitive) === 'slashTrail');
-					if (trail) {
-						playPixiPrimitive('slashTrail', targetPoint, sourcePoint, counts, palette, seed);
-					}
-					return scheduleVisualWindow(
-						`${event.id}:travel`,
-						travelDuration(event),
-						priority,
-					);
-				},
-			},
-			{
-				id: 'damage-impact',
-				after: ['attack-travel'],
-				run: () => {
-					const handles: GameEffectHandle[] = [];
-					for (const recipeStep of recipe) {
-						const local = localPrimitive(recipeStep.primitive);
-						if (local) {
-							handles.push(playLocalFx(impact.target, local, event.id, priority));
-							continue;
-						}
-						const pixi = pixiPrimitive(recipeStep.primitive);
-						if (pixi && pixi !== 'slashTrail') {
-							playPixiPrimitive(pixi, targetPoint, sourcePoint, counts, palette, seed);
-						}
-					}
-
-					if (impact.outcome === 'damage' && impact.amount > 0) {
-						const effectId = scheduleDamageEffect(
-							targetPoint,
-							impact.amount,
-							event.kind === 'counter' ? 'combat-counter' : 'combat-damage',
-						);
-						handles.push({
-							cancel: () => useAnimationOrchestrator.getState().cancelEffect(effectId),
-						});
-					}
-
-					handles.push(scheduleVisualWindow(`${event.id}:aftermath`, 1_000, priority));
-					return combineEffectHandles(handles);
-				},
-			},
-		],
+		nodes: buildImpactPlanNodes(
+			targetPhase,
+			targetPoint,
+			targetSourcePoint,
+			counterPhase,
+			counterPoint,
+			counterSourcePoint,
+			targetRecipe,
+			presentation,
+			event,
+			priority,
+			seed,
+		),
 	});
 }
 

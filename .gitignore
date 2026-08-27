@@ -98,6 +98,7 @@ __tests__/
 !client/src/game/combat/vfx/pokerEventFx.test.ts
 !client/src/game/combat/vfx/handlers/pokerDramaHandlers.test.ts
 !client/src/game/effects/presentation/CombatPresentation.test.ts
+!client/src/game/combat/vfx/adaptCombatBusToVisual.test.ts
 !client/src/game/combat/feedback/combatFeedbackStore.test.ts
 !client/src/game/utils/pokerHeroComposition.test.ts
 !client/src/game/utils/pokerHeroFrameAdapter.test.ts
