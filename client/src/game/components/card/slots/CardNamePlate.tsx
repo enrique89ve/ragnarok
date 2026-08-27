@@ -24,7 +24,6 @@ const resolveNameDensity = (name: string): CardNameDensity => {
 
 const CardNamePlate: React.FC<CardNamePlateProps> = ({ name }) => {
 	const { rarity, size } = useCardFrame();
-	const isPreview = size === 'preview';
 	const rarityColor = getRarityCssColor(rarity);
 	const nameDensity = resolveNameDensity(name);
 
@@ -33,10 +32,7 @@ const CardNamePlate: React.FC<CardNamePlateProps> = ({ name }) => {
 			className="card-frame__name-plate"
 			data-size={size}
 			data-name-density={nameDensity}
-			style={{
-				color: rarityColor,
-				fontSize: isPreview ? '1.25rem' : undefined,
-			} as React.CSSProperties}
+			style={{ color: rarityColor } as React.CSSProperties}
 		>
 			{name}
 		</div>

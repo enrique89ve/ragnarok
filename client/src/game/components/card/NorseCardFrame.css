@@ -389,7 +389,11 @@
   color: var(--collection-name-color) !important;
   display: block;
   overflow: visible;
-  font-size: 0.5rem;
+  font-size: clamp(
+    0.46rem,
+    calc(var(--norse-card-name-font-size) * var(--norse-card-name-font-scale)),
+    1.1rem
+  );
   font-weight: 800;
   line-height: 1;
   letter-spacing: 0;
@@ -402,22 +406,10 @@
     0 0 6px rgba(0, 0, 0, 0.78);
 }
 
-.norse-card-frame .card-frame__name-plate[data-size="small"] {
-  font-size: 0.48rem;
-}
-
-.norse-card-frame .card-frame__name-plate[data-size="medium"] {
-  font-size: 0.56rem;
-}
-
-.norse-card-frame .card-frame__name-plate[data-size="large"] {
-  font-size: 0.72rem;
-}
-
-.norse-card-frame .card-frame__name-plate[data-size="preview"] {
-  font-size: calc(0.9rem * var(--norse-card-name-font-scale)) !important;
-}
-
+/* Name type scales with the frame's real width. A fixed rem value makes a
+ * card look fine at its authored size but too small when the same frame is
+ * fitted into a narrower hand or mulligan row. The density multiplier keeps
+ * long names readable without allowing them to change the slot geometry. */
 .norse-card-frame .card-frame__name-plate[data-name-density="long"] {
   --norse-card-name-font-scale: 0.86;
 }
@@ -676,8 +668,8 @@
   --collection-frame-line-inset: 4px;
   --norse-card-name-bottom: calc(4px * var(--norse-card-ui-scale));
   --norse-card-name-inline: calc(8px * var(--norse-card-ui-scale));
-  --norse-card-name-height: calc(12px * var(--norse-card-ui-scale));
-  --norse-card-name-font-size: calc(0.46rem * var(--norse-card-ui-scale));
+  --norse-card-name-height: clamp(15px, 12cqw, 26px);
+  --norse-card-name-font-size: 8cqw;
   --norse-card-rarity-mark-bottom: calc(2px * var(--norse-card-ui-scale));
 }
 

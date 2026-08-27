@@ -57,7 +57,6 @@ export const HandFan = React.memo<HandFanProps>(({
   onCardInspect,
 }) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [shakingCardId, setShakingCardId] = useState<string | null>(null);
   const [bloodModeCardId, setBloodModeCardId] = useState<string | null>(null);
   const [drawCounter, setDrawCounter] = useState(0);
@@ -137,10 +136,7 @@ export const HandFan = React.memo<HandFanProps>(({
 
   const cardCount = adaptedCards.length;
   const centerIndex = (cardCount - 1) / 2;
-  const selectedIndex = selectedCardId
-    ? adaptedCards.findIndex(card => card.instanceId === selectedCardId)
-    : -1;
-  const activeIndex = hoveredIndex ?? (selectedIndex >= 0 ? selectedIndex : null);
+  const activeIndex = hoveredIndex;
 
   const getFanMotion = (index: number) => {
     const offset = index - centerIndex;
@@ -254,7 +250,6 @@ export const HandFan = React.memo<HandFanProps>(({
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
-                setSelectedCardId(card.instanceId);
                 onCardInspect?.(card);
                 return;
               }
@@ -276,11 +271,7 @@ export const HandFan = React.memo<HandFanProps>(({
                 }
               }
             }}
-            onClick={() => {
-              setSelectedCardId(card.instanceId);
-            }}
             onDoubleClick={() => {
-              setSelectedCardId(card.instanceId);
               onCardInspect?.(card);
             }}
             onPointerDown={(event) => {
@@ -290,7 +281,6 @@ export const HandFan = React.memo<HandFanProps>(({
               const startX = event.clientX;
               const startY = event.clientY;
               const timer = setTimeout(() => {
-                setSelectedCardId(card.instanceId);
                 onCardInspect?.(card);
                 longPressRef.current = null;
               }, 650);

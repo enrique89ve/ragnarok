@@ -139,13 +139,30 @@
   --norse-card-rarity-mark-bottom: 0px;
   --norse-card-name-bottom: calc(
     var(--norse-card-rarity-mark-bottom) +
-      var(--norse-card-rarity-mark-height) +
+    var(--norse-card-rarity-mark-height) +
       calc(4px * var(--norse-card-ui-scale))
   );
   --norse-card-keyword-bottom: calc(
     var(--norse-card-name-bottom) +
       var(--norse-card-name-height) +
       calc(3px * var(--norse-card-ui-scale))
+  );
+}
+
+/* Minion sockets are the lowest content on a collection card. Keep the name
+ * above their actual painted box, including the collection overhang, so the
+ * larger proportional type never crosses into attack or health. */
+.collection-card-frame.collection-card-frame--profile-minion.norse-card-frame--surface-collection {
+  --norse-card-name-bottom: max(
+    calc(
+      var(--norse-card-rarity-mark-height) +
+        calc(4px * var(--norse-card-ui-scale))
+    ),
+    calc(
+      var(--norse-card-stat-badge-height) +
+        var(--norse-card-stat-overhang) +
+        calc(4px * var(--norse-card-ui-scale))
+    )
   );
 }
 

@@ -16,6 +16,7 @@ const battlefieldCss = readCss('../SimpleBattlefield.css');
 const battlefieldSource = readFileSync(resolve(here, '../SimpleBattlefield.tsx'), 'utf8');
 const cardFrameCss = readCss('./CardFrame.css');
 const geometryCss = readCss('./CardFrameGeometry.css');
+const norseCardCss = readCss('./NorseCardFrame.css');
 const motionCss = readCss('./CardMotion.css');
 const surfaceCss = readCss('./cardSurfaceContract.css');
 const motionHelper = readFileSync(resolve(here, './applyCardMotion.ts'), 'utf8');
@@ -39,6 +40,19 @@ describe('card surface CSS ownership', () => {
 		expect(surfaceCss).toMatch(/\.norse-card-frame--surface-collection\b/);
 		expect(surfaceCss).toMatch(/\.norse-card-frame--surface-mulligan\b/);
 		expect(surfaceCss).toContain('--norse-card-keyword-bottom');
+	});
+
+	it('scales card names from the frame and reserves the minion lower rail', () => {
+		expect(surfaceCss).toContain('container-type: inline-size');
+		expect(norseCardCss).toContain(
+			'calc(var(--norse-card-name-font-size) * var(--norse-card-name-font-scale))',
+		);
+		expect(norseCardCss).toContain('--norse-card-name-height: clamp(15px, 12cqw, 26px)');
+		expect(norseCardCss).not.toMatch(/\.card-frame__name-plate\[data-size="(?:small|medium|large)"\]\s*\{[^}]*font-size/);
+		expect(surfaceCss).toContain(
+			'.collection-card-frame.collection-card-frame--profile-minion.norse-card-frame--surface-collection',
+		);
+		expect(surfaceCss).toContain('var(--norse-card-stat-overhang)');
 	});
 
 	it('does not let viewport width rewrite Norse mana anatomy', () => {
@@ -145,6 +159,13 @@ describe('card surface CSS ownership', () => {
 		expect(handFanCss).toContain('var(--hand-fan-push-x)');
 		expect(handFanSource).toContain('--hand-fan-lift');
 		expect(handFanSource).not.toMatch(/transform:\s*`translateY/);
+	});
+
+	it('keeps HandFan visual lift tied to hover instead of click selection', () => {
+		const handFanSource = readFileSync(resolve(here, '../HandFan.tsx'), 'utf8');
+		expect(handFanSource).toContain('const activeIndex = hoveredIndex;');
+		expect(handFanSource).not.toContain('selectedCardId');
+		expect(handFanSource).not.toContain('setSelectedCardId');
 	});
 
 	it('enforces the testnet ownership gates from the architecture report', () => {
