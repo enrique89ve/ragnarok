@@ -51,6 +51,7 @@ export interface AtlasFaction {
 export interface AtlasCard {
 	id: string | number;
 	name: string;
+	artUrl?: string;
 	type: string;
 	rarity?: string;
 	manaCost?: number;
@@ -78,6 +79,7 @@ export interface AtlasHeroAbility {
 export interface AtlasHeroKitEntry {
 	id: string;
 	name: string;
+	artUrl?: string;
 	manaCost: number;
 	description?: string;
 }
@@ -85,6 +87,7 @@ export interface AtlasHeroKitEntry {
 export interface AtlasHero {
 	id: string;
 	name: string;
+	artUrl?: string;
 	title: string;
 	element: string;
 	heroClass?: string;

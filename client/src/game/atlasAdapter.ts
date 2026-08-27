@@ -6,6 +6,7 @@ import { realmShiftCards } from './data/cardRegistry/sets/core/neutrals/realmShi
 import { ALL_HERO_LIST } from './data/norseHeroes';
 import { FACTIONS } from './pvp/pvpData';
 import { normalizeRarityKey } from './utils/rarityUtils';
+import { getCardArtPath, getHeroArtPath } from './utils/art/artMapping';
 import type { AtlasCard, AtlasDataAdapter, AtlasFaction, AtlasHero, AtlasRealmInfo, AtlasRealmShiftCard } from './components/map/adapter';
 import type { MapRealmId } from './components/map/types';
 import type { CardData } from './types';
@@ -30,6 +31,7 @@ function toAtlasCard(card: CardData): AtlasCard {
 	return {
 		id: card.id,
 		name: card.name,
+		artUrl: getCardArtPath(card.id) ?? undefined,
 		type: card.type,
 		rarity: normalizeRarityKey(card.rarity),
 		manaCost: card.manaCost,
@@ -50,9 +52,13 @@ function toAtlasCard(card: CardData): AtlasCard {
 }
 
 function toAtlasHero(hero: NorseHero): AtlasHero {
+	const heroArtUrl = getHeroArtPath(hero.id) ?? undefined;
+	const weaponArtUrl = getCardArtPath(hero.weaponUpgrade.id) ?? heroArtUrl;
+
 	return {
 		id: hero.id,
 		name: hero.name,
+		artUrl: heroArtUrl,
 		title: hero.title,
 		element: hero.element,
 		heroClass: hero.heroClass,
@@ -62,6 +68,7 @@ function toAtlasHero(hero: NorseHero): AtlasHero {
 		weaponUpgrade: {
 			id: String(hero.weaponUpgrade.id),
 			name: hero.weaponUpgrade.name,
+			artUrl: weaponArtUrl,
 			manaCost: hero.weaponUpgrade.manaCost,
 			description: hero.weaponUpgrade.description,
 		},

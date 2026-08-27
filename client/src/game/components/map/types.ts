@@ -31,6 +31,7 @@ export interface RealmShiftSummary {
 export interface MapCardReference {
 	id: string;
 	name: string;
+	artUrl?: string;
 	typeLabel: string;
 	sourceLabel: string;
 	costLabel: string;

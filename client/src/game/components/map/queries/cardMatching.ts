@@ -181,6 +181,7 @@ function toCardReference(card: AtlasCard): MapCardReference {
 	return {
 		id: String(card.id),
 		name: card.name,
+		artUrl: card.artUrl,
 		typeLabel: titleCase(card.type),
 		sourceLabel: getCardCategory(card) ? titleCase(getCardCategory(card)) : 'Card',
 		costLabel: card.manaCost === undefined ? '-' : String(card.manaCost),
@@ -194,6 +195,7 @@ function toHeroReference(hero: AtlasHero): MapCardReference {
 	return {
 		id: hero.id,
 		name: hero.name,
+		artUrl: hero.artUrl,
 		typeLabel: hero.title,
 		sourceLabel: 'Hero',
 		costLabel: 'Hero',
@@ -207,6 +209,7 @@ function toHeroWeaponReference(hero: AtlasHero): MapCardReference {
 	return {
 		id: `${hero.id}-weapon-${hero.weaponUpgrade.id}`,
 		name: hero.weaponUpgrade.name,
+		artUrl: hero.weaponUpgrade.artUrl ?? hero.artUrl,
 		typeLabel: 'Weapon Upgrade',
 		sourceLabel: hero.name,
 		costLabel: String(hero.weaponUpgrade.manaCost),
