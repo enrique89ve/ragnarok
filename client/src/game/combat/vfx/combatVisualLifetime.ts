@@ -13,7 +13,10 @@ export const COMBAT_LETHAL_TIMELINE_MS = {
 	counterImpact: 140,
 	lethalEmphasis: 100,
 	death: 320,
+	postDeathGap: 40,
 } as const;
+
+export const COMBAT_REDUCED_MOTION_EXIT_MS = 60;
 
 export function lethalVisualLifetimeMs(hasCounter: boolean): number {
 	return COMBAT_LETHAL_TIMELINE_MS.travel
@@ -21,13 +24,35 @@ export function lethalVisualLifetimeMs(hasCounter: boolean): number {
 		+ (hasCounter ? COMBAT_LETHAL_TIMELINE_MS.counterImpact : 0)
 		+ COMBAT_LETHAL_TIMELINE_MS.lethalEmphasis
 		+ COMBAT_LETHAL_TIMELINE_MS.death
-		+ 40;
+		+ COMBAT_LETHAL_TIMELINE_MS.postDeathGap;
 }
 
 /** Worst-case hold, useful for tests and callers that do not have a plan. */
 export const COMBAT_LETHAL_VISUAL_LIFETIME_MS = lethalVisualLifetimeMs(true);
 
 export const COMBAT_NORMAL_EXIT_MS = 350;
+
+export function combatVisualExitTiming(
+	remainingMs: number,
+	reducedMotion: boolean,
+): { readonly lifetimeMs: number; readonly deathDelayMs: number } {
+	if (reducedMotion) {
+		return { lifetimeMs: COMBAT_REDUCED_MOTION_EXIT_MS, deathDelayMs: 0 };
+	}
+	if (remainingMs <= 0) {
+		return { lifetimeMs: COMBAT_NORMAL_EXIT_MS, deathDelayMs: 0 };
+	}
+
+	return {
+		lifetimeMs: remainingMs,
+		deathDelayMs: Math.max(
+			0,
+			remainingMs
+				- COMBAT_LETHAL_TIMELINE_MS.death
+				- COMBAT_LETHAL_TIMELINE_MS.postDeathGap,
+		),
+	};
+}
 
 const visualDeadlines = new Map<string, number>();
 

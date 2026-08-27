@@ -121,7 +121,7 @@ describe('combat presentation contract', () => {
 		expect(presentation.counter).toMatchObject({ amount: 3, lethal: false });
 	});
 
-	it('keeps a zero-damage counter shield break in the presentation sequence', () => {
+	it('keeps a Divine Shield counter impact in the presentation sequence', () => {
 		const presentation = buildCombatPresentationFromResolvedAttack({
 			id: 'resolved-counter-shield',
 			attackerId: 'attacker-1',
@@ -129,7 +129,7 @@ describe('combat presentation contract', () => {
 			targetType: 'minion',
 			attackerSide: 'player',
 			damageToTarget: 4,
-			damageToAttacker: 0,
+			damageToAttacker: 3,
 			healthDamageToTarget: 4,
 			healthDamageToAttacker: 0,
 			targetHealthBefore: 8,
@@ -147,7 +147,7 @@ describe('combat presentation contract', () => {
 		});
 
 		expect(presentation.counter).toMatchObject({
-			amount: 0,
+			amount: 3,
 			outcome: 'shield',
 			lethal: false,
 		});

@@ -67,7 +67,7 @@ function state(attacker: CardInstance, target: CardInstance): GameState {
 	};
 }
 
-function step(target: CardInstance): ReturnType<typeof createCombatStep> {
+function step(target: CardInstance, attackerHasDivineShield = false): ReturnType<typeof createCombatStep> {
 	return createCombatStep(
 		'attacker',
 		'Attacker',
@@ -76,7 +76,7 @@ function step(target: CardInstance): ReturnType<typeof createCombatStep> {
 		'Target',
 		'minion',
 		3,
-		false,
+		attackerHasDivineShield,
 		target.hasDivineShield === true,
 		'player',
 	);
@@ -99,6 +99,22 @@ describe('resolved combat result', () => {
 			healthDamageToAttacker: 3,
 		});
 		expect(resolution.state.players.opponent.battlefield[0]?.hasDivineShield).toBe(false);
+	});
+
+	it('preserves counter magnitude when Divine Shield absorbs the counter', () => {
+		const attacker = minion('attacker', { hasDivineShield: true });
+		const target = minion('target');
+		const resolution = resolveDamageToState(state(attacker, target), step(target, true));
+
+		expect(resolution.resolvedAttack).toMatchObject({
+			damageToAttacker: 3,
+			healthDamageToAttacker: 0,
+			attackerHealthBefore: 5,
+			attackerHealthAfter: 5,
+			attackerShieldConsumed: true,
+			counterAttackOccurred: true,
+		});
+		expect(resolution.state.players.player.battlefield[0]?.hasDivineShield).toBe(false);
 	});
 
 	it('reports lethal target removal while preserving the pre-impact target snapshot', () => {

@@ -23,10 +23,10 @@ import { GameIcon } from '../utils/ui/GameIcon';
 import type { IconName } from '../utils/ui/iconMap';
 import { useTargetingStore } from '../stores/targetingStore';
 import {
-  COMBAT_LETHAL_TIMELINE_MS,
-  COMBAT_NORMAL_EXIT_MS,
+  combatVisualExitTiming,
   clearCombatVisualLifetime,
   combatVisualLifetimeRemaining,
+  COMBAT_LETHAL_TIMELINE_MS,
 } from '../combat/vfx/combatVisualLifetime';
 
 interface SimpleBattlefieldProps {
@@ -129,21 +129,18 @@ const BattlefieldCardPresence: React.FC<BattlefieldCardPresenceProps> = ({
     }
 
     const remaining = combatVisualLifetimeRemaining(cardInstanceId);
-    const lifetime = remaining > 0 ? remaining : COMBAT_NORMAL_EXIT_MS;
-    const deathDelay = remaining > 0
-      ? Math.max(0, remaining - COMBAT_LETHAL_TIMELINE_MS.death)
-      : 0;
-    const deathTimer = window.setTimeout(() => setDeathPhase(true), deathDelay);
+    const { lifetimeMs, deathDelayMs } = combatVisualExitTiming(remaining, reducedMotion === true);
+    const deathTimer = window.setTimeout(() => setDeathPhase(true), deathDelayMs);
     const removeTimer = window.setTimeout(() => {
       clearCombatVisualLifetime(cardInstanceId);
       safeToRemove?.();
-    }, lifetime);
+    }, lifetimeMs);
 
     return () => {
       window.clearTimeout(deathTimer);
       window.clearTimeout(removeTimer);
     };
-  }, [cardInstanceId, isPresent, safeToRemove]);
+  }, [cardInstanceId, isPresent, reducedMotion, safeToRemove]);
 
   const animate = isPresent
     ? (animateCardEntry ? { opacity: 1, scale: 1, y: 0 } : undefined)
