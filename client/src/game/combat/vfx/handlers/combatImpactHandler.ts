@@ -48,6 +48,7 @@ import type { CombatImpactEvent } from '../events';
 type Point = { readonly x: number; readonly y: number };
 
 const DEFAULT_TRAVEL_MS = 420;
+const IMPACT_CHOREOGRAPHY_GATE_MS = 140;
 
 function localPrimitive(value: EffectRecipeStep['primitive']): LocalFxPrimitive | null {
 	switch (value) {
@@ -175,6 +176,12 @@ function primitiveCounts(level: ImpactLevel): {
 			return exhaustive;
 		}
 	}
+}
+
+function countsForImpact(phase: ImpactPhase): ReturnType<typeof primitiveCounts> {
+	const counts = primitiveCounts(phase.impact.level);
+	if (phase.impact.lethal !== true) return counts;
+	return { ...counts, smoke: Math.max(counts.smoke, 5) };
 }
 
 function scheduleVisualWindow(
@@ -342,10 +349,8 @@ function scheduleImpactPhase(
 	seed: string,
 	includeTrail: boolean,
 ): GameEffectHandle {
-	const counts = primitiveCounts(phase.impact.level);
-	const scheduledSteps = recipe.filter(
-		step => includeTrail || pixiPrimitive(step.primitive) !== 'slashTrail',
-	);
+	const counts = countsForImpact(phase);
+	const scheduledSteps = scheduledRecipeSteps(recipe, includeTrail);
 	const handles = scheduledSteps.map((step, index) => scheduleRecipeStep(
 		phase,
 		step,
@@ -357,10 +362,7 @@ function scheduleImpactPhase(
 		seed,
 		priority,
 	));
-	const lastRecipeDelay = scheduledSteps.reduce(
-		(maxDelay, step) => Math.max(maxDelay, step.delayMs),
-		0,
-	);
+	const lastRecipeDelay = maxRecipeDelay(recipe, includeTrail);
 	const damageNumber = scheduleDamageNumber(
 		phase,
 		targetPoint,
@@ -371,6 +373,60 @@ function scheduleImpactPhase(
 	);
 	if (damageNumber) handles.push(damageNumber);
 	return combineEffectHandles(handles);
+}
+
+function scheduledRecipeSteps(
+	recipe: readonly EffectRecipeStep[],
+	includeTrail: boolean,
+): readonly EffectRecipeStep[] {
+	return recipe.filter(
+		step => includeTrail || pixiPrimitive(step.primitive) !== 'slashTrail',
+	);
+}
+
+function maxRecipeDelay(
+	recipe: readonly EffectRecipeStep[],
+	includeTrail: boolean,
+): number {
+	return scheduledRecipeSteps(recipe, includeTrail).reduce(
+		(maxDelay, step) => Math.max(maxDelay, step.delayMs),
+		0,
+	);
+}
+
+function scheduleImpactPhaseWithGate(
+	phase: ImpactPhase,
+	recipe: readonly EffectRecipeStep[],
+	targetPoint: Point,
+	sourcePoint: Point | null,
+	event: CombatImpactEvent,
+	priority: GameEffectPriority,
+	seed: string,
+	includeTrail: boolean,
+): GameEffectHandle {
+	const effects = scheduleImpactPhase(
+		phase,
+		recipe,
+		targetPoint,
+		sourcePoint,
+		event,
+		priority,
+		seed,
+		includeTrail,
+	);
+	const gate = scheduleVisualWindow(
+		`${seed}:${phase.id}:choreography-gate`,
+		Math.max(IMPACT_CHOREOGRAPHY_GATE_MS, maxRecipeDelay(recipe, includeTrail)),
+		priority,
+	);
+
+	return {
+		cancel: () => {
+			effects.cancel();
+			gate.cancel();
+		},
+		onComplete: gate.onComplete,
+	};
 }
 
 function schedulePrimaryTravel(
@@ -396,7 +452,7 @@ function schedulePrimaryTravel(
 		recipe.indexOf(trail),
 		targetPoint,
 		sourcePoint,
-		primitiveCounts(phase.impact.level),
+		countsForImpact(phase),
 		ELEMENT_PALETTES.neutral,
 		seed,
 		priority,
@@ -452,7 +508,7 @@ function buildImpactPlanNodes(
 		{
 			id: 'target-impact',
 			after: ['attack-travel'],
-			run: () => scheduleImpactPhase(
+			run: () => scheduleImpactPhaseWithGate(
 				targetPhase,
 				targetRecipe,
 				targetPoint,
@@ -470,7 +526,7 @@ function buildImpactPlanNodes(
 		nodes.push({
 			id: 'counter-impact',
 			after: ['target-impact'],
-			run: () => scheduleImpactPhase(
+			run: () => scheduleImpactPhaseWithGate(
 				counterPhase,
 				counterRecipe,
 				counterPoint,

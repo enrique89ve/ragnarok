@@ -538,9 +538,13 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       }
 
       if (result.status === 'applied') {
-        const damage = getAttack(attackerCard.card);
+        // The command above remains the gameplay authority. These resolved
+        // instance values are used for the presentation emitted below.
+        const damage = attackerCard.currentAttack ?? getAttack(attackerCard.card);
         const targetMinion = gameState.players.opponent.battlefield.find(c => c.instanceId === defenderId);
-        const counterDamage = targetMinion ? getAttack(targetMinion.card) : 0;
+        const counterDamage = targetMinion
+          ? targetMinion.currentAttack ?? getAttack(targetMinion.card)
+          : 0;
         const isHeroTarget = !defenderId || defenderId === 'opponent-hero';
 
         // Capture target health before/after the attack so animations and debug
