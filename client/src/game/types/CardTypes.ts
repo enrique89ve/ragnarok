@@ -237,6 +237,7 @@ export interface CardInstance {
   isWeakened?: boolean;        // Has -3 Attack
   isVulnerable?: boolean;      // Takes +3 damage from all sources
   isMarked?: boolean;          // Can always be targeted (ignores stealth/protection)
+  enrageAttackBonus?: number;  // Attack currently supplied by Enrage
   isSilenced?: boolean;        // Cannot use abilities
   isBurning?: boolean;         // Takes 3 damage when attacking, deals +3 damage
   

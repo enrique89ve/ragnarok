@@ -22,6 +22,7 @@ import {
 } from '@/game/effects/core/gameEffectMediator';
 import type { EffectEndpoint } from '@/game/effects/core/effectIntentTypes';
 import {
+	buildCombatPresentationFromResolvedAttack,
 	buildCombatPresentationFromIntent,
 } from '@/game/effects/presentation/CombatPresentation';
 import {
@@ -39,6 +40,11 @@ import {
 import {
 	recipeForCombatPresentation,
 } from '@/game/effects/presentation/EffectRecipes';
+import {
+	COMBAT_LETHAL_TIMELINE_MS,
+	holdCombatVisualLifetime,
+	lethalVisualLifetimeMs,
+} from '../combatVisualLifetime';
 import type {
 	CombatPresentation,
 	EffectRecipeStep,
@@ -56,7 +62,7 @@ import type { CombatImpactEvent } from '../events';
 type Point = { readonly x: number; readonly y: number };
 
 const DEFAULT_TRAVEL_MS = 300;
-const IMPACT_CHOREOGRAPHY_GATE_MS = 140;
+const IMPACT_CHOREOGRAPHY_GATE_MS = COMBAT_LETHAL_TIMELINE_MS.impact;
 
 function localPrimitive(value: EffectRecipeStep['primitive']): LocalFxPrimitive | null {
 	switch (value) {
@@ -155,6 +161,19 @@ function impactPhases(
 		source: presentation.counter.source,
 		impact: presentation.counter,
 	}];
+}
+
+function holdLethalCardVisuals(presentation: CombatPresentation): void {
+	const impacts = [presentation.target, presentation.counter].filter(
+	(impact): impact is PresentationImpact => impact !== undefined,
+	);
+	for (const impact of impacts) {
+		if (impact.lethal !== true || impact.target.type !== 'card') continue;
+		holdCombatVisualLifetime(
+			impact.target.instanceId,
+			lethalVisualLifetimeMs(presentation.counter !== undefined),
+		);
+	}
 }
 
 function travelDuration(event: CombatImpactEvent, profile: CombatImpactMotionProfile): number {
@@ -563,12 +582,17 @@ function scheduleImpactPhaseWithGate(
 		seed,
 		includeTrail,
 	);
-	const reaction = scheduleTargetReaction(
-		phase.impact.target,
-		direction,
-		profile,
+	const reaction = scheduleDelayedChild(
+		`${seed}:${phase.id}:target-reaction`,
+		IMPACT_CHOREOGRAPHY_GATE_MS,
 		priority,
-		seed,
+		() => scheduleTargetReaction(
+			phase.impact.target,
+			direction,
+			profile,
+			priority,
+			seed,
+		),
 	);
 	const gate = scheduleVisualWindow(
 		`${seed}:${phase.id}:choreography-gate`,
@@ -741,7 +765,31 @@ function buildImpactPlanNodes(
 		});
 	}
 
-	const aftermathAfter = counterPhase && counterPoint ? 'counter-impact' : 'target-impact';
+	const impactAfter = counterPhase && counterPoint ? 'counter-impact' : 'target-impact';
+	let aftermathAfter: string = impactAfter;
+	const hasLethalOutcome = targetPhase.impact.lethal === true
+		|| counterPhase?.impact.lethal === true;
+	if (hasLethalOutcome) {
+		nodes.push({
+			id: 'lethal-confirmed',
+			after: [impactAfter],
+			run: () => scheduleVisualWindow(
+				`${seed}:lethal-confirmed`,
+				COMBAT_LETHAL_TIMELINE_MS.lethalEmphasis,
+				priority,
+			),
+		});
+		nodes.push({
+			id: 'death',
+			after: ['lethal-confirmed'],
+			run: () => scheduleVisualWindow(
+				`${seed}:death`,
+				COMBAT_LETHAL_TIMELINE_MS.death,
+				priority,
+			),
+		});
+		aftermathAfter = 'death';
+	}
 	nodes.push({
 		id: 'aftermath',
 		after: [aftermathAfter],
@@ -751,9 +799,14 @@ function buildImpactPlanNodes(
 }
 
 function handleCombatImpact(event: CombatImpactEvent): EffectHandle | null {
-	const presentation = event.presentation ?? fallbackPresentation(event);
+	const presentation = event.resolvedAttack
+		? buildCombatPresentationFromResolvedAttack(event.resolvedAttack)
+		: event.presentation ?? fallbackPresentation(event);
 	const phases = impactPhases(event, presentation);
-	if (phases.length === 0 || phases.every(phase => phase.impact.amount <= 0)) return null;
+	if (phases.length === 0 || phases.every(phase =>
+		phase.impact.amount <= 0 && phase.impact.outcome !== 'shield' && phase.impact.lethal !== true
+	)) return null;
+	holdLethalCardVisuals(presentation);
 
 	// Capture every endpoint synchronously while the combat state still owns
 	// both cards. The later counter/death phases can then render from geometry

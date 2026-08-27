@@ -68,7 +68,7 @@ import { processSpellburst } from './mechanics/spellburstUtils';
 import { GameEventBus } from '@/core/events/GameEventBus';
 import { cryptoIdGen, cryptoRng } from './seededRng';
 import { getCardsRng, withCardsRng } from './cardsCommandRng';
-import { canMinionAct } from './effects/statusEffectUtils';
+import { canMinionAct, getEffectiveAttack, processOnAttackEffects } from './effects/statusEffectUtils';
 
 function attemptPetEvolution(
   state: GameState,
@@ -2249,9 +2249,7 @@ function processAttackForOpponent(
       }
 
       // Calculate attack with status effects using type guard
-      let attackDamage = attacker.currentAttack ?? getAttack(attacker.card);
-      if (attacker.isWeakened) attackDamage = Math.max(0, attackDamage - 3);
-      if (attacker.isBurning) attackDamage += 3;
+      const attackDamage = getEffectiveAttack(attacker);
 
       debug.combat(`[AI Attack] ${attacker.card.name} attacks Player Hero for ${attackDamage} damage (deferDamage=${deferDamage})`);
 
@@ -2332,9 +2330,7 @@ function processAttackForOpponent(
     const defender = playerField[defenderIndex];
 
     // Calculate attack with status effects using type guard
-    let attackDamage = attacker.currentAttack ?? getAttack(attacker.card);
-    if (attacker.isWeakened) attackDamage = Math.max(0, attackDamage - 3);
-    if (attacker.isBurning) attackDamage += 3;
+    const attackDamage = getEffectiveAttack(attacker);
 
     // Check for Divine Shield on attacker and defender
     const attackerHasDivineShield = attacker.hasDivineShield || false;
@@ -2350,7 +2346,7 @@ function processAttackForOpponent(
       defender.instanceId,
       'minion',
       attackDamage,
-      (defender.card as any).attack || 0, // counterDamage
+      getEffectiveAttack(defender), // counterDamage
       attackerHasDivineShield,
       defenderHasDivineShield,
       'opponent',
@@ -2411,7 +2407,7 @@ function processAttackForOpponent(
       newState.players.opponent.battlefield[attackerIndex].hasDivineShield = false;
     } else {
       // Normal damage application
-      const defenderAttack = (defender.card as any).attack || 0;
+      const defenderAttack = getEffectiveAttack(defender);
       if (defenderAttack > 0) {
         newState.players.opponent.battlefield[attackerIndex].currentHealth = (newState.players.opponent.battlefield[attackerIndex].currentHealth || 0) - defenderAttack;
 
@@ -2589,9 +2585,7 @@ function processAttackForPlayer(
       }
 
       // Calculate attack with status effects using type guard
-      let attackDamage = attacker.currentAttack ?? getAttack(attacker.card);
-      if (attacker.isWeakened) attackDamage = Math.max(0, attackDamage - 3);
-      if (attacker.isBurning) attackDamage += 3;
+      const attackDamage = getEffectiveAttack(attacker);
 
       // Queue animation with full combat data for deferred damage
       queueAIAttackAnimation(
@@ -2659,9 +2653,7 @@ function processAttackForPlayer(
     const defender = opponentField[defenderIndex];
 
     // Calculate attack with status effects using type guard
-    let attackDamage = attacker.currentAttack ?? getAttack(attacker.card);
-    if (attacker.isWeakened) attackDamage = Math.max(0, attackDamage - 3);
-    if (attacker.isBurning) attackDamage += 3;
+    const attackDamage = getEffectiveAttack(attacker);
 
     // Check for Divine Shield
     const attackerHasDivineShield = attacker.hasDivineShield || false;
@@ -2675,7 +2667,7 @@ function processAttackForPlayer(
       defender.instanceId,
       'minion',
       attackDamage,
-      (defender.card as any).attack || 0, // counterDamage
+      getEffectiveAttack(defender), // counterDamage
       attackerHasDivineShield,
       defenderHasDivineShield,
       'player' // attackerSide - this is a player minion attacking
@@ -2725,7 +2717,7 @@ function processAttackForPlayer(
     if (attackerHasDivineShield) {
       newState.players.player.battlefield[attackerIndex].hasDivineShield = false;
     } else {
-      const defenderAttack = (defender.card as any).attack || 0;
+      const defenderAttack = getEffectiveAttack(defender);
       if (defenderAttack > 0) {
         newState.players.player.battlefield[attackerIndex].currentHealth = (newState.players.player.battlefield[attackerIndex].currentHealth || 0) - defenderAttack;
         damagedMinionIds.push(attacker.instanceId);
@@ -3043,10 +3035,18 @@ function processAttackUnbound(
   if (!defenderInstanceId || defenderInstanceId === 'opponent-hero') {
     // Deal damage to opponent's hero using the dealDamage function instead of direct modification
     // This ensures armor is properly handled
-    const attackerAttackVal = (attacker.card as any).attack;
+    const attackerAttackVal = getEffectiveAttack(attacker);
     if (attackerAttackVal !== undefined && attackerAttackVal > 0) {
       newState = dealDamage(newState, 'opponent', 'hero', attackerAttackVal, undefined, attacker.card.id as number | undefined, 'player');
       newState = applyLifestealHealing(newState, attacker, attackerAttackVal, 'player');
+    }
+
+    const burnSelfDamage = processOnAttackEffects(attacker).selfDamage;
+    if (burnSelfDamage > 0) {
+      const burnAttacker = newState.players.player.battlefield.find(card => card.instanceId === attacker.instanceId);
+      if (burnAttacker) {
+        burnAttacker.currentHealth = (burnAttacker.currentHealth ?? getHealth(burnAttacker.card)) - burnSelfDamage;
+      }
     }
 
     // Store the original attacker ID
@@ -3113,7 +3113,7 @@ function processAttackUnbound(
     newState.players.opponent.battlefield[defenderIndex].hasDivineShield = false;
   } else {
     // Normal damage application
-    const attackerAtk = (attacker.card as any).attack || 0;
+    const attackerAtk = getEffectiveAttack(attacker);
     if (attackerAtk > 0) {
       newState.players.opponent.battlefield[defenderIndex].currentHealth = (newState.players.opponent.battlefield[defenderIndex].currentHealth || 0) - attackerAtk;
 
@@ -3130,7 +3130,7 @@ function processAttackUnbound(
     newState.players.player.battlefield[attackerIndex].hasDivineShield = false;
   } else {
     // Normal damage application
-    const defenderAtk = (defender.card as any).attack || 0;
+    const defenderAtk = getEffectiveAttack(defender);
     if (defenderAtk > 0) {
       newState.players.player.battlefield[attackerIndex].currentHealth = (newState.players.player.battlefield[attackerIndex].currentHealth || 0) - defenderAtk;
 
@@ -3170,15 +3170,23 @@ function processAttackUnbound(
 
   // Apply lifesteal healing for minion-vs-minion combat
   if (!defenderHasDivineShield) {
-    const attackerAtk2 = (attacker.card as any).attack || 0;
+    const attackerAtk2 = getEffectiveAttack(attacker);
     if (attackerAtk2 > 0) {
       newState = applyLifestealHealing(newState, attacker, attackerAtk2, 'player');
     }
   }
   if (!attackerHasDivineShield) {
-    const defenderAtk2 = (defender.card as any).attack || 0;
+    const defenderAtk2 = getEffectiveAttack(defender);
     if (defenderAtk2 > 0) {
       newState = applyLifestealHealing(newState, defender, defenderAtk2, 'opponent');
+    }
+  }
+
+  const burnSelfDamage = processOnAttackEffects(attacker).selfDamage;
+  if (burnSelfDamage > 0) {
+    const burnAttacker = newState.players.player.battlefield.find(card => card.instanceId === attacker.instanceId);
+    if (burnAttacker) {
+      burnAttacker.currentHealth = (burnAttacker.currentHealth ?? getHealth(burnAttacker.card)) - burnSelfDamage;
     }
   }
 
@@ -3347,7 +3355,7 @@ export function findOptimalAttackTargets(
     return []; // Card can't attack
   }
 
-  const attackerAttack = (attacker.card as any).attack || 0;
+  const attackerAttack = getEffectiveAttack(attacker);
   const opponentField = state.players.opponent.battlefield;
   const opponentHeroHealth = state.players.opponent.health;
 

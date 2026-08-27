@@ -4,8 +4,10 @@
  */
 
 import { CardInstance } from '../../types/CardTypes';
+import type { CardInstance as RuntimeCardInstance } from '../../types';
 import { cardsRng } from '../cardsCommandRng';
 import type { IconName } from '../ui/iconMap';
+import { getAttack } from '../cards/typeGuards';
 
 // Status effect types
 export type StatusEffectType =
@@ -102,9 +104,17 @@ export function getActiveStatusEffects(minion: CardInstance): StatusEffectType[]
   return active;
 }
 
-// Calculate modified attack (for Weakness and Burn bonuses)
-export function getModifiedAttack(minion: CardInstance): number {
-  let attack = minion.currentAttack ?? minion.card.attack ?? 0;
+/**
+ * Resolve the attack value used by gameplay at the moment of an attack.
+ *
+ * `currentAttack` is the instance's already-resolved stat projection: it may
+ * contain permanent buffs, auras, Enrage, temporary modifiers, or card
+ * ability results. Cards created without that projection fall back to their
+ * current card attack. Status modifiers are applied here, exactly once, at
+ * the combat boundary.
+ */
+export function getEffectiveAttack(minion: CardInstance | RuntimeCardInstance): number {
+  let attack = minion.currentAttack ?? getAttack(minion.card);
   
   if (minion.isWeakened) {
     attack = Math.max(0, attack - 3);
@@ -115,6 +125,9 @@ export function getModifiedAttack(minion: CardInstance): number {
   
   return attack;
 }
+
+/** @deprecated Use getEffectiveAttack at gameplay resolution boundaries. */
+export const getModifiedAttack = getEffectiveAttack;
 
 // Calculate damage taken (for Vulnerable and Bleed)
 export function calculateDamageTaken(minion: CardInstance, baseDamage: number, isAdditionalDamage: boolean = false): number {
@@ -165,7 +178,7 @@ export function processTurnStartEffects(minion: CardInstance): { damage: number;
 }
 
 // Process on-attack effects (Burn self-damage)
-export function processOnAttackEffects(minion: CardInstance): { selfDamage: number; effects: string[] } {
+export function processOnAttackEffects(minion: CardInstance | RuntimeCardInstance): { selfDamage: number; effects: string[] } {
   const effects: string[] = [];
   let selfDamage = 0;
   

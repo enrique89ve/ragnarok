@@ -1,6 +1,6 @@
 import { CardInstance, GameState } from '../../types';
 import { isMinion, getAttack, getHealth } from '../cards/typeGuards';
-import { addKeyword, removeKeyword, hasKeyword } from '../cards/keywordUtils';
+import { hasKeyword } from '../cards/keywordUtils';
 
 /**
  * Check if a minion should be enraged (has less than max health but is still alive)
@@ -37,59 +37,31 @@ export function applyEnrageEffect(minion: CardInstance): CardInstance {
   const shouldEnrage = shouldBeEnraged(minion);
   
   const minionAttack = getAttack(minion.card);
-  
+  const attackBonus = minion.card.name === 'Enraged Berserker'
+    ? 3
+    : minion.card.name === 'Tyr, God of War'
+      ? 6
+      : 2;
+  const previousBonus = minion.enrageAttackBonus ?? 0;
+  const currentAttack = minion.currentAttack ?? minionAttack;
+
   // Apply card-specific enrage effects based on card names
   if (shouldEnrage && minionAttack > 0) {
-    // Only apply the bonus if not already applied
-    if (!minion.currentAttack || minion.currentAttack === minionAttack) {
-      let attackBonus = 2; // Default bonus
-      let windfuryAdded = false;
-      
-      // Apply card-specific enrage effects
-      switch (minion.card.name) {
-        case "Enraged Berserker":
-          attackBonus = 3;
-          break;
-        case "Tyr, God of War":
-          attackBonus = 6;
-          break;
-      }
-      
-      // Apply attack bonus to currentAttack
-      if (!modifiedMinion.currentAttack) {
-        modifiedMinion.currentAttack = minionAttack;
-      }
-      modifiedMinion.currentAttack += attackBonus;
-      
-      // Apply windfury if needed
-      if (windfuryAdded) {
-        addKeyword(modifiedMinion, 'windfury');
-      }
-      
+    // Track Enrage separately so Aura/temporary projections do not suppress it.
+    if (previousBonus !== attackBonus) {
+      modifiedMinion.currentAttack = currentAttack - previousBonus + attackBonus;
+      modifiedMinion.enrageAttackBonus = attackBonus;
     }
-  } else if (!shouldEnrage && minion.currentAttack && minion.currentAttack > minionAttack && minionAttack > 0) {
+  } else if (!shouldEnrage && previousBonus > 0) {
     // Remove the enrage bonus when healed to full or silenced
-    let attackBonus = 2; // Default bonus
-    let windfuryRemoved = false;
-    
-    // Apply card-specific enrage removal
-    switch (minion.card.name) {
-      case "Enraged Berserker":
-        attackBonus = 3;
-        break;
-      case "Tyr, God of War":
-        attackBonus = 6;
-        break;
+    modifiedMinion.currentAttack = currentAttack - previousBonus;
+    modifiedMinion.enrageAttackBonus = undefined;
+  } else if (!shouldEnrage && currentAttack > minionAttack && minionAttack > 0) {
+    // Compatibility for older instances created before enrageAttackBonus was tracked.
+    const auraAttack = minion.auraBuffAttack ?? 0;
+    if (currentAttack - auraAttack > minionAttack) {
+      modifiedMinion.currentAttack = currentAttack - attackBonus;
     }
-    
-    // Remove attack bonus
-    modifiedMinion.currentAttack = (modifiedMinion.currentAttack ?? 0) - attackBonus;
-    
-    // Remove windfury if it was added by enrage
-    if (windfuryRemoved) {
-      removeKeyword(modifiedMinion, 'windfury');
-    }
-    
   }
   
   return modifiedMinion;

@@ -81,21 +81,25 @@ export function adaptCombatBusToVisual(): () => void {
 		const presentation = presentationForImpact(event, targetIntent, counterIntent);
 		if (targetIntent) {
 			emitCombatImpact({
+				attackerId: event.attackerId,
 				targetId: event.targetId,
 				damage: presentation?.target.amount ?? targetIntent.impact.amount,
 				kind: 'hit',
 				intent: targetIntent,
 				presentation,
+				resolvedAttack: event.resolvedAttack,
 			});
 		} else if (counterIntent) {
 			// A counter belongs to the primary attack's visual sequence. Keep this
 			// fallback for malformed/legacy events that contain no target impact.
 			emitCombatImpact({
+				attackerId: event.attackerId,
 				targetId: event.attackerId,
 				damage: counterIntent.impact.amount,
 				kind: 'counter',
 				intent: counterIntent,
 				presentation,
+				resolvedAttack: event.resolvedAttack,
 			});
 		}
 	}, 75);

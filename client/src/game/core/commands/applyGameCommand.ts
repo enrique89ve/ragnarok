@@ -2,7 +2,7 @@ import { GAME_COMMAND_TYPES, assertNeverCommand, type GameCommand } from './game
 import type { CardInstance, GameState } from '../../types';
 import { findCardInstance } from '../../utils/cards/cardUtils';
 import { hasKeyword } from '../../utils/cards/keywordUtils';
-import { getAttack } from '../../utils/cards/typeGuards';
+import { getEffectiveAttack } from '../../utils/effects/statusEffectUtils';
 import { autoAttackWithAllCards, processAttack, playCard, endTurn } from '../../utils/gameUtils';
 import { executeHeroPower } from '../../utils/heroPowerUtils';
 import { applyWeaponUpgrade, executeNorseHeroPower, getNorseHeroById, withNorseHeroPowerRandomness } from '../../utils/norseHeroPowerUtils';
@@ -380,7 +380,7 @@ function applyAttackCommandInPerspective(
 			metadata: {
 				cardName: attacker.card.name,
 				targetName,
-				value: getAttack(attacker.card),
+					value: getEffectiveAttack(attacker),
 			},
 		},
 		{ type: 'clear_selection', selection: 'all' },

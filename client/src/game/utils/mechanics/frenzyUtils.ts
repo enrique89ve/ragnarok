@@ -145,11 +145,13 @@ export function executeFrenzyEffect(
         const buffedCardInstance = updatedState.players[playerId].battlefield[index];
         // Apply attack buff
         if (effect.buffAttack && isMinion(buffedCardInstance.card)) {
-          const currentAttack = getAttack(buffedCardInstance.card);
+          const currentAttack = buffedCardInstance.currentAttack ?? getAttack(buffedCardInstance.card);
+          const nextAttack = currentAttack + effect.buffAttack;
           (buffedCardInstance.card as any) = {
             ...buffedCardInstance.card,
-            attack: currentAttack + effect.buffAttack
+            attack: getAttack(buffedCardInstance.card) + effect.buffAttack
           };
+          buffedCardInstance.currentAttack = nextAttack;
         }
         // Apply health buff
         if (effect.buffHealth && buffedCardInstance.currentHealth !== undefined && isMinion(buffedCardInstance.card)) {

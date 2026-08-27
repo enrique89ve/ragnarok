@@ -10,8 +10,16 @@ import {
  */
 export function attackIntentsFromImpact(event: ImpactPhaseEvent): readonly AttackEffectIntent[] {
 	const intents: AttackEffectIntent[] = [];
+	const targetIsShieldImpact = event.resolvedAttack?.targetShieldConsumed === true
+		|| event.presentation?.target.outcome === 'shield';
+	const targetHasResolvedOutcome = event.resolvedAttack?.targetLethal === true
+		|| targetIsShieldImpact;
+	const counterIsShieldImpact = event.resolvedAttack?.attackerShieldConsumed === true
+		|| event.presentation?.counter?.outcome === 'shield';
+	const counterHasResolvedOutcome = event.resolvedAttack?.attackerLethal === true
+		|| counterIsShieldImpact;
 
-	if (event.damageToTarget > 0) {
+	if (event.damageToTarget > 0 || targetHasResolvedOutcome) {
 		intents.push(createAttackEffectIntent({
 			id: `${event.id}:target`,
 			domain: 'poker',
@@ -25,7 +33,7 @@ export function attackIntentsFromImpact(event: ImpactPhaseEvent): readonly Attac
 		}));
 	}
 
-	if (event.damageToAttacker > 0) {
+	if (event.damageToAttacker > 0 || counterHasResolvedOutcome) {
 		intents.push(createAttackEffectIntent({
 			id: `${event.id}:counter`,
 			domain: 'poker',

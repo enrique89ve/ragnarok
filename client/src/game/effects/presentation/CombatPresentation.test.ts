@@ -72,15 +72,24 @@ describe('combat presentation contract', () => {
 		expect(impactLevelFor(8)).toBe('heavy');
 
 		const shielded = buildCombatPresentation(makeStep({ defenderHasDivineShield: true }));
-		expect(recipeForCombatPresentation(shielded).map(item => item.primitive)).toEqual([
-			'slashTrail',
-			'shield-flash',
-			'sparkBurst',
+		expect(recipeForCombatPresentation(shielded)).toEqual([
+			{ primitive: 'slashTrail', delayMs: 0 },
+			{ primitive: 'shield-flash', delayMs: 0 },
+			{ primitive: 'sparkBurst', delayMs: 110 },
 		]);
 		expect(CRITICAL_HIT_RECIPE).toContainEqual({
 			primitive: 'shine',
 			delayMs: 0,
 		});
+	});
+
+	it('keeps lethal semantics outside the particle recipe', () => {
+		const lethal = buildCombatPresentation(makeStep(), { targetLethal: true });
+
+		expect(recipeForCombatPresentation(lethal)).not.toContainEqual(
+			expect.objectContaining({ primitive: 'smokePuff' }),
+		);
+		expect(lethal.target.lethal).toBe(true);
 	});
 
 	it('maps resolved shield and lethal facts without reading card state', () => {

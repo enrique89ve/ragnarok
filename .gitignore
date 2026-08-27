@@ -99,6 +99,8 @@ __tests__/
 !client/src/game/combat/vfx/handlers/pokerDramaHandlers.test.ts
 !client/src/game/effects/presentation/CombatPresentation.test.ts
 !client/src/game/services/AttackResolutionService.test.ts
+!client/src/game/utils/effects/statusEffectUtils.test.ts
+!client/src/game/combat/vfx/combatVisualLifetime.test.ts
 !client/src/game/combat/vfx/adaptCombatBusToVisual.test.ts
 !client/src/game/combat/feedback/combatFeedbackStore.test.ts
 !client/src/game/utils/pokerHeroComposition.test.ts

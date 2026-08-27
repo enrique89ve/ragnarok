@@ -78,4 +78,49 @@ describe('combat bus visual adapter', () => {
 		unsubscribeVisual();
 		unsubscribeAdapter();
 	});
+
+	it('keeps a zero-damage shield break visible as an impact outcome', () => {
+		const seen: CombatImpactEvent[] = [];
+		const unsubscribeAdapter = adaptCombatBusToVisual();
+		const unsubscribeVisual = subscribeVisualEvent('combatImpact', event => seen.push(event));
+
+		CombatEventBus.emitImpactPhase({
+			attackerId: 'attacker-1',
+			targetId: 'target-1',
+			damageToTarget: 0,
+			damageToAttacker: 0,
+			resolvedAttack: {
+				id: 'combat-step-shield',
+				attackerId: 'attacker-1',
+				targetId: 'target-1',
+				targetType: 'minion',
+				attackerSide: 'player',
+				damageToTarget: 0,
+				damageToAttacker: 0,
+				healthDamageToTarget: 0,
+				healthDamageToAttacker: 0,
+				targetHealthBefore: 5,
+				targetHealthAfter: 5,
+				attackerHealthBefore: 5,
+				attackerHealthAfter: 5,
+				targetShieldConsumed: true,
+				attackerShieldConsumed: false,
+				targetLethal: false,
+				attackerLethal: false,
+				counterAttackOccurred: false,
+				triggeredEffects: [],
+				statChanges: [],
+				zoneChanges: [],
+			},
+		});
+
+		expect(seen).toHaveLength(1);
+		expect(seen[0]).toMatchObject({
+			damage: 0,
+			presentation: { target: { amount: 0, outcome: 'shield', lethal: false } },
+		});
+
+		unsubscribeVisual();
+		unsubscribeAdapter();
+	});
 });

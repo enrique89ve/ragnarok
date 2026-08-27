@@ -8,13 +8,13 @@ const step = (primitive: EffectRecipeStep['primitive'], delayMs: number): Effect
 export const BASIC_ATTACK_RECIPE: readonly EffectRecipeStep[] = [
 	step('slashTrail', 0),
 	step('impact-normal', 0),
-	step('white-flash', 0),
+	step('white-flash', 40),
 ];
 
 export const LIGHT_ATTACK_RECIPE: readonly EffectRecipeStep[] = [
 	step('slashTrail', 0),
 	step('impact-light', 0),
-	step('white-flash', 0),
+	step('white-flash', 30),
 ];
 
 export const HEAVY_ATTACK_RECIPE: readonly EffectRecipeStep[] = [
@@ -27,12 +27,14 @@ export const HEAVY_ATTACK_RECIPE: readonly EffectRecipeStep[] = [
 export const SHIELD_ATTACK_RECIPE: readonly EffectRecipeStep[] = [
 	step('slashTrail', 0),
 	step('shield-flash', 0),
-	step('sparkBurst', 0),
+	// The spark is the break/contact cue, after the shield has flashed.
+	step('sparkBurst', 110),
 ];
 
 export const LETHAL_ATTACK_RECIPE: readonly EffectRecipeStep[] = [
+	// Lethality is a semantic lifecycle, not a larger particle count. The
+	// explicit lethal-confirmed/death nodes own the post-impact sequence.
 	...HEAVY_ATTACK_RECIPE,
-	step('smokePuff', 0),
 ];
 
 /**

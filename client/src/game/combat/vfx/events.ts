@@ -9,6 +9,7 @@ import type { PokerSpellEffectType } from '../../types/CardTypes';
 import type { CombatAction, CombatPhase, PokerCard, PokerHandRank } from '../../types/PokerCombatTypes';
 import type { AttackEffectIntent } from '@/game/effects/core/effectIntentTypes';
 import type { CombatPresentation } from '@/game/effects/presentation/types';
+import type { ResolvedAttack } from '@/game/services/AttackResolutionService';
 
 export type WagerType =
 	| 'all_in_bonus_with_cost'
@@ -105,11 +106,14 @@ export interface WagerActivatedEvent extends VisualEventBase {
 
 export interface CombatImpactEvent extends VisualEventBase {
 	type: 'combatImpact';
+	attackerId: string;
 	targetId: string;
 	damage: number;
 	kind: 'hit' | 'counter';
 	intent?: AttackEffectIntent;
 	presentation?: CombatPresentation;
+	/** The gameplay result remains available at the visual boundary. */
+	resolvedAttack?: ResolvedAttack;
 }
 
 export interface VisualEventMap {

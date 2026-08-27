@@ -9,8 +9,8 @@
  */
 
 import { debug } from '../config/debugConfig';
-import React, { useMemo, useState, useRef } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { AnimatePresence, motion, usePresence, useReducedMotion } from 'framer-motion';
 import { CardInstanceWithCardData } from '../types/interfaceExtensions';
 import SimpleCardCompat from './card/SimpleCardCompat';
 import { toSimpleCardData } from './card/cardDataAdapter';
@@ -22,6 +22,12 @@ import { arenaVfxWagerMinionProps } from '../combat/arenaVfxTargets';
 import { GameIcon } from '../utils/ui/GameIcon';
 import type { IconName } from '../utils/ui/iconMap';
 import { useTargetingStore } from '../stores/targetingStore';
+import {
+  COMBAT_LETHAL_TIMELINE_MS,
+  COMBAT_NORMAL_EXIT_MS,
+  clearCombatVisualLifetime,
+  combatVisualLifetimeRemaining,
+} from '../combat/vfx/combatVisualLifetime';
 
 interface SimpleBattlefieldProps {
   playerCards: CardInstanceWithCardData[];
@@ -80,6 +86,74 @@ function buildBattlefieldStatView(card: CardInstanceWithCardData): SimpleCardSta
     },
   };
 }
+
+interface BattlefieldCardPresenceProps {
+  readonly cardInstanceId: string;
+  readonly side: 'player' | 'opponent';
+  readonly animateCardEntry: boolean;
+  readonly children: React.ReactNode;
+}
+
+const BattlefieldCardPresence: React.FC<BattlefieldCardPresenceProps> = ({
+  cardInstanceId,
+  side,
+  animateCardEntry,
+  children,
+}) => {
+  const [isPresent, safeToRemove] = usePresence();
+  const [deathPhase, setDeathPhase] = useState(false);
+  const reducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (isPresent) {
+      setDeathPhase(false);
+      clearCombatVisualLifetime(cardInstanceId);
+      return undefined;
+    }
+
+    const remaining = combatVisualLifetimeRemaining(cardInstanceId);
+    const lifetime = remaining > 0 ? remaining : COMBAT_NORMAL_EXIT_MS;
+    const deathDelay = remaining > 0
+      ? Math.max(0, remaining - COMBAT_LETHAL_TIMELINE_MS.death)
+      : 0;
+    const deathTimer = window.setTimeout(() => setDeathPhase(true), deathDelay);
+    const removeTimer = window.setTimeout(() => {
+      clearCombatVisualLifetime(cardInstanceId);
+      safeToRemove?.();
+    }, lifetime);
+
+    return () => {
+      window.clearTimeout(deathTimer);
+      window.clearTimeout(removeTimer);
+    };
+  }, [cardInstanceId, isPresent, safeToRemove]);
+
+  const animate = isPresent
+    ? (animateCardEntry ? { opacity: 1, scale: 1, y: 0 } : undefined)
+    : deathPhase
+      ? {
+          opacity: 0,
+          scale: 0.05,
+          y: side === 'opponent' ? 25 : -25,
+          filter: 'brightness(5) saturate(0)',
+        }
+      : { opacity: 1, scale: 1, y: 0, filter: 'none' };
+
+  return (
+    <motion.div
+      className="bf-card-position"
+      initial={animateCardEntry ? { opacity: 0, scale: 0.15, y: side === 'player' ? 80 : -80 } : false}
+      animate={animate}
+      transition={isPresent
+        ? { type: 'spring', stiffness: 420, damping: 24 }
+        : deathPhase
+          ? { duration: reducedMotion ? 0.01 : COMBAT_LETHAL_TIMELINE_MS.death / 1000, ease: [0.55, 0, 1, 0.45] }
+          : { duration: 0 }}
+    >
+      {children}
+    </motion.div>
+  );
+};
 
 export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
   playerCards,
@@ -173,19 +247,11 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
         >
           <AnimatePresence>
             {card && (
-              <motion.div
+              <BattlefieldCardPresence
                 key={card.instanceId}
-                className="bf-card-position"
-                initial={animateCardEntry ? { opacity: 0, scale: 0.15, y: side === 'player' ? 80 : -80 } : false}
-                animate={animateCardEntry ? { opacity: 1, scale: 1, y: 0 } : undefined}
-                exit={{
-                  opacity: 0,
-                  scale: 0.05,
-                  y: side === 'opponent' ? 25 : -25,
-                  filter: 'brightness(5) saturate(0)',
-                  transition: { duration: 0.35, ease: [0.55, 0, 1, 0.45] }
-                }}
-                transition={{ type: 'spring', stiffness: 420, damping: 24 }}
+                cardInstanceId={card.instanceId}
+                side={side}
+                animateCardEntry={animateCardEntry}
               >
               <div
                 data-instance-id={card.instanceId}
@@ -323,7 +389,7 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
                   </div>
                 )}
               </div>
-              </motion.div>
+              </BattlefieldCardPresence>
             )}
           </AnimatePresence>
         </div>

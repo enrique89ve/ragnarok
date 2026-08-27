@@ -26,7 +26,7 @@ import { useUnifiedCombatStore } from './unifiedCombatStore';
 import { useTargetingStore } from './targetingStore';
 import { logActivity } from './activityLogStore';
 import { CombatEventBus } from '../services/CombatEventBus';
-import { getAttack } from '../utils/cards/typeGuards';
+import { getEffectiveAttack } from '../utils/effects/statusEffectUtils';
 import { useMatchStore } from '../match/store';
 import { computeStateHash } from '../engine/engineBridge';
 import { GAME_COMMAND_TYPES, applyGameCommand, applyOpponentCommand, canActInPokerWindow, type ApplyGameCommandResult, type GameCommand, type PokerCardTimingContext } from '../core/commands';
@@ -527,13 +527,11 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       });
 
       if (result.status === 'applied') {
-        // `processAttack` is the gameplay authority for this command and
-        // currently resolves physical attack from card.attack. Keep the event
-        // on that same source until the mechanic itself is migrated.
-        const damage = getAttack(attackerCard.card);
+        // Keep event data on the same gameplay authority as resolution.
+        const damage = getEffectiveAttack(attackerCard);
         const targetMinion = gameState.players.opponent.battlefield.find(c => c.instanceId === defenderId);
         const counterDamage = targetMinion
-          ? getAttack(targetMinion.card)
+          ? getEffectiveAttack(targetMinion)
           : 0;
         const isHeroTarget = !defenderId || defenderId === 'opponent-hero';
 
@@ -948,7 +946,7 @@ export function initGameStoreSubscriptions() {
 
 		const hasAvailableAttacker = battlefield.some((m: CardInstance) => {
 			if (m.hasAttacked || m.isFrozen || m.isSummoningSick) return false;
-			const atk = m.currentAttack ?? getAttack(m.card);
+			const atk = getEffectiveAttack(m);
 			return atk > 0;
 		});
 
