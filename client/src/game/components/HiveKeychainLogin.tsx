@@ -15,6 +15,7 @@ import {
 import { getNFTBridge } from '../nft';
 import { Button } from '../../components/ui-norse';
 import { ensureBridgeRuntime } from '../runtime/bridgeRuntime';
+import { closeHiveWebSession } from '../../data/hiveWebSession';
 
 type ConnectStatus = 'idle' | 'connecting' | 'error';
 
@@ -89,7 +90,6 @@ export function HiveKeychainLogin({ onConnected }: HiveKeychainLoginProps = {}) 
 			setErrorMsg(result.error ?? 'Login cancelled or failed.');
 			return;
 		}
-
 		setUser({
 			hiveUsername: trimmed,
 			displayName: trimmed,
@@ -121,7 +121,6 @@ export function HiveKeychainLogin({ onConnected }: HiveKeychainLoginProps = {}) 
 			setErrorMsg(result.error ?? 'Login cancelled or failed.');
 			return;
 		}
-
 		setUser({
 			...user,
 			lastLogin: Date.now(),
@@ -132,6 +131,7 @@ export function HiveKeychainLogin({ onConnected }: HiveKeychainLoginProps = {}) 
 
 	const handleLogout = () => {
 		void stopHiveBridgeSync();
+		void closeHiveWebSession();
 		clearActiveHiveSession();
 		logout();
 	};

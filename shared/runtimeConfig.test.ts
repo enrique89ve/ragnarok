@@ -230,6 +230,7 @@ describe('runtimeConfig', () => {
 				hiveBroadcast: false,
 				walletLogin: true,
 				walletInvocation: false,
+				p2pMatchAcceptance: true,
 				marketplace: false,
 				packs: false,
 				nftLoxWrites: false,

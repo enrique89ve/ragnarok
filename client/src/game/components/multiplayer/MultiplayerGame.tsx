@@ -18,6 +18,7 @@ import {
 	PanelTitle,
 } from '../../../components/ui-norse';
 import { useMatchmaking } from '../../hooks/useMatchmaking';
+import { useMatchmakingStore } from '../../stores/matchmakingStore';
 import { useWarbandStore, selectArmy } from '../../../lib/stores/useWarbandStore';
 import { P2PStatusBadge } from './P2PStatusBadge';
 import { useP2PMatchResume } from '../../p2p/useP2PMatchResume';
@@ -185,7 +186,8 @@ export const MultiplayerGame: React.FC = () => {
 	// host vs client by order of arrival in the room, so we no longer branch on
 	// the matchmaking-emitted isHost (which was advisory under WebRTC anyway).
 	useEffect(() => {
-		if (matchmakingStatus === 'matched' && roomId && persistedArmy && !gameStarted) {
+		if ((matchmakingStatus === 'ready' || matchmakingStatus === 'connecting') && roomId && persistedArmy && !gameStarted) {
+			useMatchmakingStore.getState().setStatus('connecting');
 			usePeerStore.getState().connectToRoom(roomId).catch(err => {
 				debug.error('[MultiplayerGame] connectToRoom failed:', err);
 			});
@@ -309,12 +311,10 @@ export const MultiplayerGame: React.FC = () => {
 		//         gameState (`initGameFromHandshake`). Until then the
 		//         coordinator stays unmounted so input cannot hit empty/stale
 		//         state (TD-15).
-		//   2. <MatchSetupP2P/> — silent ctx wiring. Once seed_reveal +
-		//      p2pInitApplied are in, calls resolveP2P() and pushes the
-		//      MatchContext into useMatchStore BEFORE the coordinator mounts.
-		// Hive session authorization is intentionally not a hard gameplay gate
-		// in closed beta. It feeds audit/settlement transcript evidence, but P2P
-		// gameplay must not fail just because a wallet prompt is pending.
+		//   2. <MatchSetupP2P/> — final Quick Match gate. It waits for the
+		//      bilateral Accept proofs, peer-specific relay ticket and complete
+		//      handshake before wiring MatchContext and mounting the coordinator.
+		//      Legacy manual rooms retain their compatibility path.
 		// The P2PProvider wrapping all of renderInner keeps useWireSync mounted
 		// behind the spinner so `cards_deck` / seed exchange still arrive.
 		const guard = computeP2PRenderGuard({

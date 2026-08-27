@@ -17,6 +17,15 @@ definitions are in [`shared/protocolPhase.ts`](../shared/protocolPhase.ts).
 The mapping is implemented by `getProtocolPhaseId`; changing
 the deployment label alone cannot promote local economy.
 
+For Quick Match, the phase contract is:
+
+```text
+SEARCH ≠ SIGN
+ACCEPT = única firma Keychain de la partida
+BATTLE_START ⇒ A_AUTHORIZED ∧ B_AUTHORIZED ∧ P2P_READY
+P2P ∨ UNKNOWN_STATE ⇒ AI_DISABLED
+```
+
 Launch identity is the fingerprint, not the npm script name.
 `VITE_NETWORK_STAGE` is only `local | testnet | mainnet`. Alfa vs Closed Beta
 is selected by `VITE_RAGNAROK_RESET_EPOCH` (`alfa-testnet-*` vs
@@ -43,9 +52,10 @@ wallet extension. This is the supported path for structural browser automation
 and LLM testers. It does not apply to the shared Alfa deployment: shared Alfa
 still requires an account identity before starter, social or P2P flows. Once
 that identity exists, an F1 starter receipt is server-issued without a second
-Keychain signature. Shared-network P2P queue join also uses that identity
-without a second Posting signature. Gameplay, claims and `session_authorize`
-must not invoke the wallet. Anonymous progress sentinels (`guest`, legacy
+Keychain signature. Quick Match search/queue also uses that reusable HTTP
+session without a signature. When a server offer arrives, `Accept` is the
+single match-specific Posting signature; `session_authorize` reuses that proof
+and does not prompt again. Anonymous progress sentinels (`guest`, legacy
 `local`) are reserved for `dev/local` IndexedDB only. Shared Alfa/testnet
 never writes RUNE, ELO, SeasonScore or CardXP under those ids.
 
@@ -65,8 +75,9 @@ browser fallback when an orientation lock is unavailable.
 
 These are not Hive operations. F1 never emits canonical `match_anchor` or
 `match_result`, canonical RUNE ledger entries, official ranking, NFT CardXP,
-Hive `level_up`, IPFS, outbox, `custom_json`, or a wallet prompt. Identity login
-is allowed; wallet invocation is not. Marketplace, packs and NFTLox writes are
+Hive `level_up`, IPFS, outbox, `custom_json`, or a non-acceptance wallet prompt.
+Identity login is allowed; the only match-specific wallet invocation is the
+explicit Quick Match `Accept` proof. Marketplace, packs and NFTLox writes are
 disabled and must not mount mutation surfaces.
 
 ## Phase 2 — Hive testnet replay

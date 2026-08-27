@@ -5,12 +5,24 @@
 
 > **Active testnet contract:** [ADR 0007](adr/0007-p2p-gameplay-only-testnet.md)
 > enables deterministic WebSocket phase checkpoints but disables P2P
-> `match_anchor`, `match_result`, economic settlement and every match-driven
-> Keychain prompt. A completed match shows and exports a local result only.
+> `match_anchor`, `match_result` and economic settlement. Quick Match follows
+> `Offer → Accept → Ready`: queue/search is unsigned, `Accept` is the one
+> match-specific Posting signature per player, and no later handshake,
+> reconnect or result path may prompt Keychain. A completed match shows and
+> exports a local result only.
 
 **Audience**: contributors writing or auditing P2P wire code, the transcript
 pipeline, or the matchmaking surface. Ranked settlement canon:
 [ADR 0008](adr/0008-winner-posted-match-result.md).
+
+Normative Quick Match invariants:
+
+```text
+SEARCH ≠ SIGN
+ACCEPT = única firma Keychain de la partida
+BATTLE_START ⇒ A_AUTHORIZED ∧ B_AUTHORIZED ∧ P2P_READY
+P2P ∨ UNKNOWN_STATE ⇒ AI_DISABLED
+```
 
 **Companion specs**:
 - `adr/0008-winner-posted-match-result.md` — ranked settlement (winner posts, replay validates)
@@ -193,44 +205,38 @@ in phases 0-2 before any gameplay action is sent.
 
 ### Phase 0 — Matchmaking
 
-1. Each player POSTs `/api/matchmaking/queue`. In local/dev runtime, anonymous
-   `{ peerId }` free-play remains available. In shared-network runtime
-   (`testnet`/`mainnet`), the request must include a Hive `username`,
-   `starterClaimed: true`, and a Posting signature over the canonical queue
-   message from `shared/p2pMatchmakingAuth.ts`:
-   `ragnarok-queue:<username>:<peerId>:starter-claimed:<timestamp>`.
-   Binding `peerId` and starter claim state into the signed bytes prevents a
-   queue signature from being reused for a different relay peer. The server
-   does not trust the body boolean as proof that onboarding happened: it also
-   requires a server-side starter ceremony receipt recorded through
-   `/api/starter/claim` before shared-network matchmaking can enqueue the
-   account. After login/identity, F1 registers that receipt without a second
-   wallet invocation; F2/F3 retain signed body authentication. The server returns
-   a process-local `queueToken`; clients send it
-   back as `x-p2p-queue-token` for queue rechecks, status polling, and leave
-   requests. Queue/status handling re-checks that receipt before returning
-   queued/matched state: a peer that loses starter access is removed from the
-   queue, skipped as an opponent, and cannot receive a match ticket from
-   `/api/matchmaking/status/:peerId`.
-
-   Direct friend challenges use the same shared-network starter receipt gate.
-   `/api/friends/heartbeat` may still serve read-only friend presence, but if
-   the authenticated account lacks a starter ceremony receipt it strips `peerId`
-   and publishes the account as non-challengeable. `/api/friends/challenge`
-   rejects with `starter_claim_required` unless both sender and target have
-   server-recorded starter receipts. `/api/friends/challenges/:username` also
-   re-checks the receiver receipt before delivering pending challenges; if the
-   receiver loses starter access, pending tickets are discarded and the endpoint
-   returns `starter_claim_required`.
+1. LOGIN signs `ragnarok-login:<username>:<timestamp>` once with Hive Posting
+   authority and establishes the reusable `/api/session` HTTP session. In
+   shared-network runtime (`testnet`/`mainnet`), Quick Match queue/search
+   requires that session; it does not open Keychain or sign the queue body.
+   The server also requires a server-side starter ceremony receipt recorded
+   through `/api/starter/claim` before the account can enqueue. The request may
+   carry identity metadata for ELO lookup, but the HTTP session is the
+   authentication authority. The server returns a process-local `queueToken`;
+   clients send it as `x-p2p-queue-token` for queue rechecks, status polling and
+   leave requests.
 2. The server runs `findBestEloMatch` (`matchmakingRoutes.ts:93`):
    - First pass: closest ELO within ±200 (expands to ±500 after 30s,
      anyone after 60s — see `matchmakingRoutes.ts:99-102`).
    - Second pass: if no ELO match, pair with anyone waiting >60s.
-3. On match, the server returns `{ matchId, opponentPeerId, isHost, matchTicket }`
-   to the joining player. The other player learns of the match by polling
-   `/api/matchmaking/status/:peerId` with its `x-p2p-queue-token`; the status
-   response includes only that peer's own `matchTicket`.
-4. The first arrival becomes "host" by matchmaking convention. The relay
+   A pair receives perspective-specific `offer` objects, not relay tickets.
+   The offer includes the shared `offerId`, `matchId`, both peer identities,
+   nonce and expiry. No active room exists yet.
+3. Each player explicitly accepts their offer with `POST
+   /api/matchmaking/accept`. On shared network this is the only
+   match-specific Keychain action: the player signs the canonical acceptance
+   payload containing the offer, peer binding, ruleset/engine hashes,
+   ephemeral session public key, nonce and expiry. The server verifies the
+   proof against the reusable HTTP session and stores it idempotently.
+   One acceptance returns `waiting_opponent`; two valid acceptances commit the
+   match. A declined or expired offer creates no room.
+4. Only after bilateral acceptance does the server create the peer-specific
+   relay tickets/challenges and return `status: ready`. Each status response
+   contains only that caller's own `matchTicket`. Direct challenges and manual
+   rooms remain legacy compatibility paths and are outside this Quick Match
+   migration.
+
+5. The first arrival becomes "host" by matchmaking convention. The relay
    emits `isHost` from lexical `peerId` order so reconnect cannot flip it. These
    two `isHost` values are NOT guaranteed to agree — the WS-relay value is the
    one that drives downstream code (`peerStore.ts` consumes
@@ -389,7 +395,7 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `ping` / `pong` | both | both | Lower-level RTT probe |
 | `opponentDisconnected` | — | — | **Dropped.** Not a legal relay type. Departure is `__sys.close` only. |
 | `spectator_state` | host | host | Future / unused in beta |
-| `session_authorize` | peer→peer | both | Future ranked/settlement path: broadcast `{ matchId, ephemeralPubkey, hiveSig }` signed with Hive Posting authority so the opponent binds the ephemeral signing key to the Hive identity. Closed-beta full NFT gameplay skips this prompt; NFT custody is enforced by deck verification while P2P RUNE/ELO settlement remains disabled. |
+| `session_authorize` | peer→peer | both | Quick Match carries the already-verified `Accept` proof `{ matchId, ephemeralPubkey, hiveSig, acceptance }` into the handshake. Both peers must verify the bilateral proof before Battle Ready; it never opens a second Keychain prompt. Manual/direct legacy authorization remains outside this migration. |
 | `session_renewal` | peer→peer | both | **Future ADR 0004 settlement path**; disabled because current matches cannot request a reload Keychain signature |
 | `session_resumed` | peer→peer | both | **Future ADR 0004 settlement path**; not a current testnet release gate |
 | `state_sync_request` | peer→peer | both | Ask the **peer** for missing transcript leaves after reconnect or hard-reload rejoin. The relay only fans the request out. |

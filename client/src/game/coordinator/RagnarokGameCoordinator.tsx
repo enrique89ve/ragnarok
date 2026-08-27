@@ -95,6 +95,24 @@ type RagnarokGameCoordinatorProps = {
   opponentArmy?: ArmySelectionType | null;
 };
 
+function resolveOpponentArmy(
+	ctx: ReturnType<typeof useMatchStore.getState>['activeMatch'],
+	opponentArmyProp: ArmySelectionType | null,
+): ArmySelectionType {
+	if (ctx?.opponent.kind === 'peer') {
+		if (!opponentArmyProp) {
+			throw new Error('P2P_NOT_READY: opponent army is required before mounting the coordinator');
+		}
+		return opponentArmyProp;
+	}
+	if (opponentArmyProp) return opponentArmyProp;
+	if (ctx) {
+		const fromMode = deriveOpponentArmyForMode(ctx);
+		if (fromMode) return fromMode;
+	}
+	return getDefaultArmySelection();
+}
+
 const MATCH_EXIT_AUTO_HOME_SECONDS = 25;
 
 type MatchExitControlsProps = {
@@ -366,18 +384,11 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
 
   const { initializeCombatFromPayload, endCombat } = usePokerCombatAdapter();
 
-  const opponentArmy = useMemo(() => {
-    // P2P wire prop wins for peer matches — opponent army comes off
-    // the wire and is not derivable from ctx alone.
-    if (opponentArmyProp) return opponentArmyProp;
-    // Fase 4 C8: derive from ctx via mode modules. ai → single builder
-    // (default army), scripted → campaign builder (mission-specific).
-    if (ctx) {
-      const fromMode = deriveOpponentArmyForMode(ctx);
-      if (fromMode) return fromMode;
-    }
-    return getDefaultArmySelection();
-  }, [ctx, opponentArmyProp]);
+	const opponentArmy = useMemo(() => {
+		// Peer armies are wire-owned. Missing data is a hard readiness error,
+		// never an opportunity to substitute the local AI roster.
+		return resolveOpponentArmy(ctx, opponentArmyProp);
+	}, [ctx, opponentArmyProp]);
 
   const missionRealm = campaignData?.mission?.realm;
   const visualRealm = useMemo(() => resolveVisualRealm(missionRealm), [missionRealm]);

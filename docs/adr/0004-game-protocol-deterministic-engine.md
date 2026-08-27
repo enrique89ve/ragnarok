@@ -10,7 +10,8 @@
 > Hive-authorized session keys, `match_anchor`, signed action envelopes,
 > `session_renewal`, result signing and settlement. Current P2P testnet matches
 > use server-notarized phase checkpoints, produce a local result and open no
-> match-driven Keychain prompt. The design below remains the future ranked
+> post-`Accept` match-driven Keychain prompt. Quick Match `Accept` supplies the
+> one explicit match-specific signature per player; the design below remains the future ranked
 > settlement target.
 
 ---
@@ -233,9 +234,9 @@ ADR 0007 gameplay-only testnet):
 - Match end: 1 Posting prompt (final result envelope)
 
 This historical budget is not acceptable for the current gameplay-only track.
-ADR 0007 requires zero match-driven prompts; reload recovery must either use the
-supported unsigned P2P path or surface a local blocker. The shipped unsigned
-path is [`P2P_MATCH_RESUME.md`](../P2P_MATCH_RESUME.md).
+ADR 0007 permits exactly one visible Quick Match `Accept` signature per player;
+reload recovery must reuse the accepted proof or surface a local blocker. The
+shipped recovery path is [`P2P_MATCH_RESUME.md`](../P2P_MATCH_RESUME.md).
 
 **Edge cases**:
 

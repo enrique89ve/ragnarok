@@ -20,9 +20,12 @@ archive remains explicit recovery evidence; never reuse an incompatible volume.
 
 Current P2P testnet follows
 [`ADR 0007`](./adr/0007-p2p-gameplay-only-testnet.md): Keychain may be used for
-an explicit login before matchmaking, but a match must not request signatures
-or broadcast `match_anchor`/`match_result`. Phase checkpoints use the existing
-WebSocket relay and the terminal result is local evidence only.
+an explicit login before matchmaking. Quick Match then follows
+`Offer → Accept → Ready`: queue/search is unsigned, each player signs the
+match-specific acceptance once at `Accept`, and the P2P handshake reuses that
+proof without another prompt. The match must not sign or broadcast
+`match_anchor`/`match_result`. Phase checkpoints use the existing WebSocket
+relay and the terminal result is local evidence only.
 
 For the one-week QA Testnet Season 0 operating script, use
 [`TESTNET_WEEK_ONE_SPEC.md`](./TESTNET_WEEK_ONE_SPEC.md). That spec is the
@@ -467,9 +470,11 @@ campaign/local AI behavior as proof for P2P.
    `/#/warband?mode=multiplayer`. Confirming the Warband continues into
    `/#/multiplayer`; the wire `deck_verify` message must use
    `protocolVersion: 2` and `claims[]` only.
-4. Start one manual or quick match. Confirm the existing pre-match login/session
-   gate passes without a new `session_authorize` prompt and the board renders
-   with the announced armies.
+4. Start a Quick Match. Confirm queue/search opens no wallet prompt, an
+   `Offer → Accept → Ready` surface appears, `Accept` opens exactly one
+   match-specific Posting prompt, and `session_authorize` reuses that proof
+   without a second prompt. The board renders only after both acceptances and
+   the complete handshake.
 5. Make at least one quiet chess move from each side. Record any
    `chess_command_rejected` event, reject code, command id, or state-hash
    prefix from the P2P session log instead of guessing.
@@ -494,7 +499,8 @@ campaign/local AI behavior as proof for P2P.
 10. Confirm QA cards do not earn CardXP: no `level_up`, no NFTLox
     `mutableData` write, no marketplace ownership change, and no Season Score
     input is created from the QA result.
-11. Confirm the match caused no Keychain prompt, `match_anchor`, `match_result`,
+11. Confirm the match caused only the two visible `Accept` prompts (one per
+    player), then no further Keychain prompt, `match_anchor`, `match_result`,
     `session_renewal` or Hive broadcast. Confirm no `p2p_ranked` RUNE ledger,
     ELO, Season Score or CardXP mutation appears for either account. Ranked
     settlement remains deferred in

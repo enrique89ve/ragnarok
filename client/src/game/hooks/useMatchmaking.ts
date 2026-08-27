@@ -3,16 +3,18 @@ import { useMatchmakingStore } from '../stores/matchmakingStore';
 import { usePeerStore } from '../stores/peerStore';
 import { useNFTUsername } from '../nft/hooks';
 import { debug } from '../config/debugConfig';
-import { isHiveWalletAvailable, signHiveMessage } from '../../data/HiveAuth';
+import { signHiveMessage } from '../../data/HiveAuth';
 import { getAuthenticatedHiveUsername } from '../../data/HiveSessionIdentity';
 import { isSharedNetworkEnvironment } from '../config/featureFlags';
-import { getRagnarokNetworkConfig } from '../config/networkConfig';
 import { readP2PMatchTicket, readServerSignedChallenge } from '@shared/p2pAvailability';
-import { buildP2PQueueAuthMessage } from '@shared/p2pMatchmakingAuth';
-import { buildRagnarokRuntimeEvidence } from '@shared/runtimeConfig';
-import { resolveWalletInvocationAuthMode, type WalletInvocationAuthMode } from '@shared/protocolPhase';
+import { isCurrentMatchOffer, readMatchAcceptanceProof, readMatchOffer, buildMatchAcceptanceMessage, type MatchAcceptanceProof, type MatchAcceptanceV1, type MatchOffer } from '@shared/p2pMatchAcceptance';
 import { useStarterStore } from '../stores/starterStore';
 import { ensureSharedNetworkStarterClaimReceipt } from '../data/starterClaim';
+import { getCardRegistryHash } from '../data/effects/registryHash';
+import { getWasmHash, loadWasmEngine } from '../engine/wasmLoader';
+import { generateSessionKey } from '../protocol/sessionKey';
+import { invokeClientWalletAction } from '../../data/wallet/clientWalletInvocation';
+import { cacheMatchAcceptance, clearCachedMatchAcceptance, getCachedMatchAcceptance } from '../p2p/matchAcceptance';
 import {
 	normalizeProtectedFlowAccountId,
 	resolveProtectedFlowAccess,
@@ -53,7 +55,7 @@ type QuickMatchQueueAccess =
 type MatchmakingActions = Pick<
 	ReturnType<typeof useMatchmakingStore.getState>,
 	'setStatus' | 'setQueuePosition' | 'setOpponent' | 'setRoomId' | 'setQueueToken' | 'setError'
->;
+> & Partial<Pick<ReturnType<typeof useMatchmakingStore.getState>, 'setOffer' | 'setMatchCommitted'>>;
 
 type QueueBodyBuildResult =
 	| { readonly ok: true; readonly body: Record<string, unknown> }
@@ -76,7 +78,7 @@ export function resolveQuickMatchQueueAccess(input: {
 	readonly authenticatedHiveUsername: string | null;
 	readonly sharedNetwork: boolean;
 	readonly starterClaimed: boolean;
-	readonly hiveWalletAvailable: boolean;
+	readonly hiveWalletAvailable?: boolean;
 }): QuickMatchQueueAccess {
 	const p2pAccess = resolveProtectedFlowAccess({
 		accountId: input.accountId,
@@ -95,14 +97,6 @@ export function resolveQuickMatchQueueAccess(input: {
 		};
 	}
 
-	if (input.sharedNetwork && !input.hiveWalletAvailable) {
-		return {
-			kind: 'blocked',
-			reason: 'hive_wallet_unavailable',
-			message: 'Hive Keychain is not available in this browser profile.',
-		};
-	}
-
 	return { kind: 'allowed', accountId: p2pAccess.accountId };
 }
 
@@ -112,12 +106,6 @@ function readQuickMatchStarterClaimed(input: {
 }): boolean {
 	if (!input.sharedNetwork) return useStarterStore.getState().hasClaimed(input.accountId);
 	return Boolean(input.accountId && useStarterStore.getState().hasClaimed(input.accountId));
-}
-
-function resolveQueueWalletAuthMode(override?: WalletInvocationAuthMode): WalletInvocationAuthMode {
-	return override ?? resolveWalletInvocationAuthMode(
-		buildRagnarokRuntimeEvidence(getRagnarokNetworkConfig()).phasePolicy,
-	);
 }
 
 function unsignedQueueBody(input: {
@@ -137,46 +125,11 @@ export async function buildQuickMatchQueueBody(input: {
 	readonly accountId: string | null;
 	readonly sharedNetwork: boolean;
 	readonly starterClaimed: boolean;
-	readonly walletAuthMode?: WalletInvocationAuthMode;
+	readonly walletAuthMode?: 'unsigned-local' | 'hive-body-auth';
 }): Promise<QueueBodyBuildResult> {
-	const walletAuthMode = resolveQueueWalletAuthMode(input.walletAuthMode);
+	void input.walletAuthMode;
 	if (input.sharedNetwork && !input.accountId) {
 		return { ok: false, message: 'Hive account required before entering matchmaking.' };
-	}
-	if (input.accountId && walletAuthMode === 'hive-body-auth') {
-		const timestamp = Date.now();
-		const message = buildP2PQueueAuthMessage({
-			username: input.accountId,
-			peerId: input.peerId,
-			starterClaimed: input.starterClaimed,
-			timestamp,
-		});
-		try {
-			const result = await signHiveMessage(message, {
-				username: input.accountId,
-				title: 'Ragnarok: queue',
-			});
-			if (!result.success || !result.signature) {
-				return { ok: false, message: 'Hive Keychain signature required before entering matchmaking.' };
-			}
-			return {
-				ok: true,
-				body: {
-					...unsignedQueueBody({
-						peerId: input.peerId,
-						accountId: input.accountId,
-						starterClaimed: input.starterClaimed,
-					}),
-					timestamp,
-					signature: result.signature,
-				},
-			};
-		} catch (err) {
-			debug.warn('[useMatchmaking] Hive auth body build failed:', err);
-			if (input.sharedNetwork) {
-				return { ok: false, message: 'Hive Keychain signature required before entering matchmaking.' };
-			}
-		}
 	}
 	if (input.accountId) {
 		return {
@@ -215,7 +168,7 @@ function readMatchmakingPosition(data: Record<string, unknown>): number | null {
 	return typeof data.position === 'number' ? data.position : null;
 }
 
-function applyMatchedMatchmakingPayload(data: Record<string, unknown>, actions: MatchmakingActions): void {
+function applyReadyMatchmakingPayload(data: Record<string, unknown>, actions: MatchmakingActions): void {
 	const matchTicket = readP2PMatchTicket(data.matchTicket);
 	if (!matchTicket) throw new Error('Matchmaking server did not return a valid P2P match ticket');
 	if (typeof data.opponentPeerId !== 'string') {
@@ -232,11 +185,34 @@ function applyMatchedMatchmakingPayload(data: Record<string, unknown>, actions: 
 		opponentMatchChallenge ?? null,
 	);
 	usePeerStore.getState().setMatchTicket(matchTicket);
-	actions.setStatus('matched');
+	actions.setOffer?.(null);
+	actions.setMatchCommitted?.(true);
+	actions.setStatus('ready');
 	actions.setOpponent(data.opponentPeerId, data.isHost);
 	if (typeof data.matchId === 'string') actions.setRoomId(data.matchId);
-	actions.setQueueToken(null);
 	actions.setQueuePosition(null);
+}
+
+function applyOfferedMatchmakingPayload(
+	data: Record<string, unknown>,
+	fallbackQueueToken: string | null,
+	actions: MatchmakingActions,
+): void {
+	const offer = readMatchOffer(data.offer);
+	if (!offer || !isCurrentMatchOffer(offer)) {
+		throw new Error('Matchmaking server did not return a valid active match offer');
+	}
+	const offeredToken = typeof data.queueToken === 'string' && data.queueToken.length > 0
+		? data.queueToken
+		: fallbackQueueToken;
+	if (!offeredToken) throw new Error('Matchmaking server did not return a queue token');
+	actions.setQueueToken(offeredToken);
+	actions.setOffer?.(offer);
+	actions.setMatchCommitted?.(false);
+	actions.setOpponent(offer.opponent.peerId, null);
+	actions.setRoomId(offer.matchId);
+	actions.setQueuePosition(null);
+	actions.setStatus('offered');
 }
 
 function applyQueuedMatchmakingPayload(
@@ -254,13 +230,20 @@ function applyQueuedMatchmakingPayload(
 	actions.setQueuePosition(readMatchmakingPosition(data));
 }
 
+export function isMatchOfferForPeer(offer: MatchOffer, peerId: string, now = Date.now()): boolean {
+	return offer.player.peerId === peerId && isCurrentMatchOffer(offer, now);
+}
+
 export function failQueuedStatus(message: string, actions: MatchmakingActions): void {
 	clearServerStatusPoller();
 	usePeerStore.getState().clearMatchChallenges();
+	clearCachedMatchAcceptance();
 	actions.setQueueToken(null);
 	actions.setQueuePosition(null);
 	actions.setOpponent(null, null);
 	actions.setRoomId(null);
+	actions.setOffer?.(null);
+	actions.setMatchCommitted?.(false);
 	actions.setError(message);
 	actions.setStatus('error');
 }
@@ -278,6 +261,7 @@ async function pollMatchmakingStatus(actions: MatchmakingActions): Promise<void>
 	}
 	const statusResponse = await fetch(`${getMatchmakingApiBase()}/api/matchmaking/status/${currentPeerId}`, {
 		headers: { 'x-p2p-queue-token': activeQueueToken },
+		credentials: 'include',
 	});
 	if (!statusResponse.ok) {
 		const serverError = await readMatchmakingError(statusResponse);
@@ -286,8 +270,13 @@ async function pollMatchmakingStatus(actions: MatchmakingActions): Promise<void>
 	const statusData: unknown = await statusResponse.json();
 	if (!isRecord(statusData) || statusData.success !== true) return;
 
-	if (statusData.status === 'matched') {
-		applyMatchedMatchmakingPayload(statusData, actions);
+	if (statusData.status === 'offered' || statusData.status === 'waiting_opponent') {
+		applyOfferedMatchmakingPayload(statusData, activeQueueToken, actions);
+		if (statusData.status === 'waiting_opponent') actions.setStatus('waiting_opponent');
+		return;
+	}
+	if (statusData.status === 'ready') {
+		applyReadyMatchmakingPayload(statusData, actions);
 		clearServerStatusPoller();
 		return;
 	}
@@ -319,12 +308,16 @@ export function useMatchmaking() {
 		roomId,
 		queueToken,
 		error,
+		offer,
+		matchCommitted,
 		setStatus,
 		setQueuePosition,
 		setOpponent,
 		setRoomId,
 		setQueueToken,
 		setError,
+		setOffer,
+		setMatchCommitted,
 		reset,
 	} = useMatchmakingStore();
 
@@ -333,12 +326,15 @@ export function useMatchmaking() {
 		const failJoin = (message: string) => {
 			clearServerStatusPoller();
 			usePeerStore.getState().clearMatchChallenges();
+			clearCachedMatchAcceptance();
 			setQueueToken(null);
 			setError(message);
 			setStatus('error');
 			setQueuePosition(null);
 			setOpponent(null, null);
 			setRoomId(null);
+			setOffer(null);
+			setMatchCommitted(false);
 			return false;
 		};
 
@@ -368,7 +364,7 @@ export function useMatchmaking() {
 				authenticatedHiveUsername,
 				sharedNetwork,
 				starterClaimed,
-				hiveWalletAvailable: isHiveWalletAvailable(),
+				hiveWalletAvailable: true,
 			});
 			if (p2pAccess.kind === 'blocked') {
 				return failJoin(p2pAccess.message);
@@ -394,6 +390,7 @@ export function useMatchmaking() {
 					'Content-Type': 'application/json',
 					...(existingQueueToken ? { 'x-p2p-queue-token': existingQueueToken } : {}),
 				},
+				credentials: 'include',
 				body: JSON.stringify(queueBodyResult.body),
 			}).catch((err) => {
 				// Network-level failure (server not running, CORS, browser offline).
@@ -415,44 +412,150 @@ export function useMatchmaking() {
 				throw new Error(isRecord(data) && typeof data.error === 'string' ? data.error : 'Failed to join queue');
 			}
 
-			if (data.status === 'matched') {
-				applyMatchedMatchmakingPayload(data, {
-					setStatus,
-					setQueuePosition,
-					setOpponent,
-					setRoomId,
-					setQueueToken,
-					setError,
-				});
+			const actions: MatchmakingActions = {
+				setStatus,
+				setQueuePosition,
+				setOpponent,
+				setRoomId,
+				setQueueToken,
+				setError,
+				setOffer,
+				setMatchCommitted,
+			};
+			if (data.status === 'offered') {
+				applyOfferedMatchmakingPayload(data, queueToken, actions);
+			} else if (data.status === 'ready') {
+				applyReadyMatchmakingPayload(data, actions);
+				clearServerStatusPoller();
 				return true;
+			} else {
+				applyQueuedMatchmakingPayload(data, queueToken, actions);
 			}
-
-			applyQueuedMatchmakingPayload(data, queueToken, {
-				setStatus,
-				setQueuePosition,
-				setOpponent,
-				setRoomId,
-				setQueueToken,
-				setError,
-			});
-			startServerStatusPoller({
-				setStatus,
-				setQueuePosition,
-				setOpponent,
-				setRoomId,
-				setQueueToken,
-				setError,
-			});
+			startServerStatusPoller(actions);
 
 			return true;
 		} catch (err: unknown) {
 			return failJoin(err instanceof Error ? err.message : 'Failed to join matchmaking queue');
 		}
-	}, [hiveUsername, queueToken, setStatus, setError, setQueuePosition, setOpponent, setRoomId, setQueueToken]);
+	}, [hiveUsername, queueToken, setStatus, setError, setQueuePosition, setOpponent, setRoomId, setQueueToken, setOffer, setMatchCommitted]);
+
+	const acceptOffer = useCallback(async (): Promise<boolean> => {
+		const currentOffer = useMatchmakingStore.getState().offer ?? offer;
+		const peerId = usePeerStore.getState().myPeerId;
+		if (!currentOffer || !peerId || !isMatchOfferForPeer(currentOffer, peerId)) {
+			setError('This match offer is no longer available.');
+			return false;
+		}
+
+		setStatus('accepting');
+		setError(null);
+		try {
+			const cached = getCachedMatchAcceptance();
+			const cachedForOffer = cached
+				&& cached.offer.offerId === currentOffer.offerId
+				&& cached.offer.matchId === currentOffer.matchId
+				? cached
+				: null;
+			let proof: MatchAcceptanceProof;
+			if (cachedForOffer) {
+				// A lost HTTP response must be retryable without opening Keychain a
+				// second time. The proof and ephemeral key are bound to this offer.
+				proof = cachedForOffer.proof;
+			} else {
+				await loadWasmEngine();
+				const [rulesetHash] = await Promise.all([getCardRegistryHash()]);
+				const sessionKey = await generateSessionKey(currentOffer.matchId);
+				const account = getAuthenticatedHiveUsername() ?? hiveUsername ?? undefined;
+				const acceptance: MatchAcceptanceV1 = {
+					protocol: 'ragnarok-match-accept-v1',
+					offerId: currentOffer.offerId,
+					matchId: currentOffer.matchId,
+					...(account ? { account } : {}),
+					peerId,
+					...(currentOffer.opponent.username ? { opponentAccount: currentOffer.opponent.username } : {}),
+					opponentPeerId: currentOffer.player.peerId,
+					ephemeralPubkey: sessionKey.pubkey,
+					rulesetHash,
+					engineHash: getWasmHash(),
+					serverNonce: currentOffer.serverNonce,
+					expiresAt: currentOffer.expiresAt,
+				};
+				proof = acceptance;
+				if (isSharedNetworkEnvironment()) {
+					if (!account) throw new Error('Hive session required before accepting a match.');
+					const signed = await invokeClientWalletAction(
+						{ kind: 'p2p_match_acceptance', authority: 'Posting', label: 'Accept match' },
+						() => signHiveMessage(buildMatchAcceptanceMessage(acceptance), {
+							username: account,
+							title: 'Ragnarok: accept match',
+						}),
+					);
+					if (!signed.success || !signed.signature) throw new Error(signed.error ?? 'Match acceptance signature rejected.');
+					proof = { ...acceptance, hiveSig: signed.signature };
+				}
+
+				cacheMatchAcceptance({ offer: currentOffer, proof, sessionKey });
+			}
+			const response = await fetch(`${getMatchmakingApiBase()}/api/matchmaking/accept`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					...(useMatchmakingStore.getState().queueToken ? { 'x-p2p-queue-token': useMatchmakingStore.getState().queueToken as string } : {}),
+				},
+				credentials: 'include',
+				body: JSON.stringify({ peerId, offerId: currentOffer.offerId, acceptance: proof }),
+			});
+			if (!response.ok) throw new Error(`Match acceptance rejected: ${await readMatchmakingError(response)}`);
+			const data: unknown = await response.json();
+			if (!isRecord(data) || data.success !== true) throw new Error('Match acceptance failed.');
+			if (data.status === 'ready') {
+				applyReadyMatchmakingPayload(data, {
+					setStatus, setQueuePosition, setOpponent, setRoomId, setQueueToken, setError, setOffer, setMatchCommitted,
+				});
+				return true;
+			}
+			if (data.status !== 'waiting_opponent') throw new Error('Unexpected match acceptance status.');
+			applyOfferedMatchmakingPayload(data, useMatchmakingStore.getState().queueToken, {
+				setStatus, setQueuePosition, setOpponent, setRoomId, setQueueToken, setError, setOffer, setMatchCommitted,
+			});
+			setStatus('waiting_opponent');
+			startServerStatusPoller({
+				setStatus, setQueuePosition, setOpponent, setRoomId, setQueueToken, setError, setOffer, setMatchCommitted,
+			});
+			return true;
+		} catch (err: unknown) {
+			const cachedAfterFailure = getCachedMatchAcceptance();
+			if (!cachedAfterFailure || cachedAfterFailure.offer.offerId !== currentOffer.offerId) {
+				clearCachedMatchAcceptance();
+			}
+			setStatus('offered');
+			setError(err instanceof Error ? err.message : 'Could not accept this match.');
+			return false;
+		}
+	}, [offer, hiveUsername, setStatus, setError, setQueuePosition, setOpponent, setRoomId, setQueueToken, setOffer, setMatchCommitted]);
+
+	const declineOffer = useCallback(async (): Promise<void> => {
+		const currentOffer = useMatchmakingStore.getState().offer ?? offer;
+		const peerId = usePeerStore.getState().myPeerId;
+		if (currentOffer && peerId) {
+			await fetch(`${getMatchmakingApiBase()}/api/matchmaking/decline`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					...(useMatchmakingStore.getState().queueToken ? { 'x-p2p-queue-token': useMatchmakingStore.getState().queueToken as string } : {}),
+				},
+				credentials: 'include',
+				body: JSON.stringify({ peerId, offerId: currentOffer.offerId }),
+			}).catch((err: unknown) => debug.warn('[useMatchmaking] decline failed:', err));
+		}
+		clearCachedMatchAcceptance();
+		reset();
+	}, [offer, reset]);
 
 	const leaveQueue = useCallback(async () => {
 		const peerId = usePeerStore.getState().myPeerId;
 		usePeerStore.getState().clearMatchChallenges();
+		clearCachedMatchAcceptance();
 		clearServerStatusPoller();
 
 		if (!peerId) {
@@ -468,6 +571,7 @@ export function useMatchmaking() {
 					'Content-Type': 'application/json',
 					...(activeQueueToken ? { 'x-p2p-queue-token': activeQueueToken } : {}),
 				},
+				credentials: 'include',
 				body: JSON.stringify({ peerId }),
 			});
 		} catch (err) {
@@ -484,7 +588,11 @@ export function useMatchmaking() {
 		isHost,
 		roomId,
 		error,
+		offer,
+		matchCommitted,
 		joinQueue,
+		acceptOffer,
+		declineOffer,
 		leaveQueue,
 	};
 }

@@ -8,9 +8,10 @@
 >
 > **Current P2P override:** [ADR 0007](./adr/0007-p2p-gameplay-only-testnet.md)
 > defines the active gameplay-only testnet. P2P phase checkpoints are automatic;
-> `match_anchor`, `match_result`, economic settlement and match-driven Keychain
-> prompts are disabled. Future ranked-economy statements below are not gates for
-> this gameplay validation phase.
+> `match_anchor`, `match_result`, economic settlement and post-`Accept` Keychain
+> prompts are disabled. Quick Match queue/search is unsigned and `Accept` is the
+> one match-specific signature per player. Future ranked-economy statements
+> below are not gates for this gameplay validation phase.
 
 ## Objective
 
@@ -94,8 +95,8 @@ The expected testnet shape is mainnet-like:
   entitlement, DUAT provenance/filter, ceremony feedback, RUNE/pack smoke, and
   campaign QA pass.
 - P2P Season 0 is code-hardened and waiting on a real two-browser gameplay
-  smoke. Hive login may happen before matchmaking, but the match itself must
-  trigger no Keychain prompt.
+  smoke. Hive login may happen before matchmaking; Quick Match `Accept` is the
+  only match-specific Keychain prompt and the match triggers no prompt after it.
 - P2P session-log exports now carry shared runtime evidence, including reset
   epoch and QA full-catalog state.
 - `/api/health` and `/api/admin/config` expose `runtimePhase`,

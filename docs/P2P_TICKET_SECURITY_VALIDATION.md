@@ -58,7 +58,7 @@ pnpm test -- \
 
 - This checklist does not prove full two-browser P2P gameplay.
 - This checklist does not enable ranked P2P RUNE, ELO, or Season Score.
-- This checklist does not authorize `match_anchor`, `match_result` or any
-  match-driven Keychain prompt.
+- This checklist does not authorize `match_anchor`, `match_result`, or any
+  wallet prompt beyond the explicit Quick Match `Accept` signature.
 - Winner arbitration is future settlement work; the real two-browser
   gameplay-only smoke remains a separate current gate.

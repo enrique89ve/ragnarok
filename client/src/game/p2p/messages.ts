@@ -12,6 +12,7 @@ import type { PackagedMatchResult } from '../../data/blockchain/types';
 import type { GameCommandEnvelope } from '../hooks/p2pEnvelope';
 import type { ArmySelection } from '../types/ChessTypes';
 import type { GameStateWirePayload } from './stateFrameCodec';
+import type { MatchAcceptanceProof } from '../../../../shared/p2pMatchAcceptance';
 
 /**
  * Challenge shape allowed inside `session_authorize`.
@@ -77,7 +78,8 @@ export type WireMessage =
 		type: 'session_authorize';
 		matchId: string;
 		ephemeralPubkey: string;
-		hiveSig: string;
+		hiveSig?: string;
+		acceptance?: MatchAcceptanceProof;
 		matchChallenge?: SessionAuthorizeChallenge;
 	}
 	| { type: 'session_renewal'; matchId: string; newPubkey: string; hiveSig: string }

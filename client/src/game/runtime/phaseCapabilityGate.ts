@@ -14,6 +14,7 @@ const CAPABILITY_DESCRIPTIONS: Readonly<Record<ProtocolCapability, string>> = {
 	hiveBroadcast: 'External Hive broadcast is reserved for the Hive Testnet profile.',
 	walletLogin: 'Login may establish identity without invoking a wallet operation.',
 	walletInvocation: 'Explicit wallet invocation is reserved for the Hive Testnet profile.',
+	p2pMatchAcceptance: 'Quick Match acceptance permits one explicit Posting signature per player before the P2P handshake.',
 	marketplace: 'Marketplace mutations are reserved for the Mainnet profile.',
 	packs: 'Pack mutations are reserved for the Mainnet profile.',
 	nftLoxWrites: 'NFTLox writes are reserved for the Mainnet profile.',

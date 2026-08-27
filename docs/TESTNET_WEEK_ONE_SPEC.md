@@ -8,7 +8,7 @@ the Closed Testnet Beta invite decision.
 
 This historical rehearsal now follows
 [`ADR 0007`](./adr/0007-p2p-gameplay-only-testnet.md). It does not enable P2P
-`match_anchor`/`match_result`, match-driven Keychain prompts, ranked P2P RUNE,
+`match_anchor`/`match_result`, post-acceptance Keychain prompts, ranked P2P RUNE,
 official ELO, Season Score, CardXP or NFTLox `mutableData` writes.
 
 ## Boundary
@@ -119,7 +119,8 @@ Must test with two browser profiles and two Hive testnet identities:
 - explicit win/loss/draw result on both peers;
 - matching commits at `chess → poker_combat`, `poker_combat → chess` and the
   terminal boundary;
-- zero Keychain prompts or Hive operations from matchmaking through result;
+- unsigned queue/search, one visible `Accept` signature per player, then zero
+  further Keychain prompts or Hive operations through result;
 - QA-local reward preview stays outside wallet, CardXP, NFTLox, ELO, and
   Season Score.
 
@@ -179,7 +180,8 @@ gate, and no bleed from Season 0 data.
 - No official ranking.
 - No ranked P2P RUNE settlement.
 - No P2P `match_anchor`/`match_result` signature or broadcast.
-- No match-driven Keychain prompt during, on reconnect, or after a match.
+- No Keychain prompt during, on reconnect, or after `Accept`; `Accept` is the
+  only match-specific signature in Quick Match.
 - No automatic settlement for disconnects, reloads, or result-only evidence.
 - Hard reload uses a local sealed snapshot + 2 room rejoins. Ranked
   action-log replay is still deferred. A missing or invalid snapshot is a

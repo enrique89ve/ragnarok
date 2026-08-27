@@ -30,6 +30,7 @@ describe('protocol phase profiles', () => {
 			hiveBroadcast: false,
 			walletLogin: true,
 			walletInvocation: false,
+			p2pMatchAcceptance: true,
 			p2pProgression: true,
 			dailyQuestClaim: true,
 			marketplace: false,
@@ -76,7 +77,7 @@ describe('protocol phase profiles', () => {
 
 	it('covers every concrete capability in every profile', () => {
 		const capabilities = [
-			'localSettlement', 'hiveBroadcast', 'walletLogin', 'walletInvocation',
+			'localSettlement', 'hiveBroadcast', 'walletLogin', 'walletInvocation', 'p2pMatchAcceptance',
 			'marketplace', 'packs', 'nftLoxWrites', 'campaignPublish',
 			'dailyQuestClaim', 'p2pProgression', 'officialRanking',
 		] as const;

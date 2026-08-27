@@ -8,7 +8,8 @@ server never participates during a match
 
 **Current testnet scope**: [ADR 0007](./0007-p2p-gameplay-only-testnet.md)
 uses these checkpoints without Hive `match_result` signing, settlement or
-match-driven Keychain prompts.
+post-`Accept` Keychain prompts. Quick Match `Accept` is the one explicit
+match-specific signature per player; the checkpoint relay never signs.
 
 ## Context
 

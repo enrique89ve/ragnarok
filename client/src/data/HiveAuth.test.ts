@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	clearActiveHiveSession,
 	getAuthenticatedHiveUsername,
+	loginWithHiveWallet,
 	setActiveHiveSession,
 	signHiveMessage,
 } from './HiveAuth';
@@ -21,6 +22,7 @@ function stubKeychainResponse(response: HiveKeychainResponse): {
 	});
 
 	vi.stubGlobal('window', {
+		location: { origin: 'http://localhost' },
 		hive_keychain: {
 			requestSignBuffer,
 			requestCustomJson: vi.fn(),
@@ -102,5 +104,43 @@ describe('HiveAuth signHiveMessage', () => {
 		});
 
 		expect(getAuthenticatedHiveUsername()).toBe('alice');
+	});
+
+	it('returns the login proof and establishes the reusable HTTP session', async () => {
+		const { requestSignBuffer } = stubKeychainResponse({
+			success: true,
+			result: 'LOGIN_SIG',
+		});
+		const fetchMock = vi.fn().mockResolvedValue(new Response(
+			JSON.stringify({ success: true, username: 'alice' }),
+			{ status: 200, headers: { 'Content-Type': 'application/json' } },
+		));
+		vi.stubGlobal('fetch', fetchMock);
+
+		const result = await loginWithHiveWallet(' Alice ');
+
+		expect(result).toMatchObject({
+			success: true,
+			authProof: {
+				username: 'alice',
+				message: expect.stringMatching(/^ragnarok-login:alice:\d+$/),
+				signature: 'LOGIN_SIG',
+			},
+		});
+		expect(requestSignBuffer).toHaveBeenCalledWith(
+			'alice',
+			expect.stringMatching(/^ragnarok-login:alice:\d+$/),
+			'Posting',
+			expect.any(Function),
+			undefined,
+			'Log in to Ragnarok Cards',
+		);
+		expect(fetchMock).toHaveBeenCalledWith(
+			'http://localhost/api/session/login',
+			expect.objectContaining({
+				method: 'POST',
+				credentials: 'include',
+			}),
+		);
 	});
 });

@@ -20,7 +20,8 @@
  *   home then re-enter multiplayer) starts from a clean store.
  *
  * Lifetime invariants:
- *   - children only render once useMatchStore.activeMatch.opponent.kind === 'peer'.
+ *   - Quick Match children only render after bilateral acceptance and complete
+ *     P2P readiness; legacy manual rooms retain the handshake-only path.
  *   - on unmount, useMatchStore is cleared.
  */
 
@@ -29,6 +30,8 @@ import { useEffect, type ReactNode } from 'react';
 import { useGameStore } from '../../../stores/gameStore';
 import { usePeerStore } from '../../../stores/peerStore';
 import { useMatchStore } from '../../store';
+import { useMatchmakingStore } from '../../../stores/matchmakingStore';
+import { computeP2PBattleReadiness } from '../../p2pBattleReadiness';
 import { resolveP2P } from './resolver';
 
 interface MatchSetupP2PProps {
@@ -38,18 +41,43 @@ interface MatchSetupP2PProps {
 
 export function MatchSetupP2P({ children, fallback = null }: MatchSetupP2PProps) {
 	const connectionState = usePeerStore((s) => s.connectionState);
+	const myPeerId = usePeerStore((s) => s.myPeerId);
 	const remotePeerId = usePeerStore((s) => s.remotePeerId);
+	const opponentArmy = usePeerStore((s) => s.opponentArmy);
 	const p2pInitApplied = usePeerStore((s) => s.p2pInitApplied);
 	const matchSeed = useGameStore((s) => s.matchSeed);
 	const matchId = useGameStore((s) => s.matchId);
 	const myCanonicalSide = useGameStore((s) => s.myCanonicalSide);
 	const activeMatch = useMatchStore((s) => s.activeMatch);
+	const serverMatchCommitted = useMatchmakingStore((s) => s.matchCommitted);
+	const expectedRoomId = useMatchmakingStore((s) => s.roomId);
+	const matchTicket = usePeerStore((s) => s.matchTicket);
+	const localAcceptanceVerified = usePeerStore((s) => s.p2pSessionLocalAuthorized);
+	const remoteAcceptanceVerified = usePeerStore((s) => s.p2pSessionRemoteAuthorized);
 
-	const ready =
+	const handshakeReady =
 		connectionState === 'connected' &&
 		p2pInitApplied &&
 		matchSeed !== null &&
 		matchId !== null;
+	const battleReadiness = serverMatchCommitted
+		? computeP2PBattleReadiness({
+			activeMatchKind: 'peer',
+			serverMatchCommitted,
+			localAcceptanceVerified,
+			remoteAcceptanceVerified,
+			matchTicket,
+			expectedRoomId,
+			expectedPeerId: myPeerId,
+			connectionState,
+			remotePeerId,
+			matchId,
+			matchSeed,
+			opponentArmy,
+			p2pInitApplied,
+		})
+		: { ready: true as const };
+	const ready = handshakeReady && battleReadiness.ready;
 
 	useEffect(() => {
 		if (!ready) return;
@@ -72,7 +100,13 @@ export function MatchSetupP2P({ children, fallback = null }: MatchSetupP2PProps)
 		};
 	}, []);
 
-	if (!activeMatch || activeMatch.opponent.kind !== 'peer') {
+	const activeMatchMatchesHandshake = Boolean(
+		activeMatch
+		&& activeMatch.matchId === matchId
+		&& activeMatch.opponent.kind === 'peer'
+		&& activeMatch.opponent.peerId === remotePeerId,
+	);
+	if (!ready || !activeMatchMatchesHandshake) {
 		return <>{fallback}</>;
 	}
 

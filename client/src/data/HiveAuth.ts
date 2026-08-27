@@ -4,6 +4,7 @@ import {
   getHiveKeychainSignature,
   isHiveKeychainAvailable,
 } from "./HiveKeychain";
+import { establishHiveWebSession } from "./hiveWebSession";
 import type {
   SignMessageOptions,
   SignedMessageResult,
@@ -13,7 +14,16 @@ import type {
   WalletSession,
 } from "./WalletAuth";
 
-export type HiveAuthResult = WalletAuthResult;
+export type HiveLoginProof = {
+  username: string;
+  message: string;
+  timestamp: number;
+  signature: string;
+};
+
+export type HiveAuthResult = WalletAuthResult & {
+  authProof?: HiveLoginProof;
+};
 export type HiveSignedMessageResult = SignedMessageResult;
 export type HiveWalletProviderId = Extract<WalletProviderId, "hive_keychain">;
 export type HiveSessionAuthentication = "keychain_signature" | "stored_identity";
@@ -28,10 +38,12 @@ export interface HiveSignMessageOptions extends SignMessageOptions {
   keyType?: "Active" | "Posting" | "Memo";
 }
 
-export type HiveWalletProvider = WalletProvider<
-  HiveWalletProviderId,
-  HiveSignMessageOptions
->;
+export type HiveWalletProvider = Omit<
+  WalletProvider<HiveWalletProviderId, HiveSignMessageOptions>,
+  "login"
+> & {
+  login: (accountId: string) => Promise<HiveAuthResult>;
+};
 
 const KEYCHAIN_TIMEOUT_MS = 60_000;
 const DEFAULT_HIVE_WALLET_PROVIDER_ID: HiveWalletProviderId = "hive_keychain";
@@ -77,22 +89,30 @@ const hiveKeychainProvider: HiveWalletProvider = {
       };
     }
 
-    const message = `ragnarok-login:${username}:${Date.now()}`;
+    const timestamp = Date.now();
+    const message = `ragnarok-login:${username}:${timestamp}`;
     const keychainPromise = new Promise<HiveAuthResult>((resolve) => {
       keychain.requestSignBuffer(
         username,
         message,
         "Posting",
         (response) => {
-          if (response.success) {
+          const signature = getHiveKeychainSignature(response);
+          if (response.success && signature) {
             setActiveHiveSession(username, "hive_keychain", "keychain_signature");
-            resolve({ success: true });
+            resolve({
+              success: true,
+              authProof: { username, message, timestamp, signature },
+            });
             return;
           }
 
           resolve({
             success: false,
-            error: getHiveKeychainError(response, "Hive Keychain login rejected"),
+            error: getHiveKeychainError(
+              response,
+              response.success ? "Hive Keychain returned no signature" : "Hive Keychain login rejected",
+            ),
           });
         },
         undefined,
@@ -179,7 +199,20 @@ export async function loginWithHiveWallet(
   username: string,
   providerId: HiveWalletProviderId = DEFAULT_HIVE_WALLET_PROVIDER_ID,
 ): Promise<HiveAuthResult> {
-  return getHiveWalletProvider(providerId).login(username);
+  const normalizedUsername = normalizeHiveUsername(username);
+  if (!normalizedUsername) return { success: false, error: "Hive username required" };
+
+  const result = await getHiveWalletProvider(providerId).login(normalizedUsername);
+  if (!result.success || !result.authProof) return result;
+
+  if (!await establishHiveWebSession(result.authProof)) {
+    clearActiveHiveSession();
+    return {
+      success: false,
+      error: "Could not establish the secure web session. Try again.",
+    };
+  }
+  return result;
 }
 
 export async function signHiveMessage(

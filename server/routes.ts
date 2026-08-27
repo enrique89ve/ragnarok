@@ -62,6 +62,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const starterClaimRoutes = (await import("./routes/starterClaimRoutes")).default;
   app.use('/api/starter', starterClaimRoutes);
 
+  const hiveSessionRoutes = (await import("./routes/hiveSessionRoutes")).default;
+  app.use('/api/session', hiveSessionRoutes);
+
   const matchmakingRoutes = (await import("./routes/matchmakingRoutes")).default;
   app.use('/api/matchmaking', matchmakingRoutes);
 

@@ -101,6 +101,9 @@ import type { Hash256 } from '@shared/p2p-wire/integrity';
 import { isRetryablePhaseCheckpointDispute, type PhaseCheckpointPhase } from '@shared/p2p-wire/phaseCheckpoint';
 import { isRetryablePokerTurnNotaryDispute } from '@shared/p2p-wire/pokerTimeNotary';
 import { settleRemoteCommand } from './remoteCommandSettlement';
+import { getCachedMatchAcceptance } from '../../../../p2p/matchAcceptance';
+import { buildMatchAcceptanceMessage, readMatchAcceptanceProof } from '../../../../../../../shared/p2pMatchAcceptance';
+import { useMatchmakingStore } from '../../../../stores/matchmakingStore';
 
 export type { GameCommandEnvelope, WireGameCommand } from '../../../../hooks/p2pEnvelope';
 export type { P2PMessage } from '../../../../p2p/messages';
@@ -269,9 +272,9 @@ export function useWireSync() {
 
 	// Session binding: matchId derived from seed exchange
 	const matchIdRef = useRef<string | null>(null);
-	// ADR 0004 §Decision.3 — ephemeral session keys for future ranked
-	// settlement. F1 walletInvocation=false skips this Posting prompt;
-	// F2/F3 may bind the session key after explicit wallet policy.
+	// Quick Match creates this key during the visible Accept ceremony and
+	// carries it into session_authorize. Legacy manual rooms retain the older
+	// compatibility path below.
 	const sessionKeyRef = useRef<SessionKey | null>(null);
 	const sessionAuthorizeSentRef = useRef(false);
 	const opponentSessionPubkeyRef = useRef<string | null>(null);
@@ -284,8 +287,8 @@ export function useWireSync() {
 	const signedTranscriptRef = useRef<Transcript | null>(null);
 	const myBroadcasterRef = useRef<Broadcaster | null>(null);
 	// ADR 0004 §Decision.6 (issue 04) — encrypted IndexedDB action log. This is
-	// available only when session_authorize is enabled; F1 skips it because
-	// walletInvocation is off.
+	// available when Quick Match acceptance is signed; legacy unsigned/local
+	// matches do not create an encrypted log key.
 	const actionLogDbRef = useRef<Awaited<ReturnType<typeof openActionLog>> | null>(null);
 	const actionLogEncKeyRef = useRef<CryptoKey | null>(null);
 	// Per-session seq tracking: monotonic, contiguous, reset on new session
@@ -1028,30 +1031,23 @@ export function useWireSync() {
 
 					seedResolvedRef.current = true;
 
-					// Session binding: derive matchId from seed + peer IDs.
-					// Sort peer IDs lexicographically (same pattern as the seed
-					// derivation above) so BOTH peers hash the same string and
-					// arrive at the same matchId. Without sorting, peer A would
-					// hash `seed+A+B` and peer B would hash `seed+B+A` — different
-					// values, breaking symmetric Plan B chess where both peers
-					// validate matchId on incoming chess_command envelopes.
-					// (Cards path didn't surface this bug because only the host
-					// validates matchId there — the client never compares.)
-					// Mirrored onto gameStore so other subsystems (chess wire
-					// sender, transcript builder) can read it without coupling
-					// to useWireSync internals.
+					// Quick Match already has a server-issued room identity. Reuse
+					// it so the relay room, acceptance proof, MatchContext, and
+					// transcript all refer to one match. Manual rooms retain the
+					// legacy deterministic identity until that flow is migrated.
 					const [matchIdFirst, matchIdSecond] = myPeerId < remotePeerId
 						? [myPeerId, remotePeerId]
 						: [remotePeerId, myPeerId];
-					const matchId = await sha256Hash(matchSeed + matchIdFirst + matchIdSecond);
-						const truncatedMatchId = matchId.slice(0, 16);
-						matchIdRef.current = truncatedMatchId;
-						useGameStore.setState({ matchId: truncatedMatchId });
-						debug.log('[wireSync] seed_reveal RESOLVED', {
-							matchSeed: matchSeed.slice(0, 12),
-							matchId: truncatedMatchId,
-							myCanonicalSide,
-						isWsHost,
+					const derivedMatchId = (await sha256Hash(matchSeed + matchIdFirst + matchIdSecond)).slice(0, 16);
+					const cachedAcceptance = getCachedMatchAcceptance();
+					const canonicalMatchId = cachedAcceptance?.offer.matchId ?? derivedMatchId;
+					matchIdRef.current = canonicalMatchId;
+					useGameStore.setState({ matchId: canonicalMatchId });
+					debug.log('[wireSync] seed_reveal RESOLVED', {
+						matchSeed: matchSeed.slice(0, 12),
+						matchId: canonicalMatchId,
+						myCanonicalSide,
+					isWsHost,
 					});
 
 					// ADR 0004 §Decision.4 (issue 03) — initialise the signed
@@ -1060,7 +1056,7 @@ export function useWireSync() {
 					// at seed_reveal: WS host is 'A', client is 'B'. This is
 					// the only place we mint the label; downstream code reads
 					// `myBroadcasterRef.current`.
-					signedTranscriptRef.current = emptyTranscript(truncatedMatchId);
+					signedTranscriptRef.current = emptyTranscript(canonicalMatchId);
 					myBroadcasterRef.current = isWsHost ? 'A' : 'B';
 
 					// Identity binding: capture opponent's Hive username
@@ -1075,15 +1071,51 @@ export function useWireSync() {
 						}
 					}
 
-					// Future ranked settlement can bind an ephemeral action-signing
-					// key to the Hive identity here. Full NFT testnet gameplay
-					// intentionally does not request this Posting signature: the
-					// match can be played with NFT custody verification, while P2P
-					// RUNE/ELO settlement remains disabled until the winner arbiter.
+					// Quick Match carries the single explicit Accept proof into the
+					// wire handshake. There is no second Keychain ceremony here.
 					if (!sessionAuthorizeSentRef.current) {
 						sessionAuthorizeSentRef.current = true;
-						const localMatchId = truncatedMatchId;
-						if (!shouldRequestP2PSessionAuthorizePrompt()) {
+						const localMatchId = canonicalMatchId;
+						const quickMatchCommitted = useMatchmakingStore.getState().matchCommitted;
+						if (cachedAcceptance && cachedAcceptance.offer.matchId === localMatchId) {
+							sessionKeyRef.current = cachedAcceptance.sessionKey;
+							const localProof = cachedAcceptance.proof;
+							if (isSharedNetworkEnvironment() && (!localProof.account || !localProof.hiveSig)) {
+								usePeerStore.getState().setP2pSessionAuthorization({
+									localAuthorized: false,
+									remoteAuthorized: false,
+									error: 'Signed match acceptance is required for shared-network P2P',
+								});
+							} else if (isCurrentConnectedMatch(localMatchId)) {
+								send({
+									type: 'session_authorize',
+									matchId: localMatchId,
+									ephemeralPubkey: cachedAcceptance.sessionKey.pubkey,
+									...(localProof.hiveSig ? { hiveSig: localProof.hiveSig } : {}),
+									acceptance: localProof,
+								});
+								usePeerStore.getState().setP2pSessionAuthorization({ localAuthorized: true, error: null });
+								if (localProof.hiveSig) {
+									try {
+										const [db, encKey] = await Promise.all([
+											openActionLog(),
+											deriveActionLogEncKey(localProof.hiveSig, localMatchId),
+										]);
+										actionLogDbRef.current = db;
+										actionLogEncKeyRef.current = encKey;
+									} catch (logErr) {
+										debug.warn('[wireSync] Action log unavailable — running without reload safety', logErr);
+									}
+								}
+							}
+						} else if (quickMatchCommitted) {
+							debug.warn('[wireSync] Quick Match acceptance proof is unavailable — refusing legacy authorization fallback');
+							usePeerStore.getState().setP2pSessionAuthorization({
+								localAuthorized: false,
+								remoteAuthorized: false,
+								error: 'Quick Match acceptance proof is unavailable; return to the lobby',
+							});
+						} else if (!shouldRequestP2PSessionAuthorizePrompt()) {
 							debug.log('[wireSync] session_authorize skipped — walletInvocation is disabled for this phase');
 							usePeerStore.getState().setP2pSessionAuthorization({
 								localAuthorized: false,
@@ -2176,17 +2208,72 @@ export function useWireSync() {
 							});
 							break;
 						}
-						const opponentUsername = opponentUsernameRef.current;
-						if (!opponentUsername) {
-							debug.warn('[wireSync] session_authorize dropped — no opponent Hive username');
-							usePeerStore.getState().setP2pSessionAuthorization({
-								remoteAuthorized: false,
-								error: 'Missing opponent Hive username',
-							});
+							if (data.acceptance) {
+							const remoteAcceptance = readMatchAcceptanceProof(data.acceptance);
+							const localAcceptance = getCachedMatchAcceptance();
+							const offer = localAcceptance?.offer;
+							const proofMatchesLocalOffer = Boolean(
+								remoteAcceptance && offer
+								&& remoteAcceptance.offerId === offer.offerId
+								&& remoteAcceptance.matchId === offer.matchId
+								&& remoteAcceptance.peerId === offer.opponent.peerId
+								&& remoteAcceptance.opponentPeerId === offer.player.peerId
+								&& remoteAcceptance.serverNonce === offer.serverNonce
+								&& remoteAcceptance.expiresAt === offer.expiresAt
+								&& remoteAcceptance.ephemeralPubkey === data.ephemeralPubkey
+								&& remoteAcceptance.hiveSig === data.hiveSig
+								&& remoteAcceptance.rulesetHash === localAcceptance?.proof.rulesetHash
+								&& remoteAcceptance.engineHash === localAcceptance?.proof.engineHash
+								&& (!offer.player.username || remoteAcceptance.opponentAccount === offer.player.username)
+								&& (!offer.opponent.username || remoteAcceptance.account === offer.opponent.username)
+							);
+							let acceptanceValid = proofMatchesLocalOffer;
+							if (acceptanceValid && isSharedNetworkEnvironment()) {
+								if (!remoteAcceptance?.account || !remoteAcceptance.hiveSig) {
+									acceptanceValid = false;
+								} else {
+									const { hiveSig, ...payload } = remoteAcceptance;
+									acceptanceValid = await verifyHiveSignature(
+										remoteAcceptance.account,
+										buildMatchAcceptanceMessage(payload),
+										hiveSig,
+									);
+								}
+							}
+							if (!acceptanceValid || !remoteAcceptance) {
+								debug.warn('[wireSync] session_authorize dropped — match acceptance verification failed');
+								usePeerStore.getState().setP2pSessionAuthorization({
+									remoteAuthorized: false,
+									error: 'Opponent match acceptance verification failed',
+								});
+								break;
+							}
+							opponentSessionPubkeyRef.current = remoteAcceptance.ephemeralPubkey;
+							opponentSessionHiveSigRef.current = remoteAcceptance.hiveSig ?? null;
+							usePeerStore.getState().setP2pSessionAuthorization({ remoteAuthorized: true, error: null });
+							debug.log('[wireSync] Verified opponent match acceptance', { matchId: data.matchId });
 							break;
 						}
+							if (useMatchmakingStore.getState().matchCommitted) {
+								debug.warn('[wireSync] Quick Match session_authorize missing acceptance proof');
+							usePeerStore.getState().setP2pSessionAuthorization({
+								remoteAuthorized: false,
+								error: 'Opponent Quick Match acceptance proof is missing',
+							});
+								break;
+							}
 
-						const expectedChallenges = getSessionAuthChallenges();
+							const opponentUsername = opponentUsernameRef.current;
+							if (!opponentUsername) {
+								debug.warn('[wireSync] session_authorize dropped — no opponent Hive username');
+								usePeerStore.getState().setP2pSessionAuthorization({
+									remoteAuthorized: false,
+									error: 'Missing opponent Hive username',
+								});
+								break;
+							}
+
+							const expectedChallenges = getSessionAuthChallenges();
 						if (expectedChallenges.length > 0) {
 							if (!data.matchChallenge) {
 								debug.warn('[wireSync] session_authorize dropped — expected match challenge missing', {
@@ -2224,6 +2311,13 @@ export function useWireSync() {
 							}
 						}
 
+						if (!data.hiveSig) {
+							usePeerStore.getState().setP2pSessionAuthorization({
+								remoteAuthorized: false,
+								error: 'Missing Hive session authorization signature',
+							});
+							break;
+						}
 						const authorizeMessage = buildSessionAuthorizeMessage(
 							data.matchId,
 							data.ephemeralPubkey,

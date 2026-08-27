@@ -15,9 +15,11 @@ import type { P2PConnectionState } from '../../stores/peerStore';
  *    an empty/stale gameState and accept inputs the peer cannot resolve
  *    (TD-15).
  *
- * Hive session authorization is intentionally not a board gate in closed beta:
- * the signed transcript is an audit/settlement layer, while connectivity,
- * loadout exchange, and handshake init decide whether gameplay can start.
+ * Quick Match has an additional final gate in `MatchSetupP2P`: bilateral
+ * acceptance authorization, the peer-specific relay ticket and the complete
+ * handshake must be ready before MatchContext/coordinator mount. This guard
+ * remains the transport/legacy compatibility gate that keeps the wire sync
+ * mounted while that final gate resolves.
  *
  * Lives outside the component so it can be unit-tested without a JSX
  * runtime — the project's vitest config is `environment: "node"`.

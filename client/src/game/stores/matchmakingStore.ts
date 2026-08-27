@@ -1,6 +1,15 @@
 import { create } from 'zustand';
+import type { MatchOffer } from '@shared/p2pMatchAcceptance';
 
-export type MatchmakingStatus = 'idle' | 'queued' | 'matched' | 'error';
+export type MatchmakingStatus =
+	| 'idle'
+	| 'queued'
+	| 'offered'
+	| 'accepting'
+	| 'waiting_opponent'
+	| 'ready'
+	| 'connecting'
+	| 'error';
 
 type MatchmakingStore = {
 	status: MatchmakingStatus;
@@ -14,6 +23,8 @@ type MatchmakingStore = {
 	 * host vs client by order of arrival in the room.
 	 */
 	roomId: string | null;
+	offer: MatchOffer | null;
+	matchCommitted: boolean;
 	/**
 	 * Process-local bearer token returned by the matchmaking server for the
 	 * current queued peerId. Memory-only; never persist this value.
@@ -25,6 +36,8 @@ type MatchmakingStore = {
 	setQueuePosition: (position: number | null) => void;
 	setOpponent: (peerId: string | null, isHost: boolean | null) => void;
 	setRoomId: (roomId: string | null) => void;
+	setOffer: (offer: MatchOffer | null) => void;
+	setMatchCommitted: (committed: boolean) => void;
 	setQueueToken: (queueToken: string | null) => void;
 	setError: (error: string | null) => void;
 	reset: () => void;
@@ -36,6 +49,8 @@ export const useMatchmakingStore = create<MatchmakingStore>((set) => ({
 	opponentPeerId: null,
 	isHost: null,
 	roomId: null,
+	offer: null,
+	matchCommitted: false,
 	queueToken: null,
 	error: null,
 
@@ -43,6 +58,8 @@ export const useMatchmakingStore = create<MatchmakingStore>((set) => ({
 	setQueuePosition: (position) => set({ queuePosition: position }),
 	setOpponent: (peerId, isHost) => set({ opponentPeerId: peerId, isHost }),
 	setRoomId: (roomId) => set({ roomId }),
+	setOffer: (offer) => set({ offer }),
+	setMatchCommitted: (matchCommitted) => set({ matchCommitted }),
 	setQueueToken: (queueToken) => set({ queueToken }),
 	setError: (error) => set({ error }),
 	reset: () =>
@@ -52,6 +69,8 @@ export const useMatchmakingStore = create<MatchmakingStore>((set) => ({
 			opponentPeerId: null,
 			isHost: null,
 			roomId: null,
+			offer: null,
+			matchCommitted: false,
 			queueToken: null,
 			error: null,
 		}),

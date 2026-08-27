@@ -23,6 +23,7 @@ import type { ArmySelection } from '../../types/ChessTypes';
 import { isSharedNetworkEnvironment } from '../../config/featureFlags';
 import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from '../../../data/HiveSessionIdentity';
 import { resolveProtectedFlowAccess } from '../../auth/protectedFlowAccess';
+import type { MatchOffer } from '@shared/p2pMatchAcceptance';
 
 interface MultiplayerLobbyProps {
 	onGameStart: () => void;
@@ -202,6 +203,37 @@ export function getConnectedMatchProgress(input: ConnectedMatchProgressInput): C
 		title: 'Opponent connected',
 		detail: 'Starting match.',
 	};
+}
+
+type QuickMatchLobbyReadinessInput = {
+	readonly serverMatchCommitted: boolean;
+	readonly localAcceptanceVerified: boolean;
+	readonly remoteAcceptanceVerified: boolean;
+	readonly matchTicket: P2PMatchTicket | null;
+	readonly expectedRoomId: string | null;
+	readonly expectedPeerId: string | null;
+	readonly connectionState: P2PConnectionState;
+	readonly remotePeerId: string | null;
+	readonly opponentArmy: ArmySelection | null;
+	readonly p2pInitApplied: boolean;
+};
+
+function getQuickMatchLobbyReadiness(input: QuickMatchLobbyReadinessInput): { readonly ready: boolean; readonly reason: string } {
+	if (!input.serverMatchCommitted) return { ready: false, reason: 'Match offer has not been committed' };
+	if (!input.localAcceptanceVerified) return { ready: false, reason: 'Waiting for local match authorization' };
+	if (!input.remoteAcceptanceVerified) return { ready: false, reason: 'Waiting for opponent authorization' };
+	if (!input.matchTicket || !input.expectedRoomId || !input.expectedPeerId) {
+		return { ready: false, reason: 'Waiting for the relay ticket' };
+	}
+	if (input.matchTicket.roomId !== input.expectedRoomId || input.matchTicket.peerId !== input.expectedPeerId) {
+		return { ready: false, reason: 'Waiting for a relay ticket for this peer and room' };
+	}
+	if (input.matchTicket.expiresAt <= Date.now()) return { ready: false, reason: 'Relay ticket has expired' };
+	if (input.connectionState !== 'connected') return { ready: false, reason: 'Waiting for the P2P connection' };
+	if (!input.remotePeerId) return { ready: false, reason: 'Waiting for the opponent peer' };
+	if (!input.opponentArmy) return { ready: false, reason: 'Waiting for the opponent loadout' };
+	if (!input.p2pInitApplied) return { ready: false, reason: 'Waiting for the initial P2P state' };
+	return { ready: true, reason: 'Battle ready' };
 }
 
 type AsyncVoidHandler = () => void | Promise<void>;
@@ -385,6 +417,41 @@ function QueuePanel({
 	);
 }
 
+function MatchOfferPanel({
+	offer,
+	onAccept,
+	onDecline,
+	accepting,
+	interactive,
+}: {
+	readonly offer: MatchOffer | null;
+	readonly onAccept: AsyncVoidHandler;
+	readonly onDecline: AsyncVoidHandler;
+	readonly accepting: boolean;
+	readonly interactive: boolean;
+}) {
+	if (!offer) return null;
+	return (
+		<div className="space-y-3 rounded-lg border border-(--gold-500)/35 bg-(--gold-500)/10 p-4">
+			<div>
+				<p className="text-xs font-semibold uppercase tracking-wide text-(--gold-300)">Match found</p>
+				<p className="mt-1 text-base font-semibold text-(--ink-100)">
+					{offer.opponent.username ? `@${offer.opponent.username}` : 'Opponent'}
+				</p>
+				<p className="text-xs text-(--ink-300)">{interactive ? `Accept within ${formatChallengeTimeRemaining(offer.expiresAt, Date.now())}.` : 'Waiting for both players to authorize the match.'}</p>
+			</div>
+			<div className="flex gap-2">
+				<Button type="button" onClick={() => { void onAccept(); }} disabled={accepting || !interactive} className="flex-1">
+					<Check className="mr-1 h-4 w-4" /> Accept
+				</Button>
+				<Button type="button" variant="outline" onClick={() => { void onDecline(); }} disabled={accepting || !interactive} className="flex-1">
+					<X className="mr-1 h-4 w-4" /> Decline
+				</Button>
+			</div>
+		</div>
+	);
+}
+
 function MatchedProgressPanel({
 	status,
 	connectionState,
@@ -394,7 +461,8 @@ function MatchedProgressPanel({
 	readonly connectionState: P2PConnectionState;
 	readonly matchProgress: ConnectedMatchProgress;
 }) {
-	if (status !== 'matched' || connectionState === 'connected') return null;
+	if (status !== 'ready' && status !== 'connecting') return null;
+	if (connectionState === 'connected') return null;
 
 	return (
 		<div className="text-center space-y-2">
@@ -648,7 +716,12 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 	const {
 		status: matchmakingStatus,
 		queuePosition,
+		roomId: matchmakingRoomId,
 		error: matchmakingError,
+		offer: matchOffer,
+		matchCommitted,
+		acceptOffer,
+		declineOffer,
 	} = useMatchmaking();
 	const hiveUsername = useNFTUsername();
 	const authenticatedHiveUsername = useSyncExternalStore(
@@ -689,7 +762,7 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 		protectedBlockMessage,
 	} satisfies DirectChallengeAccessContext;
 	const idleControlsVisible = connectionState === 'disconnected' && matchmakingStatus === 'idle';
-	const matchProgress = getConnectedMatchProgress({
+	const legacyMatchProgress = getConnectedMatchProgress({
 		connectionState,
 		opponentArmy,
 		p2pInitApplied,
@@ -699,6 +772,24 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 		reconnectCountdown,
 		reconnectAttemptCount,
 	});
+	const matchTicket = usePeerStore(state => state.matchTicket);
+	const quickBattleReadiness = getQuickMatchLobbyReadiness({
+		serverMatchCommitted: matchCommitted,
+		localAcceptanceVerified: p2pSessionLocalAuthorized,
+		remoteAcceptanceVerified: p2pSessionRemoteAuthorized,
+		matchTicket,
+		expectedRoomId: matchmakingRoomId,
+		expectedPeerId: myPeerId,
+		connectionState,
+		remotePeerId,
+		opponentArmy,
+		p2pInitApplied,
+	});
+	const matchProgress = matchCommitted && !quickBattleReadiness.ready
+		? { ready: false as const, title: 'Preparing battle', detail: quickBattleReadiness.reason }
+		: matchCommitted
+			? { ready: true as const, title: 'Battle ready', detail: 'Both players are authorized. Starting match.' }
+			: legacyMatchProgress;
 
 	const fetchIncomingChallenges = useCallback(async (signal?: AbortSignal) => {
 		if (!hiveUsername) return;
@@ -936,6 +1027,13 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 						status={matchmakingStatus}
 						queuePosition={queuePosition}
 						onLeaveQueue={leaveQueue}
+					/>
+					<MatchOfferPanel
+						offer={matchOffer}
+						onAccept={async () => { await acceptOffer(); }}
+						onDecline={declineOffer}
+						accepting={matchmakingStatus === 'accepting'}
+						interactive={matchmakingStatus === 'offered'}
 					/>
 					<MatchedProgressPanel
 						status={matchmakingStatus}

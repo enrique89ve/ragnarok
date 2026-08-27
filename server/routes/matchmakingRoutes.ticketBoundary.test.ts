@@ -45,6 +45,7 @@ function challenge(from: string, to: string, peerId: string): ServerSignedChalle
 
 function activeMatch(): P2PActiveMatch {
 	return {
+		offerId: 'offer-test',
 		player1: 'peer-one',
 		player2: 'peer-two',
 		createdAt: 1_000,
@@ -58,12 +59,15 @@ function activeMatch(): P2PActiveMatch {
 }
 
 describe('matchmakingRoutes P2P ticket boundary', () => {
-	it('returns only the requesting peer relay ticket from immediate and polled matches', () => {
+	it('keeps relay tickets out of the offer and exposes them only after commit', () => {
 		const sourcePath = join(dirname(fileURLToPath(import.meta.url)), 'matchmakingRoutes.ts');
 		const source = readFileSync(sourcePath, 'utf8');
 
-		expect(source).toContain('const peerView = getP2PMatchPeerView(activeMatch, newPlayer.peerId)');
+		expect(source).toContain('const peerView = getP2PMatchPeerView(activeMatch, pending.playerB.peerId)');
 		expect(source).toContain('const peerView = getP2PMatchPeerView(match, peerId)');
+		const offerStart = source.indexOf('function createPendingMatchOffer');
+		const commitStart = source.indexOf('function commitPendingMatch');
+		expect(source.slice(offerStart, commitStart)).not.toContain('buildP2PMatchTicket');
 		expect(source).not.toMatch(/return res\.json\(\{[\s\S]{0,500}player1MatchTicket/);
 		expect(source).not.toMatch(/return res\.json\(\{[\s\S]{0,500}player2MatchTicket/);
 		expect(source).not.toMatch(/return res\.json\(\{[\s\S]{0,500}match\.player1MatchTicket/);
@@ -96,18 +100,15 @@ describe('matchmakingRoutes P2P ticket boundary', () => {
 		expect(getP2PMatchPeerView(match, 'unknown-peer')).toBeNull();
 	});
 
-	it('requires Hive identity for shared-network queue entries and signs only when walletInvocation is allowed', () => {
+	it('requires a reusable Hive web session for shared-network queue entries', () => {
 		const sourcePath = join(dirname(fileURLToPath(import.meta.url)), 'matchmakingRoutes.ts');
 		const source = readFileSync(sourcePath, 'utf8');
 
-		expect(source).toContain('const sharedNetworkQueueAuth = requireHiveBodyAuth({');
-		expect(source).toContain('buildMessage: buildQueueAuthMessage');
-		expect(source).toContain("missingUsernameMessage: 'Hive username required for shared-network matchmaking'");
-		expect(source).toContain('resolveWalletInvocationAuthMode(policy) === \'hive-body-auth\'');
-		expect(source).toContain('attachUnsignedQueueUsername');
+		expect(source).toContain('getHiveWebSessionUsername(req)');
+		expect(source).toContain('Hive web session required for shared-network matchmaking');
 		expect(source).toContain("process.env.VITE_NETWORK_STAGE === 'testnet'");
 		expect(source).toContain("process.env.VITE_NETWORK_STAGE === 'mainnet'");
-		expect(source).toContain('router.post(\'/queue\', validateQueuePeerId, requireQueueAuthForRuntime');
+		expect(source).toContain('router.post(\'/queue\', validateQueuePeerId, requireMatchmakingSession');
 		expect(resolveQueueUsername({
 			authenticatedUsername: 'Alice',
 			providedUsername: 'mallory',
@@ -141,13 +142,13 @@ describe('matchmakingRoutes P2P ticket boundary', () => {
 		})).resolves.toEqual({ ok: true });
 	});
 
-	it('rolls back queue ownership when match signing fails after picking an opponent', () => {
+	it('does not issue a relay ticket while a match offer is pending', () => {
 		const sourcePath = join(dirname(fileURLToPath(import.meta.url)), 'matchmakingRoutes.ts');
 		const source = readFileSync(sourcePath, 'utf8');
 
-		expect(source).toContain('function rollbackFailedMatchmakingPair(opponent: QueuedPlayer, newPlayer: QueuedPlayer)');
-		expect(source).toContain('removeQueuedPeer(newPlayer.peerId)');
-		expect(source).toContain('restoreQueuedPeer(opponent)');
-		expect(source.match(/rollbackFailedMatchmakingPair\(opponent, newPlayer\)/g)).toHaveLength(2);
+		const offerStart = source.indexOf('function createPendingMatchOffer');
+		const commitStart = source.indexOf('function commitPendingMatch');
+		expect(source.slice(offerStart, commitStart)).not.toContain('tryBuildMatchTickets');
+		expect(source.slice(commitStart)).toContain('tryBuildMatchTickets');
 	});
 });

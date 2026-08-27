@@ -8,18 +8,19 @@ import {
 	P2P_MATCH_TICKET_WS_PROTOCOL_PREFIX,
 	type P2PMatchTicket,
 } from '../../shared/p2pAvailability';
-import { buildP2PQueueAuthMessage } from '../../shared/p2pMatchmakingAuth';
 import {
 	PHASE_CHECKPOINT_PROTOCOL_VERSION,
 	PHASE_CHECKPOINT_SCOPE,
 	ZERO_PHASE_CHECKPOINT_ID,
 } from '../../shared/p2p-wire/phaseCheckpoint';
 import { attachP2PRelay } from './p2pRelay';
+import hiveSessionRouter from './hiveSessionRoutes';
 import { verifyHiveAuth } from '../services/hiveAuth';
 import {
 	clearStarterCeremonyClaimsForTests,
 	setStarterCeremonyClaim,
 } from '../services/starterClaimRegistry';
+import { clearHiveWebSessionsForTests } from '../services/hiveWebSession';
 
 vi.mock('../services/hiveAuth', async () => {
 	const actual = await vi.importActual<typeof import('../services/hiveAuth')>('../services/hiveAuth');
@@ -35,7 +36,7 @@ type HttpJsonResponse = {
 };
 
 type MatchedQueueBody = {
-	readonly status: 'matched';
+	readonly status: 'ready';
 	readonly matchId: string;
 	readonly opponentPeerId: string;
 	readonly isHost: boolean;
@@ -97,9 +98,9 @@ function readMatchTicket(value: Record<string, unknown>, key: string): P2PMatchT
 function expectMatchedBody(body: unknown): MatchedQueueBody {
 	expect(isRecord(body)).toBe(true);
 	const record = isRecord(body) ? body : {};
-	expect(record.status).toBe('matched');
+	expect(record.status).toBe('ready');
 	return {
-		status: 'matched',
+		status: 'ready',
 		matchId: readStringProperty(record, 'matchId'),
 		opponentPeerId: readStringProperty(record, 'opponentPeerId'),
 		isHost: readBooleanProperty(record, 'isHost'),
@@ -154,12 +155,14 @@ async function postJson(
 	path: string,
 	body: Record<string, unknown>,
 	queueToken?: string,
+	cookie?: string,
 ): Promise<HttpJsonResponse> {
 	const response = await fetch(`${baseUrl}${path}`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			...(queueToken ? { 'x-p2p-queue-token': queueToken } : {}),
+			...(cookie ? { Cookie: cookie } : {}),
 		},
 		body: JSON.stringify(body),
 	});
@@ -173,9 +176,13 @@ async function getJson(
 	baseUrl: string,
 	path: string,
 	queueToken?: string,
+	cookie?: string,
 ): Promise<HttpJsonResponse> {
 	const response = await fetch(`${baseUrl}${path}`, {
-		headers: queueToken ? { 'x-p2p-queue-token': queueToken } : {},
+		headers: {
+			...(queueToken ? { 'x-p2p-queue-token': queueToken } : {}),
+			...(cookie ? { Cookie: cookie } : {}),
+		},
 	});
 	return {
 		status: response.status,
@@ -183,12 +190,23 @@ async function getJson(
 	};
 }
 
+async function loginSession(baseUrl: string, username: string): Promise<string> {
+	const timestamp = Date.now();
+	const response = await fetch(`${baseUrl}/api/session/login`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ username, timestamp, signature: `${username}-login-signature` }),
+	});
+	expect(response.status).toBe(200);
+	const cookie = response.headers.get('set-cookie');
+	if (!cookie) throw new Error('Hive session cookie missing');
+	return cookie.split(';', 1)[0];
+}
+
 function queueBody(peerId: string, username: string, starterClaimed = true): Record<string, unknown> {
 	return {
 		peerId,
 		username,
-		signature: `${username}-mock-signature`,
-		timestamp: Date.now(),
 		starterClaimed,
 	};
 }
@@ -199,6 +217,40 @@ function assertNoCrossPeerTicketLeak(body: unknown): void {
 	expect(record.player1MatchTicket).toBeUndefined();
 	expect(record.player2MatchTicket).toBeUndefined();
 	expect(record.matchTickets).toBeUndefined();
+}
+
+type TestOffer = {
+	readonly protocol: 'ragnarok-match-offer-v1';
+	readonly offerId: string;
+	readonly matchId: string;
+	readonly player: { readonly peerId: string; readonly username?: string; readonly elo: number };
+	readonly opponent: { readonly peerId: string; readonly username?: string; readonly elo: number };
+	readonly createdAt: number;
+	readonly expiresAt: number;
+	readonly serverNonce: string;
+};
+
+function readOffer(value: unknown): TestOffer {
+	expect(isRecord(value)).toBe(true);
+	return value as TestOffer;
+}
+
+function acceptanceForOffer(offer: TestOffer, pubkey: string, signature: string): Record<string, unknown> {
+	return {
+		protocol: 'ragnarok-match-accept-v1',
+		offerId: offer.offerId,
+		matchId: offer.matchId,
+		account: offer.player.username,
+		peerId: offer.player.peerId,
+		opponentAccount: offer.opponent.username,
+		opponentPeerId: offer.opponent.peerId,
+		ephemeralPubkey: pubkey,
+		rulesetHash: 'registry-test',
+		engineHash: 'engine-test',
+		serverNonce: offer.serverNonce,
+		expiresAt: offer.expiresAt,
+		hiveSig: signature,
+	};
 }
 
 function relayProtocols(ticket: P2PMatchTicket): string[] {
@@ -313,6 +365,7 @@ describe('matchmaking and relay integration', () => {
 		process.env.RAGNAROK_RESET_EPOCH = 'alfa-testnet-matchmaking';
 		process.env.P2P_CHALLENGE_SIGNING_SECRET = 'integration-secret-32-characters-minimum';
 		clearStarterCeremonyClaimsForTests();
+		clearHiveWebSessionsForTests();
 	});
 
 	afterEach(() => {
@@ -325,6 +378,7 @@ describe('matchmaking and relay integration', () => {
 		clearP2PMatchmakingStateForTests();
 		const app = express();
 		app.use(express.json());
+		app.use('/api/session', hiveSessionRouter);
 		app.use('/api/matchmaking', matchmakingRouter);
 		const server = createServer(app);
 		attachP2PRelay(server);
@@ -337,6 +391,10 @@ describe('matchmaking and relay integration', () => {
 
 			const peerOneId = 'it-peer-one';
 			const peerTwoId = 'it-peer-two';
+			const charlieCookie = await loginSession(baseUrl, 'charlie');
+			const aliceCookie = await loginSession(baseUrl, 'alice');
+			const bobCookie = await loginSession(baseUrl, 'bob');
+			vi.mocked(verifyHiveAuth).mockClear();
 			await setStarterCeremonyClaim('alice', 1_800_000_000_000);
 			await setStarterCeremonyClaim('bob', 1_800_000_000_000);
 
@@ -344,12 +402,14 @@ describe('matchmaking and relay integration', () => {
 				baseUrl,
 				'/api/matchmaking/queue',
 				queueBody('it-peer-unclaimed', 'charlie', true),
+				undefined,
+				charlieCookie,
 			);
 			expect(unclaimedQueue.status).toBe(403);
 			expect(unclaimedQueue.body).toMatchObject({ success: false, error: 'starter claim required' });
 
 			const firstQueueBody = queueBody(peerOneId, 'alice');
-			const firstQueue = await postJson(baseUrl, '/api/matchmaking/queue', firstQueueBody);
+			const firstQueue = await postJson(baseUrl, '/api/matchmaking/queue', firstQueueBody, undefined, aliceCookie);
 			expect(firstQueue.status).toBe(200);
 			expect(vi.mocked(verifyHiveAuth)).not.toHaveBeenCalled();
 			expect(isRecord(firstQueue.body)).toBe(true);
@@ -359,28 +419,55 @@ describe('matchmaking and relay integration', () => {
 			assertNoCrossPeerTicketLeak(firstQueue.body);
 
 			const unauthenticatedStatus = await getJson(baseUrl, `/api/matchmaking/status/${peerOneId}`);
-			expect(unauthenticatedStatus.status).toBe(403);
+			expect(unauthenticatedStatus.status).toBe(401);
 
-			const secondQueue = await postJson(baseUrl, '/api/matchmaking/queue', queueBody(peerTwoId, 'bob'));
+			const secondQueue = await postJson(baseUrl, '/api/matchmaking/queue', queueBody(peerTwoId, 'bob'), undefined, bobCookie);
 			expect(secondQueue.status).toBe(200);
-			const peerTwoMatch = expectMatchedBody(secondQueue.body);
-			expect(peerTwoMatch.matchTicket.peerId).toBe(peerTwoId);
-			expect(peerTwoMatch.opponentPeerId).toBe(peerOneId);
+			expect(secondQueue.body).toMatchObject({ success: true, status: 'offered' });
+			const peerTwoOffer = readOffer(isRecord(secondQueue.body) ? secondQueue.body.offer : null);
+			expect(peerTwoOffer.opponent.peerId).toBe(peerOneId);
 			assertNoCrossPeerTicketLeak(secondQueue.body);
-			const peerTwoQueueToken = peerTwoMatch.queueToken;
-			expect(typeof peerTwoQueueToken).toBe('string');
+			const peerTwoQueueToken = readStringProperty(isRecord(secondQueue.body) ? secondQueue.body : {}, 'queueToken');
 
-			const peerOneWrongTokenStatus = await getJson(baseUrl, `/api/matchmaking/status/${peerOneId}`, peerTwoQueueToken);
+			const peerOneWrongTokenStatus = await getJson(baseUrl, `/api/matchmaking/status/${peerOneId}`, peerTwoQueueToken, aliceCookie);
 			expect(peerOneWrongTokenStatus.status).toBe(403);
 
-			const firstStatus = await getJson(baseUrl, `/api/matchmaking/status/${peerOneId}`, peerOneQueueToken);
+			const firstStatus = await getJson(baseUrl, `/api/matchmaking/status/${peerOneId}`, peerOneQueueToken, aliceCookie);
 			expect(firstStatus.status).toBe(200);
-			const peerOneMatch = expectMatchedBody(firstStatus.body);
+			expect(firstStatus.body).toMatchObject({ success: true, status: 'offered' });
+			const peerOneOffer = readOffer(isRecord(firstStatus.body) ? firstStatus.body.offer : null);
+			expect(peerOneOffer.matchId).toBe(peerTwoOffer.matchId);
+			assertNoCrossPeerTicketLeak(firstStatus.body);
+
+			const firstAccepted = await postJson(baseUrl, '/api/matchmaking/accept', {
+				peerId: peerOneId,
+				offerId: peerOneOffer.offerId,
+				acceptance: acceptanceForOffer(peerOneOffer, 'a'.repeat(43), 'alice-acceptance-signature'),
+			}, peerOneQueueToken, aliceCookie);
+			expect(firstAccepted.body).toMatchObject({ success: true, status: 'waiting_opponent' });
+			const secondAccepted = await postJson(baseUrl, '/api/matchmaking/accept', {
+				peerId: peerTwoId,
+				offerId: peerTwoOffer.offerId,
+				acceptance: acceptanceForOffer(peerTwoOffer, 'b'.repeat(43), 'bob-acceptance-signature'),
+			}, peerTwoQueueToken, bobCookie);
+			const peerTwoMatch = expectMatchedBody(secondAccepted.body);
+			const retryAfterCommit = await postJson(baseUrl, '/api/matchmaking/accept', {
+				peerId: peerTwoId,
+				offerId: peerTwoOffer.offerId,
+				acceptance: acceptanceForOffer(peerTwoOffer, 'b'.repeat(43), 'bob-acceptance-signature'),
+			}, peerTwoQueueToken, bobCookie);
+			const retryMatch = expectMatchedBody(retryAfterCommit.body);
+			expect(retryMatch).toMatchObject({
+				matchId: peerTwoMatch.matchId,
+				matchTicket: peerTwoMatch.matchTicket,
+			});
+			expect(peerTwoMatch.matchTicket.peerId).toBe(peerTwoId);
+			expect(peerTwoMatch.opponentPeerId).toBe(peerOneId);
+			const peerOneMatch = expectMatchedBody((await getJson(baseUrl, `/api/matchmaking/status/${peerOneId}`, peerOneQueueToken, aliceCookie)).body);
 			expect(peerOneMatch.matchId).toBe(peerTwoMatch.matchId);
 			expect(peerOneMatch.matchTicket.peerId).toBe(peerOneId);
 			expect(peerOneMatch.opponentPeerId).toBe(peerTwoId);
 			expect(peerOneMatch.matchTicket.token).not.toBe(peerTwoMatch.matchTicket.token);
-			assertNoCrossPeerTicketLeak(firstStatus.body);
 
 			const peerOneSocket = new WebSocket(
 				`${wsBaseUrl}?room=${encodeURIComponent(peerOneMatch.matchId)}&peer=${encodeURIComponent(peerOneId)}`,
@@ -441,45 +528,38 @@ describe('matchmaking and relay integration', () => {
 		}
 	});
 
-	it('requires Hive verification for F2 shared-network queue bodies', async () => {
-		process.env.VITE_RAGNAROK_RESET_EPOCH = 'closed-beta-queue-auth';
-		process.env.RAGNAROK_RESET_EPOCH = 'closed-beta-queue-auth';
+	it('reuses the HTTP Hive session without verifying the queue request again', async () => {
 		const { default: matchmakingRouter, clearP2PMatchmakingStateForTests } = await import('./matchmakingRoutes');
 		clearP2PMatchmakingStateForTests();
 		vi.mocked(verifyHiveAuth).mockClear();
 		const app = express();
 		app.use(express.json());
+		app.use('/api/session', hiveSessionRouter);
 		app.use('/api/matchmaking', matchmakingRouter);
 		const server = createServer(app);
 
 		try {
 			const port = await listenOnEphemeralPort(server);
 			const baseUrl = `http://127.0.0.1:${port}`;
+			const cookie = await loginSession(baseUrl, 'alice');
+			vi.mocked(verifyHiveAuth).mockClear();
 			await setStarterCeremonyClaim('alice', 1_800_000_000_000);
 			const body = queueBody('f2-signed-peer', 'alice');
-			const response = await postJson(baseUrl, '/api/matchmaking/queue', body);
+			const response = await postJson(baseUrl, '/api/matchmaking/queue', body, undefined, cookie);
 			expect(response.status).toBe(200);
-			expect(vi.mocked(verifyHiveAuth)).toHaveBeenCalledWith(
-				'alice',
-				buildP2PQueueAuthMessage({
-					username: 'alice',
-					peerId: 'f2-signed-peer',
-					starterClaimed: true,
-					timestamp: Number(body.timestamp),
-				}),
-				'alice-mock-signature',
-			);
+			expect(vi.mocked(verifyHiveAuth)).not.toHaveBeenCalled();
 		} finally {
 			await closeServer(server);
 		}
 	});
 
-	it('accepts an unsigned F1 shared-network queue body without Hive verification', async () => {
+	it('rejects matchmaking without the reusable HTTP Hive session', async () => {
 		const { default: matchmakingRouter, clearP2PMatchmakingStateForTests } = await import('./matchmakingRoutes');
 		clearP2PMatchmakingStateForTests();
 		vi.mocked(verifyHiveAuth).mockClear();
 		const app = express();
 		app.use(express.json());
+		app.use('/api/session', hiveSessionRouter);
 		app.use('/api/matchmaking', matchmakingRouter);
 		const server = createServer(app);
 
@@ -492,9 +572,8 @@ describe('matchmaking and relay integration', () => {
 				username: 'alice',
 				starterClaimed: true,
 			});
-			expect(response.status).toBe(200);
-			expect(isRecord(response.body)).toBe(true);
-			expect(isRecord(response.body) ? response.body.status : null).toBe('queued');
+			expect(response.status).toBe(401);
+			expect(response.body).toMatchObject({ success: false, error: 'Hive web session required for shared-network matchmaking' });
 			expect(vi.mocked(verifyHiveAuth)).not.toHaveBeenCalled();
 		} finally {
 			await closeServer(server);
@@ -506,15 +585,17 @@ describe('matchmaking and relay integration', () => {
 		clearP2PMatchmakingStateForTests();
 		const app = express();
 		app.use(express.json());
+		app.use('/api/session', hiveSessionRouter);
 		app.use('/api/matchmaking', matchmakingRouter);
 		const server = createServer(app);
 
 		try {
 			const port = await listenOnEphemeralPort(server);
 			const baseUrl = `http://127.0.0.1:${port}`;
+			const aliceCookie = await loginSession(baseUrl, 'alice');
 
 			await setStarterCeremonyClaim('alice', 1_800_000_000_000);
-			const firstQueue = await postJson(baseUrl, '/api/matchmaking/queue', queueBody('stale-peer-one', 'alice'));
+			const firstQueue = await postJson(baseUrl, '/api/matchmaking/queue', queueBody('stale-peer-one', 'alice'), undefined, aliceCookie);
 			expect(firstQueue.status).toBe(200);
 			expect(isRecord(firstQueue.body)).toBe(true);
 			const firstQueueRecord = isRecord(firstQueue.body) ? firstQueue.body : {};
@@ -522,7 +603,7 @@ describe('matchmaking and relay integration', () => {
 			const staleQueueToken = readStringProperty(firstQueueRecord, 'queueToken');
 
 			clearStarterCeremonyClaimsForTests();
-			const staleStatus = await getJson(baseUrl, '/api/matchmaking/status/stale-peer-one', staleQueueToken);
+			const staleStatus = await getJson(baseUrl, '/api/matchmaking/status/stale-peer-one', staleQueueToken, aliceCookie);
 			expect(staleStatus.status).toBe(403);
 			expect(staleStatus.body).toMatchObject({
 				success: false,
@@ -530,7 +611,7 @@ describe('matchmaking and relay integration', () => {
 			});
 
 			await setStarterCeremonyClaim('alice', 1_800_000_000_000);
-			const staleRequeue = await postJson(baseUrl, '/api/matchmaking/queue', queueBody('stale-peer-two', 'alice'));
+			const staleRequeue = await postJson(baseUrl, '/api/matchmaking/queue', queueBody('stale-peer-two', 'alice'), undefined, aliceCookie);
 			expect(staleRequeue.status).toBe(200);
 			expect(isRecord(staleRequeue.body)).toBe(true);
 			const staleRequeueRecord = isRecord(staleRequeue.body) ? staleRequeue.body : {};
@@ -538,7 +619,8 @@ describe('matchmaking and relay integration', () => {
 
 			clearStarterCeremonyClaimsForTests();
 			await setStarterCeremonyClaim('bob', 1_800_000_000_000);
-			const bobQueue = await postJson(baseUrl, '/api/matchmaking/queue', queueBody('fresh-peer-bob', 'bob'));
+			const bobCookie = await loginSession(baseUrl, 'bob');
+			const bobQueue = await postJson(baseUrl, '/api/matchmaking/queue', queueBody('fresh-peer-bob', 'bob'), undefined, bobCookie);
 			expect(bobQueue.status).toBe(200);
 			expect(bobQueue.body).toMatchObject({
 				success: true,
@@ -554,6 +636,7 @@ describe('matchmaking and relay integration', () => {
 		clearP2PMatchmakingStateForTests();
 		const app = express();
 		app.use(express.json());
+		app.use('/api/session', hiveSessionRouter);
 		app.use('/api/matchmaking', matchmakingRouter);
 		const server = createServer(app);
 
@@ -562,47 +645,51 @@ describe('matchmaking and relay integration', () => {
 			const baseUrl = `http://127.0.0.1:${port}`;
 			const peerOneId = 'leave-peer-one';
 			const peerTwoId = 'leave-peer-two';
+			const aliceCookie = await loginSession(baseUrl, 'alice');
+			const bobCookie = await loginSession(baseUrl, 'bob');
 			await setStarterCeremonyClaim('alice', 1_800_000_000_000);
 			await setStarterCeremonyClaim('bob', 1_800_000_000_000);
 
-			const firstQueue = await postJson(baseUrl, '/api/matchmaking/queue', queueBody(peerOneId, 'alice'));
+			const firstQueue = await postJson(baseUrl, '/api/matchmaking/queue', queueBody(peerOneId, 'alice'), undefined, aliceCookie);
 			expect(firstQueue.status).toBe(200);
 			expect(isRecord(firstQueue.body)).toBe(true);
 			const firstQueueRecord = isRecord(firstQueue.body) ? firstQueue.body : {};
 			expect(firstQueueRecord.status).toBe('queued');
 			const peerOneQueueToken = readStringProperty(firstQueueRecord, 'queueToken');
 
-			const secondQueue = await postJson(baseUrl, '/api/matchmaking/queue', queueBody(peerTwoId, 'bob'));
+			const secondQueue = await postJson(baseUrl, '/api/matchmaking/queue', queueBody(peerTwoId, 'bob'), undefined, bobCookie);
 			expect(secondQueue.status).toBe(200);
-			const peerTwoMatch = expectMatchedBody(secondQueue.body);
-			expect(peerTwoMatch.queueToken).toBeDefined();
-			const peerTwoQueueToken = peerTwoMatch.queueToken ?? '';
+			expect(secondQueue.body).toMatchObject({ success: true, status: 'offered' });
+			const peerTwoOffer = readOffer(isRecord(secondQueue.body) ? secondQueue.body.offer : null);
+			const peerTwoQueueToken = readStringProperty(isRecord(secondQueue.body) ? secondQueue.body : {}, 'queueToken');
 
 			const wrongTokenLeave = await postJson(
 				baseUrl,
 				'/api/matchmaking/leave',
 				{ peerId: peerTwoId },
 				peerOneQueueToken,
+				bobCookie,
 			);
 			expect(wrongTokenLeave.status).toBe(403);
 			expect(wrongTokenLeave.body).toMatchObject({ success: false, error: 'queue token required' });
 
-			const stillMatchedStatus = await getJson(baseUrl, `/api/matchmaking/status/${peerOneId}`, peerOneQueueToken);
+			const stillMatchedStatus = await getJson(baseUrl, `/api/matchmaking/status/${peerOneId}`, peerOneQueueToken, aliceCookie);
 			expect(stillMatchedStatus.status).toBe(200);
-			expectMatchedBody(stillMatchedStatus.body);
+			expect(stillMatchedStatus.body).toMatchObject({ success: true, status: 'offered' });
 
 			const leaveResponse = await postJson(
 				baseUrl,
 				'/api/matchmaking/leave',
 				{ peerId: peerTwoId },
 				peerTwoQueueToken,
+				bobCookie,
 			);
 			expect(leaveResponse.status).toBe(200);
 			expect(leaveResponse.body).toMatchObject({ success: true });
 
-			const remainingPeerStatus = await getJson(baseUrl, `/api/matchmaking/status/${peerOneId}`, peerOneQueueToken);
+			const remainingPeerStatus = await getJson(baseUrl, `/api/matchmaking/status/${peerOneId}`, peerOneQueueToken, aliceCookie);
 			expect(remainingPeerStatus.status).toBe(200);
-			expectMatchedBody(remainingPeerStatus.body);
+			expect(remainingPeerStatus.body).toMatchObject({ success: true, status: 'not_queued' });
 		} finally {
 			await closeServer(server);
 		}

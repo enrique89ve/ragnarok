@@ -335,11 +335,28 @@ const PubkeyString = z.string().min(32).max(256);
 // here, only require non-empty + reasonable cap.
 const HiveSigString = NonEmptyString(512);
 
+const MatchAcceptanceProofSchema = z.object({
+	protocol: z.literal('ragnarok-match-accept-v1'),
+	offerId: NonEmptyString(128),
+	matchId: NonEmptyString(128),
+	account: NonEmptyString(32).optional(),
+	peerId: NonEmptyString(64),
+	opponentAccount: NonEmptyString(32).optional(),
+	opponentPeerId: NonEmptyString(64),
+	ephemeralPubkey: PubkeyString,
+	rulesetHash: NonEmptyString(256),
+	engineHash: NonEmptyString(256),
+	serverNonce: NonEmptyString(128),
+	expiresAt: z.number().int().positive(),
+	hiveSig: HiveSigString.optional(),
+}).strict();
+
 const SessionAuthorizeSchema = z.object({
 	type: z.literal('session_authorize'),
 	matchId: NonEmptyString(64),
 	ephemeralPubkey: PubkeyString,
-	hiveSig: HiveSigString,
+	hiveSig: HiveSigString.optional(),
+	acceptance: MatchAcceptanceProofSchema.optional(),
 	matchChallenge: z.object({
 		from: NonEmptyString(32),
 		to: NonEmptyString(32),

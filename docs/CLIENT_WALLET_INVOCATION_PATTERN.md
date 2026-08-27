@@ -2,9 +2,11 @@
 
 Status: launch hardening rule, 2026-05-19.
 
-For the current gameplay-only P2P testnet, ADR 0007 is stricter: after
-matchmaking starts, the match flow must create **zero** wallet invocations,
-including reconnect/reload and `game_over`.
+For the current gameplay-only P2P testnet, Quick Match has one explicit
+match-start ceremony: `Offer → Accept → Ready`. Queue/search and status polling
+create **zero** wallet invocations; each player signs exactly once on the
+visible `Accept` action. After `Accept`, reconnect/reload and `game_over` create
+zero additional wallet invocations.
 
 In F1 this boundary also covers local campaign and daily-quest settlement:
 local replay commits first and no Keychain/broadcast is involved. Login is an
@@ -56,8 +58,11 @@ The current TypeScript seam is:
 
 ## Remaining Migration Targets
 
-- Future P2P ranked settlement `session_authorize` (start) and winner
-  `match_result` review (end) need visible wallet surfaces ([ADR 0008](./adr/0008-winner-posted-match-result.md)).
+- Quick Match `Accept` is the current visible wallet surface for the
+  match-specific Posting proof. `session_authorize` carries that same proof
+  into the P2P handshake and must not prompt again.
+- Future P2P ranked settlement winner `match_result` review (end) still needs a
+  separate visible wallet surface ([ADR 0008](./adr/0008-winner-posted-match-result.md)).
   There is no loser `result_countersign`. Disabled on the gameplay-only testnet.
 - The transaction queue needs a visible wallet outbox UI for manual Hive
   submission and retry.
@@ -65,7 +70,8 @@ The current TypeScript seam is:
 - Future ranked/on-chain matchmaking `queue_join` / `queue_leave`, Collection
   custody/crafting actions, Marketplace actions, Admin, and Treasury still use
   direct button handlers and should be migrated through the same invocation
-  wrapper for consistency. F1 Quick Match is unsigned server matchmaking
-  (`walletInvocation=false`); F2/F3 queue bodies use Hive body auth.
+  wrapper for consistency. Quick Match queue/search is unsigned server
+  matchmaking and reuses the HTTP login session; only `Accept` uses the
+  `p2pMatchAcceptance` wallet seam.
 - Campaign result publishing should be reviewed against the same rule before
   public beta.

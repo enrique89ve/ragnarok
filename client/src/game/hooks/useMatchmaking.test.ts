@@ -1,6 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildP2PQueueAuthMessage } from '@shared/p2pMatchmakingAuth';
-
 const matchmakingMocks = vi.hoisted(() => ({
 	signHiveMessage: vi.fn(),
 }));
@@ -16,6 +14,7 @@ vi.mock('../../data/HiveAuth', async () => {
 import {
 	buildQuickMatchQueueBody,
 	failQueuedStatus,
+	isMatchOfferForPeer,
 	readMatchmakingError,
 	resolveQuickMatchAccountId,
 	resolveQuickMatchQueueAccess,
@@ -103,21 +102,17 @@ describe('useMatchmaking quick-match access helpers', () => {
 		});
 	});
 
-	it('blocks shared-network matchmaking when Keychain is unavailable even after account gates pass', () => {
+	it('does not require Keychain again after the Hive session is authenticated', () => {
 		expect(resolveQuickMatchQueueAccess({
 			accountId: 'alice',
 			authenticatedHiveUsername: 'alice',
 			sharedNetwork: true,
 			starterClaimed: true,
 			hiveWalletAvailable: false,
-		})).toEqual({
-			kind: 'blocked',
-			reason: 'hive_wallet_unavailable',
-			message: 'Hive Keychain is not available in this browser profile.',
-		});
+		})).toEqual({ kind: 'allowed', accountId: 'alice' });
 	});
 
-	it('allows shared-network matchmaking only when account, session, starter, and Keychain are ready', () => {
+	it('allows shared-network matchmaking when account, session, and starter claim are ready', () => {
 		expect(resolveQuickMatchQueueAccess({
 			accountId: 'alice',
 			authenticatedHiveUsername: 'alice',
@@ -162,7 +157,7 @@ describe('useMatchmaking quick-match access helpers', () => {
 		expect(matchmakingMocks.signHiveMessage).not.toHaveBeenCalled();
 	});
 
-	it('builds a queue body whose Hive signature is bound to peerId and starter claim state', async () => {
+	it('never signs while building the queue request', async () => {
 		matchmakingMocks.signHiveMessage.mockResolvedValueOnce({
 			success: true,
 			signature: 'signed-queue',
@@ -178,27 +173,31 @@ describe('useMatchmaking quick-match access helpers', () => {
 
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
-		expect(result.body).toMatchObject({
+		expect(result.body).toEqual({
 			peerId: 'peer-one',
 			username: 'alice',
-			signature: 'signed-queue',
 			starterClaimed: true,
 		});
-		const timestamp = result.body.timestamp;
-		expect(typeof timestamp).toBe('number');
-		if (typeof timestamp !== 'number') throw new Error('expected queue timestamp');
-		expect(matchmakingMocks.signHiveMessage).toHaveBeenCalledWith(
-			buildP2PQueueAuthMessage({
-				username: 'alice',
-				peerId: 'peer-one',
-				starterClaimed: true,
-				timestamp,
-			}),
-			{ username: 'alice', title: 'Ragnarok: queue' },
-		);
+		expect(matchmakingMocks.signHiveMessage).not.toHaveBeenCalled();
 	});
 
-	it('fails closed when shared-network queue signing is rejected', async () => {
+	it('accepts the offer addressed to this peer, not the opponent perspective', () => {
+		const offer = {
+			protocol: 'ragnarok-match-offer-v1' as const,
+			offerId: 'offer-1',
+			matchId: 'room-1',
+			player: { peerId: 'peer-local', elo: 1000 },
+			opponent: { peerId: 'peer-remote', elo: 1000 },
+			createdAt: 1_000,
+			expiresAt: 2_000,
+			serverNonce: 'nonce-1',
+		};
+
+		expect(isMatchOfferForPeer(offer, 'peer-local', 1_500)).toBe(true);
+		expect(isMatchOfferForPeer(offer, 'peer-remote', 1_500)).toBe(false);
+	});
+
+	it('does not turn a rejected unused signer into a queue failure', async () => {
 		matchmakingMocks.signHiveMessage.mockResolvedValueOnce({
 			success: false,
 			error: 'rejected',
@@ -210,10 +209,7 @@ describe('useMatchmaking quick-match access helpers', () => {
 			sharedNetwork: true,
 			starterClaimed: true,
 			walletAuthMode: 'hive-body-auth',
-		})).resolves.toEqual({
-			ok: false,
-			message: 'Hive Keychain signature required before entering matchmaking.',
-		});
+		})).resolves.toMatchObject({ ok: true });
 	});
 
 	it('reads server matchmaking rejection details instead of hiding them behind status codes', async () => {
@@ -224,7 +220,7 @@ describe('useMatchmaking quick-match access helpers', () => {
 	});
 
 	it('clears local matchmaking and peer secrets when queued status polling fails', () => {
-		useMatchmakingStore.getState().setStatus('matched');
+		useMatchmakingStore.getState().setStatus('ready');
 		useMatchmakingStore.getState().setQueuePosition(2);
 		useMatchmakingStore.getState().setQueueToken('queue-token');
 		useMatchmakingStore.getState().setOpponent('opponent-peer', true);

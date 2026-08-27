@@ -31,9 +31,11 @@ The current Alfa/closed testnet P2P track is **gameplay-only**:
 - The WebSocket relay notarizes only deterministic phase boundaries as defined
   by [ADR 0005](./0005-server-notarized-phase-checkpoints.md).
 - No P2P `match_anchor` or `match_result` is signed or broadcast to Hive.
-- The match flow must not open Hive Keychain during a match, on reload/reconnect,
-  or after `game_over`. A login/session action explicitly initiated before
-  matchmaking may still use Keychain.
+- Quick Match follows `Offer → Accept → Ready`: queue/search is unsigned and
+  reuses the HTTP login session; `Accept` is the single visible match-specific
+  Posting signature per player. The resulting proof is reused by
+  `session_authorize`. No further Keychain prompt is allowed during the match,
+  on reload/reconnect, or after `game_over`.
 - F1 does not settle RUNE, ELO, Season Score, CardXP or `level_up` on Hive.
   Local replay/IndexedDB does persist those complete projections plus local
   anchor/result evidence; none is NFTLoX ownership or official ranking.
@@ -64,7 +66,8 @@ or submit a Hive operation.
 A gameplay-only P2P smoke is successful when two browsers complete the full
 `chess → poker_combat → chess → game_over` path, agree at every phase checkpoint,
 survive the supported short reconnect path, export diagnostic evidence, show a
-local terminal result, and trigger no match-driven Keychain prompt or Hive
+local terminal result, and show exactly one visible `Accept` signature per
+player followed by no additional match-driven Keychain prompt or Hive
 operation.
 
 ## Consequences

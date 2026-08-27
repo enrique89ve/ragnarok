@@ -16,6 +16,7 @@ export type ProtocolCapability =
 	| 'hiveBroadcast'
 	| 'walletLogin'
 	| 'walletInvocation'
+	| 'p2pMatchAcceptance'
 	| 'marketplace'
 	| 'packs'
 	| 'nftLoxWrites'
@@ -25,7 +26,7 @@ export type ProtocolCapability =
 	| 'officialRanking';
 
 export const PROTOCOL_CAPABILITIES = [
-	'localSettlement', 'hiveBroadcast', 'walletLogin', 'walletInvocation',
+	'localSettlement', 'hiveBroadcast', 'walletLogin', 'walletInvocation', 'p2pMatchAcceptance',
 	'marketplace', 'packs', 'nftLoxWrites', 'campaignPublish', 'dailyQuestClaim',
 	'p2pProgression', 'officialRanking',
 ] as const satisfies ReadonlyArray<ProtocolCapability>;
@@ -39,6 +40,7 @@ type ProtocolPhasePolicyBase = {
 	readonly hiveBroadcast: boolean;
 	readonly walletLogin: boolean;
 	readonly walletInvocation: boolean;
+	readonly p2pMatchAcceptance: boolean;
 	readonly marketplace: boolean;
 	readonly packs: boolean;
 	readonly nftLoxWrites: boolean;
@@ -58,6 +60,7 @@ export type ProtocolPhasePolicy =
 		readonly hiveBroadcast: false;
 		readonly walletLogin: true;
 		readonly walletInvocation: false;
+		readonly p2pMatchAcceptance: true;
 		readonly marketplace: false;
 		readonly packs: false;
 		readonly nftLoxWrites: false;
@@ -75,6 +78,7 @@ export type ProtocolPhasePolicy =
 		readonly hiveBroadcast: true;
 		readonly walletLogin: true;
 		readonly walletInvocation: true;
+		readonly p2pMatchAcceptance: true;
 		readonly marketplace: false;
 		readonly packs: false;
 		readonly nftLoxWrites: false;
@@ -92,6 +96,7 @@ export type ProtocolPhasePolicy =
 		readonly hiveBroadcast: true;
 		readonly walletLogin: true;
 		readonly walletInvocation: true;
+		readonly p2pMatchAcceptance: true;
 		readonly marketplace: true;
 		readonly packs: true;
 		readonly nftLoxWrites: true;
@@ -111,6 +116,7 @@ export const PROTOCOL_PHASE_POLICIES: Readonly<Record<ProtocolPhaseId, ProtocolP
 		hiveBroadcast: false,
 		walletLogin: true,
 		walletInvocation: false,
+		p2pMatchAcceptance: true,
 		marketplace: false,
 		packs: false,
 		nftLoxWrites: false,
@@ -128,6 +134,7 @@ export const PROTOCOL_PHASE_POLICIES: Readonly<Record<ProtocolPhaseId, ProtocolP
 		hiveBroadcast: true,
 		walletLogin: true,
 		walletInvocation: true,
+		p2pMatchAcceptance: true,
 		marketplace: false,
 		packs: false,
 		nftLoxWrites: false,
@@ -145,6 +152,7 @@ export const PROTOCOL_PHASE_POLICIES: Readonly<Record<ProtocolPhaseId, ProtocolP
 		hiveBroadcast: true,
 		walletLogin: true,
 		walletInvocation: true,
+		p2pMatchAcceptance: true,
 		marketplace: true,
 		packs: true,
 		nftLoxWrites: true,

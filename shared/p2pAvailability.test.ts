@@ -26,7 +26,8 @@ describe('p2pAvailability', () => {
 		expect(availabilityFromConnectionState('grace_period', 'idle')).toBe('reconnecting');
 		expect(availabilityFromConnectionState('reconnecting', 'idle')).toBe('reconnecting');
 		expect(availabilityFromConnectionState('disconnected', 'queued')).toBe('matchmaking');
-		expect(availabilityFromConnectionState('disconnected', 'matched')).toBe('in_match');
+		expect(availabilityFromConnectionState('disconnected', 'ready')).toBe('in_match');
+		expect(availabilityFromConnectionState('disconnected', 'connecting')).toBe('in_match');
 	});
 
 	it('strictly parses compact heartbeat request bodies', () => {

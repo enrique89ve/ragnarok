@@ -1,6 +1,7 @@
 import type { P2PMatchTicket, ServerSignedChallenge } from '../../shared/p2pAvailability';
 
 export type P2PActiveMatch = {
+	readonly offerId: string;
 	readonly player1: string;
 	readonly player2: string;
 	readonly player1Username?: string;

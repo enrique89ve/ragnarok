@@ -14,7 +14,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useUnifiedCombatStore } from '../../stores/unifiedCombatStore';
-import { deriveLocalAiProfile, derivePlayableMatchMode, useMatchStore } from '../../match';
+import { deriveLocalAiProfile, useMatchStore } from '../../match';
 import { cryptoRng } from '../../utils/seededRng';
 import { debug } from '../../config/debugConfig';
 import {
@@ -35,9 +35,9 @@ export function useChessAITurn({ enabled }: ChessAITurnOptions): void {
 	const currentTurn = useUnifiedCombatStore((s) => s.boardState.currentTurn);
 	const gameStatus = useUnifiedCombatStore((s) => s.boardState.gameStatus);
 	const activeMatch = useMatchStore((s) => s.activeMatch);
-	const matchMode = activeMatch ? derivePlayableMatchMode(activeMatch) : null;
 	const localAi = activeMatch ? deriveLocalAiProfile(activeMatch) : null;
-	const isP2PMatch = matchMode === 'p2p';
+	const isP2PMatch = activeMatch?.opponent.kind === 'peer';
+	const aiEnabled = enabled && localAi !== null;
 	const behaviorProfile: ChessAIBehaviorProfile = localAi?.behaviorProfile ?? 'campaign';
 	const aiDifficulty = localAi?.difficulty ?? 'normal';
 	const aiStyle = localAi?.style ?? 'balanced';
@@ -53,7 +53,7 @@ export function useChessAITurn({ enabled }: ChessAITurnOptions): void {
 		};
 
 		const policy = deriveChessTurnPolicy({
-			enabled,
+			enabled: aiEnabled,
 			currentTurn,
 			gameStatus,
 			isP2PMatch,
@@ -85,5 +85,5 @@ export function useChessAITurn({ enabled }: ChessAITurnOptions): void {
 		const firstAttemptDelayMs = getAIFirstAttemptDelayMs(aiDifficulty, rng, aiStyle);
 		schedule(() => driver.runAITurn(), firstAttemptDelayMs);
 		return clearAllTimeouts;
-	}, [enabled, currentTurn, gameStatus, isP2PMatch, aiDifficulty, aiStyle, behaviorProfile]);
+	}, [aiEnabled, currentTurn, gameStatus, isP2PMatch, aiDifficulty, aiStyle, behaviorProfile]);
 }

@@ -19,6 +19,7 @@ deterministic rejection, not a hidden network attempt.
 | `hiveBroadcast` | no | yes | yes |
 | `walletLogin` | yes | yes | yes |
 | `walletInvocation` | no | yes | yes |
+| `p2pMatchAcceptance` | yes | yes | yes |
 | `marketplace` | no | no | yes |
 | `packs` | no | no | yes |
 | `nftLoxWrites` | no | no | yes |
@@ -33,6 +34,9 @@ deterministic rejection, not a hidden network attempt.
 - `hiveBroadcast`: permits external Hive transaction/custom-json broadcast.
 - `walletLogin`: permits identity/login discovery without signing or invocation.
 - `walletInvocation`: permits an explicit Keychain/wallet operation.
+- `p2pMatchAcceptance`: permits the one explicit Quick Match `Accept` signature
+  that authorizes the match-specific P2P handshake. It is deliberately
+  narrower than generic `walletInvocation`.
 - `marketplace`: permits marketplace mutation handlers and UI actions.
 - `packs`: permits pack purchase/open mutation handlers and UI actions.
 - `nftLoxWrites`: permits NFTLox ownership or protocol writes.
@@ -62,7 +66,9 @@ an explicit Period 6 task.
 | F3 | `hive-canonical` | `canonical` | `explicit-only` |
 
 F1 `walletLogin=true` and `walletInvocation=false` is intentional: identity
-may be established, but gameplay, claims, P2P queue join and
-`session_authorize` do not open Keychain. Starter claim and shared-network
-queue bodies are unsigned in F1 and Hive-signed in F2/F3. See the
+may be established, generic gameplay/claim wallet operations remain closed,
+and Quick Match is the sole narrow exception: `Accept` uses the separate
+`p2pMatchAcceptance=true` capability exactly once per player. Queue/search is
+unsigned and reuses the HTTP session; `session_authorize` reuses the accepted
+proof and never opens Keychain again. See the
 [phase explanation](./TESTNET_PHASES.md) and [migration runbook](./PHASE_MIGRATION_RUNBOOK.md).

@@ -40,6 +40,18 @@ describe('deriveChessTurnPolicy', () => {
 		});
 	});
 
+	it('disables AI when no match context enables a local opponent', () => {
+		expect(deriveChessTurnPolicy({
+			enabled: false,
+			currentTurn: 'opponent',
+			gameStatus: 'playing',
+			isP2PMatch: false,
+		})).toMatchObject({
+			actor: 'none',
+			shouldScheduleAiTurn: false,
+		});
+	});
+
 	it('does not schedule AI when chess is not the active playable phase', () => {
 		expect(deriveChessTurnPolicy({
 			enabled: false,
