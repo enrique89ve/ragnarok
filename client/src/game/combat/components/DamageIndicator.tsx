@@ -51,7 +51,7 @@ export const DamageIndicator: React.FC<DamageIndicatorProps> = ({
 			lane: 'damage-indicator',
 			key: id,
 			priority: isCritical ? 'high' : 'normal',
-			delayMs: 2000,
+			delayMs: 800,
 			run: onComplete,
 		});
 		return () => handle.cancel();
@@ -86,7 +86,7 @@ export const DamageIndicator: React.FC<DamageIndicatorProps> = ({
 				top: position.y + jitter.y,
 				pointerEvents: 'none',
 				zIndex: 35,
-				transform: 'translateX(-50%)',
+				transform: 'translate(-50%, -50%)',
 			}}
 		>
 			<span className={`damage-number-text ${isHeal ? 'combat-heal-number' : 'combat-damage-number'} ${!isHeal && isCrit ? 'crit' : ''}`}>

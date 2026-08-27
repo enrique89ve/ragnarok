@@ -126,6 +126,14 @@ body:has(.game-viewport-wrapper) {
   animation: screenShakeStrong 0.3s ease-out;
 }
 
+.game-viewport-wrapper.screen-shake-impact-heavy {
+  animation: screenShakeImpactHeavy 0.24s ease-out;
+}
+
+.game-viewport-wrapper.screen-shake-impact-lethal {
+  animation: screenShakeImpactLethal 0.28s ease-out;
+}
+
 @keyframes screenShakeMild {
   0%, 100% { transform: translate(0, 0); }
   15% { transform: translate(-2px, 1px); }
@@ -143,9 +151,27 @@ body:has(.game-viewport-wrapper) {
   70% { transform: translate(-2px, 1px); }
 }
 
+@keyframes screenShakeImpactHeavy {
+  0%, 100% { transform: translate(0, 0); }
+  18% { transform: translate(-1px, 0.5px); }
+  36% { transform: translate(1.5px, -1px); }
+  58% { transform: translate(-1px, 1px); }
+  78% { transform: translate(0.5px, -0.5px); }
+}
+
+@keyframes screenShakeImpactLethal {
+  0%, 100% { transform: translate(0, 0); }
+  14% { transform: translate(-2px, 1px); }
+  30% { transform: translate(3px, -2px); }
+  48% { transform: translate(-2px, 2px); }
+  68% { transform: translate(1.5px, -1px); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .game-viewport-wrapper.screen-shake-mild,
-  .game-viewport-wrapper.screen-shake-strong {
+  .game-viewport-wrapper.screen-shake-strong,
+  .game-viewport-wrapper.screen-shake-impact-heavy,
+  .game-viewport-wrapper.screen-shake-impact-lethal {
     animation: none !important;
   }
 }

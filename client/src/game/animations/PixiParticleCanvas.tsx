@@ -17,6 +17,11 @@ export interface ParticleColor {
 	glow: string;
 }
 
+export interface ParticleDirection {
+	readonly x: number;
+	readonly y: number;
+}
+
 export const ELEMENT_PALETTES: Record<string, ParticleColor> = {
 	fire:      { primary: '#ff5500', secondary: '#ffd700', glow: 'rgba(255,85,0,0.6)' },
 	ice:       { primary: '#00ccff', secondary: '#b3e5fc', glow: 'rgba(0,204,255,0.6)' },
@@ -32,6 +37,20 @@ function hexToNum(hex: string): number {
 
 function pickColor(palette: ParticleColor, next: () => number = Math.random): number {
 	return next() > 0.5 ? hexToNum(palette.primary) : hexToNum(palette.secondary);
+}
+
+function prefersReducedMotion(): boolean {
+	return typeof window !== 'undefined'
+		&& typeof window.matchMedia === 'function'
+		&& window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function reducedParticleCount(count: number): number {
+	return prefersReducedMotion() ? Math.max(1, Math.ceil(count * 0.25)) : count;
+}
+
+function motionDuration(seconds: number): number {
+	return prefersReducedMotion() ? seconds * 0.25 : seconds;
 }
 
 let pixiApp: Application | null = null;
@@ -199,6 +218,7 @@ export function spawnSlashTrail(
 	count: number,
 	palette: ParticleColor,
 	seed?: string,
+	durationMs = 300,
 ) {
 	if (!pixiApp || !trailContainer) return;
 	const random = seed ? createEffectRandom(`slash-trail:${seed}`) : null;
@@ -212,8 +232,10 @@ export function spawnSlashTrail(
 	const nx = len > 0 ? -dy / len : 0;
 	const ny = len > 0 ? dx / len : 0;
 
-	for (let i = 0; i < count; i++) {
-		const t = i / count;
+	const particleCount = reducedParticleCount(count);
+	const travelMs = Math.max(1, durationMs) * (prefersReducedMotion() ? 0.25 : 1);
+	for (let i = 0; i < particleCount; i++) {
+		const t = i / particleCount;
 		const spread = (next() - 0.5) * 30;
 		const x = start.x + dx * t + nx * spread;
 		const y = start.y + dy * t + ny * spread;
@@ -229,11 +251,11 @@ export function spawnSlashTrail(
 		gsap.to(g, {
 			alpha: 1,
 			duration: 0.1,
-			delay: t * 0.25,
+			delay: (t * travelMs) / 1000,
 			onComplete: () => {
 				gsap.to(g, {
 					alpha: 0,
-					duration: 0.3,
+					duration: motionDuration(0.3),
 					ease: 'power2.out',
 					onComplete: () => {
 						trailContainer?.removeChild(g);
@@ -243,7 +265,7 @@ export function spawnSlashTrail(
 				gsap.to(g.scale, {
 					x: 0.3,
 					y: 0.3,
-					duration: 0.3,
+					duration: motionDuration(0.3),
 					ease: 'power2.out',
 				});
 			}
@@ -263,8 +285,9 @@ export function spawnParticleBurst(
 	const center = toArenaPoint(cx, cy);
 	if (!center) return;
 
-	for (let i = 0; i < count; i++) {
-		const angle = (Math.PI * 2 * i) / count + (next() - 0.5) * 0.4;
+	const particleCount = reducedParticleCount(count);
+	for (let i = 0; i < particleCount; i++) {
+		const angle = (Math.PI * 2 * i) / particleCount + (next() - 0.5) * 0.4;
 		const dist = 30 + next() * 90;
 		const r = 2 + next() * 6;
 		const endX = center.x + Math.cos(angle) * dist;
@@ -281,7 +304,7 @@ export function spawnParticleBurst(
 			x: endX,
 			y: endY,
 			alpha: 0,
-			duration: 0.4 + next() * 0.2,
+			duration: motionDuration(0.4 + next() * 0.2),
 			ease: 'power2.out',
 			onComplete: () => {
 				burstContainer?.removeChild(g);
@@ -293,6 +316,50 @@ export function spawnParticleBurst(
 
 /** Shared primitive name used by combat recipes. */
 export const spawnImpactBurst = spawnParticleBurst;
+
+export function spawnDirectionalImpactBurst(
+	cx: number,
+	cy: number,
+	count: number,
+	palette: ParticleColor,
+	direction: ParticleDirection,
+	seed?: string,
+) {
+	if (!pixiApp || !burstContainer) return;
+	const center = toArenaPoint(cx, cy);
+	if (!center) return;
+	const random = seed ? createEffectRandom(`directional-impact:${seed}`) : null;
+	const next = random?.next ?? Math.random;
+	const particleCount = reducedParticleCount(count);
+	const directionalCount = Math.ceil(particleCount * 0.7);
+	const baseAngle = Math.atan2(direction.y, direction.x);
+
+	for (let i = 0; i < particleCount; i += 1) {
+		const angle = i < directionalCount
+			? baseAngle + (next() - 0.5) * (Math.PI * 100 / 180)
+			: next() * Math.PI * 2;
+		const distance = 30 + next() * 90;
+		const r = 2 + next() * 6;
+		const g = new Graphics();
+		g.circle(0, 0, r);
+		g.fill(pickColor(palette, next));
+		g.position.set(center.x, center.y);
+		g.alpha = 1;
+		burstContainer.addChild(g);
+
+		gsap.to(g, {
+			x: center.x + Math.cos(angle) * distance,
+			y: center.y + Math.sin(angle) * distance,
+			alpha: 0,
+			duration: motionDuration(0.4 + next() * 0.2),
+			ease: 'power2.out',
+			onComplete: () => {
+				burstContainer?.removeChild(g);
+				g.destroy();
+			},
+		});
+	}
+}
 
 export function spawnImpactRing(
 	cx: number, cy: number,
@@ -312,7 +379,7 @@ export function spawnImpactRing(
 
 	gsap.to(ring, {
 		alpha: 0,
-		duration: 0.35,
+		duration: motionDuration(0.35),
 		ease: 'power2.out',
 		onComplete: () => {
 			burstContainer?.removeChild(ring);
@@ -322,7 +389,7 @@ export function spawnImpactRing(
 	gsap.to(ring.scale, {
 		x: 2.5,
 		y: 2.5,
-		duration: 0.35,
+		duration: motionDuration(0.35),
 		ease: 'power2.out',
 	});
 }
@@ -376,7 +443,8 @@ export function spawnSmokePuff(
 	const random = seed ? createEffectRandom(`smoke-puff:${seed}`) : null;
 	const next = random?.next ?? Math.random;
 
-	for (let i = 0; i < count; i += 1) {
+	const particleCount = reducedParticleCount(count);
+	for (let i = 0; i < particleCount; i += 1) {
 		const size = 10 + next() * 18;
 		const startX = center.x + (next() - 0.5) * 24;
 		const startY = center.y + (next() - 0.5) * 18;
@@ -392,7 +460,7 @@ export function spawnSmokePuff(
 			x: startX + (next() - 0.5) * 50,
 			y: startY - 24 - next() * 34,
 			alpha: 0,
-			duration: 0.55 + next() * 0.35,
+			duration: motionDuration(0.55 + next() * 0.35),
 			ease: 'power1.out',
 			onComplete: () => {
 				burstContainer?.removeChild(puff);
@@ -402,7 +470,7 @@ export function spawnSmokePuff(
 		gsap.to(puff.scale, {
 			x: 1.4,
 			y: 1.4,
-			duration: 0.65,
+			duration: motionDuration(0.65),
 			ease: 'power1.out',
 		});
 	}
@@ -414,6 +482,7 @@ export function spawnSparkBurst(
 	count: number,
 	palette: ParticleColor,
 	seed?: string,
+	direction?: ParticleDirection,
 ) {
 	if (!pixiApp || !burstContainer) return;
 	const center = toArenaPoint(cx, cy);
@@ -421,8 +490,13 @@ export function spawnSparkBurst(
 	const random = seed ? createEffectRandom(`spark-burst:${seed}`) : null;
 	const next = random?.next ?? Math.random;
 
-	for (let i = 0; i < count; i += 1) {
-		const angle = next() * Math.PI * 2;
+	const particleCount = reducedParticleCount(count);
+	const directionalCount = Math.ceil(particleCount * 0.7);
+	const baseAngle = direction ? Math.atan2(direction.y, direction.x) : 0;
+	for (let i = 0; i < particleCount; i += 1) {
+		const angle = direction && i < directionalCount
+			? baseAngle + (next() - 0.5) * (Math.PI * 100 / 180)
+			: next() * Math.PI * 2;
 		const distance = 22 + next() * 64;
 		const spark = new Graphics();
 		spark.rect(-1, -5, 2, 10);
@@ -435,7 +509,7 @@ export function spawnSparkBurst(
 			x: center.x + Math.cos(angle) * distance,
 			y: center.y + Math.sin(angle) * distance,
 			alpha: 0,
-			duration: 0.25 + next() * 0.2,
+			duration: motionDuration(0.25 + next() * 0.2),
 			ease: 'power2.out',
 			onComplete: () => {
 				burstContainer?.removeChild(spark);

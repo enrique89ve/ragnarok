@@ -23,49 +23,39 @@ export interface HealthSnapshot {
 export function useDamageAnimations() {
 	const [damageAnimations, setDamageAnimations] = useState<DamageAnimation[]>([]);
 	const [shakingTargets, setShakingTargets] = useState<Set<string>>(new Set());
-	const [screenShakeClass, setScreenShakeClass] = useState('');
-	const screenShakeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const shakeTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 	const prevHealthRef = useRef<HealthSnapshot | null>(null);
 
 	useEffect(() => {
+		const timers = shakeTimersRef.current;
 		return () => {
-			if (screenShakeTimeoutRef.current) clearTimeout(screenShakeTimeoutRef.current);
-			shakeTimersRef.current.forEach(t => clearTimeout(t));
-			shakeTimersRef.current.clear();
+			timers.forEach(t => clearTimeout(t));
+			timers.clear();
 		};
-	}, []);
-
-	const triggerScreenShake = useCallback((damage: number) => {
-		if (damage < 5) return;
-		const shakeClass = damage >= 8 ? 'screen-shake-strong' : 'screen-shake-mild';
-		setScreenShakeClass(shakeClass);
-		if (screenShakeTimeoutRef.current) clearTimeout(screenShakeTimeoutRef.current);
-		screenShakeTimeoutRef.current = setTimeout(() => setScreenShakeClass(''), 350);
 	}, []);
 
 	const triggerDamageAnimation = useCallback((targetId: string, damage: number, x: number, y: number, isHeal = false) => {
 		const animId = `dmg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 		setDamageAnimations(prev => [...prev, { id: animId, damage, targetId, x, y, timestamp: Date.now(), isHeal }]);
+		const isHeroTarget = targetId === 'player-hero' || targetId === 'opponent-hero';
 		if (!isHeal) {
-			setShakingTargets(prev => new Set(prev).add(targetId));
-			const t = setTimeout(() => {
-				shakeTimersRef.current.delete(t);
-				setShakingTargets(prev => {
-					const next = new Set(prev);
-					next.delete(targetId);
-					return next;
-				});
-			}, 300);
-			shakeTimersRef.current.add(t);
-			triggerScreenShake(damage);
-			if (targetId === 'player-hero' || targetId === 'opponent-hero') {
+			if (isHeroTarget) {
+				setShakingTargets(prev => new Set(prev).add(targetId));
+				const t = setTimeout(() => {
+					shakeTimersRef.current.delete(t);
+					setShakingTargets(prev => {
+						const next = new Set(prev);
+						next.delete(targetId);
+						return next;
+					});
+				}, 300);
+				shakeTimersRef.current.add(t);
 				playSound('damage');
 			}
-		} else if (targetId === 'player-hero' || targetId === 'opponent-hero') {
+		} else if (isHeroTarget) {
 			playSound('heal');
 		}
-	}, [triggerScreenShake]);
+	}, []);
 
 	const removeDamageAnimation = useCallback((id: string) => {
 		setDamageAnimations(prev => prev.filter(a => a.id !== id));
@@ -80,9 +70,7 @@ export function useDamageAnimations() {
 	return {
 		damageAnimations,
 		shakingTargets,
-		screenShakeClass,
 		prevHealthRef,
-		triggerScreenShake,
 		triggerDamageAnimation,
 		removeDamageAnimation,
 		addShakingTarget,

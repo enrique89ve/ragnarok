@@ -68,19 +68,8 @@
 .bf-slot.occupied {
   border: none;
   background: transparent;
-  animation: bf-idle-breathe 3.5s ease-in-out infinite;
+  animation: none;
 }
-
-/* Subtle idle breathing on battlefield minions — makes the board feel alive */
-@keyframes bf-idle-breathe {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-1.5px); }
-}
-
-/* Stagger breathing so cards don't all pulse in sync */
-.bf-slot.occupied:nth-child(2) { animation-delay: -0.7s; }
-.bf-slot.occupied:nth-child(3) { animation-delay: -1.4s; }
-.bf-slot.occupied:nth-child(4) { animation-delay: -2.1s; }
 
 /* Poker owns fixed 1920x1080 zone coordinates. Do not let the generic
    battlefield idle motion move those cards after the chess handoff. */
@@ -236,6 +225,27 @@
   --bf-action-y: 0px;
   --bf-action-rotate: 0deg;
   --bf-action-scale: 0;
+  --bf-action-anticipation-x: 0px;
+  --bf-action-anticipation-y: 0px;
+  --bf-action-contact-x: 0px;
+  --bf-action-contact-y: 0px;
+  --bf-action-contact-rotate: 0deg;
+  --bf-action-anticipation-rotate: 0deg;
+  --bf-action-rebound-x: 0px;
+  --bf-action-rebound-y: 0px;
+  --bf-action-rebound-rotate: 0deg;
+  --bf-action-travel-duration: 300ms;
+  --bf-action-recovery-duration: 160ms;
+  --bf-reaction-impulse-x: 0px;
+  --bf-reaction-impulse-y: 0px;
+  --bf-reaction-rebound-x: 0px;
+  --bf-reaction-rebound-y: 0px;
+  --bf-reaction-tail-x: 0px;
+  --bf-reaction-tail-y: 0px;
+  --bf-reaction-rotate-peak: 0deg;
+  --bf-reaction-rebound-rotate: 0deg;
+  --bf-reaction-tail-rotate: 0deg;
+  --bf-reaction-duration: 160ms;
   position: relative;
   width: 100%;
   height: 100%;
@@ -301,6 +311,82 @@
     bf-reaction-hit-flash 0.4s ease-out;
 }
 
+.bf-card-wrapper.combat-action-lunge {
+  animation: bf-action-melee-lunge var(--bf-action-travel-duration) cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.bf-card-wrapper.combat-action-recover {
+  animation: bf-action-melee-recover var(--bf-action-recovery-duration) cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.bf-card-wrapper.combat-reaction-recoil {
+  animation: bf-reaction-directional-recoil var(--bf-reaction-duration) cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes bf-action-melee-lunge {
+  0%, 8% {
+    --bf-action-x: 0px;
+    --bf-action-y: 0px;
+    --bf-action-rotate: 0deg;
+  }
+  18% {
+    --bf-action-x: var(--bf-action-anticipation-x);
+    --bf-action-y: var(--bf-action-anticipation-y);
+    --bf-action-rotate: var(--bf-action-anticipation-rotate);
+  }
+  42%, 100% {
+    --bf-action-x: var(--bf-action-contact-x);
+    --bf-action-y: var(--bf-action-contact-y);
+    --bf-action-rotate: var(--bf-action-contact-rotate);
+  }
+}
+
+@keyframes bf-action-melee-recover {
+  0% {
+    --bf-action-x: var(--bf-action-contact-x);
+    --bf-action-y: var(--bf-action-contact-y);
+    --bf-action-rotate: var(--bf-action-contact-rotate);
+  }
+  28% {
+    --bf-action-x: var(--bf-action-rebound-x);
+    --bf-action-y: var(--bf-action-rebound-y);
+    --bf-action-rotate: var(--bf-action-rebound-rotate);
+  }
+  100% {
+    --bf-action-x: 0px;
+    --bf-action-y: 0px;
+    --bf-action-rotate: 0deg;
+  }
+}
+
+@keyframes bf-reaction-directional-recoil {
+  0%, 10% {
+    --bf-reaction-x: 0px;
+    --bf-reaction-y: 0px;
+    --bf-reaction-rotate: 0deg;
+  }
+  24% {
+    --bf-reaction-x: var(--bf-reaction-impulse-x);
+    --bf-reaction-y: var(--bf-reaction-impulse-y);
+    --bf-reaction-rotate: var(--bf-reaction-rotate-peak);
+  }
+  48% {
+    --bf-reaction-x: var(--bf-reaction-rebound-x);
+    --bf-reaction-y: var(--bf-reaction-rebound-y);
+    --bf-reaction-rotate: var(--bf-reaction-rebound-rotate);
+  }
+  72% {
+    --bf-reaction-x: var(--bf-reaction-tail-x);
+    --bf-reaction-y: var(--bf-reaction-tail-y);
+    --bf-reaction-rotate: var(--bf-reaction-tail-rotate);
+  }
+  100% {
+    --bf-reaction-x: 0px;
+    --bf-reaction-y: 0px;
+    --bf-reaction-rotate: 0deg;
+  }
+}
+
 @keyframes bf-reaction-hit-rotate {
   0%, 100% { --bf-reaction-rotate: 0deg; }
   15%       { --bf-reaction-rotate: -2deg; }
@@ -316,7 +402,7 @@
   box-shadow: 0 0 8px rgba(74, 222, 128, 0.25), inset 0 0 4px rgba(74, 222, 128, 0.1);
 }
 
-/* Can attack state — refined gold/amber glow (Norse theme) */
+/* Can attack state — quiet affordance; the selected attacker owns the stronger hierarchy. */
 .bf-card-wrapper.can-attack {
   cursor: pointer;
 }
@@ -328,16 +414,15 @@
   border-radius: 8px;
   pointer-events: none;
   z-index: 1;
-  border: 1.5px solid rgba(251, 191, 36, 0.5);
+  border: 1px solid rgba(251, 191, 36, 0.42);
   box-shadow:
-    0 0 10px 2px rgba(251, 191, 36, 0.45),
-    0 0 22px 4px rgba(217, 160, 20, 0.18);
-  animation: canAttackGlow 2s ease-in-out infinite;
+    0 0 8px 1px rgba(251, 191, 36, 0.24),
+    0 0 16px 3px rgba(217, 160, 20, 0.1);
 }
 
 .bf-card-wrapper.can-attack:hover {
-  --bf-motion-y: -16px;
-  --bf-motion-scale: 1.12;
+  --bf-motion-y: -12px;
+  --bf-motion-scale: 1.05;
 }
 
 .bf-card-wrapper.can-attack:hover::after {
@@ -346,11 +431,6 @@
   box-shadow:
     0 0 14px 4px rgba(251, 191, 36, 0.65),
     0 0 30px 8px rgba(217, 160, 20, 0.25);
-}
-
-@keyframes canAttackGlow {
-  0%, 100% { opacity: 0.4; }
-  50%       { opacity: 1; }
 }
 
 /* Summoning sickness - newly played, cannot attack yet */
@@ -365,30 +445,6 @@
   --bf-motion-scale: 1.02;
 }
 
-.bf-card-wrapper.summoning-sick::after {
-  content: 'Zzz';
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  font-size: var(--text-13);
-  font-weight: 900;
-  letter-spacing: 2px;
-  color: rgba(186, 230, 253, 1);
-  background: rgba(15, 23, 42, 0.88);
-  padding: var(--space-3) 7px;
-  border-radius: var(--radius-5);
-  border: 1px solid rgba(186, 230, 253, 0.55);
-  pointer-events: none;
-  z-index: 15;
-  animation: sleepPulse 1.8s ease-in-out infinite;
-  text-shadow: 0 0 8px rgba(147, 210, 250, 0.8);
-}
-
-@keyframes sleepPulse {
-  0%, 100% { opacity: 0.6; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.06); }
-}
-
 /* Exhausted - already attacked this turn */
 .bf-card-wrapper.exhausted {
   cursor: default;
@@ -399,6 +455,32 @@
 .bf-card-wrapper.exhausted:hover {
   --bf-motion-y: -4px;
   --bf-motion-scale: 1.02;
+}
+
+.bf-card-state-marker {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-5);
+  background: rgba(15, 23, 42, 0.9);
+  pointer-events: none;
+  z-index: 16;
+}
+
+.bf-card-state-marker--sleep {
+  color: #bae6fd;
+  border: 1px solid rgba(186, 230, 253, 0.55);
+  box-shadow: 0 0 8px rgba(147, 210, 250, 0.35);
+}
+
+.bf-card-state-marker--spent {
+  color: #fca5a5;
+  border: 1px solid rgba(252, 165, 165, 0.55);
+  box-shadow: 0 0 8px rgba(248, 113, 113, 0.28);
 }
 
 /* Ready to evolve — pet with petEvolutionMet=true */
@@ -497,37 +579,30 @@
   white-space: nowrap;
 }
 
-/* Valid target state — AAA layered threat glow with animated rotating border
-   Multi-layer: inner highlight + animated conic border + outer atmospheric glow */
+/* Valid target state — stable red threat outline. Validity comes from the
+   targeting store; CSS only communicates the resolved affordance. */
 .bf-card-wrapper.valid-target {
-  border: none;
+  border: 2px solid rgba(248, 113, 113, 0.78);
   border-radius: 8px;
   cursor: crosshair;
+  box-shadow:
+    0 0 8px 2px rgba(239, 68, 68, 0.48),
+    0 0 22px 5px rgba(185, 28, 28, 0.18);
 }
 
-/* Animated conic gradient border — rotating crimson energy ring */
+/* Quiet inner edge rather than a rotating border that competes with the
+   selected attacker and combat motion. */
 .bf-card-wrapper.valid-target::before {
   content: '';
   position: absolute;
-  inset: -3px;
+  inset: -1px;
   border-radius: 10px;
-  padding: var(--space-3);
-  background: conic-gradient(
-    from var(--border-angle, 0deg),
-    #7f1d1d, #dc2626, #ef4444, #fca5a5,
-    #fff1f2,
-    #fca5a5, #ef4444, #dc2626, #7f1d1d
-  );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  animation: border-rotate 3s linear infinite;
+  border: 1px solid rgba(254, 202, 202, 0.38);
   pointer-events: none;
   z-index: 1;
 }
 
-/* Outer atmospheric glow — deep red falloff with soft pulse */
+/* Outer atmospheric glow — deep red falloff without a pulse. */
 .bf-card-wrapper.valid-target::after {
   content: '';
   position: absolute;
@@ -535,54 +610,28 @@
   border-radius: 10px;
   pointer-events: none;
   z-index: 0;
-  box-shadow:
-    /* Inner fire ring */
-    0 0 8px 2px rgba(239, 68, 68, 0.7),
-    /* Mid glow — warm crimson */
-    0 0 20px 6px rgba(220, 38, 38, 0.5),
-    /* Outer atmosphere — deep spread */
-    0 0 40px 12px rgba(185, 28, 28, 0.3),
-    /* Far ambient — barely visible */
-    0 0 60px 20px rgba(127, 29, 29, 0.15),
-    /* Inner highlight for depth */
-    inset 0 0 12px 2px rgba(239, 68, 68, 0.15);
-  animation: validTargetGlow 2s ease-in-out infinite;
-}
-
-@keyframes validTargetGlow {
-  0%, 100% { opacity: 0.6; }
-  50%       { opacity: 1; }
+  box-shadow: 0 0 16px 4px rgba(220, 38, 38, 0.28);
+  opacity: 0.9;
 }
 
 .bf-card-wrapper.valid-target:hover {
-  --bf-motion-y: -16px;
-  --bf-motion-scale: 1.12;
+  --bf-motion-y: -12px;
+  --bf-motion-scale: 1.05;
 }
 
 .bf-card-wrapper.valid-target:hover::before {
-  animation: border-rotate 1.5s linear infinite;
-  background: conic-gradient(
-    from var(--border-angle, 0deg),
-    #991b1b, #ef4444, #f87171, #fecaca,
-    #ffffff,
-    #fecaca, #f87171, #ef4444, #991b1b
-  );
-  inset: -4px;
-  padding: 4px;
+  border-color: rgba(254, 202, 202, 0.7);
 }
 
 .bf-card-wrapper.valid-target:hover::after {
   animation: none;
   opacity: 1;
   box-shadow:
-    0 0 12px 4px rgba(248, 113, 113, 0.9),
-    0 0 28px 10px rgba(239, 68, 68, 0.65),
-    0 0 50px 18px rgba(220, 38, 38, 0.4),
-    0 0 80px 28px rgba(185, 28, 28, 0.2),
-    inset 0 0 16px 4px rgba(239, 68, 68, 0.2);
+    0 0 12px 3px rgba(248, 113, 113, 0.72),
+    0 0 28px 8px rgba(239, 68, 68, 0.34);
 }
 
-/* Selected attacker — persistent pulsing glow + lift so player KNOWS it's selected */
+/* Selected attacker — strongest persistent hierarchy, but no idle pulse. */
 .bf-card-wrapper.attacking {
   --bf-motion-y: -14px;
   --bf-motion-scale: 1.08;
@@ -591,29 +640,11 @@
     0 0 20px 6px rgba(251, 191, 36, 0.85),
     0 0 40px 12px rgba(251, 191, 36, 0.4),
     0 8px 24px rgba(0, 0, 0, 0.6);
-  animation: attacker-selected-pulse 1.2s ease-in-out infinite;
+  animation: none;
   outline: 2px solid rgba(251, 191, 36, 0.9);
   outline-offset: 2px;
   border-radius: 8px;
 }
-
-@keyframes attacker-selected-pulse {
-  0%, 100% {
-    box-shadow:
-      0 0 20px 6px rgba(251, 191, 36, 0.85),
-      0 0 40px 12px rgba(251, 191, 36, 0.4),
-      0 8px 24px rgba(0, 0, 0, 0.6);
-  }
-  50% {
-    box-shadow:
-      0 0 28px 10px rgba(251, 191, 36, 1),
-      0 0 55px 18px rgba(251, 191, 36, 0.55),
-      0 8px 24px rgba(0, 0, 0, 0.6);
-  }
-}
-
-.player-row .bf-card-wrapper.attacking { --lunge-y: -40px; --lunge-x: 0; }
-.opponent-row .bf-card-wrapper.attacking { --lunge-y: 40px; --lunge-x: 0; }
 
 /* Super Minion Hero Bonus - Golden mythic glow */
 .bf-card-wrapper.super-minion-bonus {
@@ -758,7 +789,16 @@
   border-radius: var(--radius-4);
   padding: var(--space-2) 3px;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  animation: badgePulse 2.5s ease-in-out infinite;
+  min-width: 16px;
+  text-align: center;
+}
+
+.status-badge--overflow {
+  color: rgba(248, 250, 252, 0.9);
+  border-color: rgba(248, 250, 252, 0.42);
+  font-family: var(--type-mono), ui-monospace, monospace;
+  font-size: var(--text-10);
+  font-weight: 800;
 }
 
 .badge-poison { border-color: rgba(34, 197, 94, 0.6); }
@@ -769,11 +809,6 @@
 .badge-weakness { border-color: rgba(167, 139, 250, 0.6); }
 .badge-vulnerable { border-color: rgba(239, 68, 68, 0.6); }
 .badge-marked { border-color: rgba(251, 191, 36, 0.6); }
-
-@keyframes badgePulse {
-  0%, 100% { opacity: 0.8; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.08); }
-}
 
 /* ── Einherjar return counter ── */
 .bf-einherjar-badge {
@@ -1204,6 +1239,19 @@
     animation-iteration-count: 1;
   }
 
+  .bf-card-wrapper.combat-action-lunge,
+  .bf-card-wrapper.combat-action-recover,
+  .bf-card-wrapper.combat-reaction-recoil {
+    animation-duration: 1ms;
+    animation-iteration-count: 1;
+    --bf-action-x: 0px;
+    --bf-action-y: 0px;
+    --bf-action-rotate: 0deg;
+    --bf-reaction-x: 0px;
+    --bf-reaction-y: 0px;
+    --bf-reaction-rotate: 0deg;
+  }
+
   .bf-summon-fx {
     animation-duration: 1ms;
     animation-iteration-count: 1;
@@ -1216,11 +1264,6 @@
   .bf-card-wrapper.can-attack {
     animation: none;
     box-shadow: 0 0 12px 3px rgba(251, 191, 36, 0.5);
-  }
-
-  .bf-card-wrapper.summoning-sick::after {
-    animation: none;
-    opacity: 1;
   }
 
   .bf-card-wrapper.super-minion-bonus {

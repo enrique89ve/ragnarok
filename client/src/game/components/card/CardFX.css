@@ -35,6 +35,7 @@
 		rgba(255, 255, 255, 0.22) 50%,
 		transparent 65%
 	);
+	background-size: 220% 100%;
 }
 
 .card-fx-layer:is(.card-fx-layer) .card-fx-layer__local-glow {
@@ -56,24 +57,24 @@
 }
 
 .card-fx--impact-light .card-fx-layer__flash {
-	animation: card-fx-impact-light 220ms ease-out both;
+	animation: card-fx-impact-light 135ms ease-out both;
 }
 
 .card-fx--impact-normal .card-fx-layer__flash {
-	animation: card-fx-impact-normal 300ms ease-out both;
+	animation: card-fx-impact-normal 170ms ease-out both;
 }
 
 .card-fx--impact-heavy .card-fx-layer__flash {
-	animation: card-fx-impact-heavy 420ms ease-out both;
+	animation: card-fx-impact-heavy 210ms ease-out both;
 }
 
 .card-fx--white-flash .card-fx-layer__flash {
 	--card-fx-flash-color: rgba(255, 255, 255, 0.78);
-	animation: card-fx-white-flash 180ms ease-out both;
+	animation: card-fx-white-flash 140ms ease-out both;
 }
 
 .card-fx--shine .card-fx-layer__shine {
-	animation: card-fx-shine 520ms ease-out both;
+	animation: card-fx-shine 220ms ease-out both;
 }
 
 .card-fx--shield-flash {
@@ -82,7 +83,7 @@
 }
 
 .card-fx--shield-flash :is(.card-fx-layer__flash, .card-fx-layer__local-glow) {
-	animation: card-fx-shield-flash 360ms ease-out both;
+	animation: card-fx-shield-flash 180ms ease-out both;
 }
 
 @keyframes card-fx-impact-light {
@@ -113,9 +114,9 @@
 }
 
 @keyframes card-fx-shine {
-	0% { opacity: 0; transform: translateX(-120%); }
+	0% { opacity: 0; background-position: -120% 0; }
 	22% { opacity: 0.8; }
-	100% { opacity: 0; transform: translateX(120%); }
+	100% { opacity: 0; background-position: 120% 0; }
 }
 
 @keyframes card-fx-shield-flash {
@@ -130,7 +131,7 @@
 .combat-fx-target--impact-light,
 .combat-fx-target--impact-normal,
 .combat-fx-target--impact-heavy {
-	animation: combat-fx-target-flash 260ms ease-out both;
+	animation: combat-fx-target-flash 190ms ease-out both;
 }
 
 .combat-fx-target--shield-flash {

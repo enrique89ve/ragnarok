@@ -3,7 +3,7 @@ import {
 	useAnimationOrchestrator,
 } from '../../../animations/UnifiedAnimationOrchestrator';
 import {
-	spawnImpactBurst,
+	spawnDirectionalImpactBurst,
 	spawnImpactRing,
 	spawnSlashTrail,
 	spawnSmokePuff,
@@ -26,8 +26,16 @@ import {
 } from '@/game/effects/presentation/CombatPresentation';
 import {
 	captureVisualSnapshot,
+	resolvePresentationTargetElement,
 	targetEntityId,
 } from '@/game/effects/presentation/EffectTargetResolver';
+import {
+	attackDirectionBetween,
+	combatImpactMotionProfile,
+	motionVector,
+	type CombatAttackDirection,
+	type CombatImpactMotionProfile,
+} from '@/game/effects/presentation/CombatImpactMotion';
 import {
 	recipeForCombatPresentation,
 } from '@/game/effects/presentation/EffectRecipes';
@@ -47,7 +55,7 @@ import type { CombatImpactEvent } from '../events';
 
 type Point = { readonly x: number; readonly y: number };
 
-const DEFAULT_TRAVEL_MS = 420;
+const DEFAULT_TRAVEL_MS = 300;
 const IMPACT_CHOREOGRAPHY_GATE_MS = 140;
 
 function localPrimitive(value: EffectRecipeStep['primitive']): LocalFxPrimitive | null {
@@ -149,9 +157,9 @@ function impactPhases(
 	}];
 }
 
-function travelDuration(event: CombatImpactEvent): number {
-	const duration = event.intent?.motion.durationMs ?? DEFAULT_TRAVEL_MS;
-	return Math.min(900, Math.max(120, duration));
+function travelDuration(event: CombatImpactEvent, profile: CombatImpactMotionProfile): number {
+	const duration = event.intent?.motion.durationMs ?? profile.travelMs;
+	return Math.min(320, Math.max(260, duration));
 }
 
 function priorityFor(event: CombatImpactEvent): GameEffectPriority {
@@ -207,6 +215,135 @@ const PIXI_FX_DURATION_MS: Record<PixiFxPrimitive, number> = {
 	sparkBurst: 360,
 };
 
+function motionHost(target: PresentationTarget): HTMLElement | null {
+	const element = resolvePresentationTargetElement(target);
+	if (!element) return null;
+	return element.closest<HTMLElement>('.bf-card-wrapper')
+		?? (element.matches('.bf-card-wrapper') ? element : element);
+}
+
+function setMotionProperty(host: HTMLElement, name: string, value: number, unit = 'px'): void {
+	host.style.setProperty(name, `${value}${unit}`);
+}
+
+function clearCombatMotion(host: HTMLElement): void {
+	host.classList.remove('combat-action-lunge', 'combat-action-recover', 'combat-reaction-recoil');
+	[
+		'--bf-action-anticipation-x', '--bf-action-anticipation-y',
+		'--bf-action-contact-x', '--bf-action-contact-y', '--bf-action-contact-rotate', '--bf-action-anticipation-rotate',
+		'--bf-action-rebound-x', '--bf-action-rebound-y', '--bf-action-rebound-rotate',
+		'--bf-action-travel-duration', '--bf-action-recovery-duration',
+		'--bf-reaction-impulse-x', '--bf-reaction-impulse-y',
+		'--bf-reaction-rebound-x', '--bf-reaction-rebound-y',
+		'--bf-reaction-tail-x', '--bf-reaction-tail-y',
+		'--bf-reaction-rotate-peak', '--bf-reaction-rebound-rotate', '--bf-reaction-tail-rotate', '--bf-reaction-duration',
+	].forEach(property => host.style.removeProperty(property));
+}
+
+function scheduleAttackMotion(
+	target: PresentationTarget,
+	direction: CombatAttackDirection,
+	profile: CombatImpactMotionProfile,
+	priority: GameEffectPriority,
+	seed: string,
+): GameEffectHandle {
+	const host = motionHost(target);
+	if (!host) return { cancel() {}, onComplete: Promise.resolve() };
+
+	clearCombatMotion(host);
+	const contactVector = motionVector(direction, profile.lungePx);
+	const anticipation = motionVector(direction, -profile.lungePx * 0.12);
+	const rebound = motionVector(direction, profile.lungePx * 0.08);
+	setMotionProperty(host, '--bf-action-anticipation-x', anticipation.x);
+	setMotionProperty(host, '--bf-action-anticipation-y', anticipation.y);
+	setMotionProperty(host, '--bf-action-contact-x', contactVector.x);
+	setMotionProperty(host, '--bf-action-contact-y', contactVector.y);
+	setMotionProperty(host, '--bf-action-contact-rotate', direction.x * profile.rotationDeg, 'deg');
+	setMotionProperty(host, '--bf-action-anticipation-rotate', direction.x * profile.rotationDeg * -0.15, 'deg');
+	setMotionProperty(host, '--bf-action-rebound-x', rebound.x);
+	setMotionProperty(host, '--bf-action-rebound-y', rebound.y);
+	setMotionProperty(host, '--bf-action-rebound-rotate', direction.x * profile.rotationDeg * 0.18, 'deg');
+	setMotionProperty(host, '--bf-action-travel-duration', profile.travelMs, 'ms');
+	setMotionProperty(host, '--bf-action-recovery-duration', profile.recoveryMs, 'ms');
+	host.classList.add('combat-action-lunge');
+
+	const contact = scheduleVisualWindow(
+		`${seed}:attack-action:contact`,
+		profile.travelMs,
+		priority,
+	);
+	const recover = scheduleVisualWindow(
+		`${seed}:attack-action:recover`,
+		profile.travelMs + profile.hitStopMs,
+		priority,
+	);
+	const cleanup = scheduleDelayedChild(
+		`${seed}:attack-action:cleanup`,
+		profile.travelMs + profile.hitStopMs + profile.recoveryMs,
+		priority,
+		() => {
+			clearCombatMotion(host);
+			return undefined;
+		},
+	);
+	recover.onComplete?.then(() => {
+		host.classList.remove('combat-action-lunge');
+		host.classList.add('combat-action-recover');
+	});
+
+	return {
+		cancel: () => {
+			contact.cancel();
+			recover.cancel();
+			cleanup.cancel();
+			clearCombatMotion(host);
+		},
+		onComplete: contact.onComplete,
+	};
+}
+
+function scheduleTargetReaction(
+	target: PresentationTarget,
+	direction: CombatAttackDirection,
+	profile: CombatImpactMotionProfile,
+	priority: GameEffectPriority,
+	seed: string,
+): GameEffectHandle {
+	const host = motionHost(target);
+	if (!host) return { cancel() {}, onComplete: Promise.resolve() };
+
+	const impulse = motionVector(direction, profile.recoilPx);
+	const rebound = motionVector(direction, -profile.recoilPx * 0.18);
+	const tail = motionVector(direction, profile.recoilPx * 0.08);
+	setMotionProperty(host, '--bf-reaction-impulse-x', impulse.x);
+	setMotionProperty(host, '--bf-reaction-impulse-y', impulse.y);
+	setMotionProperty(host, '--bf-reaction-rebound-x', rebound.x);
+	setMotionProperty(host, '--bf-reaction-rebound-y', rebound.y);
+	setMotionProperty(host, '--bf-reaction-tail-x', tail.x);
+	setMotionProperty(host, '--bf-reaction-tail-y', tail.y);
+	setMotionProperty(host, '--bf-reaction-rotate-peak', direction.x * profile.rotationDeg, 'deg');
+	setMotionProperty(host, '--bf-reaction-rebound-rotate', direction.x * profile.rotationDeg * -0.35, 'deg');
+	setMotionProperty(host, '--bf-reaction-tail-rotate', direction.x * profile.rotationDeg * 0.15, 'deg');
+	setMotionProperty(host, '--bf-reaction-duration', profile.recoveryMs, 'ms');
+	host.classList.remove('combat-reaction-recoil');
+	void host.offsetWidth;
+	host.classList.add('combat-reaction-recoil');
+
+	const cleanup = scheduleVisualWindow(
+		`${seed}:target-reaction:cleanup`,
+		profile.recoveryMs,
+		priority,
+	);
+	cleanup.onComplete?.then(() => clearCombatMotion(host));
+	return {
+		cancel: () => {
+			cleanup.cancel();
+			clearCombatMotion(host);
+		},
+		onComplete: cleanup.onComplete,
+	};
+}
+
 function scheduleDelayedChild(
 	key: string,
 	delayMs: number,
@@ -241,6 +378,8 @@ function playPixiPrimitive(
 	primitive: PixiFxPrimitive,
 	point: Point,
 	source: Point | null,
+	direction: CombatAttackDirection,
+	travelMs: number,
 	counts: ReturnType<typeof primitiveCounts>,
 	palette: ParticleColor,
 	seed: string,
@@ -248,11 +387,11 @@ function playPixiPrimitive(
 	switch (primitive) {
 		case 'slashTrail':
 			if (source) {
-				spawnSlashTrail(source.x, source.y, point.x, point.y, counts.trail, palette, seed);
+				spawnSlashTrail(source.x, source.y, point.x, point.y, counts.trail, palette, seed, travelMs);
 			}
 			break;
 		case 'impactBurst':
-			spawnImpactBurst(point.x, point.y, counts.burst, palette, seed);
+			spawnDirectionalImpactBurst(point.x, point.y, counts.burst, palette, direction, seed);
 			break;
 		case 'impactRing':
 			spawnImpactRing(point.x, point.y, palette);
@@ -261,7 +400,7 @@ function playPixiPrimitive(
 			if (counts.smoke > 0) spawnSmokePuff(point.x, point.y, counts.smoke, palette, seed);
 			break;
 		case 'sparkBurst':
-			spawnSparkBurst(point.x, point.y, counts.sparks, palette, seed);
+			spawnSparkBurst(point.x, point.y, counts.sparks, palette, seed, direction);
 			break;
 		default: {
 			const exhaustive: never = primitive;
@@ -278,6 +417,8 @@ function scheduleRecipeStep(
 	sourcePoint: Point | null,
 	counts: ReturnType<typeof primitiveCounts>,
 	palette: ParticleColor,
+	direction: CombatAttackDirection,
+	travelMs: number,
 	seed: string,
 	priority: GameEffectPriority,
 ): GameEffectHandle {
@@ -291,7 +432,7 @@ function scheduleRecipeStep(
 
 			const pixi = pixiPrimitive(step.primitive);
 			if (!pixi) return undefined;
-			playPixiPrimitive(pixi, targetPoint, sourcePoint, counts, palette, seed);
+			playPixiPrimitive(pixi, targetPoint, sourcePoint, direction, travelMs, counts, palette, seed);
 			return scheduleVisualWindow(
 				`${seed}:${phase.id}:recipe:${stepIndex}:duration`,
 				PIXI_FX_DURATION_MS[pixi],
@@ -323,9 +464,9 @@ function scheduleDamageNumber(
 					? 'combat-counter'
 					: 'combat-damage',
 			);
-			const duration = scheduleVisualWindow(
-				`${seed}:${phase.id}:damage-number:duration`,
-				1_000,
+				const duration = scheduleVisualWindow(
+					`${seed}:${phase.id}:damage-number:duration`,
+					800,
 				priority,
 			);
 			return {
@@ -344,6 +485,8 @@ function scheduleImpactPhase(
 	recipe: readonly EffectRecipeStep[],
 	targetPoint: Point,
 	sourcePoint: Point | null,
+	direction: CombatAttackDirection,
+	profile: CombatImpactMotionProfile,
 	event: CombatImpactEvent,
 	priority: GameEffectPriority,
 	seed: string,
@@ -359,6 +502,8 @@ function scheduleImpactPhase(
 		sourcePoint,
 		counts,
 		ELEMENT_PALETTES.neutral,
+		direction,
+		profile.travelMs,
 		seed,
 		priority,
 	));
@@ -399,6 +544,8 @@ function scheduleImpactPhaseWithGate(
 	recipe: readonly EffectRecipeStep[],
 	targetPoint: Point,
 	sourcePoint: Point | null,
+	direction: CombatAttackDirection,
+	profile: CombatImpactMotionProfile,
 	event: CombatImpactEvent,
 	priority: GameEffectPriority,
 	seed: string,
@@ -409,10 +556,19 @@ function scheduleImpactPhaseWithGate(
 		recipe,
 		targetPoint,
 		sourcePoint,
+		direction,
+		profile,
 		event,
 		priority,
 		seed,
 		includeTrail,
+	);
+	const reaction = scheduleTargetReaction(
+		phase.impact.target,
+		direction,
+		profile,
+		priority,
+		seed,
 	);
 	const gate = scheduleVisualWindow(
 		`${seed}:${phase.id}:choreography-gate`,
@@ -423,6 +579,7 @@ function scheduleImpactPhaseWithGate(
 	return {
 		cancel: () => {
 			effects.cancel();
+			reaction.cancel();
 			gate.cancel();
 		},
 		onComplete: gate.onComplete,
@@ -434,6 +591,8 @@ function schedulePrimaryTravel(
 	recipe: readonly EffectRecipeStep[],
 	targetPoint: Point,
 	sourcePoint: Point | null,
+	direction: CombatAttackDirection,
+	profile: CombatImpactMotionProfile,
 	event: CombatImpactEvent,
 	priority: GameEffectPriority,
 	seed: string,
@@ -441,10 +600,11 @@ function schedulePrimaryTravel(
 	const trail = recipe.find(step => pixiPrimitive(step.primitive) === 'slashTrail');
 	const travelHold = scheduleVisualWindow(
 		`${seed}:attack-travel:duration`,
-		travelDuration(event),
+		travelDuration(event, profile),
 		priority,
 	);
-	if (!trail) return travelHold;
+	const action = scheduleAttackMotion(phase.source ?? phase.impact.target, direction, profile, priority, seed);
+	if (!trail) return combineEffectHandles([travelHold, action]);
 
 	const trailHandle = scheduleRecipeStep(
 		phase,
@@ -454,10 +614,12 @@ function schedulePrimaryTravel(
 		sourcePoint,
 		countsForImpact(phase),
 		ELEMENT_PALETTES.neutral,
+		direction,
+		profile.travelMs,
 		seed,
 		priority,
 	);
-	return combineEffectHandles([travelHold, trailHandle]);
+	return combineEffectHandles([travelHold, trailHandle, action]);
 }
 
 function pointForTarget(
@@ -495,29 +657,56 @@ function buildImpactPlanNodes(
 	const nodes: GameEffectNode[] = [
 		{
 			id: 'attack-travel',
-			run: () => schedulePrimaryTravel(
-				targetPhase,
-				targetRecipe,
-				targetPoint,
-				targetSourcePoint,
-				event,
-				priority,
-				`${seed}:target`,
-			),
+			run: () => {
+				const profile = combatImpactMotionProfile(
+					targetPhase.impact.level,
+					targetPhase.impact.lethal,
+				);
+				const travelProfile = { ...profile, travelMs: travelDuration(event, profile) };
+				const direction = attackDirectionBetween(
+					targetSourcePoint,
+					targetPoint,
+					event.presentation?.attackerSide === 'player' ? -1 : 1,
+				);
+				return schedulePrimaryTravel(
+					targetPhase,
+					targetRecipe,
+					targetPoint,
+					targetSourcePoint,
+					direction,
+					travelProfile,
+					event,
+					priority,
+					`${seed}:target`,
+				);
+			},
 		},
 		{
 			id: 'target-impact',
 			after: ['attack-travel'],
-			run: () => scheduleImpactPhaseWithGate(
-				targetPhase,
-				targetRecipe,
-				targetPoint,
-				targetSourcePoint,
-				event,
-				priority,
-				`${seed}:target`,
-				false,
-			),
+			run: () => {
+				const profile = combatImpactMotionProfile(
+					targetPhase.impact.level,
+					targetPhase.impact.lethal,
+				);
+				const direction = attackDirectionBetween(
+					targetSourcePoint,
+					targetPoint,
+					event.presentation?.attackerSide === 'player' ? -1 : 1,
+				);
+				return scheduleImpactPhaseWithGate(
+					targetPhase,
+					targetRecipe,
+					targetPoint,
+					targetSourcePoint,
+					direction,
+					profile,
+					event,
+					priority,
+					`${seed}:target`,
+					false,
+				);
+			},
 		},
 	];
 
@@ -526,16 +715,29 @@ function buildImpactPlanNodes(
 		nodes.push({
 			id: 'counter-impact',
 			after: ['target-impact'],
-			run: () => scheduleImpactPhaseWithGate(
-				counterPhase,
-				counterRecipe,
-				counterPoint,
-				counterSourcePoint,
-				event,
-				priority,
-				`${seed}:counter`,
-				true,
-			),
+			run: () => {
+				const profile = combatImpactMotionProfile(
+					counterPhase.impact.level,
+					counterPhase.impact.lethal,
+				);
+				const direction = attackDirectionBetween(
+					counterSourcePoint,
+					counterPoint,
+					event.presentation?.attackerSide === 'player' ? -1 : 1,
+				);
+				return scheduleImpactPhaseWithGate(
+					counterPhase,
+					counterRecipe,
+					counterPoint,
+					counterSourcePoint,
+					direction,
+					profile,
+					event,
+					priority,
+					`${seed}:counter`,
+					true,
+				);
+			},
 		});
 	}
 

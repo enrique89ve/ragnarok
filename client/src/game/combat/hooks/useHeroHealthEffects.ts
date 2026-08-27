@@ -17,8 +17,9 @@ export function useHeroHealthEffects({ playerHeroHealth, opponentHeroHealth }: U
 			const playerDmg = prev.player - curr.player;
 			const opponentDmg = prev.opponent - curr.opponent;
 			const maxDmg = Math.max(playerDmg, opponentDmg);
-			if (maxDmg >= 5) {
-				const cls = maxDmg >= 8 ? 'screen-shake-strong' : 'screen-shake-mild';
+			if (maxDmg >= 8) {
+				const isLethal = curr.player <= 0 || curr.opponent <= 0;
+				const cls = isLethal ? 'screen-shake-impact-lethal' : 'screen-shake-impact-heavy';
 				setOuterShakeClass(cls);
 				if (outerShakeTimeoutRef.current) clearTimeout(outerShakeTimeoutRef.current);
 				outerShakeTimeoutRef.current = setTimeout(() => setOuterShakeClass(''), 350);

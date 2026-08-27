@@ -10,12 +10,12 @@ import {
 import type { LocalFxPrimitive, PresentationTarget } from '@/game/effects/presentation/types';
 
 const LOCAL_FX_DURATION_MS: Record<LocalFxPrimitive, number> = {
-	'impact-light': 220,
-	'impact-normal': 300,
-	'impact-heavy': 420,
-	'white-flash': 180,
-	shine: 520,
-	'shield-flash': 360,
+	'impact-light': 135,
+	'impact-normal': 170,
+	'impact-heavy': 210,
+	'white-flash': 140,
+	shine: 220,
+	'shield-flash': 180,
 };
 
 const LOCAL_FX_CLASS: Record<LocalFxPrimitive, string> = {

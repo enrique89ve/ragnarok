@@ -8,8 +8,12 @@
   line-height: 1;
   pointer-events: none;
   user-select: none;
-  animation: damageFloat 2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: damageFloat 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   font-family: "Cinzel", "Georgia", serif;
+}
+
+.damage-indicator.damage-critical {
+  animation: damageFloatCrit 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .damage-number-text {
@@ -57,7 +61,15 @@
     1px -1px 0 #1a1000,
     -1px 1px 0 #1a1000,
     1px 1px 0 #1a1000;
-  animation: damageFloatCrit 2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: none;
+}
+
+/* The indicator owns the single transform/scale timeline. The child classes
+   are shared by older combat VFX and must not fight the centered parent. */
+.damage-indicator .damage-number-text {
+  position: static;
+  transform: none;
+  animation: none;
 }
 
 .damage-crit-label {
@@ -68,63 +80,63 @@
   color: #fbbf24;
   text-shadow: 0 0 8px rgba(251, 191, 36, 0.8);
   margin-top: var(--space-2);
-  animation: critLabelFade 2s ease-out forwards;
+  animation: critLabelFade 0.8s ease-out forwards;
 }
 
 @keyframes damageFloat {
   0% {
     opacity: 0;
-    transform: translateX(-50%) translateY(10px) scale(2);
+    transform: translate(-50%, -50%) translateY(10px) scale(1.35);
   }
   6% {
     opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1.1);
+    transform: translate(-50%, -50%) translateY(0) scale(1.05);
   }
   18% {
     opacity: 1;
-    transform: translateX(-50%) translateY(-15px) scale(1);
+    transform: translate(-50%, -50%) translateY(-15px) scale(1);
   }
   55% {
     opacity: 1;
-    transform: translateX(-50%) translateY(-35px) scale(0.97);
+    transform: translate(-50%, -50%) translateY(-35px) scale(0.97);
   }
   80% {
     opacity: 0.8;
-    transform: translateX(-50%) translateY(-50px) scale(0.9);
+    transform: translate(-50%, -50%) translateY(-50px) scale(0.9);
   }
   100% {
     opacity: 0;
-    transform: translateX(-50%) translateY(-65px) scale(0.8);
+    transform: translate(-50%, -50%) translateY(-65px) scale(0.8);
   }
 }
 
 @keyframes damageFloatCrit {
   0% {
     opacity: 0;
-    transform: translateX(-50%) translateY(14px) scale(2.4);
+    transform: translate(-50%, -50%) translateY(14px) scale(1.5);
   }
   6% {
     opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1.15);
+    transform: translate(-50%, -50%) translateY(0) scale(1.1);
   }
   15% {
-    transform: translateX(-50%) translateY(-5px) scale(1.05);
+    transform: translate(-50%, -50%) translateY(-5px) scale(1.05);
   }
   30% {
     opacity: 1;
-    transform: translateX(-50%) translateY(-20px) scale(1);
+    transform: translate(-50%, -50%) translateY(-20px) scale(1);
   }
   60% {
     opacity: 1;
-    transform: translateX(-50%) translateY(-40px) scale(0.95);
+    transform: translate(-50%, -50%) translateY(-40px) scale(0.95);
   }
   85% {
     opacity: 0.7;
-    transform: translateX(-50%) translateY(-55px) scale(0.85);
+    transform: translate(-50%, -50%) translateY(-55px) scale(0.85);
   }
   100% {
     opacity: 0;
-    transform: translateX(-50%) translateY(-70px) scale(0.75);
+    transform: translate(-50%, -50%) translateY(-70px) scale(0.75);
   }
 }
 

@@ -21,6 +21,7 @@ import './SimpleBattlefield.css';
 import { arenaVfxWagerMinionProps } from '../combat/arenaVfxTargets';
 import { GameIcon } from '../utils/ui/GameIcon';
 import type { IconName } from '../utils/ui/iconMap';
+import { useTargetingStore } from '../stores/targetingStore';
 
 interface SimpleBattlefieldProps {
   playerCards: CardInstanceWithCardData[];
@@ -99,15 +100,10 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
   const showOpponent = renderMode === 'both' || renderMode === 'opponent';
   const showPlayer = renderMode === 'both' || renderMode === 'player';
   const animateCardEntry = renderSurface !== 'poker';
-
-  const opponentHasTaunt = useMemo(
-    () => opponentCards.some(c => hasKeyword(c, 'taunt')),
-    [opponentCards]
-  );
+  const validTargetIds = useTargetingStore(state => state.validTargets);
 
   const isValidTarget = (card: CardInstanceWithCardData) => {
-    if (!attackingCard) return false;
-    return !opponentHasTaunt || hasKeyword(card, 'taunt');
+    return Boolean(attackingCard && validTargetIds.includes(card.instanceId));
   };
 
   const renderSlots = (
@@ -156,6 +152,19 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
       const statusMarked = !!(card as any)?.isMarked;
       const statusBurning = !!(card as any)?.isBurning;
       const hasAnyStatus = statusPoisoned || statusBleeding || statusParalyzed || statusWeakened || statusVulnerable || statusFrozen || statusMarked || statusBurning;
+      const statView = card ? buildBattlefieldStatView(card) : null;
+      const statusBadges: ReadonlyArray<{ readonly className: string; readonly title: string; readonly icon: IconName }> = [
+        { active: statusFrozen, className: 'badge-frozen', title: 'Frozen: Cannot act', icon: 'snowflake' },
+        { active: statusParalyzed, className: 'badge-paralysis', title: 'Paralysis: 50% chance to fail', icon: 'zap' },
+        { active: statusPoisoned, className: 'badge-poison', title: 'Poison: 3 damage per turn', icon: 'skullCrossed' },
+        { active: statusBleeding, className: 'badge-bleed', title: 'Bleed: +3 damage taken', icon: 'droplet' },
+        { active: statusBurning, className: 'badge-burn', title: 'Burn: +3 Attack, 3 self-damage', icon: 'flame' },
+        { active: statusWeakened, className: 'badge-weakness', title: 'Weakness: -3 Attack', icon: 'arrowDown' },
+        { active: statusVulnerable, className: 'badge-vulnerable', title: 'Vulnerable: +3 damage taken', icon: 'target' },
+        { active: statusMarked, className: 'badge-marked', title: 'Marked: Ignores Stealth', icon: 'eye' },
+      ].filter((badge): badge is { readonly active: true; readonly className: string; readonly title: string; readonly icon: IconName } => badge.active);
+      const visibleStatusBadges = statusBadges.slice(0, 4);
+      const hiddenStatusBadges = statusBadges.slice(4);
 
       return (
         <div
@@ -208,7 +217,8 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
                   ${hasFlying ? 'has-flying' : ''}
                 `}
                 role="button"
-                aria-label={`${card.card?.name || 'Minion'}, ${(card.card as any)?.attack ?? 0} attack, ${card.health ?? (card.card as any)?.health ?? 0} health${cardHasTaunt ? ', taunt' : ''}${canAttack ? ', ready to attack' : ''}`}
+                aria-disabled={isInteractionDisabled}
+                aria-label={`${card.card?.name || 'Minion'}, ${statView?.attack?.value ?? 0} attack, ${statView?.health?.value ?? 0} health${cardHasTaunt ? ', taunt' : ''}${canAttack ? ', ready to attack' : ''}`}
                 tabIndex={0}
                 onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); (e.currentTarget as HTMLElement).click(); } }}
                 onClick={() => {
@@ -225,6 +235,18 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
                 }}
               >
                 <span className="bf-summon-fx" aria-hidden="true" />
+                {isSummoningSick && (
+                  <span className="bf-card-state-marker bf-card-state-marker--sleep" title="Summoning sickness">
+                    <GameIcon name="moon" size={12} />
+                    <span className="sr-only">Summoning sickness</span>
+                  </span>
+                )}
+                {isExhausted && (
+                  <span className="bf-card-state-marker bf-card-state-marker--spent" title="Already attacked this turn">
+                    <GameIcon name="swords" size={12} />
+                    <span className="sr-only">Already attacked this turn</span>
+                  </span>
+                )}
                 {(() => {
                   const simpleData = toSimpleCardData(card);
                   if (!simpleData) return null;
@@ -234,21 +256,27 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
                       isPlayable
                       isHighlighted={isAttacking || canAttack || isTarget}
                       size="medium"
-                      statView={buildBattlefieldStatView(card)}
+                      statView={statView ?? undefined}
                       statsMode="battlefield"
                     />
                   );
                 })()}
                 {hasAnyStatus && (
                   <div className="bf-status-badges">
-                    {statusPoisoned && <span className="status-badge badge-poison" title="Poison: 3 damage per turn"><GameIcon name="skullCrossed" size={12} /></span>}
-                    {statusBleeding && <span className="status-badge badge-bleed" title="Bleed: +3 damage taken"><GameIcon name="droplet" size={12} /></span>}
-                    {statusBurning && <span className="status-badge badge-burn" title="Burn: +3 Attack, 3 self-damage"><GameIcon name="flame" size={12} /></span>}
-                    {statusFrozen && <span className="status-badge badge-frozen" title="Frozen: Cannot act"><GameIcon name="snowflake" size={12} /></span>}
-                    {statusParalyzed && <span className="status-badge badge-paralysis" title="Paralysis: 50% chance to fail"><GameIcon name="zap" size={12} /></span>}
-                    {statusWeakened && <span className="status-badge badge-weakness" title="Weakness: -3 Attack"><GameIcon name="arrowDown" size={12} /></span>}
-                    {statusVulnerable && <span className="status-badge badge-vulnerable" title="Vulnerable: +3 damage taken"><GameIcon name="target" size={12} /></span>}
-                    {statusMarked && <span className="status-badge badge-marked" title="Marked: Ignores Stealth"><GameIcon name="eye" size={12} /></span>}
+                    {visibleStatusBadges.map((badge) => (
+                      <span key={badge.className} className={`status-badge ${badge.className}`} title={badge.title}>
+                        <GameIcon name={badge.icon} size={12} />
+                      </span>
+                    ))}
+                    {hiddenStatusBadges.length > 0 && (
+                      <span
+                        className="status-badge status-badge--overflow"
+                        title={hiddenStatusBadges.map(badge => badge.title).join(' | ')}
+                        aria-label={`${hiddenStatusBadges.length} additional statuses`}
+                      >
+                        +{hiddenStatusBadges.length}
+                      </span>
+                    )}
                   </div>
                 )}
                 {einherjarReturns !== undefined && einherjarReturns > 0 && (
@@ -305,12 +333,12 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
 
   const playerSlots = useMemo(
     () => renderSlots(playerCards, 'player', onCardClick),
-    [playerCards, onCardClick, shakingTargets, attackingCard, isPlayerTurn, isInteractionDisabled, allowDisabledCardClick, opponentHasTaunt]
+    [playerCards, onCardClick, shakingTargets, attackingCard, isPlayerTurn, isInteractionDisabled, allowDisabledCardClick, validTargetIds]
   );
 
   const opponentSlots = useMemo(
     () => renderSlots(opponentCards, 'opponent', onOpponentCardClick),
-    [opponentCards, onOpponentCardClick, shakingTargets, attackingCard, isPlayerTurn, isInteractionDisabled, allowDisabledCardClick, opponentHasTaunt]
+    [opponentCards, onOpponentCardClick, shakingTargets, attackingCard, isPlayerTurn, isInteractionDisabled, allowDisabledCardClick, validTargetIds]
   );
 
   const playerRowRef = useRef<HTMLDivElement>(null);

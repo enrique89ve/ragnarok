@@ -201,15 +201,6 @@ export const useAIActionManager = ({
                     }, 100);
                   }
                   
-                  // Add dramatic camera shake for high-cost cards
-                  if (manaCost >= 7) {
-                    const shakeIntensity = Math.min(manaCost, 10); // Cap at 10px shake
-                    document.body.style.animation = `shake 0.6s ${shakeIntensity}px`;
-                    setTimeout(() => {
-                      document.body.style.animation = '';
-                    }, 700);
-                  }
-                  
                   // Show mana crystal flash on play
                   addAnimation({
                     id: `mana-flash-${Date.now()}`,
@@ -337,13 +328,6 @@ export const useAIActionManager = ({
                   ];
                   const randomSound = attackSounds[Math.floor(Math.random() * attackSounds.length)];
                   playPooledAudio(randomSound, 0.6);
-                  
-                  // Add camera shake for impact
-                  const intensity = Math.random() * 5 + 5; // Between 5-10px shake
-                  document.body.style.animation = `shake 0.5s ${intensity}px`;
-                  setTimeout(() => {
-                    document.body.style.animation = '';
-                  }, 500);
                   
                   // Add the attack animation with improved visuals
                   addAnimation({
@@ -559,14 +543,6 @@ export const useAIActionManager = ({
                     duration: 500,
                     particleType: 'magic'
                   });
-                }
-                
-                // Add subtle camera shake for impact
-                if (Math.random() > 0.5) { // Only sometimes for variety
-                  document.body.style.animation = `shake 0.4s 3px`;
-                  setTimeout(() => {
-                    document.body.style.animation = '';
-                  }, 400);
                 }
                 
                 // Slight delay before executing the actual power

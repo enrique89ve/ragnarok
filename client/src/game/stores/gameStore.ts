@@ -526,17 +526,6 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
         pokerCombat: getPokerCardTimingContext(),
       });
 
-      // Animation: matches original — fires for valid attempts, suppressed only on windfury rejection
-      const isWindfuryRejection = result.status === 'rejected' && result.reason === 'no attacks left';
-      if (!isWindfuryRejection) {
-        GameEventBus.emitAnimationRequest({
-          animationType: 'attack_lunge',
-          sourceId: attackerId,
-          targetId: defenderId || 'opponent-hero',
-          params: { attackerSide: 'player' }
-        });
-      }
-
       if (result.status === 'applied') {
         // The command above remains the gameplay authority. These resolved
         // instance values are used for the presentation emitted below.
