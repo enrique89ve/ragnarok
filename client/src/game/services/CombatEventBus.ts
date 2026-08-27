@@ -10,6 +10,7 @@
 
 import { debug } from '../config/debugConfig';
 import type { CombatPresentation } from '../effects/presentation/types';
+import type { ResolvedAttack } from './AttackResolutionService';
 
 export type CombatEventType = 
   | 'DAMAGE_INTENT'      // Something wants to deal damage
@@ -57,10 +58,13 @@ export interface DamageResolvedEvent extends CombatEventBase {
   targetHealthBefore: number;
   targetHealthAfter: number;
   targetDied: boolean;
+  /** True when Divine Shield absorbed the resolved hit. */
+  shieldConsumed?: boolean;
   counterDamage?: number;
   counterTargetHealthBefore?: number;
   counterTargetHealthAfter?: number;
   counterTargetDied?: boolean;
+  counterShieldConsumed?: boolean;
 }
 
 export interface AttackBlockedEvent extends CombatEventBase {
@@ -85,6 +89,8 @@ export interface ImpactPhaseEvent extends CombatEventBase {
 	targetId: string;
 	damageToTarget: number;
 	damageToAttacker: number;
+	/** Gameplay-owned result. Optional only for legacy non-stateful callers. */
+	resolvedAttack?: ResolvedAttack;
 	presentation?: CombatPresentation;
 }
 

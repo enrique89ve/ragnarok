@@ -34,8 +34,8 @@ import { applyGameCommandToStore } from './gameCommandStoreAdapter';
 import { buildHandshakeGameState, type CardsDeckAnnounce } from '../p2p/cardsDeckHandshake';
 import { applyPokerAuxiliaryEffects } from '../combat/pokerAuxiliaryEffects';
 import type { FrontlineAttackMode } from '../core/commands';
-import { createCombatStep } from '../services/AttackResolutionService';
-import { buildCombatPresentation } from '../effects/presentation/CombatPresentation';
+import { createCombatStep, createResolvedAttackFromStates } from '../services/AttackResolutionService';
+import { buildCombatPresentationFromResolvedAttack } from '../effects/presentation/CombatPresentation';
 
 // ============== BATTLEFIELD DEBUG MONITOR ==============
 // Track battlefield changes with stack traces to identify root cause of minion disappearance
@@ -527,30 +527,16 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       });
 
       if (result.status === 'applied') {
-        // The command above remains the gameplay authority. These resolved
-        // instance values are used for the presentation emitted below.
-        const damage = attackerCard.currentAttack ?? getAttack(attackerCard.card);
+        // `processAttack` is the gameplay authority for this command and
+        // currently resolves physical attack from card.attack. Keep the event
+        // on that same source until the mechanic itself is migrated.
+        const damage = getAttack(attackerCard.card);
         const targetMinion = gameState.players.opponent.battlefield.find(c => c.instanceId === defenderId);
         const counterDamage = targetMinion
-          ? targetMinion.currentAttack ?? getAttack(targetMinion.card)
+          ? getAttack(targetMinion.card)
           : 0;
         const isHeroTarget = !defenderId || defenderId === 'opponent-hero';
 
-        // Capture target health before/after the attack so animations and debug
-        // subscribers see real values (TD-7 closure). For hero targets, read
-        // from heroHealth; for minions, find by instanceId in pre/post state.
-        const beforeOpponent = gameState.players.opponent;
-        const afterOpponent = result.state.players.opponent;
-        const targetHealthBefore = isHeroTarget
-          ? (beforeOpponent.heroHealth ?? beforeOpponent.health ?? 0)
-          : (targetMinion?.currentHealth ?? 0);
-        const afterTargetMinion = !isHeroTarget && defenderId
-          ? afterOpponent.battlefield.find(c => c.instanceId === defenderId)
-          : undefined;
-        const targetHealthAfter = isHeroTarget
-          ? (afterOpponent.heroHealth ?? afterOpponent.health ?? 0)
-          : (afterTargetMinion?.currentHealth ?? 0);
-        const targetDied = !isHeroTarget && defenderId !== undefined && afterTargetMinion === undefined;
         const combatStep = createCombatStep(
           attackerId,
           attackerCard.card.name,
@@ -563,19 +549,15 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
           targetMinion?.hasDivineShield || false,
           'player',
         );
-        const targetLethal = isHeroTarget
-          ? (afterOpponent.heroHealth ?? afterOpponent.health ?? 0) <= 0
-          : targetDied;
-        const attackerLethal = !isHeroTarget && !result.state.players.player.battlefield.some(
-          card => card.instanceId === attackerId,
-        );
+        const resolvedAttack = createResolvedAttackFromStates(gameState, result.state, combatStep);
 
         CombatEventBus.emitImpactPhase({
           attackerId,
           targetId: defenderId || 'opponent-hero',
-          damageToTarget: damage,
-          damageToAttacker: isHeroTarget ? 0 : counterDamage,
-          presentation: buildCombatPresentation(combatStep, { targetLethal, attackerLethal }),
+          damageToTarget: resolvedAttack.damageToTarget,
+          damageToAttacker: resolvedAttack.damageToAttacker,
+          resolvedAttack,
+          presentation: buildCombatPresentationFromResolvedAttack(resolvedAttack),
         });
 
         CombatEventBus.emitDamageResolved({
@@ -583,14 +565,19 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
           sourceType: 'minion',
           targetId: defenderId || 'opponent-hero',
           targetType: isHeroTarget ? 'hero' : 'minion',
-          actualDamage: damage,
+          actualDamage: resolvedAttack.healthDamageToTarget,
           damageSource: 'minion_attack',
           attackerOwner: 'player',
           defenderOwner: 'opponent',
-          targetHealthBefore,
-          targetHealthAfter,
-          targetDied,
-          counterDamage: isHeroTarget ? undefined : counterDamage,
+          targetHealthBefore: resolvedAttack.targetHealthBefore,
+          targetHealthAfter: resolvedAttack.targetHealthAfter,
+          targetDied: resolvedAttack.targetLethal,
+          shieldConsumed: resolvedAttack.targetShieldConsumed,
+          counterDamage: isHeroTarget ? undefined : resolvedAttack.damageToAttacker,
+          counterTargetHealthBefore: isHeroTarget ? undefined : resolvedAttack.attackerHealthBefore,
+          counterTargetHealthAfter: isHeroTarget ? undefined : resolvedAttack.attackerHealthAfter,
+          counterTargetDied: isHeroTarget ? undefined : resolvedAttack.attackerLethal,
+          counterShieldConsumed: isHeroTarget ? undefined : resolvedAttack.attackerShieldConsumed,
         });
       }
 

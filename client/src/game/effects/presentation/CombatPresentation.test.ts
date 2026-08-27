@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	buildCombatPresentation,
+	buildCombatPresentationFromResolvedAttack,
 	impactLevelFor,
 } from './CombatPresentation';
 import { CRITICAL_HIT_RECIPE, recipeForCombatPresentation } from './EffectRecipes';
@@ -80,5 +81,34 @@ describe('combat presentation contract', () => {
 			primitive: 'shine',
 			delayMs: 0,
 		});
+	});
+
+	it('maps resolved shield and lethal facts without reading card state', () => {
+		const presentation = buildCombatPresentationFromResolvedAttack({
+			id: 'resolved-1',
+			attackerId: 'attacker-1',
+			targetId: 'target-1',
+			targetType: 'minion',
+			attackerSide: 'player',
+			damageToTarget: 8,
+			damageToAttacker: 3,
+			healthDamageToTarget: 0,
+			healthDamageToAttacker: 3,
+			targetHealthBefore: 5,
+			targetHealthAfter: 5,
+			attackerHealthBefore: 5,
+			attackerHealthAfter: 2,
+			targetShieldConsumed: true,
+			attackerShieldConsumed: false,
+			targetLethal: false,
+			attackerLethal: false,
+			counterAttackOccurred: true,
+			triggeredEffects: [],
+			statChanges: [],
+			zoneChanges: [],
+		});
+
+		expect(presentation.target).toMatchObject({ outcome: 'shield', amount: 8, lethal: false });
+		expect(presentation.counter).toMatchObject({ amount: 3, lethal: false });
 	});
 });

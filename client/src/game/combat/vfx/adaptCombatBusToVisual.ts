@@ -6,7 +6,11 @@
 import { CombatEventBus, type ImpactPhaseEvent } from '../../services/CombatEventBus';
 import { emitCombatImpact } from './events';
 import { attackIntentsFromImpact } from '@/game/effects/poker/attackEffectAdapter';
-import { buildCombatPresentationFromIntent, impactLevelFor } from '@/game/effects/presentation/CombatPresentation';
+import {
+	buildCombatPresentationFromIntent,
+	buildCombatPresentationFromResolvedAttack,
+	impactLevelFor,
+} from '@/game/effects/presentation/CombatPresentation';
 import type { CombatPresentation } from '@/game/effects/presentation/types';
 
 function withResolvedImpactAmounts(
@@ -39,6 +43,9 @@ function presentationForImpact(
 	targetIntent: ReturnType<typeof attackIntentsFromImpact>[number] | undefined,
 	counterIntent: ReturnType<typeof attackIntentsFromImpact>[number] | undefined,
 ): CombatPresentation | undefined {
+	if (event.resolvedAttack) {
+		return buildCombatPresentationFromResolvedAttack(event.resolvedAttack);
+	}
 	if (event.presentation) return withResolvedImpactAmounts(event, event.presentation);
 	if (!targetIntent) return undefined;
 
@@ -75,7 +82,7 @@ export function adaptCombatBusToVisual(): () => void {
 		if (targetIntent) {
 			emitCombatImpact({
 				targetId: event.targetId,
-				damage: targetIntent.impact.amount,
+				damage: presentation?.target.amount ?? targetIntent.impact.amount,
 				kind: 'hit',
 				intent: targetIntent,
 				presentation,

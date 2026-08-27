@@ -1,4 +1,4 @@
-import type { CombatStep } from '@/game/services/AttackResolutionService';
+import type { CombatStep, ResolvedAttack } from '@/game/services/AttackResolutionService';
 import type {
 	CombatPresentation,
 	ImpactLevel,
@@ -84,6 +84,49 @@ export function buildCombatPresentation(
 		action: 'melee-hit',
 		source: { type: 'card', instanceId: step.attackerId },
 		attackerSide: step.attackerSide,
+		target: targetImpact,
+		...(counter ? { counter } : {}),
+	};
+}
+
+/**
+ * Maps the gameplay-owned resolved result into presentation data. The
+ * renderer receives the resolved combat amount, shield outcome, and lethal
+ * flags; it never has to inspect a CardInstance or recalculate them.
+ */
+export function buildCombatPresentationFromResolvedAttack(
+	resolved: ResolvedAttack,
+): CombatPresentation {
+	const target = resolved.targetType === 'hero'
+		? { type: 'hero' as const, side: opposingSide(resolved.attackerSide) }
+		: resolved.targetId
+			? { type: 'card' as const, instanceId: resolved.targetId }
+			: { type: 'field' as const, side: opposingSide(resolved.attackerSide) };
+
+	const targetImpact = createImpact(
+		target,
+		resolved.damageToTarget,
+		resolved.targetShieldConsumed,
+		resolved.targetLethal,
+	);
+	const counter = resolved.counterAttackOccurred && resolved.targetType === 'minion'
+		&& resolved.targetId && resolved.damageToAttacker > 0
+		? {
+			source: target,
+			...createImpact(
+				{ type: 'card' as const, instanceId: resolved.attackerId },
+				resolved.damageToAttacker,
+				resolved.attackerShieldConsumed,
+				resolved.attackerLethal,
+			),
+		}
+		: undefined;
+
+	return {
+		id: resolved.id,
+		action: 'melee-hit',
+		source: { type: 'card', instanceId: resolved.attackerId },
+		attackerSide: resolved.attackerSide,
 		target: targetImpact,
 		...(counter ? { counter } : {}),
 	};

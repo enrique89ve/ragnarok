@@ -1,10 +1,14 @@
 import { useAIAttackAnimationStore, type AIAttackEvent } from '../stores/aiAttackAnimationStore';
 import { useGameStore } from '../stores/gameStore';
-import { applyDamageToState, type CombatStep } from '../services/AttackResolutionService';
+import {
+  applyDamageToState,
+  createResolvedAttackFromStates,
+  type CombatStep,
+} from '../services/AttackResolutionService';
 import { CombatEventBus, type ImpactPhaseEvent } from '../services/CombatEventBus';
 import type { GameState } from '../types';
 import { debug } from '../config/debugConfig';
-import { buildCombatPresentation } from '@/game/effects/presentation/CombatPresentation';
+import { buildCombatPresentationFromResolvedAttack } from '@/game/effects/presentation/CombatPresentation';
 
 export type AIAttackImpactPayload = Omit<ImpactPhaseEvent, 'type' | 'id' | 'timestamp' | 'turn'>;
 
@@ -53,24 +57,6 @@ export function getAIAttackImpactTargetId(event: AIAttackEvent): string | null {
   }
 
   return event.targetId;
-}
-
-function opposingSide(side: 'player' | 'opponent'): 'player' | 'opponent' {
-  return side === 'player' ? 'opponent' : 'player';
-}
-
-function combatantDied(
-  state: GameState,
-  side: 'player' | 'opponent',
-  type: 'hero' | 'minion',
-  id: string | null,
-): boolean {
-  const player = state.players?.[side];
-  if (!player) return false;
-  if (type === 'hero') {
-    return (player.heroHealth ?? player.health) <= 0;
-  }
-  return id !== null && !player.battlefield.some(card => card.instanceId === id);
 }
 
 export function createAIAttackResolutionStoreDeps(
@@ -128,17 +114,15 @@ export function resolveAIAttackEvent(
   // the event can carry lethal outcomes while the DOM still has the target.
   // The commit remains after the event; this changes no gameplay authority.
   const newState = applyDamage(currentGameState, step);
-  const defenderSide = opposingSide(step.attackerSide);
+  const resolvedAttack = createResolvedAttackFromStates(currentGameState, newState, step);
   if (impactTargetId) {
     deps.emitImpactPhase({
       attackerId: event.attackerId,
       targetId: impactTargetId,
-      damageToTarget: event.damage,
-      damageToAttacker: event.counterDamage,
-      presentation: buildCombatPresentation(step, {
-        targetLethal: combatantDied(newState, defenderSide, step.targetType, step.targetId),
-        attackerLethal: combatantDied(newState, step.attackerSide, 'minion', step.attackerId),
-      }),
+      damageToTarget: resolvedAttack.damageToTarget,
+      damageToAttacker: resolvedAttack.damageToAttacker,
+      resolvedAttack,
+      presentation: buildCombatPresentationFromResolvedAttack(resolvedAttack),
     });
     debug.animation(`[AI-ATTACK-ANIM] Emitted IMPACT_PHASE: ${event.attackerId} -> ${impactTargetId} (${event.damage} dmg)`);
   } else {
