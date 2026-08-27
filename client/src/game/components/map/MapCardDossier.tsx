@@ -7,8 +7,10 @@ import {
 	Swords,
 	Users,
 } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import type { MapCardReference, MapCardSection, MapCardSectionId, MapRealmLegend } from './types';
+import { REALM_ART_URLS, REALM_SYMBOLS } from './realmVisuals';
 
 interface MapCardDossierProps {
 	activeSectionId: MapCardSectionId;
@@ -39,26 +41,51 @@ export default function MapCardDossier({
 	const indexedCards = sections.reduce((total, section) => total + section.count, 0);
 	const activeSection = sections.find(section => section.id === activeSectionId) ?? sections[0];
 	const featuredCard = activeSection.cards[0];
+	const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+	useEffect(() => {
+		closeButtonRef.current?.focus();
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') onClose();
+		};
+		document.addEventListener('keydown', handleKeyDown);
+		return () => document.removeEventListener('keydown', handleKeyDown);
+	}, [onClose]);
+
+	const RealmIcon = REALM_SYMBOLS[realm.id];
 
 	return (
 		<section
 			aria-modal="true"
 			role="dialog"
-			className="absolute left-1/2 top-1/2 z-40 grid w-[min(58rem,calc(100%-2rem))] max-h-[min(34rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-lg border border-gold-300/28 bg-[#06161d]/92 text-ink-0 shadow-[0_28px_90px_-38px_rgba(0,0,0,0.95)] backdrop-blur-md"
+			aria-labelledby="atlas-dossier-title"
+			aria-describedby="atlas-dossier-description"
+			className="absolute left-1/2 top-1/2 z-40 grid max-h-[min(42rem,calc(100%-1rem))] w-[min(64rem,calc(100%-1rem))] grid-rows-[auto_minmax(0,1fr)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-lg border border-gold-300/28 bg-[#06161d]/95 text-ink-0 shadow-[0_28px_90px_-38px_rgba(0,0,0,0.95)] backdrop-blur-md"
 			style={{ boxShadow: `0 0 0 1px ${realm.color}22, 0 30px 90px -40px rgba(0,0,0,0.95)` }}
 			onPointerDown={event => event.stopPropagation()}
 			onWheel={event => event.stopPropagation()}
 		>
 			<header className="grid gap-3 border-b border-obsidian-700/80 bg-obsidian-950/64 p-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
+				<p id="atlas-dossier-description" className="sr-only">Browse the indexed cards and the featured card for {realm.name}.</p>
 				<div className="min-w-0">
 					<p className="font-mono text-[9px] font-semibold uppercase tracking-[0.24em]" style={{ color: contextColor }}>
 						{contextLabel}
 					</p>
 					<div className="mt-1 flex min-w-0 items-center gap-2">
-						<span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border font-display text-sm font-black" style={{ borderColor: `${realm.color}77`, color: realm.color }}>
-							{realm.runeSymbol}
+						{REALM_ART_URLS[realm.id] ? (
+							<img
+								src={REALM_ART_URLS[realm.id]}
+								alt=""
+								width={72}
+								height={48}
+								className="h-10 w-14 shrink-0 rounded-md border border-obsidian-600 object-cover opacity-80"
+							/>
+						) : null}
+						<span className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full border" style={{ borderColor: `${realm.color}77`, color: realm.color }}>
+							<RealmIcon className="h-4 w-4" aria-hidden="true" />
+							<span className="absolute -bottom-1 -right-1 grid h-4 w-4 place-items-center rounded-sm border border-current/50 bg-obsidian-950 font-mono text-[8px] font-bold" aria-hidden="true">{realm.runeSymbol}</span>
 						</span>
-						<h2 className="truncate font-display text-base font-black uppercase leading-tight tracking-[0.12em] text-ink-0 md:text-lg">
+						<h2 id="atlas-dossier-title" className="truncate font-display text-base font-black uppercase leading-tight tracking-[0.12em] text-ink-0 md:text-lg">
 							{realm.name} regional cards
 						</h2>
 					</div>
@@ -80,7 +107,8 @@ export default function MapCardDossier({
 					type="button"
 					aria-label="Close regional cards"
 					onClick={onClose}
-					className="grid h-10 w-10 place-items-center rounded-md border border-obsidian-700 bg-obsidian-900/80 text-ink-300 transition-colors hover:border-gold-300/45 hover:text-gold-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
+					ref={closeButtonRef}
+					className="grid h-11 w-11 place-items-center rounded-md border border-obsidian-700 bg-obsidian-900/80 text-ink-300 transition-colors motion-reduce:transition-none hover:border-gold-300/45 hover:text-gold-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
 				>
 					<X className="h-4 w-4" aria-hidden="true" />
 				</button>
@@ -100,11 +128,8 @@ export default function MapCardDossier({
 								aria-pressed={active}
 								title={section.title}
 								onClick={() => onSelectSection(section.id)}
-								className={`grid h-10 place-items-center rounded-md border transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300 ${
-									active
-										? 'border-gold-300/70 bg-gold-300/14 text-gold-100'
-										: 'border-obsidian-700 bg-obsidian-900/70 text-ink-300 hover:border-obsidian-500 hover:text-ink-0'
-								}`}
+								className="grid h-11 place-items-center rounded-md border border-obsidian-700 bg-obsidian-900/70 text-ink-300 transition-colors motion-reduce:transition-none hover:border-obsidian-500 hover:text-ink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
+								style={active ? { borderColor: 'rgba(246,196,83,0.7)', backgroundColor: 'rgba(246,196,83,0.14)', color: '#fff1b8' } : undefined}
 							>
 								<Icon className="h-4 w-4" aria-hidden="true" />
 							</button>
@@ -164,12 +189,8 @@ function SectionTab({
 			type="button"
 			aria-pressed={active}
 			onClick={onSelect}
-			className={`grid min-h-10 grid-cols-[1.5rem_1fr] items-center gap-2 rounded-md border px-2 py-1.5 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300 ${
-				active
-					? 'border-gold-300/65 bg-gold-300/12 text-ink-0'
-					: 'border-obsidian-700 bg-obsidian-900/60 text-ink-300 hover:border-obsidian-500 hover:text-ink-0'
-			}`}
-			style={active ? { boxShadow: `inset 0 1px 0 ${color}44` } : undefined}
+			className="grid min-h-11 grid-cols-[1.5rem_1fr] items-center gap-2 rounded-md border border-obsidian-700 bg-obsidian-900/60 px-2 py-1.5 text-left text-ink-300 transition-colors motion-reduce:transition-none hover:border-obsidian-500 hover:text-ink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
+			style={active ? { borderColor: 'rgba(246,196,83,0.65)', backgroundColor: 'rgba(246,196,83,0.12)', color: '#f8f3e7', boxShadow: `inset 0 1px 0 ${color}44` } : undefined}
 		>
 			<Icon className="h-3.5 w-3.5" aria-hidden="true" />
 			<span className="min-w-0">
@@ -182,7 +203,7 @@ function SectionTab({
 
 function TerrainCard({ card, color }: { card: MapCardReference; color: string }) {
 	return (
-		<li className="min-h-[8.25rem] rounded-md border border-obsidian-700/85 bg-[#0a2028]/86 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors hover:border-gold-300/45">
+		<li className="min-h-[8.25rem] rounded-md border border-obsidian-700/85 bg-[#0a2028]/86 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors motion-reduce:transition-none hover:border-gold-300/45">
 			<div className="grid grid-cols-[2.25rem_1fr_auto] items-start gap-2">
 				<span className="grid h-8 w-8 place-items-center rounded-md border border-obsidian-600 bg-obsidian-950/85 font-display text-xs font-black text-ink-100">
 					{card.costLabel}
