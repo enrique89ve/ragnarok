@@ -10,7 +10,7 @@
 
 import { debug } from '../config/debugConfig';
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { AnimatePresence, motion, usePresence, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, LayoutGroup, motion, usePresence, useReducedMotion } from 'framer-motion';
 import { CardInstanceWithCardData } from '../types/interfaceExtensions';
 import SimpleCardCompat from './card/SimpleCardCompat';
 import { toSimpleCardData } from './card/cardDataAdapter';
@@ -50,8 +50,25 @@ interface SimpleBattlefieldProps {
 }
 
 const MAX_SLOTS = MAX_BATTLEFIELD_SIZE;
-const SLOT_INDICES = Array.from({ length: MAX_BATTLEFIELD_SIZE }, (_, i) => i);
 const EMPTY_SET = new Set<string>();
+
+export interface BattlefieldLayoutItem<T extends { instanceId: string } = CardInstanceWithCardData> {
+  readonly key: string;
+  readonly card: T;
+}
+
+/**
+ * Cards are layout participants in their logical battlefield order.
+ * The instance id is deliberately the only identity used by the renderer;
+ * array indexes describe order, never card lifetime.
+ */
+export function buildBattlefieldLayoutItems<T extends { instanceId: string }>(
+  cards: readonly T[],
+): ReadonlyArray<BattlefieldLayoutItem<T>> {
+  return cards
+    .slice(0, MAX_SLOTS)
+    .map(card => ({ key: card.instanceId, card }));
+}
 
 function compareStat(current: number, base: number): SimpleCardStatTone {
   if (current > base) return 'buffed';
@@ -142,13 +159,27 @@ const BattlefieldCardPresence: React.FC<BattlefieldCardPresenceProps> = ({
   return (
     <motion.div
       className="bf-card-position"
+      layout="position"
       initial={animateCardEntry ? { opacity: 0, scale: 0.15, y: side === 'player' ? 80 : -80 } : false}
       animate={animate}
       transition={isPresent
-        ? { type: 'spring', stiffness: 420, damping: 24 }
+        ? {
+            layout: reducedMotion
+              ? { duration: 0.01 }
+              : { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
+            type: 'spring',
+            stiffness: 420,
+            damping: 24,
+          }
         : deathPhase
-          ? { duration: reducedMotion ? 0.01 : COMBAT_LETHAL_TIMELINE_MS.death / 1000, ease: [0.55, 0, 1, 0.45] }
-          : { duration: 0 }}
+          ? {
+              layout: reducedMotion
+                ? { duration: 0.01 }
+                : { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
+              duration: reducedMotion ? 0.01 : COMBAT_LETHAL_TIMELINE_MS.death / 1000,
+              ease: [0.55, 0, 1, 0.45],
+            }
+          : { layout: { duration: 0.22, ease: [0.22, 1, 0.36, 1] }, duration: 0 }}
     >
       {children}
     </motion.div>
@@ -181,13 +212,11 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
   };
 
   const renderSlots = (
-    cards: CardInstanceWithCardData[], 
+    cards: readonly CardInstanceWithCardData[],
     side: 'player' | 'opponent',
     onClick?: (card: CardInstanceWithCardData) => void
   ) => {
-    return SLOT_INDICES.map((index) => {
-      const card = cards[index];
-      const isOccupied = !!card;
+    return buildBattlefieldLayoutItems(cards).map(({ card, key }) => {
       const isShaking = card && shakingTargets.has(card.instanceId);
       const isAttacking = card && attackingCard?.instanceId === card.instanceId;
       const canAttack = side === 'player' && card && isPlayerTurn &&
@@ -241,18 +270,12 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
       const hiddenStatusBadges = statusBadges.slice(4);
 
       return (
-        <div
-          key={`${side}-slot-${index}`}
-          className={`bf-slot ${isOccupied ? 'occupied' : 'empty'}`}
+        <BattlefieldCardPresence
+          key={key}
+          cardInstanceId={card.instanceId}
+          side={side}
+          animateCardEntry={animateCardEntry}
         >
-          <AnimatePresence>
-            {card && (
-              <BattlefieldCardPresence
-                key={card.instanceId}
-                cardInstanceId={card.instanceId}
-                side={side}
-                animateCardEntry={animateCardEntry}
-              >
               <div
                 data-instance-id={card.instanceId}
                 data-card-family="nft"
@@ -389,10 +412,7 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
                   </div>
                 )}
               </div>
-              </BattlefieldCardPresence>
-            )}
-          </AnimatePresence>
-        </div>
+        </BattlefieldCardPresence>
       );
     });
   };
@@ -446,29 +466,31 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
       data-max-slots={MAX_SLOTS}
       data-render-surface={renderSurface}
     >
-      {showOpponent && (
-        <div
-          className="bf-row opponent-row"
-          aria-label="Opponent's battlefield"
-          data-card-count={opponentCardCount}
-          data-max-slots={MAX_SLOTS}
-        >
-          {opponentSlots}
-        </div>
-      )}
+      <LayoutGroup>
+        {showOpponent && (
+          <div
+            className="bf-row opponent-row"
+            aria-label="Opponent's battlefield"
+            data-card-count={opponentCardCount}
+            data-max-slots={MAX_SLOTS}
+          >
+            <AnimatePresence>{opponentSlots}</AnimatePresence>
+          </div>
+        )}
 
-      {showPlayer && (
-        <div
-          ref={playerRowRef}
-          className={`bf-row player-row ${showGaps ? 'dragging' : ''} ${showPositionPicker ? 'position-picking' : ''}`}
-          aria-label="Player's battlefield"
-          data-card-count={playerCardCount}
-          data-max-slots={MAX_SLOTS}
-          data-row-mode={showGaps ? 'position-picker' : 'normal'}
-        >
-          {playerSlotsWithGaps}
-        </div>
-      )}
+        {showPlayer && (
+          <div
+            ref={playerRowRef}
+            className={`bf-row player-row ${showGaps ? 'dragging' : ''} ${showPositionPicker ? 'position-picking' : ''}`}
+            aria-label="Player's battlefield"
+            data-card-count={playerCardCount}
+            data-max-slots={MAX_SLOTS}
+            data-row-mode={showGaps ? 'position-picker' : 'normal'}
+          >
+            <AnimatePresence>{playerSlotsWithGaps}</AnimatePresence>
+          </div>
+        )}
+      </LayoutGroup>
     </div>
   );
 });

@@ -44,8 +44,8 @@
   padding-top: 4px;
 }
 
-/* Slot container — sized exactly to card, no extra hitbox */
-.bf-slot {
+/* Card layout participant — the card itself owns its position in the row. */
+.bf-card-position {
   box-sizing: border-box;
   flex: 0 0 var(--bf-card-width);
   width: var(--bf-card-width);
@@ -54,31 +54,19 @@
   justify-content: center;
   align-items: center;
   border-radius: 6px;
-  transition: transform 0.2s ease;
   position: relative;
   padding: 0;
   margin: 0;
 }
 
-.bf-slot.empty {
-  /* Hide empty slots completely - no placeholder boxes */
-  display: none;
-}
-
-.bf-slot.occupied {
-  border: none;
-  background: transparent;
-  animation: none;
-}
-
 /* Poker owns fixed 1920x1080 zone coordinates. Do not let the generic
    battlefield idle motion move those cards after the chess handoff. */
-.simple-battlefield[data-render-surface='poker'] .bf-slot.occupied {
+.simple-battlefield[data-render-surface='poker'] .bf-card-position {
   animation: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bf-slot.occupied { animation: none; }
+  .bf-card-position { animation: none; }
 }
 
 /* ── Insertion gap indicators — shown while dragging a card ── */
@@ -125,13 +113,6 @@
   box-shadow: 0 0 20px rgba(34, 197, 94, 0.6), 0 0 40px rgba(34, 197, 94, 0.25);
   border-color: rgba(34, 197, 94, 0.7);
   opacity: 1;
-}
-
-/* Framer Motion owns entry/exit on this node. CSS must not write transform here. */
-.bf-card-position {
-  position: relative;
-  width: 100%;
-  height: 100%;
 }
 
 @property --bf-motion-x {
@@ -1257,7 +1238,7 @@
     animation-iteration-count: 1;
   }
 
-  .bf-slot {
+  .bf-card-position {
     transition: none;
   }
 
@@ -1394,7 +1375,7 @@
   pointer-events: none;
   transition: opacity 0.2s ease, filter 0.2s ease;
 }
-.simple-battlefield.targeting-friendly .player-row .bf-slot.occupied {
+.simple-battlefield.targeting-friendly .player-row .bf-card-position {
   box-shadow: 0 0 12px rgba(34, 197, 94, 0.6);
 }
 
@@ -1405,11 +1386,11 @@
   pointer-events: none;
   transition: opacity 0.2s ease, filter 0.2s ease;
 }
-.simple-battlefield.targeting-enemy .opponent-row .bf-slot.occupied {
+.simple-battlefield.targeting-enemy .opponent-row .bf-card-position {
   box-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
 }
 
 /* Any targeting: highlight both sides */
-.simple-battlefield.targeting-any .bf-slot.occupied {
+.simple-battlefield.targeting-any .bf-card-position {
   box-shadow: 0 0 12px rgba(245, 158, 11, 0.5);
 }

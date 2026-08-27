@@ -152,6 +152,16 @@ describe('card surface CSS ownership', () => {
 		expect(battlefieldCss).not.toContain('@keyframes invalidShake');
 	});
 
+	it('keeps battlefield reflow cards direct, stable, and layout-owned', () => {
+		expect(battlefieldSource).toContain('buildBattlefieldLayoutItems');
+		expect(battlefieldSource).toContain('<LayoutGroup>');
+		expect(battlefieldSource).toContain('layout="position"');
+		expect(battlefieldSource).toContain('key={key}');
+		expect(battlefieldSource).not.toContain('cards[index]');
+		expect(battlefieldSource).not.toContain('key={`${side}-slot-${index}`}');
+		expect(battlefieldCss).toContain('flex: 0 0 var(--bf-card-width)');
+	});
+
 	it('keeps HandFan shake off the fan placement transform string', () => {
 		const handFanCss = readCss('../HandFan.css');
 		const handFanSource = readFileSync(resolve(here, '../HandFan.tsx'), 'utf8');
