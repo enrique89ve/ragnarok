@@ -110,7 +110,8 @@ export function buildCombatPresentationFromResolvedAttack(
 		resolved.targetLethal,
 	);
 	const counter = resolved.counterAttackOccurred && resolved.targetType === 'minion'
-		&& resolved.targetId && resolved.damageToAttacker > 0
+		&& resolved.targetId
+		&& (resolved.damageToAttacker > 0 || resolved.attackerShieldConsumed)
 		? {
 			source: target,
 			...createImpact(

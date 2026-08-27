@@ -120,4 +120,40 @@ describe('combat presentation contract', () => {
 		expect(presentation.target).toMatchObject({ outcome: 'shield', amount: 8, lethal: false });
 		expect(presentation.counter).toMatchObject({ amount: 3, lethal: false });
 	});
+
+	it('keeps a zero-damage counter shield break in the presentation sequence', () => {
+		const presentation = buildCombatPresentationFromResolvedAttack({
+			id: 'resolved-counter-shield',
+			attackerId: 'attacker-1',
+			targetId: 'target-1',
+			targetType: 'minion',
+			attackerSide: 'player',
+			damageToTarget: 4,
+			damageToAttacker: 0,
+			healthDamageToTarget: 4,
+			healthDamageToAttacker: 0,
+			targetHealthBefore: 8,
+			targetHealthAfter: 4,
+			attackerHealthBefore: 8,
+			attackerHealthAfter: 8,
+			targetShieldConsumed: false,
+			attackerShieldConsumed: true,
+			targetLethal: false,
+			attackerLethal: false,
+			counterAttackOccurred: true,
+			triggeredEffects: [],
+			statChanges: [],
+			zoneChanges: [],
+		});
+
+		expect(presentation.counter).toMatchObject({
+			amount: 0,
+			outcome: 'shield',
+			lethal: false,
+		});
+		expect(recipeForCombatPresentation(presentation, 'counter')).toContainEqual({
+			primitive: 'shield-flash',
+			delayMs: 0,
+		});
+	});
 });
