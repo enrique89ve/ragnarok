@@ -7,7 +7,7 @@ import { signHiveMessage } from '../../data/HiveAuth';
 import { getAuthenticatedHiveUsername } from '../../data/HiveSessionIdentity';
 import { isSharedNetworkEnvironment } from '../config/featureFlags';
 import { readP2PMatchTicket, readServerSignedChallenge } from '@shared/p2pAvailability';
-import { isCurrentMatchOffer, readMatchAcceptanceProof, readMatchOffer, buildMatchAcceptanceMessage, type MatchAcceptanceProof, type MatchAcceptanceV1, type MatchOffer } from '@shared/p2pMatchAcceptance';
+import { isCurrentMatchOffer, readMatchOffer, buildMatchAcceptanceMessage, type MatchAcceptanceProof, type MatchAcceptanceV1, type MatchOffer } from '@shared/p2pMatchAcceptance';
 import { useStarterStore } from '../stores/starterStore';
 import { ensureSharedNetworkStarterClaimReceipt } from '../data/starterClaim';
 import { getCardRegistryHash } from '../data/effects/registryHash';
@@ -144,6 +144,30 @@ export async function buildQuickMatchQueueBody(input: {
 	return { ok: true, body: { peerId: input.peerId } };
 }
 
+export function buildMatchAcceptance(input: {
+	readonly offer: MatchOffer;
+	readonly peerId: string;
+	readonly account?: string | null;
+	readonly ephemeralPubkey: string;
+	readonly rulesetHash: string;
+	readonly engineHash: string;
+}): MatchAcceptanceV1 {
+	return {
+		protocol: 'ragnarok-match-accept-v1',
+		offerId: input.offer.offerId,
+		matchId: input.offer.matchId,
+		...(input.account ? { account: input.account } : {}),
+		peerId: input.peerId,
+		...(input.offer.opponent.username ? { opponentAccount: input.offer.opponent.username } : {}),
+		opponentPeerId: input.offer.opponent.peerId,
+		ephemeralPubkey: input.ephemeralPubkey,
+		rulesetHash: input.rulesetHash,
+		engineHash: input.engineHash,
+		serverNonce: input.offer.serverNonce,
+		expiresAt: input.offer.expiresAt,
+	};
+}
+
 async function readSharedNetworkStarterReceiptError(input: {
 	readonly sharedNetwork: boolean;
 	readonly accountId: string | null;
@@ -262,7 +286,11 @@ async function pollMatchmakingStatus(actions: MatchmakingActions): Promise<void>
 	const statusResponse = await fetch(`${getMatchmakingApiBase()}/api/matchmaking/status/${currentPeerId}`, {
 		headers: { 'x-p2p-queue-token': activeQueueToken },
 		credentials: 'include',
+		cache: 'no-store',
 	});
+	// Older proxies may still answer a conditional poll with 304. The state is
+	// unchanged, so keep the current offer/token and let the next poll continue.
+	if (statusResponse.status === 304) return;
 	if (!statusResponse.ok) {
 		const serverError = await readMatchmakingError(statusResponse);
 		throw new Error(`Matchmaking status rejected: ${serverError}`);
@@ -466,20 +494,14 @@ export function useMatchmaking() {
 				const [rulesetHash] = await Promise.all([getCardRegistryHash()]);
 				const sessionKey = await generateSessionKey(currentOffer.matchId);
 				const account = getAuthenticatedHiveUsername() ?? hiveUsername ?? undefined;
-				const acceptance: MatchAcceptanceV1 = {
-					protocol: 'ragnarok-match-accept-v1',
-					offerId: currentOffer.offerId,
-					matchId: currentOffer.matchId,
-					...(account ? { account } : {}),
+				const acceptance = buildMatchAcceptance({
+					offer: currentOffer,
 					peerId,
-					...(currentOffer.opponent.username ? { opponentAccount: currentOffer.opponent.username } : {}),
-					opponentPeerId: currentOffer.player.peerId,
+					account,
 					ephemeralPubkey: sessionKey.pubkey,
 					rulesetHash,
 					engineHash: getWasmHash(),
-					serverNonce: currentOffer.serverNonce,
-					expiresAt: currentOffer.expiresAt,
-				};
+				});
 				proof = acceptance;
 				if (isSharedNetworkEnvironment()) {
 					if (!account) throw new Error('Hive session required before accepting a match.');

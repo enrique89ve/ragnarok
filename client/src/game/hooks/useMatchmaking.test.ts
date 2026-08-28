@@ -12,6 +12,7 @@ vi.mock('../../data/HiveAuth', async () => {
 });
 
 import {
+	buildMatchAcceptance,
 	buildQuickMatchQueueBody,
 	failQueuedStatus,
 	isMatchOfferForPeer,
@@ -195,6 +196,30 @@ describe('useMatchmaking quick-match access helpers', () => {
 
 		expect(isMatchOfferForPeer(offer, 'peer-local', 1_500)).toBe(true);
 		expect(isMatchOfferForPeer(offer, 'peer-remote', 1_500)).toBe(false);
+	});
+
+	it('binds acceptance to the opponent in the offer perspective', () => {
+		const offer = {
+			protocol: 'ragnarok-match-offer-v1' as const,
+			offerId: 'offer-1',
+			matchId: 'room-1',
+			player: { peerId: 'peer-local', elo: 1000 },
+			opponent: { peerId: 'peer-remote', elo: 1000 },
+			createdAt: 1_000,
+			expiresAt: 2_000,
+			serverNonce: 'nonce-1',
+		};
+
+		expect(buildMatchAcceptance({
+			offer,
+			peerId: 'peer-local',
+			ephemeralPubkey: 'p'.repeat(43),
+			rulesetHash: 'ruleset-hash',
+			engineHash: 'engine-hash',
+		})).toMatchObject({
+			peerId: 'peer-local',
+			opponentPeerId: 'peer-remote',
+		});
 	});
 
 	it('does not turn a rejected unused signer into a queue failure', async () => {

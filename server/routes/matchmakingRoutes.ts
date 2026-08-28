@@ -32,6 +32,19 @@ import { log } from '../static';
 
 const router = Router();
 
+// Matchmaking state changes independently of browser navigation. Prevent
+// conditional HTTP caching from turning a status poll into a bodyless 304.
+router.use((_req, res, next) => {
+	delete _req.headers['if-none-match'];
+	delete _req.headers['if-modified-since'];
+	res.set({
+		'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',
+		Pragma: 'no-cache',
+		Expires: '0',
+	});
+	next();
+});
+
 type QueuedPlayer = {
 	readonly peerId: string;
 	readonly username?: string;
@@ -355,6 +368,12 @@ async function canQueuedPlayerUseSharedP2P(player: Pick<QueuedPlayer, 'username'
 }
 
 async function getExistingQueueResponse(req: Request, peerId: string): Promise<ExistingQueueResponse | null> {
+	const pendingResponse = pendingOfferResponse(req, peerId, { expired: 'clear' });
+	if (pendingResponse) return pendingResponse;
+
+	const activeResponse = await getActiveMatchStatusResponse(req, peerId);
+	if (activeResponse) return activeResponse;
+
 	const existingIndex = matchmakingQueue.findIndex(p => p.peerId === peerId);
 	if (existingIndex === -1) return null;
 	if (!hasValidQueueToken(req, matchmakingQueue[existingIndex].queueTokenHash)) {
@@ -631,7 +650,11 @@ function acceptanceMessage(proof: MatchAcceptanceProof): string {
 	return buildMatchAcceptanceMessage(payload);
 }
 
-function pendingOfferResponse(req: Request, peerId: string): ExistingQueueResponse | null {
+function pendingOfferResponse(
+	req: Request,
+	peerId: string,
+	options: { readonly expired: 'not_queued' | 'clear' } = { expired: 'not_queued' },
+): ExistingQueueResponse | null {
 	const pending = pendingOfferForPeer(peerId);
 	if (!pending) return null;
 	const offer = offerForPeer(pending, peerId);
@@ -642,7 +665,9 @@ function pendingOfferResponse(req: Request, peerId: string): ExistingQueueRespon
 	}
 	if (offer.expiresAt <= Date.now()) {
 		deletePendingMatchOffer(offer.offerId);
-		return { statusCode: 200, body: { success: true, status: 'not_queued' } };
+		return options.expired === 'clear'
+			? null
+			: { statusCode: 200, body: { success: true, status: 'not_queued' } };
 	}
 	const accepted = acceptanceForPeer(pending, peerId) !== undefined;
 	return {

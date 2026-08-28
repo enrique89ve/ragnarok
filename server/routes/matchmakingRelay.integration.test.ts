@@ -553,6 +553,58 @@ describe('matchmaking and relay integration', () => {
 		}
 	});
 
+	it('keeps matchmaking status uncached and does not duplicate a pending offer on retry', async () => {
+		const { default: matchmakingRouter, clearP2PMatchmakingStateForTests } = await import('./matchmakingRoutes');
+		clearP2PMatchmakingStateForTests();
+		const app = express();
+		app.use(express.json());
+		app.use('/api/session', hiveSessionRouter);
+		app.use('/api/matchmaking', matchmakingRouter);
+		const server = createServer(app);
+
+		try {
+			const port = await listenOnEphemeralPort(server);
+			const baseUrl = `http://127.0.0.1:${port}`;
+			const aliceCookie = await loginSession(baseUrl, 'alice');
+			const bobCookie = await loginSession(baseUrl, 'bob');
+			await setStarterCeremonyClaim('alice', 1_800_000_000_000);
+			await setStarterCeremonyClaim('bob', 1_800_000_000_000);
+
+			const firstQueue = await postJson(baseUrl, '/api/matchmaking/queue', queueBody('cache-peer-a', 'alice'), undefined, aliceCookie);
+			const firstQueueRecord = isRecord(firstQueue.body) ? firstQueue.body : {};
+			const firstToken = readStringProperty(firstQueueRecord, 'queueToken');
+			const secondQueue = await postJson(baseUrl, '/api/matchmaking/queue', queueBody('cache-peer-b', 'bob'), undefined, bobCookie);
+			expect(secondQueue.body).toMatchObject({ success: true, status: 'offered' });
+			const secondRecord = isRecord(secondQueue.body) ? secondQueue.body : {};
+			const secondToken = readStringProperty(secondRecord, 'queueToken');
+			const offer = readOffer(secondRecord.offer);
+
+			const initialStatus = await fetch(`${baseUrl}/api/matchmaking/status/cache-peer-a`, {
+				headers: { Cookie: aliceCookie, 'x-p2p-queue-token': firstToken },
+			});
+			expect(initialStatus.status).toBe(200);
+			expect(initialStatus.headers.get('cache-control')).toContain('no-store');
+			const etag = initialStatus.headers.get('etag');
+			if (!etag) throw new Error('Expected matchmaking status ETag');
+			const conditionalStatus = await fetch(`${baseUrl}/api/matchmaking/status/cache-peer-a`, {
+				headers: { Cookie: aliceCookie, 'x-p2p-queue-token': firstToken, 'If-None-Match': etag },
+			});
+			expect(conditionalStatus.status).toBe(200);
+			expect(await conditionalStatus.json()).toMatchObject({ status: 'offered', offer: { offerId: offer.offerId } });
+
+			const retryQueue = await postJson(baseUrl, '/api/matchmaking/queue', queueBody('cache-peer-a', 'alice'), firstToken, aliceCookie);
+			expect(retryQueue.body).toMatchObject({ success: true, status: 'offered' });
+			const retryRecord = isRecord(retryQueue.body) ? retryQueue.body : {};
+			expect(readOffer(retryRecord.offer).offerId).toBe(offer.offerId);
+
+			const secondRetryQueue = await postJson(baseUrl, '/api/matchmaking/queue', queueBody('cache-peer-b', 'bob'), secondToken, bobCookie);
+			expect(secondRetryQueue.body).toMatchObject({ success: true, status: 'offered' });
+			expect(readOffer(isRecord(secondRetryQueue.body) ? secondRetryQueue.body.offer : null).offerId).toBe(offer.offerId);
+		} finally {
+			await closeServer(server);
+		}
+	});
+
 	it('rejects matchmaking without the reusable HTTP Hive session', async () => {
 		const { default: matchmakingRouter, clearP2PMatchmakingStateForTests } = await import('./matchmakingRoutes');
 		clearP2PMatchmakingStateForTests();
