@@ -3,6 +3,7 @@ import {
 	MAX_P2P_MATCH_TICKET_TOKEN_LENGTH,
 	P2P_MATCH_TICKET_SIGNATURE_ALGORITHM,
 	type P2PMatchTicket,
+	type P2PTransportRole,
 	isSafePeerId,
 	isSafeRoomOrMatchId,
 	normalizeHiveUsername,
@@ -15,6 +16,7 @@ export type P2PMatchTicketPayload = {
 	readonly purpose: 'p2p-room';
 	readonly roomId: string;
 	readonly peerId: string;
+	readonly role?: P2PTransportRole;
 	readonly account?: string;
 	readonly issuedAt: number;
 	readonly expiresAt: number;
@@ -74,7 +76,7 @@ function decodePayload(value: string): unknown {
 function readPayload(input: unknown): P2PMatchTicketPayload | null {
 	if (typeof input !== 'object' || input === null || Array.isArray(input)) return null;
 	const record = input as Record<string, unknown>;
-	const allowed = new Set(['v', 'purpose', 'roomId', 'peerId', 'account', 'issuedAt', 'expiresAt', 'nonce', 'sigAlg']);
+	const allowed = new Set(['v', 'purpose', 'roomId', 'peerId', 'role', 'account', 'issuedAt', 'expiresAt', 'nonce', 'sigAlg']);
 	for (const key of Object.keys(record)) {
 		if (!allowed.has(key)) return null;
 	}
@@ -82,6 +84,7 @@ function readPayload(input: unknown): P2PMatchTicketPayload | null {
 	if (record.purpose !== 'p2p-room') return null;
 	if (typeof record.roomId !== 'string' || !isSafeRoomOrMatchId(record.roomId)) return null;
 	if (typeof record.peerId !== 'string' || !isSafePeerId(record.peerId)) return null;
+	if (record.role !== undefined && record.role !== 'offerer' && record.role !== 'answerer') return null;
 	if (record.account !== undefined) {
 		if (typeof record.account !== 'string') return null;
 		const normalized = normalizeHiveUsername(record.account);
@@ -97,6 +100,7 @@ function readPayload(input: unknown): P2PMatchTicketPayload | null {
 		purpose: 'p2p-room',
 		roomId: record.roomId,
 		peerId: record.peerId,
+		...(record.role === 'offerer' || record.role === 'answerer' ? { role: record.role } : {}),
 		...(typeof record.account === 'string' ? { account: normalizeHiveUsername(record.account) } : {}),
 		issuedAt: record.issuedAt,
 		expiresAt: record.expiresAt,
@@ -115,6 +119,7 @@ function signaturesMatch(expectedHex: string, receivedHex: string): boolean {
 export function buildP2PMatchTicket(input: {
 	readonly roomId: string;
 	readonly peerId: string;
+	readonly role?: P2PTransportRole;
 	readonly account?: string;
 	readonly now?: number;
 	readonly ttlMs?: number;
@@ -131,6 +136,7 @@ export function buildP2PMatchTicket(input: {
 		purpose: 'p2p-room',
 		roomId: input.roomId,
 		peerId: input.peerId,
+		...(input.role ? { role: input.role } : {}),
 		...(normalizedAccount ? { account: normalizedAccount } : {}),
 		issuedAt,
 		expiresAt: issuedAt + (input.ttlMs ?? P2P_MATCH_TICKET_TTL_MS),
@@ -143,6 +149,7 @@ export function buildP2PMatchTicket(input: {
 		roomId: payload.roomId,
 		peerId: payload.peerId,
 		expiresAt: payload.expiresAt,
+		...(payload.role ? { role: payload.role } : {}),
 	};
 }
 

@@ -169,6 +169,38 @@ hop. For a turn-based card game this latency is negligible.
 **Keepalive**: WS-level ping/pong every 15s (`p2pRelay.ts:235-243`). An
 app-level `heartbeat` envelope (sent by `useWireSync`) runs on top.
 
+## §2.1 Control WebSocket and native WebRTC transport
+
+**Endpoint**: `ws://<host>/ws/control?match=<matchId>&peer=<peerId>`
+(`server/routes/p2pControl.ts`). This channel is separate from gameplay relay
+traffic. It accepts only the `ragnarok-p2p-control-v1` subprotocol and a
+ticket subprotocol `ragnarok-p2p-ticket.control.<token>`; the ticket never
+appears in the URL.
+
+In shared-network runtimes, the upgrade requires both the reusable Hive web
+session cookie and a matching signed ticket account. The ticket is bound to
+the match and peer and carries the deterministic `role` (`offerer` or
+`answerer`). A missing role is accepted by legacy ticket readers but rejected
+by Control WS. The web session cookie uses `/` scope so the browser sends it
+to the WebSocket upgrade as well as `/api`.
+
+The first client frame must be `control_hello_v1` with the same `matchId` and
+authenticated `peerId` from the upgrade. Once both peers have completed the
+hello, the server emits `control_open_v1` to each. Only these bounded messages
+are routed to the opponent:
+
+- `webrtc_offer_v1` from the `offerer`;
+- `webrtc_answer_v1` from the `answerer`;
+- `ice_candidate_v1`;
+- `transport_ready_v1` and `transport_fallback_v1`.
+
+SDP, ICE, frame size, message rate, room size, origin, and match bindings are
+validated at the boundary. Control WS never forwards `P2PMessage` gameplay
+frames and never chooses a winner. `WebRTCTransport` consumes this contract
+behind `GameTransport`, but remains opt-in; the known-good `/ws/p2p` relay is
+still the active gameplay transport until a future `TransportManager` enables
+WebRTC and all BattleReady gates pass.
+
 **Latency and reconnect policy (P0)**:
 - User actions are sent as compact intent envelopes, not full state dumps.
   Chess/poker carry the minimum semantic action plus optional compact tuples.

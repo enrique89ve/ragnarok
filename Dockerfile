@@ -111,6 +111,11 @@ ENV RAGNAROK_RANGE_SCAN=true
 ENV RAGNAROK_HAF_ENDPOINTS=https://api.hive.blog
 ENV ENABLE_INDEX_CHECKPOINT_PUBLISHER=false
 ENV RAGNAROK_INDEX_CHECKPOINT_DRY_RUN=true
+ENV P2P_STUN_ENABLED=true
+ENV P2P_STUN_HOST=0.0.0.0
+ENV P2P_STUN_PORT=3478
+ENV P2P_WEBRTC_ENABLED=false
+ENV P2P_WS_FALLBACK_ENABLED=true
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY --from=prod-deps /app/node_modules ./node_modules
@@ -119,6 +124,7 @@ COPY --from=build /opt/runtime-esbuild/ ./node_modules/
 COPY --from=build /app/scripts/verifyRuntimeEnv.mjs ./scripts/verifyRuntimeEnv.mjs
 
 EXPOSE 5000
+EXPOSE 3478/udp
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 5000) + '/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"

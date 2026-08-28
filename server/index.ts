@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { registerRoutes } from "./routes";
 import { serveStatic, log } from "./static";
+import { getStunService } from './network/stun';
 
 function resolveCliMode(): string {
   const modeIndex = process.argv.indexOf('--mode');
@@ -321,6 +322,8 @@ app.use('/api/testnet/rune', (_req, res) => {
   }
 
   const server = await registerRoutes(app);
+  const stunService = getStunService();
+  await stunService.start();
 
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     const status = getHttpErrorStatus(err);
@@ -371,6 +374,8 @@ app.use('/api/testnet/rune', (_req, res) => {
     } catch (err) {
       log(`[shutdown] failed to stop chain indexer worker: ${formatShutdownError(err)}`);
     }
+
+    await stunService.stop();
 
     const forcedExit = setTimeout(() => {
       log('[shutdown] timed out waiting for HTTP server close');

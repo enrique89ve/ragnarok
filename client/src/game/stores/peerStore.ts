@@ -28,7 +28,11 @@
 
 import { create } from 'zustand';
 import { debug } from '../config/debugConfig';
-import { LocalWebSocketTransport, deriveRelayUrl } from './wsTransport';
+import { deriveRelayUrl } from './wsTransport';
+import {
+	createWebSocketRelayTransport,
+	type WebSocketRelayTransport,
+} from '../p2p/transport/WebSocketRelayTransport';
 import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from '../../data/HiveSessionIdentity';
 import type { ArmySelection } from '../types/ChessTypes';
 import type { WireMessage } from '../p2p/messages';
@@ -67,7 +71,7 @@ const messageBuffer: WireMessage[] = [];
 
 // Active transport (kept outside the store to avoid serializing zustand on
 // each WS event — the store only holds the structural cast for consumers).
-let activeTransport: LocalWebSocketTransport | null = null;
+let activeTransport: WebSocketRelayTransport | null = null;
 // Last roomId used — needed by `attemptReconnect` to rejoin the same room.
 let lastRoomId: string | null = null;
 
@@ -81,7 +85,7 @@ let lastRoomId: string | null = null;
  * type is owned by us instead of by an external package whose runtime we
  * no longer depend on.
  */
-export type P2PConnection = Pick<LocalWebSocketTransport, 'send' | 'on' | 'off' | 'close'>;
+export type P2PConnection = WebSocketRelayTransport;
 
 export type P2PDisconnectSide = 'local' | 'opponent' | 'unknown';
 
@@ -298,7 +302,7 @@ function resolveReconnectForfeit(get: () => PeerStore, set: (state: Partial<Peer
 	});
 }
 
-function trySendBufferedMessage(transport: LocalWebSocketTransport, msg: WireMessage): boolean {
+function trySendBufferedMessage(transport: WebSocketRelayTransport, msg: WireMessage): boolean {
 	try {
 		transport.send(msg);
 		return true;
@@ -307,7 +311,7 @@ function trySendBufferedMessage(transport: LocalWebSocketTransport, msg: WireMes
 	}
 }
 
-function flushBuffer(transport: LocalWebSocketTransport): void {
+function flushBuffer(transport: WebSocketRelayTransport): void {
 	const pendingMessages = messageBuffer.splice(0, messageBuffer.length);
 	let flushed = 0;
 	const failedIndex = pendingMessages.findIndex((msg) => {
@@ -463,7 +467,7 @@ function openTransport(
 
 	lastRoomId = roomId;
 	set({ lastRoomId: roomId });
-	const transport = new LocalWebSocketTransport({
+	const transport = createWebSocketRelayTransport({
 		url: deriveRelayUrl(),
 		roomId,
 		peerId,
@@ -548,7 +552,10 @@ function openTransport(
 			}
 		});
 
-		transport.connect();
+		void transport.connect().catch(() => {
+			// The transport lifecycle listener above owns store state and promise
+			// rejection; this catch prevents a duplicate unhandled rejection.
+		});
 	});
 }
 

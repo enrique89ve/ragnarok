@@ -29,9 +29,9 @@ import {
 import { tryParsePhaseCheckpointServerMessage } from '@shared/p2p-wire/phaseCheckpoint';
 import { tryParsePokerTurnNotaryServerMessage } from '@shared/p2p-wire/pokerTimeNotary';
 
-type TransportEvent = 'data' | 'open' | 'close' | 'error';
+export type TransportEvent = 'data' | 'open' | 'close' | 'error';
 type TransportCloseReason = 'local' | 'opponent';
-type Listener = (...args: unknown[]) => void;
+export type TransportListener = (...args: unknown[]) => void;
 
 interface OpenPayload {
 	readonly isHost: boolean;
@@ -75,7 +75,7 @@ export function buildP2PWebSocketProtocols(matchTicket?: P2PMatchTicket | null):
 
 export class LocalWebSocketTransport {
 	private ws: WebSocket | null = null;
-	private listeners: Map<TransportEvent, Set<Listener>> = new Map();
+	private listeners: Map<TransportEvent, Set<TransportListener>> = new Map();
 	private _open = false;
 	private _remotePeer = '';
 	private _isHost = false;
@@ -107,13 +107,13 @@ export class LocalWebSocketTransport {
 	get open(): boolean { return this._open; }
 	get isHostHint(): boolean { return this._isHost; }
 
-	on(event: TransportEvent, listener: Listener): void {
+	on(event: TransportEvent, listener: TransportListener): void {
 		let bucket = this.listeners.get(event);
 		if (!bucket) { bucket = new Set(); this.listeners.set(event, bucket); }
 		bucket.add(listener);
 	}
 
-	off(event: TransportEvent, listener: Listener): void {
+	off(event: TransportEvent, listener: TransportListener): void {
 		this.listeners.get(event)?.delete(listener);
 	}
 

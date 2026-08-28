@@ -24,6 +24,7 @@ import {
 	PRESENCE_RATE_LIMIT_WINDOW_MS,
 	isSafePeerId,
 	normalizeHiveUsername,
+	resolveP2PTransportRole,
 	parsePresenceHeartbeatBody,
 	type ChallengeRejectReason,
 	type P2PAvailabilityState,
@@ -338,12 +339,14 @@ function buildDirectChallengePair(input: {
 		const senderMatchTicket = buildP2PMatchTicket({
 			roomId: input.peerId,
 			peerId: input.peerId,
+			role: resolveP2PTransportRole(input.peerId, input.targetPresence.peerId),
 			account: input.from,
 			now: input.now,
 		});
 		const targetMatchTicket = buildP2PMatchTicket({
 			roomId: input.peerId,
 			peerId: input.targetPresence.peerId,
+			role: resolveP2PTransportRole(input.targetPresence.peerId, input.peerId),
 			account: input.to,
 			now: input.now,
 		});

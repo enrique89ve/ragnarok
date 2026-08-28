@@ -24,14 +24,8 @@ function getCookieValue(cookieHeader: string | undefined, name: string): string 
 	return null;
 }
 
-function pruneExpiredSessions(now: number): void {
-	for (const [token, session] of sessions.entries()) {
-		if (session.expiresAt <= now) sessions.delete(token);
-	}
-}
-
-export function getHiveWebSessionUsername(req: Request): string | null {
-	const token = getCookieValue(req.headers.cookie, HIVE_WEB_SESSION_COOKIE);
+export function getHiveWebSessionUsernameFromCookie(cookieHeader: string | undefined): string | null {
+	const token = getCookieValue(cookieHeader, HIVE_WEB_SESSION_COOKIE);
 	if (!token) return null;
 	const now = Date.now();
 	pruneExpiredSessions(now);
@@ -40,6 +34,16 @@ export function getHiveWebSessionUsername(req: Request): string | null {
 	session.lastSeenAt = now;
 	session.expiresAt = now + HIVE_WEB_SESSION_TTL_MS;
 	return session.username;
+}
+
+function pruneExpiredSessions(now: number): void {
+	for (const [token, session] of sessions.entries()) {
+		if (session.expiresAt <= now) sessions.delete(token);
+	}
+}
+
+export function getHiveWebSessionUsername(req: Request): string | null {
+	return getHiveWebSessionUsernameFromCookie(req.headers.cookie);
 }
 
 export function issueHiveWebSession(res: Response, username: string): void {
@@ -52,7 +56,7 @@ export function issueHiveWebSession(res: Response, username: string): void {
 		httpOnly: true,
 		secure: process.env.NODE_ENV === 'production',
 		sameSite: 'lax',
-		path: '/api',
+		path: '/',
 		maxAge: HIVE_WEB_SESSION_TTL_MS,
 	});
 }
@@ -64,7 +68,7 @@ export function clearHiveWebSession(req: Request, res: Response): void {
 		httpOnly: true,
 		secure: process.env.NODE_ENV === 'production',
 		sameSite: 'lax',
-		path: '/api',
+		path: '/',
 	});
 }
 

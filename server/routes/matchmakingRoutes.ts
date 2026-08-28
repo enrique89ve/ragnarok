@@ -16,6 +16,7 @@ import {
 	CHALLENGE_STALE_THRESHOLD_MS,
 	isSafePeerId,
 	normalizeHiveUsername,
+	resolveP2PTransportRole,
 	type P2PMatchTicket,
 	type ServerSignedChallenge,
 } from '../../shared/p2pAvailability';
@@ -500,12 +501,14 @@ function tryBuildMatchTickets(
 			player1MatchTicket: buildP2PMatchTicket({
 				roomId: matchId,
 				peerId: opponent.peerId,
+				role: resolveP2PTransportRole(opponent.peerId, newPlayer.peerId),
 				account: opponent.username,
 				now,
 			}),
 			player2MatchTicket: buildP2PMatchTicket({
 				roomId: matchId,
 				peerId: newPlayer.peerId,
+				role: resolveP2PTransportRole(newPlayer.peerId, opponent.peerId),
 				account: newPlayer.username,
 				now,
 			}),

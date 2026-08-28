@@ -14,6 +14,8 @@ export const P2P_MATCH_TICKET_WS_PROTOCOL = 'ragnarok-p2p-v1';
 export const P2P_MATCH_TICKET_WS_PROTOCOL_PREFIX = 'ragnarok-p2p-ticket.';
 export const MAX_P2P_MATCH_TICKET_TOKEN_LENGTH = 2048;
 
+export type P2PTransportRole = 'offerer' | 'answerer';
+
 const HIVE_USERNAME_RE = /^[a-z][a-z0-9.-]{2,15}$/;
 const SAFE_ID_RE = /^[A-Za-z0-9._:-]+$/;
 const SERVER_SIGNATURE_RE = /^[a-f0-9]{64}$/;
@@ -86,6 +88,7 @@ export type P2PMatchTicket = {
 	readonly roomId: string;
 	readonly peerId: string;
 	readonly expiresAt: number;
+	readonly role?: P2PTransportRole;
 };
 
 export type PresenceHeartbeatResponse = {
@@ -138,6 +141,10 @@ export function isSafePeerId(value: string): boolean {
 
 export function isSafeRoomOrMatchId(value: string): boolean {
 	return value.length > 0 && value.length <= MAX_ROOM_ID_LENGTH && SAFE_ID_RE.test(value);
+}
+
+export function resolveP2PTransportRole(peerId: string, opponentPeerId: string): P2PTransportRole {
+	return peerId < opponentPeerId ? 'offerer' : 'answerer';
 }
 
 export function isP2PConnectionStateBusy(state: P2PConnectionAvailabilityState): boolean {
@@ -301,7 +308,7 @@ export function readServerSignedChallenge(input: unknown): ServerSignedChallenge
 	};
 }
 
-const MATCH_TICKET_KEYS = new Set(['token', 'roomId', 'peerId', 'expiresAt']);
+const MATCH_TICKET_KEYS = new Set(['token', 'roomId', 'peerId', 'expiresAt', 'role']);
 
 export function readP2PMatchTicket(input: unknown): P2PMatchTicket | null {
 	if (!isRecord(input) || !hasOnlyKeys(input, MATCH_TICKET_KEYS)) return null;
@@ -313,12 +320,14 @@ export function readP2PMatchTicket(input: unknown): P2PMatchTicket | null {
 	if (typeof input.roomId !== 'string' || !isSafeRoomOrMatchId(input.roomId)) return null;
 	if (typeof input.peerId !== 'string' || !isSafePeerId(input.peerId)) return null;
 	if (!isNonNegativeInteger(input.expiresAt)) return null;
+	if (input.role !== undefined && input.role !== 'offerer' && input.role !== 'answerer') return null;
 
 	return {
 		token: input.token,
 		roomId: input.roomId,
 		peerId: input.peerId,
 		expiresAt: input.expiresAt,
+		...(input.role === 'offerer' || input.role === 'answerer' ? { role: input.role } : {}),
 	};
 }
 

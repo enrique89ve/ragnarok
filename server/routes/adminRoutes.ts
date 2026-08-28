@@ -33,6 +33,7 @@ import {
 	readAdminMultisigBroadcastBody,
 } from '../services/adminMultisigTransaction';
 import { getP2PRelayStats } from './p2pRelay';
+import { getP2PControlStats } from './p2pControl';
 import { getP2PMatchmakingStats } from './matchmakingRoutes';
 import { getP2PSocialStats } from './socialRoutes';
 import { getP2PChallengeSigningSecretStatus } from '../services/p2pChallengeSigner';
@@ -104,6 +105,7 @@ router.get('/config', (_req: Request, res: Response) => {
 
 router.get('/p2p/status', (_req: Request, res: Response) => {
 	const relay = getP2PRelayStats();
+	const control = getP2PControlStats();
 	const matchmaking = getP2PMatchmakingStats();
 	const social = getP2PSocialStats();
 	const challengeSigning = getP2PChallengeSigningSecretStatus();
@@ -111,6 +113,7 @@ router.get('/p2p/status', (_req: Request, res: Response) => {
 		success: true,
 		updatedAt: Date.now(),
 		relay,
+		control,
 		matchmaking,
 		social,
 		challengeSigning,

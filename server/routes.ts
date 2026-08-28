@@ -8,6 +8,8 @@ import {
 } from "../shared/runtimeConfig";
 import { buildServerStateEvidence } from "./services/runtimeStateEvidence";
 import { requireProtocolCapability } from './middleware/protocolCapabilityGate';
+import { getStunService } from './network/stun';
+import { getP2PControlStats } from './routes/p2pControl';
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
@@ -55,6 +57,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         state: buildServerStateEvidence(runtime),
         closedBetaCutover: buildClosedBetaCutoverGate(runtime),
       },
+      stun: getStunService().health(),
+      control: getP2PControlStats(),
     });
   });
 
@@ -121,6 +125,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mounts at /ws/p2p on the same HTTP server (single port deployment).
   const { attachP2PRelay } = await import("./routes/p2pRelay");
   attachP2PRelay(httpServer);
+
+  // Control WebSocket — authenticated matchmaking/signaling/transport control.
+  // It deliberately does not carry gameplay frames or referee decisions yet.
+  const { attachP2PControl } = await import("./routes/p2pControl");
+  attachP2PControl(httpServer);
 
   return httpServer;
 }
