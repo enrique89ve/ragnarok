@@ -20,6 +20,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        VITE_P2P_WEBRTC_ENABLED: ${VITE_P2P_WEBRTC_ENABLED:-false}
+        VITE_P2P_WS_FALLBACK_ENABLED: ${VITE_P2P_WS_FALLBACK_ENABLED:-true}
     restart: unless-stopped
     environment:
       NODE_ENV: production

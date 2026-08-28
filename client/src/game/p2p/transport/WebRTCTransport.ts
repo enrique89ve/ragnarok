@@ -59,6 +59,7 @@ function safeConnectTimeout(value: number | undefined): number {
 
 export function createWebRTCTransport(options: WebRTCTransportOptions): GameTransport & {
 	readonly peer: string;
+	readonly isHostHint: boolean;
 } {
 	const messageListeners = new Set<TransportMessageListener>();
 	const stateListeners = new Set<TransportStateListener>();
@@ -298,5 +299,6 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 		},
 		close,
 		get peer(): string { return remotePeer; },
+		get isHostHint(): boolean { return options.matchTicket.role === 'offerer'; },
 	};
 }

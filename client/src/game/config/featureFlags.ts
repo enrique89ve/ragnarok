@@ -45,6 +45,10 @@ function resolveBlockchainPackaging(stage: NetworkStage): boolean {
 	return stage !== 'local';
 }
 
+function resolveBooleanEnv(value: unknown, fallback: boolean): boolean {
+	return value === 'true' || value === '1' ? true : value === 'false' || value === '0' ? false : fallback;
+}
+
 const NETWORK_STAGE = resolveNetworkStage();
 
 export const FeatureFlags = {
@@ -54,6 +58,8 @@ export const FeatureFlags = {
 	BATTLE_HISTORY_MAX_SIZE: 5,
 	DATA_LAYER_DEBUG: false,
 	BLOCKCHAIN_PACKAGING_ENABLED: resolveBlockchainPackaging(NETWORK_STAGE),
+	P2P_WEBRTC_ENABLED: resolveBooleanEnv(import.meta.env.VITE_P2P_WEBRTC_ENABLED, false),
+	P2P_WS_FALLBACK_ENABLED: resolveBooleanEnv(import.meta.env.VITE_P2P_WS_FALLBACK_ENABLED, true),
 };
 
 export type FeatureFlagsType = typeof FeatureFlags;
@@ -113,6 +119,14 @@ export function isSharedNetworkEnvironment(): boolean {
 
 export function isEconomicEnvironment(): boolean {
 	return isMainnetStage();
+}
+
+export function isP2PWebRTCEnabled(): boolean {
+	return FeatureFlags.P2P_WEBRTC_ENABLED;
+}
+
+export function isP2PWebSocketFallbackEnabled(): boolean {
+	return FeatureFlags.P2P_WS_FALLBACK_ENABLED;
 }
 
 /**

@@ -7,8 +7,8 @@
 
 Ragnarok already has a working WebSocket relay at `/ws/p2p`. The first P2P v2
 increment must preserve that known-good path while allowing native WebRTC to be
-introduced later. Transport selection must not become a second gameplay or
-matchmaking authority.
+introduced incrementally. Transport selection must not become a second
+gameplay or matchmaking authority.
 
 ## Decision
 
@@ -21,7 +21,7 @@ The current relay remains the baseline implementation:
 ```text
 WebSocketRelayTransport → /ws/p2p
 WebRTCTransport         → native DataChannel (implemented, opt-in only)
-TransportManager        → future selection/fallback owner
+TransportManager        → initial selection/fallback owner (implemented)
 ```
 
 Matchmaking remains HTTP/API-owned. The separate `/ws/control` endpoint is
@@ -50,9 +50,9 @@ ticket, peer identity, seed, army, and initial-state gates stay in force.
 ## Consequences
 
 - The relay remains usable after each migration step.
-- `peerStore` may keep its compatibility event surface while consumers migrate
-  to `GameTransport`.
-- STUN, Control WS signaling, and the native WebRTC transport are separate
-  opt-in increments; the relay remains the active gameplay path until a future
-  TransportManager enables WebRTC after all readiness gates pass.
+- `peerStore` keeps its compatibility event surface while the manager owns
+  initial transport selection; `useWireSync` does not choose a transport.
+- STUN, Control WS signaling, and native WebRTC remain separate opt-in
+  capabilities; the relay remains the default gameplay path until the build
+  flag enables WebRTC and all BattleReady gates pass.
 - No new Hive signature is introduced for transport setup or gameplay.

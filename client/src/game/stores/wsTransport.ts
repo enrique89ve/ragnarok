@@ -231,3 +231,12 @@ export function deriveRelayUrl(): string {
 	const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 	return `${proto}//${window.location.host}/ws/p2p`;
 }
+
+/** Build the separate control-plane URL without exposing ticket credentials. */
+export function deriveControlUrl(): string {
+	if (typeof window === 'undefined') {
+		throw new Error('deriveControlUrl requires a browser environment');
+	}
+	const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+	return `${proto}//${window.location.host}/ws/control`;
+}

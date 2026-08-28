@@ -1,5 +1,5 @@
 /**
- * peerStore.ts — match transport (server-mediated WebSocket relay).
+ * peerStore.ts — match transport selected by TransportManager.
  *
  * Replaces the previous PeerJS + WebRTC + STUN/TURN stack with a single
  * WebSocket connection to the game's own server (`/ws/p2p`). Same external
@@ -15,9 +15,8 @@
  * unavailable two same-machine peers behind WSL2 NAT couldn't negotiate.
  * Going through the server eliminates ICE/STUN/TURN/broker entirely; works
  * everywhere the HTTP server is reachable. Tradeoff: server sees all match
- * traffic (~1 KB/s per match — negligible). WebRTC can be re-introduced as
- * a transparent upgrade later (open the WebRTC peer connection over the
- * same WS for signaling; swap transports if the data channel opens).
+ * traffic (~1 KB/s per match — negligible). Native WebRTC is now an opt-in
+ * initial-connect attempt; TransportManager falls back before gameplay opens.
  *
  * Features preserved from the WebRTC implementation:
  * - Heartbeat keepalive (app-level, in addition to WS-level ping/pong).
@@ -28,11 +27,12 @@
 
 import { create } from 'zustand';
 import { debug } from '../config/debugConfig';
-import { deriveRelayUrl } from './wsTransport';
+import { deriveControlUrl, deriveRelayUrl } from './wsTransport';
 import {
-	createWebSocketRelayTransport,
-	type WebSocketRelayTransport,
-} from '../p2p/transport/WebSocketRelayTransport';
+	createTransportManager,
+	type ManagedTransport,
+} from '../p2p/transport/TransportManager';
+import { isP2PWebRTCEnabled, isP2PWebSocketFallbackEnabled } from '../config/featureFlags';
 import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from '../../data/HiveSessionIdentity';
 import type { ArmySelection } from '../types/ChessTypes';
 import type { WireMessage } from '../p2p/messages';
@@ -71,7 +71,7 @@ const messageBuffer: WireMessage[] = [];
 
 // Active transport (kept outside the store to avoid serializing zustand on
 // each WS event — the store only holds the structural cast for consumers).
-let activeTransport: WebSocketRelayTransport | null = null;
+let activeTransport: ManagedTransport | null = null;
 // Last roomId used — needed by `attemptReconnect` to rejoin the same room.
 let lastRoomId: string | null = null;
 
@@ -85,7 +85,7 @@ let lastRoomId: string | null = null;
  * type is owned by us instead of by an external package whose runtime we
  * no longer depend on.
  */
-export type P2PConnection = WebSocketRelayTransport;
+export type P2PConnection = ManagedTransport;
 
 export type P2PDisconnectSide = 'local' | 'opponent' | 'unknown';
 
@@ -302,7 +302,7 @@ function resolveReconnectForfeit(get: () => PeerStore, set: (state: Partial<Peer
 	});
 }
 
-function trySendBufferedMessage(transport: WebSocketRelayTransport, msg: WireMessage): boolean {
+function trySendBufferedMessage(transport: ManagedTransport, msg: WireMessage): boolean {
 	try {
 		transport.send(msg);
 		return true;
@@ -311,7 +311,7 @@ function trySendBufferedMessage(transport: WebSocketRelayTransport, msg: WireMes
 	}
 }
 
-function flushBuffer(transport: WebSocketRelayTransport): void {
+function flushBuffer(transport: ManagedTransport): void {
 	const pendingMessages = messageBuffer.splice(0, messageBuffer.length);
 	let flushed = 0;
 	const failedIndex = pendingMessages.findIndex((msg) => {
@@ -447,10 +447,10 @@ function attemptReconnect(roomId: string, get: () => PeerStore, set: (state: Par
 }
 
 /**
- * Open the WS transport against a roomId and wire up its lifecycle to the
- * store. Shared by `host()`, `join()`, `connectToRoom()`. Resolves once the
- * server confirms `__sys event=open` (i.e. the room is full / both peers
- * present); rejects on timeout or transport error before then.
+ * Open the selected transport against a roomId and wire up its lifecycle to
+ * the store. Shared by `host()`, `join()`, `connectToRoom()`. Resolves once
+ * the selected transport is connected and the room is full / both peers are
+ * present; rejects on timeout or transport error before then.
  */
 function openTransport(
 	roomId: string,
@@ -467,11 +467,14 @@ function openTransport(
 
 	lastRoomId = roomId;
 	set({ lastRoomId: roomId });
-	const transport = createWebSocketRelayTransport({
-		url: deriveRelayUrl(),
+	const transport = createTransportManager({
+		relayUrl: deriveRelayUrl(),
+		controlUrl: deriveControlUrl(),
 		roomId,
 		peerId,
 		matchTicket: get().matchTicket,
+		webrtcEnabled: isP2PWebRTCEnabled(),
+		wsFallbackEnabled: isP2PWebSocketFallbackEnabled(),
 	});
 	activeTransport = transport;
 
@@ -510,7 +513,7 @@ function openTransport(
 			flushBuffer(transport);
 			set({ bufferedMessageCount: messageBuffer.length });
 			startHeartbeat(get, set);
-			debug.log(`[PeerStore] connected via WS relay — isHost=${payload.isHost} remotePeerId=${(payload.remotePeerId ?? '').slice(0, 8)}…`);
+			debug.log(`[PeerStore] connected via ${transport.kind} — isHost=${payload.isHost} remotePeerId=${(payload.remotePeerId ?? '').slice(0, 8)}…`);
 			resolve();
 		});
 
