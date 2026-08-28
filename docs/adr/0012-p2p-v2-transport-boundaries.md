@@ -52,6 +52,12 @@ ticket, peer identity, seed, army, and initial-state gates stay in force.
 - The relay remains usable after each migration step.
 - `peerStore` keeps its compatibility event surface while the manager owns
   initial transport selection; `useWireSync` does not choose a transport.
+- WebRTC connect timeouts are cleared on both success and failure. Its
+  configured STUN list is passed from the client build profile.
+- After the DataChannel connects, Control WS loss is a signaling degradation,
+  not a gameplay transport failure.
+- `isHost` remains a gameplay perspective supplied by match/manual assignment;
+  WebRTC `offerer`/`answerer` is never treated as gameplay authority.
 - STUN, Control WS signaling, and native WebRTC remain separate opt-in
   capabilities; the relay remains the default gameplay path until the build
   flag enables WebRTC and all BattleReady gates pass.

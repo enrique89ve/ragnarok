@@ -102,7 +102,10 @@ export function createWebSocketRelayTransport(
 		kind: 'websocket-relay',
 		get state(): TransportState { return state; },
 		connect,
-		send: (message: P2PMessage): void => relay.send(message),
+		send: (message: P2PMessage): void => {
+			if (state !== 'connected' || !relay.open) throw new Error('WebSocket relay is not open');
+			relay.send(message);
+		},
 		onMessage,
 		onStateChange,
 		close: (): void => {

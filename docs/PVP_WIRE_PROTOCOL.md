@@ -197,10 +197,16 @@ are routed to the opponent:
 SDP, ICE, frame size, message rate, room size, origin, and match bindings are
 validated at the boundary. Control WS never forwards `P2PMessage` gameplay
 frames and never chooses a winner. `WebRTCTransport` consumes this contract
-behind `GameTransport`, and `TransportManager` tries it only when the explicit
-build flag enables it. The known-good `/ws/p2p` relay remains the default and
-receives the connection if WebRTC fails before the match opens. No live
-transport switch is performed after gameplay begins.
+behind `GameTransport`, using the configured public `VITE_P2P_STUN_URL` when
+present. `TransportManager` tries it only when the explicit build flag enables
+it. The known-good `/ws/p2p` relay remains the default and receives the
+connection if WebRTC fails before the match opens. Once the DataChannel is
+connected, a Control WS close degrades signaling only and does not close the
+game transport. No live transport switch is performed after gameplay begins.
+
+The gameplay `isHost` perspective is supplied by the match/manual host
+assignment and is preserved across transport selection. The WebRTC
+`offerer`/`answerer` role is signaling-only and must not become game authority.
 
 **Latency and reconnect policy (P0)**:
 - User actions are sent as compact intent envelopes, not full state dumps.

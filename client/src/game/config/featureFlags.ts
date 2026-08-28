@@ -17,6 +17,7 @@ import {
 	type RagnarokNetworkStage,
 	type RagnarokRuntimeExecutionMode,
 } from '@shared/runtimeConfig';
+import type { WebRTCIceServerConfig } from '../p2p/transport/WebRTCTransport';
 
 export type DataLayerMode = 'local' | 'test' | 'hive';
 export type NetworkStage = RagnarokNetworkStage;
@@ -127,6 +128,12 @@ export function isP2PWebRTCEnabled(): boolean {
 
 export function isP2PWebSocketFallbackEnabled(): boolean {
 	return FeatureFlags.P2P_WS_FALLBACK_ENABLED;
+}
+
+export function getP2PIceServers(): WebRTCIceServerConfig[] {
+	const raw = import.meta.env.VITE_P2P_STUN_URL as string | undefined;
+	const url = raw?.trim();
+	return url ? [{ urls: url }] : [];
 }
 
 /**

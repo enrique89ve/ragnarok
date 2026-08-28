@@ -23,6 +23,7 @@ services:
       args:
         VITE_P2P_WEBRTC_ENABLED: ${VITE_P2P_WEBRTC_ENABLED:-false}
         VITE_P2P_WS_FALLBACK_ENABLED: ${VITE_P2P_WS_FALLBACK_ENABLED:-true}
+        VITE_P2P_STUN_URL: ${VITE_P2P_STUN_URL:-stun:testnetdev.ragnaroknft.quest:3478}
     restart: unless-stopped
     environment:
       NODE_ENV: production

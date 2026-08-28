@@ -32,7 +32,11 @@ import {
 	createTransportManager,
 	type ManagedTransport,
 } from '../p2p/transport/TransportManager';
-import { isP2PWebRTCEnabled, isP2PWebSocketFallbackEnabled } from '../config/featureFlags';
+import {
+	getP2PIceServers,
+	isP2PWebRTCEnabled,
+	isP2PWebSocketFallbackEnabled,
+} from '../config/featureFlags';
 import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from '../../data/HiveSessionIdentity';
 import type { ArmySelection } from '../types/ChessTypes';
 import type { WireMessage } from '../p2p/messages';
@@ -475,6 +479,8 @@ function openTransport(
 		matchTicket: get().matchTicket,
 		webrtcEnabled: isP2PWebRTCEnabled(),
 		wsFallbackEnabled: isP2PWebSocketFallbackEnabled(),
+		isHostHint: get().isHost,
+		iceServers: getP2PIceServers(),
 	});
 	activeTransport = transport;
 
@@ -770,12 +776,14 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		const matchChallenge = get().matchChallenge;
 		const opponentMatchChallenge = get().opponentMatchChallenge;
 		const matchTicket = get().matchTicket;
+		const matchmakingHost = useMatchmakingStore.getState().isHost;
 		set({
 			myPeerId: peerId,
 			connectionState: isReconnect ? 'reconnecting' : 'connecting',
 			matchChallenge,
 			opponentMatchChallenge,
 			matchTicket,
+			...(matchmakingHost === true || matchmakingHost === false ? { isHost: matchmakingHost } : {}),
 			error: null,
 			reconnectAttemptCount: isReconnect ? reconnectAttempt : 0,
 			disconnectSide: isReconnect ? get().disconnectSide : null,

@@ -31,6 +31,7 @@ export type TransportManagerOptions = {
 	readonly matchTicket: P2PMatchTicket | null;
 	readonly webrtcEnabled: boolean;
 	readonly wsFallbackEnabled: boolean;
+	readonly isHostHint: boolean;
 	readonly iceServers?: readonly import('./WebRTCTransport').WebRTCIceServerConfig[];
 };
 
@@ -65,7 +66,7 @@ export function createTransportManager(
 	let state: TransportState = 'idle';
 	let connectPromise: Promise<void> | null = null;
 	let remotePeer = '';
-	let hostHint = false;
+	let hostHint = options.isHostHint;
 	let open = false;
 	let closed = false;
 
@@ -112,7 +113,7 @@ export function createTransportManager(
 			if (next === 'connected') {
 				open = true;
 				remotePeer = 'peer' in transport && typeof transport.peer === 'string' ? transport.peer : '';
-				hostHint = 'isHostHint' in transport && transport.isHostHint === true;
+				hostHint = options.isHostHint;
 				setState('connected');
 				emit('open', { isHost: hostHint, remotePeerId: remotePeer });
 				return;
@@ -135,7 +136,7 @@ export function createTransportManager(
 		if (!open) {
 			open = true;
 			remotePeer = 'peer' in transport && typeof transport.peer === 'string' ? transport.peer : '';
-			hostHint = 'isHostHint' in transport && transport.isHostHint === true;
+			hostHint = options.isHostHint;
 			setState('connected');
 			emit('open', { isHost: hostHint, remotePeerId: remotePeer });
 		}
@@ -216,7 +217,10 @@ export function createTransportManager(
 		get kind(): GameTransport['kind'] { return selected?.kind ?? 'websocket-relay'; },
 		get state(): TransportState { return state; },
 		connect,
-		send: message => selected?.send(message),
+		send: message => {
+			if (!selected) throw new Error('No active transport');
+			selected.send(message);
+		},
 		onMessage: listener => {
 			messageListeners.add(listener);
 			return () => messageListeners.delete(listener);
