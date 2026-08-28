@@ -203,6 +203,10 @@ it. The known-good `/ws/p2p` relay remains the default and receives the
 connection if WebRTC fails before the match opens. Once the DataChannel is
 connected, a Control WS close degrades signaling only and does not close the
 game transport. No live transport switch is performed after gameplay begins.
+Likewise, `control_peer_left_v1` means the opponent left the control plane: it
+fails an in-progress WebRTC attempt, but only degrades control after the
+DataChannel is connected. A real gameplay disconnect must come from the game
+transport itself or the existing heartbeat/reconnect policy.
 
 The gameplay `isHost` perspective is supplied by the match/manual host
 assignment and is preserved across transport selection. The WebRTC

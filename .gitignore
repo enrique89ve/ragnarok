@@ -92,6 +92,9 @@ __tests__/
 *.test.js
 *.test.ts
 !**/protocolConformance.test.ts
+!client/src/game/config/featureFlags.test.ts
+!client/src/game/p2p/transport/WebRTCTransport.test.ts
+!client/src/game/p2p/transport/TransportManager.test.ts
 !client/src/game/poker/layout/pokerViewportLayout.test.ts
 !client/src/game/combat/components/HoleCardsOverlay.render.test.ts
 !client/src/game/combat/components/holeCardsChrome.test.ts

@@ -117,9 +117,9 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 		try { socket?.close(); } catch { /* already closed */ }
 	};
 
-	const fail = (message: string): void => {
+	const fail = (failure: Error | string): void => {
 		if (closed || state === 'failed') return;
-		const error = new Error(message);
+		const error = typeof failure === 'string' ? new Error(failure) : failure;
 		controlState = 'closed';
 		setState('failed');
 		rejectPending(error);
@@ -238,7 +238,12 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 			return;
 		}
 		if (message.type === 'control_peer_left_v1') {
-			fail('Control peer left the match');
+			if (state === 'connected') {
+				controlState = 'degraded';
+				debug.warn('[WebRTCTransport] Opponent control connection lost; keeping DataChannel alive');
+				return;
+			}
+			fail('Control peer left before WebRTC connection completed');
 			return;
 		}
 		if (message.type === 'control_open_v1') {
@@ -338,7 +343,12 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 		connect,
 		send: (message: P2PMessage): void => {
 			if (!isOpenDataChannel(dataChannel)) throw new Error('WebRTC DataChannel is not open');
-			try { dataChannel.send(JSON.stringify(message)); } catch { fail('WebRTC DataChannel send failed'); }
+			try { dataChannel.send(JSON.stringify(message)); }
+			catch (error) {
+				const sendError = error instanceof Error ? error : new Error('WebRTC DataChannel send failed');
+				fail(sendError);
+				throw sendError;
+			}
 		},
 		onMessage: (listener: TransportMessageListener): (() => void) => {
 			messageListeners.add(listener);
