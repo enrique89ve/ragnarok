@@ -16,6 +16,10 @@ import type {
 	TransportState,
 	TransportStateListener,
 } from './transportTypes';
+import { createTransportFailure, getTransportFailureReason } from './transportTypes';
+import type { TransportCapabilities } from './transportCapabilities';
+import { resolveTransportPlan } from './transportPolicy';
+import type { TransportSession } from './transportSession';
 import {
 	recordRelayFallback,
 	recordWebRTCAttempt,
@@ -32,7 +36,10 @@ export type TransportManagerOptions = {
 	readonly webrtcEnabled: boolean;
 	readonly wsFallbackEnabled: boolean;
 	readonly isHostHint: boolean;
-	readonly iceServers?: readonly import('./WebRTCTransport').WebRTCIceServerConfig[];
+	readonly capabilities: TransportCapabilities;
+	readonly session: TransportSession;
+	readonly connectTimeoutMs: number;
+	readonly iceServers?: readonly import('@shared/p2p-wire/transportConfig').P2PIceServerConfig[];
 };
 
 export type ManagedTransport = GameTransport & {
@@ -50,6 +57,35 @@ export type TransportManagerDependencies = {
 
 function toError(value: unknown, fallback: string): Error {
 	return value instanceof Error ? value : new Error(fallback);
+}
+
+function safeConnectTimeout(value: number): number {
+	if (!Number.isFinite(value)) return 20_000;
+	return Math.min(30_000, Math.max(1_000, Math.floor(value)));
+}
+
+function remainingBudget(deadlineAt: number): number {
+	return Math.max(0, deadlineAt - Date.now());
+}
+
+async function connectWithinBudget(
+	transport: GameTransport,
+	deadlineAt: number,
+	message: string,
+): Promise<void> {
+	const remaining = remainingBudget(deadlineAt);
+	if (remaining <= 0) throw createTransportFailure(message, 'timeout');
+	let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+	try {
+		await Promise.race([
+			transport.connect(),
+			new Promise<never>((_, reject) => {
+				timeoutHandle = setTimeout(() => reject(createTransportFailure(message, 'timeout')), remaining);
+			}),
+		]);
+	} finally {
+		if (timeoutHandle) clearTimeout(timeoutHandle);
+	}
 }
 
 export function createTransportManager(
@@ -99,18 +135,20 @@ export function createTransportManager(
 		selectedCleanup = null;
 	};
 
-	const attachSelected = (transport: GameTransport): void => {
+	const attachSelected = (transport: GameTransport, attemptId: number): void => {
 		cleanupSelected();
 		selected = transport;
 		const removeMessage = transport.onMessage(message => {
+			if (selected !== transport || closed || !options.session.isCurrent(attemptId)) return;
 			for (const listener of messageListeners) {
 				try { listener(message); } catch (error) { debug.error('[TransportManager] message listener failed:', error); }
 			}
 			emit('data', message);
 		});
 		const removeState = transport.onStateChange(next => {
-			if (selected !== transport || closed) return;
+			if (selected !== transport || closed || !options.session.isCurrent(attemptId)) return;
 			if (next === 'connected') {
+				if (!options.session.selectTransport(attemptId, transport.kind)) return;
 				open = true;
 				remotePeer = 'peer' in transport && typeof transport.peer === 'string' ? transport.peer : '';
 				hostHint = options.isHostHint;
@@ -130,10 +168,15 @@ export function createTransportManager(
 		};
 	};
 
-	const connectOne = async (transport: GameTransport): Promise<void> => {
-		attachSelected(transport);
-		await transport.connect();
+	const connectOne = async (transport: GameTransport, attemptId: number, deadlineAt: number): Promise<void> => {
+		attachSelected(transport, attemptId);
+		await connectWithinBudget(transport, deadlineAt, `${transport.kind} transport connection timed out`);
+		if (!options.session.isCurrent(attemptId) || closed) {
+			try { transport.close(); } catch { /* stale attempt */ }
+			throw new Error('Transport connection attempt became stale');
+		}
 		if (!open) {
+			if (!options.session.selectTransport(attemptId, transport.kind)) throw new Error('Transport connection attempt became stale');
 			open = true;
 			remotePeer = 'peer' in transport && typeof transport.peer === 'string' ? transport.peer : '';
 			hostHint = options.isHostHint;
@@ -148,47 +191,74 @@ export function createTransportManager(
 		if (closed) throw new Error('Transport manager is closed');
 		setState('connecting');
 		connectPromise = (async () => {
+			const attemptId = options.session.beginAttempt();
+			const deadlineAt = Date.now() + safeConnectTimeout(options.connectTimeoutMs);
+			const session = options.session.getSnapshot();
+			const plan = resolveTransportPlan({
+				webrtcEnabled: options.webrtcEnabled,
+				relayEnabled: options.wsFallbackEnabled,
+				capabilities: options.capabilities,
+				matchRole: options.matchTicket?.role ?? null,
+				relayLocked: session.relayLocked,
+			});
+			if (plan.mode === 'unavailable') {
+				setState('failed');
+				const error = new Error(`No P2P transport available: ${plan.reason}`);
+				emit('error', error);
+				throw error;
+			}
 			let webRtcError: Error | null = null;
-			let attemptedWebRTC = false;
-			if (options.webrtcEnabled && options.matchTicket?.role) {
-				attemptedWebRTC = true;
+			if (plan.mode === 'webrtc-first') {
+				const matchTicket = options.matchTicket;
+				if (!matchTicket) {
+					setState('failed');
+					const error = new Error('WebRTC transport requires a match ticket');
+					emit('error', error);
+					throw error;
+				}
 				recordWebRTCAttempt();
 				let webRtc: GameTransport | null = null;
 				try {
+					const connectTimeoutMs = remainingBudget(deadlineAt);
 					webRtc = createWebRTC({
 						controlUrl: options.controlUrl,
 						roomId: options.roomId,
 						peerId: options.peerId,
-						matchTicket: options.matchTicket,
+						matchTicket,
+						connectTimeoutMs,
 						...(options.iceServers ? { iceServers: options.iceServers } : {}),
 					});
-					await connectOne(webRtc);
+					await connectOne(webRtc, attemptId, deadlineAt);
 					recordWebRTCConnected();
 					return;
 				} catch (error) {
 					webRtcError = toError(error, 'WebRTC connection failed');
-					recordWebRTCFailed();
+					recordWebRTCFailed(getTransportFailureReason(error) ?? 'manual');
 					try { webRtc?.close(); } catch { /* already closed */ }
 					cleanupSelected();
 					selected = null;
 				}
 			}
 
-			if (!options.wsFallbackEnabled) {
+			if (plan.mode === 'webrtc-first' && !plan.relayFallback) {
 				setState('failed');
 				const error = webRtcError ?? new Error('No transport available');
 				emit('error', error);
 				throw error;
 			}
-			if (attemptedWebRTC) recordRelayFallback();
+			if (plan.mode === 'webrtc-first') {
+				options.session.lockRelay(attemptId);
+				recordRelayFallback(getTransportFailureReason(webRtcError) ?? 'manual');
+			}
 			try {
+				if (remainingBudget(deadlineAt) <= 0) throw webRtcError ?? new Error('P2P transport connection timed out');
 				const relay = createRelay({
 					url: options.relayUrl,
 					roomId: options.roomId,
 					peerId: options.peerId,
 					matchTicket: options.matchTicket,
 				});
-				await connectOne(relay);
+				await connectOne(relay, attemptId, deadlineAt);
 			} catch (error) {
 				setState('failed');
 				const finalError = toError(error, 'Relay connection failed');

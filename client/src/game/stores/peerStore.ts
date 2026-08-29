@@ -32,11 +32,9 @@ import {
 	createTransportManager,
 	type ManagedTransport,
 } from '../p2p/transport/TransportManager';
-import {
-	getP2PIceServers,
-	isP2PWebRTCEnabled,
-	isP2PWebSocketFallbackEnabled,
-} from '../config/featureFlags';
+import { loadP2PTransportConfig } from '../p2p/transport/transportConfigClient';
+import { detectBrowserTransportCapabilities } from '../p2p/transport/transportCapabilities';
+import { createTransportSession, type TransportSession } from '../p2p/transport/transportSession';
 import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from '../../data/HiveSessionIdentity';
 import type { ArmySelection } from '../types/ChessTypes';
 import type { WireMessage } from '../p2p/messages';
@@ -45,8 +43,6 @@ import { useMatchmakingStore, type MatchmakingStatus } from './matchmakingStore'
 export { isP2PConnectionStateBusy } from '@shared/p2pAvailability';
 
 // ── Timing Constants ──
-
-const PEER_CONNECT_TIMEOUT_MS = 20_000;
 
 // Reconnect backoff: two attempts inside the 60s technical-forfeit window.
 const RECONNECT_DELAYS = [2_000, 15_000];
@@ -76,6 +72,7 @@ const messageBuffer: WireMessage[] = [];
 // Active transport (kept outside the store to avoid serializing zustand on
 // each WS event — the store only holds the structural cast for consumers).
 let activeTransport: ManagedTransport | null = null;
+let activeTransportSession: TransportSession | null = null;
 // Last roomId used — needed by `attemptReconnect` to rejoin the same room.
 let lastRoomId: string | null = null;
 
@@ -287,6 +284,15 @@ function getForfeitMessage(side: P2PDisconnectSide): string {
 	return 'Connection lost for 60 seconds. Technical defeat.';
 }
 
+function getTransportSession(roomId: string, preserveSession: boolean): TransportSession {
+	const currentSession = activeTransportSession?.getSnapshot();
+	if (!preserveSession || !currentSession || currentSession.matchId !== roomId) {
+		activeTransportSession = createTransportSession(roomId);
+	}
+	if (!activeTransportSession) throw new Error('P2P transport session was not initialized');
+	return activeTransportSession;
+}
+
 function resolveReconnectForfeit(get: () => PeerStore, set: (state: Partial<PeerStore>) => void): void {
 	const side = get().disconnectSide ?? 'unknown';
 	const attemptsUsed = reconnectAttempt;
@@ -456,11 +462,12 @@ function attemptReconnect(roomId: string, get: () => PeerStore, set: (state: Par
  * the selected transport is connected and the room is full / both peers are
  * present; rejects on timeout or transport error before then.
  */
-function openTransport(
+async function openTransport(
 	roomId: string,
 	peerId: string,
 	get: () => PeerStore,
 	set: (state: Partial<PeerStore>) => void,
+	preserveSession: boolean,
 ): Promise<void> {
 	// Close any previous transport before opening a new one — protects against
 	// stale connections after a reconnect or a quick-match retry.
@@ -471,38 +478,39 @@ function openTransport(
 
 	lastRoomId = roomId;
 	set({ lastRoomId: roomId });
+	const config = await loadP2PTransportConfig();
+	const session = getTransportSession(roomId, preserveSession);
 	const transport = createTransportManager({
 		relayUrl: deriveRelayUrl(),
 		controlUrl: deriveControlUrl(),
 		roomId,
 		peerId,
 		matchTicket: get().matchTicket,
-		webrtcEnabled: isP2PWebRTCEnabled(),
-		wsFallbackEnabled: isP2PWebSocketFallbackEnabled(),
+		webrtcEnabled: config.webrtcEnabled,
+		wsFallbackEnabled: config.relayEnabled,
 		isHostHint: get().isHost,
-		iceServers: getP2PIceServers(),
+		capabilities: detectBrowserTransportCapabilities(config.iceServers),
+		session,
+		connectTimeoutMs: config.connectTimeoutMs,
+		iceServers: config.iceServers,
 	});
 	activeTransport = transport;
 
 	return new Promise<void>((resolve, reject) => {
-		const timeoutId = setTimeout(() => {
-			debug.error(`[PeerStore] TIMEOUT (${PEER_CONNECT_TIMEOUT_MS}ms) waiting for peer in room=${roomId.slice(0, 16)}…`);
-			try { transport.close(); } catch { /* ignored */ }
-			const state = get().connectionState;
-			if (state === 'disconnected' || get().forfeitSide) {
-				reject(new Error('Connect timeout after disconnect'));
-				return;
-			}
-			if (state === 'reconnecting' || state === 'grace_period') {
-				set({ connection: null, error: 'Reconnect attempt timed out.' });
-			} else {
-				set({ error: 'Connection timeout — opponent did not arrive', connectionState: 'error' });
-			}
-			reject(new Error('Connect timeout'));
-		}, PEER_CONNECT_TIMEOUT_MS);
+		let settled = false;
+		const resolveConnection = (): void => {
+			if (settled) return;
+			settled = true;
+			resolve();
+		};
+		const rejectConnection = (error: Error): void => {
+			if (settled) return;
+			settled = true;
+			reject(error);
+		};
 
 		transport.on('open', (...args: unknown[]) => {
-			clearTimeout(timeoutId);
+			if (settled) return;
 			const payload = readOpenPayload(args[0]);
 			clearReconnectWindow();
 			set({
@@ -520,7 +528,7 @@ function openTransport(
 			set({ bufferedMessageCount: messageBuffer.length });
 			startHeartbeat(get, set);
 			debug.log(`[PeerStore] connected via ${transport.kind} — isHost=${payload.isHost} remotePeerId=${(payload.remotePeerId ?? '').slice(0, 8)}…`);
-			resolve();
+			resolveConnection();
 		});
 
 		transport.on('close', (...args: unknown[]) => {
@@ -539,9 +547,8 @@ function openTransport(
 				if (lastRoomId) attemptReconnect(lastRoomId, get, set);
 				else startGracePeriod(side, get, set);
 			} else if (connectionState === 'connecting' || connectionState === 'waiting') {
-				clearTimeout(timeoutId);
 				set({ connection: null, connectionState: 'disconnected' });
-				reject(new Error('Connection closed before opening'));
+				rejectConnection(new Error('Connection closed before opening'));
 			}
 		});
 
@@ -553,17 +560,19 @@ function openTransport(
 				return;
 			}
 			if (connectionState === 'connecting' || connectionState === 'waiting') {
-				clearTimeout(timeoutId);
 				set({ error: err.message, connectionState: 'error' });
-				reject(err);
+				rejectConnection(err);
 			} else {
 				set({ error: err.message });
 			}
 		});
 
-		void transport.connect().catch(() => {
-			// The transport lifecycle listener above owns store state and promise
-			// rejection; this catch prevents a duplicate unhandled rejection.
+		void transport.connect().catch((error: unknown) => {
+			const connectionError = error instanceof Error ? error : new Error('Transport connection failed');
+			if (!settled) {
+				set({ error: connectionError.message, connectionState: 'error' });
+				rejectConnection(connectionError);
+			}
 		});
 	});
 }
@@ -726,7 +735,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 
 		debug.log(`[PeerStore][host] opening room=${peerId.slice(0, 8)}…`);
 		try {
-			await openTransport(peerId, peerId, get, set);
+			await openTransport(peerId, peerId, get, set, false);
 		} catch (err) {
 			throw err instanceof Error ? err : new Error(String(err));
 		}
@@ -761,7 +770,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		});
 
 		debug.log(`[PeerStore][join] joining room=${remoteId.slice(0, 8)}… as peer=${peerId.slice(0, 8)}…`);
-		await openTransport(remoteId, peerId, get, set);
+		await openTransport(remoteId, peerId, get, set, isReconnect);
 	},
 
 	connectToRoom: async (roomId: string, isReconnect = false) => {
@@ -796,7 +805,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		});
 
 		debug.log(`[PeerStore][connectToRoom] room=${roomId.slice(0, 16)}… peer=${peerId.slice(0, 8)}… reconnect=${isReconnect}`);
-		await openTransport(roomId, peerId, get, set);
+		await openTransport(roomId, peerId, get, set, isReconnect);
 	},
 
 	disconnect: () => {
@@ -807,6 +816,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			activeTransport = null;
 		}
 		lastRoomId = null;
+		activeTransportSession = null;
 		set({
 			myPeerId: null,
 			remotePeerId: null,

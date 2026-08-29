@@ -23,6 +23,8 @@ import {
 	recordP2PControlDrop,
 	recordP2PControlError,
 	recordP2PControlMessage,
+	recordP2PTransportFallback,
+	recordP2PTransportReady,
 	type P2PControlTelemetrySnapshot,
 } from '../services/p2pControlTelemetry';
 import { getHiveWebSessionUsernameFromCookie } from '../services/hiveWebSession';
@@ -36,6 +38,8 @@ type ControlMember = {
 	readonly role: P2PTransportRole;
 	readonly ws: WebSocket;
 	hello: boolean;
+	transportReady: boolean;
+	transportFallback: boolean;
 };
 
 type ControlRoom = ControlMember[];
@@ -221,6 +225,8 @@ export function attachP2PControl(server: HttpServer): void {
 			role: ticket.role,
 			ws,
 			hello: false,
+			transportReady: false,
+			transportFallback: false,
 		};
 		room.push(member);
 		recordP2PControlConnection();
@@ -286,6 +292,16 @@ export function attachP2PControl(server: HttpServer): void {
 			if (message.type === 'webrtc_answer_v1' && member.role !== 'answerer') {
 				recordP2PControlDrop('answer_from_offerer');
 				return;
+			}
+			if (message.type === 'transport_ready_v1') {
+				if (member.transportFallback) return;
+				member.transportReady = true;
+				recordP2PTransportReady(message.kind);
+			}
+			if (message.type === 'transport_fallback_v1') {
+				if (member.transportReady || member.transportFallback) return;
+				member.transportFallback = true;
+				recordP2PTransportFallback(message.reason);
 			}
 			if (!isSignalingMessage(message) && !isTransportControlMessage(message)) return;
 			const opponent = currentRoom.find(candidate => candidate !== member && candidate.hello);

@@ -1,3 +1,5 @@
+import type { P2PTransportFallbackReason } from '../../shared/p2p-wire/control';
+
 export type P2PControlTelemetrySnapshot = Readonly<{
 	activeRooms: number;
 	activeConnections: number;
@@ -6,6 +8,8 @@ export type P2PControlTelemetrySnapshot = Readonly<{
 	totalFramesDropped: number;
 	totalErrors: number;
 	errorsByReason: Readonly<Record<string, number>>;
+	transportReadyByKind: Readonly<Record<'webrtc' | 'websocket-relay', number>>;
+	transportFallbackByReason: Readonly<Partial<Record<P2PTransportFallbackReason, number>>>;
 }>;
 
 type MutableTelemetry = {
@@ -14,6 +18,8 @@ type MutableTelemetry = {
 	totalFramesDropped: number;
 	totalErrors: number;
 	errorsByReason: Record<string, number>;
+	transportReadyByKind: Record<'webrtc' | 'websocket-relay', number>;
+	transportFallbackByReason: Partial<Record<P2PTransportFallbackReason, number>>;
 };
 
 const telemetry: MutableTelemetry = {
@@ -22,6 +28,8 @@ const telemetry: MutableTelemetry = {
 	totalFramesDropped: 0,
 	totalErrors: 0,
 	errorsByReason: {},
+	transportReadyByKind: { webrtc: 0, 'websocket-relay': 0 },
+	transportFallbackByReason: {},
 };
 
 export function recordP2PControlConnection(): void {
@@ -42,6 +50,14 @@ export function recordP2PControlError(reason: string): void {
 	telemetry.errorsByReason[reason] = (telemetry.errorsByReason[reason] ?? 0) + 1;
 }
 
+export function recordP2PTransportReady(kind: 'webrtc' | 'websocket-relay'): void {
+	telemetry.transportReadyByKind[kind] += 1;
+}
+
+export function recordP2PTransportFallback(reason: P2PTransportFallbackReason): void {
+	telemetry.transportFallbackByReason[reason] = (telemetry.transportFallbackByReason[reason] ?? 0) + 1;
+}
+
 export function getP2PControlTelemetrySnapshot(input: {
 	readonly activeRooms: number;
 	readonly activeConnections: number;
@@ -53,6 +69,8 @@ export function getP2PControlTelemetrySnapshot(input: {
 		totalFramesDropped: telemetry.totalFramesDropped,
 		totalErrors: telemetry.totalErrors,
 		errorsByReason: { ...telemetry.errorsByReason },
+		transportReadyByKind: { ...telemetry.transportReadyByKind },
+		transportFallbackByReason: { ...telemetry.transportFallbackByReason },
 	};
 }
 
@@ -62,5 +80,6 @@ export function resetP2PControlTelemetryForTests(): void {
 	telemetry.totalFramesDropped = 0;
 	telemetry.totalErrors = 0;
 	telemetry.errorsByReason = {};
+	telemetry.transportReadyByKind = { webrtc: 0, 'websocket-relay': 0 };
+	telemetry.transportFallbackByReason = {};
 }
-

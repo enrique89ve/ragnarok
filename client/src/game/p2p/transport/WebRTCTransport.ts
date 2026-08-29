@@ -7,7 +7,9 @@ import {
 	P2P_CONTROL_WS_PROTOCOL_PREFIX,
 	parseP2PControlServerMessage,
 	type P2PControlClientMessage,
+	type P2PTransportFallbackReason,
 } from '@shared/p2p-wire/control';
+import type { P2PIceServerConfig } from '@shared/p2p-wire/transportConfig';
 import type { P2PMatchTicket } from '@shared/p2pAvailability';
 import type {
 	GameTransport,
@@ -15,12 +17,9 @@ import type {
 	TransportState,
 	TransportStateListener,
 } from './transportTypes';
+import { createTransportFailure } from './transportTypes';
 
-export type WebRTCIceServerConfig = {
-	readonly urls: string | string[];
-	readonly username?: string;
-	readonly credential?: string;
-};
+export type WebRTCIceServerConfig = P2PIceServerConfig;
 
 type WebRTCIceCandidateInit = {
 	readonly candidate: string;
@@ -77,6 +76,7 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 	let closed = false;
 	let remoteDescriptionSet = false;
 	let controlState: WebRTCControlState = 'idle';
+	let fallbackSent = false;
 	const pendingIceCandidates: WebRTCIceCandidateInit[] = [];
 
 	const setState = (next: TransportState): void => {
@@ -117,9 +117,31 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 		try { socket?.close(); } catch { /* already closed */ }
 	};
 
-	const fail = (failure: Error | string): void => {
+	const sendFallback = (reason: P2PTransportFallbackReason): void => {
+		if (fallbackSent || socket?.readyState !== WebSocket.OPEN) return;
+		fallbackSent = true;
+		try {
+			socket.send(JSON.stringify({
+				type: 'transport_fallback_v1',
+				protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+				matchId: options.roomId,
+				reason,
+			}));
+		} catch { /* the control socket is already closing */ }
+	};
+
+	const fail = (
+		failure: Error | string,
+		reason?: P2PTransportFallbackReason,
+		notifyPeer = true,
+	): void => {
 		if (closed || state === 'failed') return;
-		const error = typeof failure === 'string' ? new Error(failure) : failure;
+		if (state !== 'connected' && notifyPeer && reason) sendFallback(reason);
+		const error = typeof failure === 'string'
+			? createTransportFailure(failure, reason)
+			: reason
+				? createTransportFailure(failure.message, reason)
+				: failure;
 		controlState = 'closed';
 		setState('failed');
 		rejectPending(error);
@@ -133,7 +155,7 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 				debug.warn('[WebRTCTransport] Control WebSocket degraded; keeping DataChannel alive');
 				return;
 			}
-			fail('Control WebSocket is not open');
+			fail('Control WebSocket is not open', 'ice_failed');
 			return;
 		}
 		try { socket.send(JSON.stringify(message)); }
@@ -143,7 +165,7 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 				debug.warn('[WebRTCTransport] Control WebSocket send failed; keeping DataChannel alive');
 				return;
 			}
-			fail('Control WebSocket send failed');
+			fail('Control WebSocket send failed', 'ice_failed');
 		}
 	};
 
@@ -180,9 +202,9 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 			const message = parseWireMessage(parsed);
 			if (message) emitMessage(message);
 		};
-		activeChannel.onerror = () => fail('WebRTC DataChannel error');
+		activeChannel.onerror = () => fail('WebRTC DataChannel error', 'data_channel_failed');
 		activeChannel.onclose = () => {
-			if (!closed && state !== 'failed') fail('WebRTC DataChannel closed');
+			if (!closed && state !== 'failed') fail('WebRTC DataChannel closed', 'data_channel_failed');
 		};
 		if (activeChannel.readyState === 'open') maybeResolveDataChannel();
 	};
@@ -190,7 +212,7 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 	const setupPeerConnection = (): RTCPeerConnection | null => {
 		if (peerConnection) return peerConnection;
 		if (typeof RTCPeerConnection === 'undefined') {
-			fail('WebRTC is unavailable in this browser');
+			fail('WebRTC is unavailable in this browser', 'unsupported');
 			return null;
 		}
 		const connection = new RTCPeerConnection({ iceServers: [...(options.iceServers ?? [])] });
@@ -209,7 +231,7 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 		};
 		connection.ondatachannel = (event: RTCDataChannelEvent) => attachDataChannel(event.channel);
 		connection.onconnectionstatechange = () => {
-			if (connection.connectionState === 'failed' || connection.connectionState === 'closed') fail('WebRTC peer connection failed');
+			if (connection.connectionState === 'failed' || connection.connectionState === 'closed') fail('WebRTC peer connection failed', 'ice_failed');
 		};
 		return connection;
 	};
@@ -230,13 +252,18 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 	const handleControlMessage = async (input: unknown): Promise<void> => {
 		const message = parseP2PControlServerMessage(input);
 		if (!message) {
-			fail('Malformed Control WebSocket message');
+			fail('Malformed Control WebSocket message', 'ice_failed');
 			return;
 		}
 		if (message.type === 'control_error_v1') {
 			fail(`Control WebSocket rejected: ${message.code}`);
 			return;
 		}
+		if (message.type === 'transport_fallback_v1') {
+			if (state !== 'connected') fail('Opponent selected relay transport', undefined, false);
+			return;
+		}
+		if (message.type === 'transport_ready_v1') return;
 		if (message.type === 'control_peer_left_v1') {
 			if (state === 'connected') {
 				controlState = 'degraded';
@@ -254,11 +281,11 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 			controlState = 'connected';
 			remotePeer = message.opponentPeerId;
 			const connection = setupPeerConnection();
-			if (connection && message.role === 'offerer') void createOffer(connection).catch(() => fail('WebRTC offer failed'));
+			if (connection && message.role === 'offerer') void createOffer(connection).catch(() => fail('WebRTC offer failed', 'ice_failed'));
 			return;
 		}
 		if (message.type === 'webrtc_offer_v1') {
-			if (!peerConnection) return fail('WebRTC offer arrived before control open');
+			if (!peerConnection) return fail('WebRTC offer arrived before control open', 'ice_failed');
 			await peerConnection.setRemoteDescription({ type: 'offer', sdp: message.sdp });
 			remoteDescriptionSet = true;
 			for (const candidate of pendingIceCandidates.splice(0)) await peerConnection.addIceCandidate(candidate);
@@ -269,14 +296,14 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 			return;
 		}
 		if (message.type === 'webrtc_answer_v1') {
-			if (!peerConnection) return fail('WebRTC answer arrived before control open');
+			if (!peerConnection) return fail('WebRTC answer arrived before control open', 'ice_failed');
 			await peerConnection.setRemoteDescription({ type: 'answer', sdp: message.sdp });
 			remoteDescriptionSet = true;
 			for (const candidate of pendingIceCandidates.splice(0)) await peerConnection.addIceCandidate(candidate);
 			return;
 		}
 		if (message.type === 'ice_candidate_v1') {
-			if (!peerConnection) return fail('ICE candidate arrived before control open');
+			if (!peerConnection) return fail('ICE candidate arrived before control open', 'ice_failed');
 			const candidate = { candidate: message.candidate, sdpMid: message.sdpMid, sdpMLineIndex: message.sdpMLineIndex } satisfies WebRTCIceCandidateInit;
 			if (remoteDescriptionSet) await peerConnection.addIceCandidate(candidate);
 			else pendingIceCandidates.push(candidate);
@@ -294,7 +321,7 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 		connectPromise = new Promise<void>((resolve, reject) => {
 			resolveConnect = resolve;
 			rejectConnect = reject;
-			timeoutHandle = setTimeout(() => fail('WebRTC transport connection timed out'), safeConnectTimeout(options.connectTimeoutMs));
+			timeoutHandle = setTimeout(() => fail('WebRTC transport connection timed out', 'timeout'), safeConnectTimeout(options.connectTimeoutMs));
 			const control = new WebSocket(buildP2PControlWebSocketUrl(options), buildP2PControlWebSocketProtocols(options.matchTicket));
 			socket = control;
 			control.onopen = () => sendControl({ type: 'control_hello_v1', protocolVersion: P2P_CONTROL_PROTOCOL_VERSION, matchId: options.roomId, peerId: options.peerId });
@@ -302,9 +329,9 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 				let payload: unknown = event.data;
 				if (typeof payload === 'string') {
 					try { payload = JSON.parse(payload); }
-					catch { fail('Malformed Control WebSocket JSON'); return; }
+					catch { fail('Malformed Control WebSocket JSON', 'ice_failed'); return; }
 				}
-				void handleControlMessage(payload).catch(() => fail('Control WebSocket message handling failed'));
+				void handleControlMessage(payload).catch(() => fail('Control WebSocket message handling failed', 'ice_failed'));
 			};
 			control.onerror = () => {
 				if (state === 'connected') {
@@ -312,7 +339,7 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 					debug.warn('[WebRTCTransport] Control WebSocket degraded; keeping DataChannel alive');
 					return;
 				}
-				fail('Control WebSocket error');
+				fail('Control WebSocket error', 'ice_failed');
 			};
 			control.onclose = () => {
 				if (closed) return;
@@ -321,7 +348,7 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 					debug.warn('[WebRTCTransport] Control WebSocket closed; keeping DataChannel alive');
 					return;
 				}
-				fail('Control WebSocket closed');
+				fail('Control WebSocket closed', 'ice_failed');
 			};
 		});
 		return connectPromise;
@@ -346,7 +373,7 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 			try { dataChannel.send(JSON.stringify(message)); }
 			catch (error) {
 				const sendError = error instanceof Error ? error : new Error('WebRTC DataChannel send failed');
-				fail(sendError);
+				fail(sendError, 'data_channel_failed');
 				throw sendError;
 			}
 		},

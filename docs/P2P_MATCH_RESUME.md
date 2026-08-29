@@ -19,6 +19,11 @@ Single-player `/#/game/single` does not resume a half-finished practice match.
 
 Reconnect policy is the same in both cases: **2 attempts** (`2s`, then `15s`) inside **60s**. Then a local technical result. That result is not RUNE evidence.
 
+Transport selection is match-scoped during this window. If the initial WebRTC
+attempt falls back to the relay, the relay decision is retained when
+`peerStore` recreates `TransportManager`; reconnect cannot silently reintroduce
+WebRTC. Each attempt uses the manager's single bounded connection budget.
+
 On reconnect the client does not re-seed. It sends version/engine probes and `state_sync_request` to the **other peer**, not to Express.
 
 ## Local snapshot

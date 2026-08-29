@@ -48,6 +48,15 @@ const IceCandidateSchemaEnvelope = z.object({
 
 const TransportKindSchema = z.enum(['webrtc', 'websocket-relay']);
 
+export const P2P_TRANSPORT_FALLBACK_REASONS = [
+	'unsupported',
+	'timeout',
+	'ice_failed',
+	'data_channel_failed',
+	'manual',
+] as const;
+export type P2PTransportFallbackReason = typeof P2P_TRANSPORT_FALLBACK_REASONS[number];
+
 const TransportReadySchema = z.object({
 	type: z.literal('transport_ready_v1'),
 	protocolVersion: z.literal(P2P_CONTROL_PROTOCOL_VERSION),
@@ -59,7 +68,7 @@ const TransportFallbackSchema = z.object({
 	type: z.literal('transport_fallback_v1'),
 	protocolVersion: z.literal(P2P_CONTROL_PROTOCOL_VERSION),
 	matchId: MatchIdSchema,
-	reason: z.enum(['unsupported', 'timeout', 'ice_failed', 'data_channel_failed', 'manual']),
+	reason: z.enum(P2P_TRANSPORT_FALLBACK_REASONS),
 }).strict();
 
 export const P2PControlClientMessageSchema = z.discriminatedUnion('type', [
@@ -121,4 +130,3 @@ export function parseP2PControlServerMessage(input: unknown): P2PControlServerMe
 export function isP2PTransportRole(value: unknown): value is P2PTransportRole {
 	return value === 'offerer' || value === 'answerer';
 }
-

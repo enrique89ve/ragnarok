@@ -194,6 +194,60 @@ describe('WebRTC transport boundary', () => {
 		expect(connection.dataChannel?.readyState).toBe('open');
 	});
 
+	it('notifies the opponent before failing a pre-connect timeout', async () => {
+		vi.useFakeTimers();
+		const socket = createFakeControlSocket();
+		const connection = createFakePeerConnection();
+		const WebSocketConstructor = vi.fn(function WebSocketMock() { return socket; });
+		Object.assign(WebSocketConstructor, { OPEN: 1 });
+		vi.stubGlobal('WebSocket', WebSocketConstructor);
+		vi.stubGlobal('RTCPeerConnection', vi.fn(function RTCPeerConnectionMock() { return connection; }));
+
+		const transport = createWebRTCTransport({
+			controlUrl: 'wss://game.example/ws/control',
+			roomId: ticket.roomId,
+			peerId: ticket.peerId,
+			matchTicket: ticket,
+			connectTimeoutMs: 1_000,
+		});
+		const pending = transport.connect();
+		socket.triggerOpen();
+		const rejected = expect(pending).rejects.toThrow('timed out');
+		await vi.advanceTimersByTimeAsync(1_001);
+
+		await rejected;
+		expect(socket.sent.map(payload => JSON.parse(payload))).toContainEqual(expect.objectContaining({
+			type: 'transport_fallback_v1',
+			reason: 'timeout',
+		}));
+	});
+
+	it('adopts the peer relay decision before the DataChannel connects', async () => {
+		const socket = createFakeControlSocket();
+		const connection = createFakePeerConnection();
+		const WebSocketConstructor = vi.fn(function WebSocketMock() { return socket; });
+		Object.assign(WebSocketConstructor, { OPEN: 1 });
+		vi.stubGlobal('WebSocket', WebSocketConstructor);
+		vi.stubGlobal('RTCPeerConnection', vi.fn(function RTCPeerConnectionMock() { return connection; }));
+
+		const transport = createWebRTCTransport({
+			controlUrl: 'wss://game.example/ws/control',
+			roomId: ticket.roomId,
+			peerId: ticket.peerId,
+			matchTicket: ticket,
+		});
+		const pending = transport.connect();
+		socket.triggerMessage({
+			type: 'transport_fallback_v1',
+			protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+			matchId: ticket.roomId,
+			reason: 'ice_failed',
+		});
+
+		await expect(pending).rejects.toThrow('Opponent selected relay transport');
+		expect(socket.sent.map(payload => JSON.parse(payload))).not.toContainEqual(expect.objectContaining({ type: 'transport_fallback_v1' }));
+	});
+
 	it('fails WebRTC when Control WS closes before the DataChannel connects', async () => {
 		const socket = createFakeControlSocket();
 		const connection = createFakePeerConnection();

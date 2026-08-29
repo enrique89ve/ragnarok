@@ -128,6 +128,8 @@ ENV P2P_STUN_HOST=0.0.0.0
 ENV P2P_STUN_PORT=3478
 ENV P2P_WEBRTC_ENABLED=false
 ENV P2P_WS_FALLBACK_ENABLED=true
+ENV P2P_CONNECT_TIMEOUT_MS=20000
+ENV P2P_ICE_SERVERS=$VITE_P2P_STUN_URL
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY --from=prod-deps /app/node_modules ./node_modules

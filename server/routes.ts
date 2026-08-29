@@ -72,6 +72,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const matchmakingRoutes = (await import("./routes/matchmakingRoutes")).default;
   app.use('/api/matchmaking', matchmakingRoutes);
 
+  const p2pTransportConfigRoutes = (await import("./routes/p2pTransportConfig")).default;
+  app.use('/api/p2p/transport-config', p2pTransportConfigRoutes);
+
   // Mock blockchain routes — local sandbox or explicit mock harness only.
   // dev:testnet must not expose a parallel authority surface.
   if (!IS_PRODUCTION && (runtime.stage === 'local' || process.env.VITE_DATA_LAYER_MODE === 'test')) {

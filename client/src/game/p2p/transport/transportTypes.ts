@@ -1,4 +1,8 @@
 import type { P2PMessage } from '../messages';
+import {
+	P2P_TRANSPORT_FALLBACK_REASONS,
+	type P2PTransportFallbackReason,
+} from '@shared/p2p-wire/control';
 
 export type TransportKind = 'webrtc' | 'websocket-relay';
 
@@ -14,10 +18,34 @@ export type TransportState =
 export type TransportMessageListener = (message: P2PMessage) => void;
 export type TransportStateListener = (state: TransportState) => void;
 
+export type TransportFailure = Error & {
+	readonly transportReason?: P2PTransportFallbackReason;
+};
+
+export function createTransportFailure(
+	message: string,
+	reason?: P2PTransportFallbackReason,
+): TransportFailure {
+	const error: TransportFailure = new Error(message);
+	if (reason) Object.defineProperty(error, 'transportReason', { value: reason, enumerable: true });
+	return error;
+}
+
+function isTransportFallbackReason(value: unknown): value is P2PTransportFallbackReason {
+	return P2P_TRANSPORT_FALLBACK_REASONS.some(reason => reason === value);
+}
+
+export function getTransportFailureReason(value: unknown): P2PTransportFallbackReason | undefined {
+	if (!(value instanceof Error)) return undefined;
+	const reason = Object.getOwnPropertyDescriptor(value, 'transportReason')?.value;
+	return isTransportFallbackReason(reason) ? reason : undefined;
+}
+
 /**
  * Canonical gameplay transport contract.
  *
- * The relay and WebRTC implementations own delivery only. Matchmaking,
+ * The relay and WebRTC implementations own gameplay delivery and transport
+ * lifecycle only. WebRTC signaling stays inside its adapter; matchmaking,
  * gameplay rules, transcript application, and BattleReady remain outside
  * this boundary.
  */

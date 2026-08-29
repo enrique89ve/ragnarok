@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { P2PMessage } from '../messages';
 import { createTransportManager } from './TransportManager';
+import { createTransportSession } from './transportSession';
 import {
 	getTransportTelemetrySnapshot,
 	resetTransportTelemetryForTests,
@@ -71,6 +72,9 @@ function managerOptions(overrides: Partial<Parameters<typeof createTransportMana
 		webrtcEnabled: true,
 		wsFallbackEnabled: true,
 		isHostHint: false,
+		capabilities: { webRtc: true, webSocket: true, iceServersConfigured: false },
+		session: createTransportSession(ticket.roomId),
+		connectTimeoutMs: 20_000,
 		...overrides,
 	};
 }
@@ -122,6 +126,7 @@ describe('TransportManager', () => {
 		}), {
 			createWebRTC: options => {
 				receivedIceServers = options.iceServers;
+				expect(options.connectTimeoutMs).toBe(20_000);
 				return webRtc.transport;
 			},
 		});
@@ -151,6 +156,32 @@ describe('TransportManager', () => {
 			webrtcFailedTotal: 1,
 			relayFallbackTotal: 1,
 		});
+	});
+
+	it('keeps a relay fallback sticky when a reconnect recreates the manager', async () => {
+		const session = createTransportSession(ticket.roomId);
+		const firstWebRtc = fakeTransport('webrtc', async () => { throw new Error('ICE failed'); });
+		const firstRelay = fakeTransport('websocket-relay', async () => { firstRelay.setState('connected'); });
+		const firstManager = createTransportManager(managerOptions({ session }), {
+			createWebRTC: () => firstWebRtc.transport,
+			createRelay: () => firstRelay.transport,
+		});
+
+		await firstManager.connect();
+		firstManager.close();
+
+		const secondWebRtc = fakeTransport('webrtc', async () => { secondWebRtc.setState('connected'); });
+		const secondRelay = fakeTransport('websocket-relay', async () => { secondRelay.setState('connected'); });
+		const createWebRTC = vi.fn(() => secondWebRtc.transport);
+		const secondManager = createTransportManager(managerOptions({ session }), {
+			createWebRTC,
+			createRelay: () => secondRelay.transport,
+		});
+
+		await secondManager.connect();
+
+		expect(createWebRTC).not.toHaveBeenCalled();
+		expect(secondManager.kind).toBe('websocket-relay');
 	});
 
 	it('keeps the current relay-only behavior when WebRTC is disabled', async () => {

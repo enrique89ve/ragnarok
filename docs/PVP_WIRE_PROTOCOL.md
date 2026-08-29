@@ -197,12 +197,13 @@ are routed to the opponent:
 SDP, ICE, frame size, message rate, room size, origin, and match bindings are
 validated at the boundary. Control WS never forwards `P2PMessage` gameplay
 frames and never chooses a winner. `WebRTCTransport` consumes this contract
-behind `GameTransport`, using the configured public `VITE_P2P_STUN_URL` when
-present. `TransportManager` tries it only when the explicit build flag enables
-it. The known-good `/ws/p2p` relay remains the default and receives the
-connection if WebRTC fails before the match opens. Once the DataChannel is
-connected, a Control WS close degrades signaling only and does not close the
-game transport. No live transport switch is performed after gameplay begins.
+behind `GameTransport`, using the public ICE list from the validated runtime
+transport config when present. `TransportManager` tries it only when the
+runtime policy enables it and the browser exposes the required capabilities.
+The known-good `/ws/p2p` relay remains the default and receives the connection
+if WebRTC fails before the match opens. Once the DataChannel is connected, a
+Control WS close degrades signaling only and does not close the game transport.
+No live transport switch is performed after gameplay begins.
 Likewise, `control_peer_left_v1` means the opponent left the control plane: it
 fails an in-progress WebRTC attempt, but only degrades control after the
 DataChannel is connected. A real gameplay disconnect must come from the game
@@ -212,6 +213,29 @@ The gameplay `isHost` perspective is supplied by the match/manual host
 assignment and is preserved across transport selection. The WebRTC
 `offerer`/`answerer` role is signaling-only and must not become game authority.
 
+### Runtime transport policy
+
+The browser reads `GET /api/p2p/transport-config` before opening a P2P
+transport. The response is versioned and contains `webrtcEnabled`,
+`relayEnabled`, a bounded `connectTimeoutMs`, and public ICE server URLs only.
+`P2P_WEBRTC_ENABLED`, `P2P_WS_FALLBACK_ENABLED`, `P2P_CONNECT_TIMEOUT_MS`, and
+`P2P_ICE_SERVERS` are server-side runtime values and take precedence over the
+legacy `VITE_*` values. Invalid values resolve to safe defaults; no ticket,
+SDP, username, or credential is returned by this endpoint.
+
+The pure transport policy distinguishes browser WebRTC capability, WebSocket
+availability, signed offerer/answerer role, and ICE configuration. An empty ICE
+list is valid configuration and is not treated as proof that WebRTC is
+unsupported. The client caches a valid response briefly and falls back to the
+baked relay-first configuration if the endpoint is unavailable.
+
+Before the DataChannel is ready, a failed WebRTC attempt sends one
+`transport_fallback_v1` with a bounded reason. The server forwards it only
+while that control member has not sent `transport_ready_v1`; after readiness,
+fallback is ignored. Once the manager selects the relay, a match-scoped
+transport session locks relay for subsequent reconnect attempts, preventing a
+recreated manager from reintroducing WebRTC mid-match.
+
 **Latency and reconnect policy (P0)**:
 - User actions are sent as compact intent envelopes, not full state dumps.
   Chess/poker carry the minimum semantic action plus optional compact tuples.
@@ -220,8 +244,10 @@ assignment and is preserved across transport selection. The WebRTC
 - Same-tab network loss enters `grace_period`/`reconnecting`; the local seed,
   transcript, seq counters, chess sender state, and queued messages are
   preserved. Reconnect allows two automatic attempts inside a 60s window
-  (`2s`, then `15s` scheduling, with per-attempt transport timeout). If the
-  window expires, the disconnected side receives a local technical result.
+  (`2s`, then `15s` scheduling). Each recreated manager receives the same
+  bounded connection budget, and a relay fallback remains sticky for the
+  match. If the window expires, the disconnected side receives a local
+  technical result.
 - On reconnect, `useWireSync` does not run a new seed handshake. It sends
   version/engine probes and `state_sync_request` for transcript recovery.
 - P0 technical results are gameplay/UI outcomes only. They do not authorize
