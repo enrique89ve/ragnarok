@@ -19,8 +19,15 @@ import { hasKeyword } from '../utils/cards/keywordUtils';
 import type { SimpleCardStatTone, SimpleCardStatView } from './card/SimpleCardCompat';
 import './SimpleBattlefield.css';
 import { arenaVfxWagerMinionProps } from '../combat/arenaVfxTargets';
-import { GameIcon } from '../utils/ui/GameIcon';
-import type { IconName } from '../utils/ui/iconMap';
+import { canCardAttack } from '../combat/attackUtils';
+import BattlefieldStateMark from '../combat/components/BattlefieldStateMark';
+import {
+  getEinherjarReturnsRemaining,
+  getRuntimeStateDefinition,
+  hasExhaustedCombatState,
+  isRuntimeStateActive,
+  type RuntimeStateId,
+} from '../combat/runtimeStateContract';
 import { useTargetingStore } from '../stores/targetingStore';
 import {
   combatVisualExitTiming,
@@ -52,9 +59,52 @@ interface SimpleBattlefieldProps {
 const MAX_SLOTS = MAX_BATTLEFIELD_SIZE;
 const EMPTY_SET = new Set<string>();
 
+const STATUS_BADGE_DEFINITIONS = [
+  { stateId: 'frozen', className: 'badge-frozen' },
+  { stateId: 'paralyzed', className: 'badge-paralysis' },
+  { stateId: 'poisoned', className: 'badge-poison' },
+  { stateId: 'bleeding', className: 'badge-bleed' },
+  { stateId: 'burning', className: 'badge-burn' },
+  { stateId: 'weakened', className: 'badge-weakness' },
+  { stateId: 'vulnerable', className: 'badge-vulnerable' },
+  { stateId: 'marked', className: 'badge-marked' },
+] as const satisfies ReadonlyArray<{ readonly stateId: RuntimeStateId; readonly className: string }>;
+
 export interface BattlefieldLayoutItem<T extends { instanceId: string } = CardInstanceWithCardData> {
   readonly key: string;
   readonly card: T;
+}
+
+/**
+ * Diagnostic guard for the canonical board identity contract. Keep this
+ * predicate outside the render path so production renders do not pay for a
+ * second identity scan; state/adaptor tests can still assert bad data.
+ */
+export function hasUniqueBattlefieldInstanceIds<T extends { instanceId: string }>(
+  cards: readonly T[],
+): boolean {
+  const seen = new Set<string>();
+  for (const card of cards) {
+    if (seen.has(card.instanceId)) return false;
+    seen.add(card.instanceId);
+  }
+  return true;
+}
+
+/** Targeting is resolved by the canonical valid-id list, not by battlefield side. */
+export function isBattlefieldTarget(
+  card: { readonly instanceId: string } | null | undefined,
+  validTargetIds: readonly string[],
+): boolean {
+  return card !== null && card !== undefined && validTargetIds.includes(card.instanceId);
+}
+
+/** Authored wager effects are active only when a concrete effect is present. */
+export function hasBattlefieldWagerEffect(input: unknown): boolean {
+  if (!input || typeof input !== 'object' || !('card' in input)) return false;
+  const card = input.card;
+  if (!card || typeof card !== 'object' || !('wagerEffect' in card)) return false;
+  return card.wagerEffect !== null && card.wagerEffect !== undefined;
 }
 
 /**
@@ -204,10 +254,6 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
   const animateCardEntry = renderSurface !== 'poker';
   const validTargetIds = useTargetingStore(state => state.validTargets);
 
-  const isValidTarget = (card: CardInstanceWithCardData) => {
-    return Boolean(attackingCard && validTargetIds.includes(card.instanceId));
-  };
-
   const renderSlots = (
     cards: readonly CardInstanceWithCardData[],
     side: 'player' | 'opponent',
@@ -217,52 +263,34 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
       const isShaking = card && shakingTargets.has(card.instanceId);
       const isAttacking = card && attackingCard?.instanceId === card.instanceId;
       const canAttack = side === 'player' && card && isPlayerTurn &&
-                        !card.isSummoningSick && card.canAttack && !attackingCard;
-      const isTarget = side === 'opponent' && card && isValidTarget(card);
-      const hasSuperBonus = card && (card as any).hasSuperMinionBonus;
-      const hasCharge = !!(card && hasKeyword(card, 'charge'));
-      const isSummoningSick = side === 'player' && !!card && !!card.isSummoningSick && !hasCharge;
-      const isExhausted = side === 'player' && !!card && isPlayerTurn &&
-                          !card.isSummoningSick && !card.canAttack &&
-                          !!((card.card as any)?.attack > 0);
-      const cardHasTaunt = !!(card && hasKeyword(card, 'taunt'));
-      const hasElementalBuff = !!(card as any)?.hasElementalBuff;
-      const readyToEvolve = !!(card as any)?.petEvolutionMet;
-      const isDormantCard = !!(card as any)?.isDormant;
-      const dormantTurnsLeft = (card as any)?.dormantTurnsLeft as number | undefined;
-      const einherjarReturns = (card as any)?.einpieces as number | undefined;
-      const hasChainPartner = !!(card?.card as any)?.chainPartner;
-      const chainPartnerOnBoard = hasChainPartner && (() => {
-        const partnerId = (card?.card as any)?.chainPartner;
-        const allCards = side === 'player' ? playerCards : opponentCards;
-        return allCards.some(c => c.card?.id === partnerId);
-      })();
-      const isSubmerged = !!(card as any)?.isSubmerged;
-      const submergeTurnsLeft = (card as any)?.submergeTurnsLeft as number | undefined;
-      const isCoiled = !!(card as any)?.isCoiled;
-      const hasWager = !!(card?.card as any)?.wagerEffect;
+                        canCardAttack(card, isPlayerTurn) && !attackingCard;
+      const isTarget = Boolean(card && isBattlefieldTarget(card, validTargetIds));
+      const hasSuperBonus = card.hasSuperMinionBonus === true;
+      const isSummoningSick = isRuntimeStateActive(card, 'summoning_sick');
+      const isExhausted = side === 'player' && isPlayerTurn && hasExhaustedCombatState(card);
+      const cardHasTaunt = isRuntimeStateActive(card, 'taunt');
+      const hasElementalBuff = card.hasElementalBuff === true;
+      const readyToEvolve = card.petEvolutionMet === true;
+      const isDormantCard = isRuntimeStateActive(card, 'dormant');
+      const dormantTurnsLeft = card.dormantTurnsLeft;
+      const einherjarReturns = getEinherjarReturnsRemaining(card);
+      const chainPartnerId = 'chainPartner' in card.card ? card.card.chainPartner : undefined;
+      const hasChainPartner = typeof chainPartnerId === 'number';
+      const chainPartnerOnBoard = isRuntimeStateActive(card, 'ragnarok_chain');
+      const isSubmerged = isRuntimeStateActive(card, 'submerged');
+      const submergeTurnsLeft = card.submergeTurnsLeft;
+      const hasCoilState = isRuntimeStateActive(card, 'coiled');
+      const hasWager = hasBattlefieldWagerEffect(card);
       const hasFlying = !!(card && hasKeyword(card, 'flying'));
 
-      const statusPoisoned = !!(card as any)?.isPoisonedDoT;
-      const statusBleeding = !!(card as any)?.isBleeding;
-      const statusParalyzed = !!(card as any)?.isParalyzed;
-      const statusWeakened = !!(card as any)?.isWeakened;
-      const statusVulnerable = !!(card as any)?.isVulnerable;
-      const statusFrozen = !!(card as any)?.isFrozen;
-      const statusMarked = !!(card as any)?.isMarked;
-      const statusBurning = !!(card as any)?.isBurning;
-      const hasAnyStatus = statusPoisoned || statusBleeding || statusParalyzed || statusWeakened || statusVulnerable || statusFrozen || statusMarked || statusBurning;
       const statView = card ? buildBattlefieldStatView(card) : null;
-      const statusBadges: ReadonlyArray<{ readonly className: string; readonly title: string; readonly icon: IconName }> = [
-        { active: statusFrozen, className: 'badge-frozen', title: 'Frozen: Cannot act', icon: 'snowflake' },
-        { active: statusParalyzed, className: 'badge-paralysis', title: 'Paralysis: 50% chance to fail', icon: 'zap' },
-        { active: statusPoisoned, className: 'badge-poison', title: 'Poison: 3 damage per turn', icon: 'skullCrossed' },
-        { active: statusBleeding, className: 'badge-bleed', title: 'Bleed: +3 damage taken', icon: 'droplet' },
-        { active: statusBurning, className: 'badge-burn', title: 'Burn: +3 Attack, 3 self-damage', icon: 'flame' },
-        { active: statusWeakened, className: 'badge-weakness', title: 'Weakness: -3 Attack', icon: 'arrowDown' },
-        { active: statusVulnerable, className: 'badge-vulnerable', title: 'Vulnerable: +3 damage taken', icon: 'target' },
-        { active: statusMarked, className: 'badge-marked', title: 'Marked: Ignores Stealth', icon: 'eye' },
-      ].filter((badge): badge is { readonly active: true; readonly className: string; readonly title: string; readonly icon: IconName } => badge.active);
+      const statusBadges = STATUS_BADGE_DEFINITIONS.flatMap(({ stateId, className }) => {
+        if (!isRuntimeStateActive(card, stateId)) return [];
+        const definition = getRuntimeStateDefinition(stateId);
+        return definition ? [{ className, stateId, title: `${definition.name}: ${definition.description}` }] : [];
+      });
+      const hasAnyStatus = statusBadges.length > 0;
+      const activeStatusIds = new Set(statusBadges.map(badge => badge.stateId));
       const visibleStatusBadges = statusBadges.slice(0, 4);
       const hiddenStatusBadges = statusBadges.slice(4);
 
@@ -287,18 +315,18 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
                   ${isExhausted ? 'exhausted' : ''}
                   ${cardHasTaunt ? 'has-taunt' : ''}
                   ${hasElementalBuff ? 'elemental-buffed' : ''}
-                  ${statusPoisoned ? 'status-poisoned' : ''}
-                  ${statusBleeding ? 'status-bleeding' : ''}
-                  ${statusParalyzed ? 'status-paralyzed' : ''}
-                  ${statusWeakened ? 'status-weakened' : ''}
-                  ${statusVulnerable ? 'status-vulnerable' : ''}
-                  ${statusFrozen ? 'status-frozen' : ''}
-                  ${statusMarked ? 'status-marked' : ''}
-                  ${statusBurning ? 'status-burning' : ''}
+                  ${activeStatusIds.has('poisoned') ? 'status-poisoned' : ''}
+                  ${activeStatusIds.has('bleeding') ? 'status-bleeding' : ''}
+                  ${activeStatusIds.has('paralyzed') ? 'status-paralyzed' : ''}
+                  ${activeStatusIds.has('weakened') ? 'status-weakened' : ''}
+                  ${activeStatusIds.has('vulnerable') ? 'status-vulnerable' : ''}
+                  ${activeStatusIds.has('frozen') ? 'status-frozen' : ''}
+                  ${activeStatusIds.has('marked') ? 'status-marked' : ''}
+                  ${activeStatusIds.has('burning') ? 'status-burning' : ''}
                   ${readyToEvolve ? 'ready-to-evolve' : ''}
                   ${isDormantCard ? 'is-dormant' : ''}
                   ${isSubmerged ? 'is-submerged' : ''}
-                  ${isCoiled ? 'is-coiled' : ''}
+                  ${hasCoilState ? 'is-coiled' : ''}
                   ${hasWager ? 'has-wager' : ''}
                   ${hasFlying ? 'has-flying' : ''}
                 `}
@@ -322,16 +350,18 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
               >
                 <span className="bf-summon-fx" aria-hidden="true" />
                 {isSummoningSick && (
-                  <span className="bf-card-state-marker bf-card-state-marker--sleep" title="Summoning sickness">
-                    <GameIcon name="moon" size={12} />
-                    <span className="sr-only">Summoning sickness</span>
-                  </span>
+                  <BattlefieldStateMark
+                    className="bf-card-state-marker bf-card-state-marker--sleep"
+                    label="Summoning sickness: Cannot attack on the turn it enters play"
+                    icon={{ source: 'combat', name: 'summoning_sick' }}
+                  />
                 )}
                 {isExhausted && (
-                  <span className="bf-card-state-marker bf-card-state-marker--spent" title="Already attacked this turn">
-                    <GameIcon name="swords" size={12} />
-                    <span className="sr-only">Already attacked this turn</span>
-                  </span>
+                  <BattlefieldStateMark
+                    className="bf-card-state-marker bf-card-state-marker--spent"
+                    label="Exhausted: Has used its available attacks this turn"
+                    icon={{ source: 'combat', name: 'exhausted' }}
+                  />
                 )}
                 {(() => {
                   const simpleData = toSimpleCardData(card);
@@ -350,9 +380,12 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
                 {hasAnyStatus && (
                   <div className="bf-status-badges">
                     {visibleStatusBadges.map((badge) => (
-                      <span key={badge.className} className={`status-badge ${badge.className}`} title={badge.title}>
-                        <GameIcon name={badge.icon} size={12} />
-                      </span>
+                      <BattlefieldStateMark
+                        key={badge.className}
+                        className={`status-badge ${badge.className}`}
+                        label={badge.title}
+                        icon={{ source: 'combat', name: badge.stateId }}
+                      />
                     ))}
                     {hiddenStatusBadges.length > 0 && (
                       <span
@@ -365,48 +398,77 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
                     )}
                   </div>
                 )}
+                {readyToEvolve && (
+                  <BattlefieldStateMark
+                    className="bf-evolution-badge"
+                    label="Evolution ready: The evolution condition has been completed"
+                    icon={{ source: 'combat', name: 'evolution_ready' }}
+                  />
+                )}
                 {einherjarReturns !== undefined && einherjarReturns > 0 && (
-                  <div className="bf-einherjar-badge" title={`Einherjar: ${einherjarReturns} return${einherjarReturns > 1 ? 's' : ''} remaining`}>
-                    <span className="einherjar-icon"><GameIcon name="swords" size={12} /></span>
-                    <span className="einherjar-count">×{einherjarReturns}</span>
-                  </div>
+                  <BattlefieldStateMark
+                    className="bf-einherjar-badge"
+                    label={`Einherjar: ${einherjarReturns} return${einherjarReturns > 1 ? 's' : ''} remaining`}
+                    icon={{ source: 'keyword', name: 'einherjar' }}
+                    count={`×${einherjarReturns}`}
+                    countClassName="einherjar-count"
+                  />
                 )}
                 {chainPartnerOnBoard && (
-                  <div className="bf-chain-badge" title="Ragnarok Chain: Partner is in play — bonuses active!">
-                    <span className="chain-icon"><GameIcon name="link" size={12} /></span>
-                  </div>
+                  <BattlefieldStateMark
+                    className="bf-chain-badge"
+                    label="Ragnarok Chain: Partner is in play — bonuses active"
+                    icon={{ source: 'combat', name: 'ragnarok_chain' }}
+                  />
                 )}
                 {hasChainPartner && !chainPartnerOnBoard && (
-                  <div className="bf-chain-badge chain-inactive" title="Ragnarok Chain: Partner not in play">
-                    <span className="chain-icon"><GameIcon name="link" size={12} /></span>
-                  </div>
+                  <BattlefieldStateMark
+                    className="bf-chain-badge chain-inactive"
+                    label="Ragnarok Chain: Partner not in play"
+                    icon={{ source: 'combat', name: 'ragnarok_chain' }}
+                  />
                 )}
                 {isDormantCard && (
-                  <div className="bf-dormant-overlay" title={`Dormant: Awakens in ${dormantTurnsLeft ?? '?'} turn${dormantTurnsLeft === 1 ? '' : 's'}`}>
-                    <span className="dormant-icon"><GameIcon name="moon" size={12} /></span>
-                    <span className="dormant-turns">{dormantTurnsLeft ?? '?'}</span>
-                  </div>
+                  <BattlefieldStateMark
+                    className="bf-dormant-overlay"
+                    label={`Dormant: Awakens in ${dormantTurnsLeft ?? '?'} turn${dormantTurnsLeft === 1 ? '' : 's'}`}
+                    icon={{ source: 'combat', name: 'dormant' }}
+                    count={dormantTurnsLeft ?? '?'}
+                    countClassName="dormant-turns"
+                    decorativeSleepMarks
+                    iconSize={36}
+                  />
                 )}
                 {isSubmerged && (
-                  <div className="bf-submerge-overlay" title={`Submerged: Surfaces in ${submergeTurnsLeft ?? '?'} turn${submergeTurnsLeft === 1 ? '' : 's'}`}>
-                    <span className="submerge-icon"><GameIcon name="droplet" size={12} /></span>
-                    <span className="submerge-turns">{submergeTurnsLeft ?? '?'}</span>
-                  </div>
+                  <BattlefieldStateMark
+                    className="bf-submerge-overlay"
+                    label={`Submerged: Surfaces in ${submergeTurnsLeft ?? '?'} turn${submergeTurnsLeft === 1 ? '' : 's'}`}
+                    icon={{ source: 'combat', name: 'submerged' }}
+                    count={submergeTurnsLeft ?? '?'}
+                    countClassName="submerge-turns"
+                    iconSize={36}
+                  />
                 )}
-                {isCoiled && (
-                  <div className="bf-coil-badge" title="Coiled: Attack locked to 0">
-                    <span className="coil-icon"><GameIcon name="snake" size={12} /></span>
-                  </div>
+                {hasCoilState && (
+                  <BattlefieldStateMark
+                    className="bf-coil-badge"
+                    label="Coiled: Attack locked to 0 while the source remains in play"
+                    icon={{ source: 'combat', name: 'coiled' }}
+                  />
                 )}
                 {hasWager && (
-                  <div className="bf-wager-badge" title="Wager: Active during poker combat">
-                    <span className="wager-icon"><GameIcon name="dice" size={12} /></span>
-                  </div>
+                  <BattlefieldStateMark
+                    className="bf-wager-badge"
+                    label="Wager: Active during poker combat"
+                    icon={{ source: 'keyword', name: 'wager' }}
+                  />
                 )}
                 {hasFlying && (
-                  <div className="bf-flying-badge" title="Flying: Bypasses Taunt">
-                    <span className="flying-icon"><GameIcon name="feather" size={12} /></span>
-                  </div>
+                  <BattlefieldStateMark
+                    className="bf-flying-badge"
+                    label="Flying: Bypasses Taunt"
+                    icon={{ source: 'keyword', name: 'flying' }}
+                  />
                 )}
               </div>
         </BattlefieldCardPresence>

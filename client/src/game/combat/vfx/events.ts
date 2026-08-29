@@ -32,6 +32,32 @@ export type WagerType =
 	| 'showdown_win_draw_and_damage'
 	| 'showdown_win_rank_damage';
 
+export const WAGER_TYPES: readonly WagerType[] = [
+	'all_in_bonus_with_cost',
+	'all_in_buff_minions',
+	'betting_round_damage',
+	'double_blinds_bonus_multiplier',
+	'double_showdown_multiplier',
+	'fold_penalty_to_healing',
+	'hand_rank_upgrade',
+	'hide_bet_actions',
+	'increase_min_bet',
+	'on_opponent_fold_heal',
+	'peek_next_community_card',
+	'reduce_fold_penalty',
+	'reveal_opponent_hole_cards',
+	'showdown_aoe_damage',
+	'showdown_coin_flip',
+	'showdown_hand_rank_draw',
+	'showdown_win_armor',
+	'showdown_win_draw_and_damage',
+	'showdown_win_rank_damage',
+];
+
+export function isWagerType(value: unknown): value is WagerType {
+	return typeof value === 'string' && WAGER_TYPES.some(type => type === value);
+}
+
 export interface VisualEventBase {
 	id: string;
 	timestamp: number;

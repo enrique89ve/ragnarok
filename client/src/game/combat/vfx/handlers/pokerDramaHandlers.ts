@@ -20,11 +20,13 @@ import {
 	playHandImprovementVFX,
 	playHandRankAnnouncement,
 	playPhaseDramaVFX,
+	playPokerSpellCast,
 	playRaiseVFX,
 	playRagnarokVFX,
 	playReraiseVFX,
 	playShowdownDamageVFX,
 	playStreakAnnouncementVFX,
+	playWagerActivate,
 } from '../../animations/PokerDramaVFX';
 import { playThorHammerVFX } from '../../../animations/ThorHammerVFX';
 import { CombatAction, CombatPhase, HAND_RANK_NAMES, PokerHandRank } from '../../../types/PokerCombatTypes';
@@ -50,6 +52,8 @@ import {
 	type RagnarokTriggeredEvent,
 	type ShowdownDamageEvent,
 	type StreakAnnouncedEvent,
+	type SpellCastEvent,
+	type WagerActivatedEvent,
 } from '../events';
 import type { ArenaVfxOwner } from '../../arenaVfxTargets';
 
@@ -188,6 +192,24 @@ function handleShowdownDamage(event: ShowdownDamageEvent): EffectHandle | null {
 	}, `showdown-impact-${targetOwner}`);
 }
 
+function handleSpellCast(event: SpellCastEvent): EffectHandle | null {
+	return schedulePokerMotion(
+		POKER_MOTION_SPECS['betting-action'],
+		[0],
+		() => playPokerSpellCast(event.effectType, event.side),
+		`spell-cast-${event.side}`,
+	);
+}
+
+function handleWagerActivated(event: WagerActivatedEvent): EffectHandle | null {
+	return schedulePokerMotion(
+		POKER_MOTION_SPECS['betting-action'],
+		[0],
+		() => playWagerActivate(event.wagerType, event.side),
+		`wager-activate-${event.side}`,
+	);
+}
+
 function handleRagnarokTriggered(_event: RagnarokTriggeredEvent): EffectHandle | null {
 	return schedulePokerMotion(POKER_MOTION_SPECS['streak-announcement'], [0], () => playRagnarokVFX(), 'ragnarok');
 }
@@ -245,6 +267,8 @@ export function registerPokerDramaVisualEffects(): VisualEffectUnregister {
 		registerVisualEffect('streakAnnounced', handleStreakAnnounced),
 		registerVisualEffect('phaseEntered', handlePhaseEntered),
 		registerVisualEffect('handImproved', handleHandImproved),
+		registerVisualEffect('spellCast', handleSpellCast),
+		registerVisualEffect('wagerActivated', handleWagerActivated),
 		registerCombatImpactVisualEffect(),
 	];
 	return () => {

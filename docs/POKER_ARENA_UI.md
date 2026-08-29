@@ -109,6 +109,23 @@ Gameplay events write `gameLogStore` always (practice, campaign, P2P). Overlay i
 
 Mapping: `client/src/game/combat/vfx/pokerEventFx.ts`. `showStatus` / `NOTIFICATION` enqueue the stack, not Sonner. Sonner stays out of the poker canvas. `ActionAnnouncement` is not a poker-lane occupant.
 
+### Clock / FX isolation
+
+The poker decision clock is a gameplay contract, not a visual timeline:
+
+- `turnDeadlineAtMs` is the source of truth; the browser interval only projects
+  remaining seconds and submits the timeout action after the deadline.
+- Betting, spell, card-reveal, and showdown VFX are emitted after gameplay
+  commits and remain fire-and-forget. `GameEffectCoordinator` may schedule or
+  cancel presentation work, but it never owns phase, turn, countdown, or action
+  eligibility.
+- Cinema occupancy only queues feedback-stack chips. It must never disable the
+  betting controls, pause the clock, or wait for an animation `onComplete` to
+  advance gameplay.
+- Timer callbacks are kept outside the interval lifecycle so a render or FX
+  update cannot recreate the timer loop. If the main thread is delayed, the
+  next tick derives the elapsed time from the absolute deadline.
+
 ### VFX target contract
 
 `arenaVfxTargets.ts` is the central selector registry for arena VFX. Components
@@ -131,6 +148,30 @@ functions. They should not fall back to `.community-slot`, `.risk-display`,
 - **GSAP `gsap.to('.game-viewport', { x, y })`**: overwrote the inline `transform: translate(...) scale(...)` set by GameViewport.tsx for responsive scaling — first shake stripped the scale, canvas displaced permanently. *Fix*: shake `.game-viewport-wrapper` instead.
 - **`body { overflow: visible; width: 100vw }`**: with `100vw` including the scrollbar gutter on Windows/Chromium, any momentary horizontal overflow triggered a document scrollbar and shifted the whole body by ~15 px. *Fix*: `overflow-x: hidden; width: 100%`.
 - **`playPhaseDramaVFX` injecting `width: 100%; background: red-gradient` slash into fixed-inset container**: drew a 1920+ px red line across the entire screen on every PRE_FLOP. *Fix*: removed the slash injection; if dramatic line is wanted in the future, mount it inside `.zone-board` and constrain to board dimensions.
+
+### 1.1 Runtime state symbols
+
+The battlefield is the visual consumer of resolved `CardInstance` facts. It
+does not infer gameplay from CSS, emoji, animation, or legacy adapter fields.
+`runtimeStateContract.ts` defines the shared state ids and descriptions used by
+the battlefield and `BattlefieldCardInspector`; `BattlefieldStateMark.tsx`
+renders their accessible SVG markers.
+
+| State | Canonical runtime fact | Board representation |
+|---|---|---|
+| Summoning sickness | `isSummoningSick`, excluding `charge` and `rush` | Distinct hourglass SVG marker; visible on either battlefield side |
+| Exhausted | `canAttack === false` after `attacksPerformed > 0`, excluding other blockers | Crossed-blade SVG marker on the active player side |
+| Dormant | `isDormant` + `dormantTurnsLeft` | Dedicated Dormant SVG, readable turn counter, and decorative `z` marks; the marks never carry rules |
+| Submerged | `isSubmerged` + `submergeTurnsLeft` | Submerge SVG and surface counter overlay |
+| Coiled | `coiledBy` | Coil SVG badge; `isCoiled` is not a runtime field |
+| Einherjar | `einherjarGeneration` plus the `einherjar` keyword | Einherjar SVG and remaining-return counter; `einpieces` is not a runtime field |
+| Status effects | canonical flags in `CardInstance` | Eight status badges from the same runtime state definitions |
+| Evolution ready | `petEvolutionMet` | Evolution-ready SVG marker |
+| Wager / Flying | authored `CardData` keywords/effects | Keyword SVG icons, not guessed status flags |
+
+All markers expose an English semantic label through the component contract.
+The label and counter remain readable when motion is reduced, and no marker is
+allowed to change gameplay lifetime or eligibility.
 
 ---
 
@@ -186,10 +227,9 @@ RagnarokGameCoordinator (FSM root)
                     └── PixiParticleCanvas        (realm particles)
 ```
 
-**Dead components (delete in cleanup):**
-- `ArenaPokerHand.tsx` — 0 usages
-- `HeroBridge.tsx` — 0 usages (still exported in `components/index.ts`)
-- `WagerEffectsHUD.tsx` — 0 usages
+**Historical cleanup completed:**
+- `ArenaPokerHand.tsx`, `HeroBridge.tsx`, and `WagerEffectsHUD.tsx` were verified at zero production usages and are no longer present.
+- Do not restore these files as alternate poker render paths; `RagnarokCombatArena` and its current zone components own the surface.
 
 **Verify before delete:**
 - `PotDisplay.tsx` — 1 usage (check it's not the only caller already dead)
@@ -420,9 +460,9 @@ For each hotspot class:
 - Decide single owner (CSS or Tailwind)
 - Delete the other
 
-### Phase E — Delete dead components
-- `ArenaPokerHand.tsx`, `HeroBridge.tsx`, `WagerEffectsHUD.tsx`
-- Audit `PotDisplay` + `PokerCombatAnimation` callers, delete if dead
+### Phase E — Delete dead components (completed for the historical list)
+- `ArenaPokerHand.tsx`, `HeroBridge.tsx`, and `WagerEffectsHUD.tsx` are already removed after the zero-usage audit.
+- `PotDisplay` and `PokerCombatAnimation` remain separate verification candidates until their current callers are intentionally migrated.
 
 ### Phase F — Split `RagnarokCombatArena.css` (4443 LOC)
 Move by concern into existing `combat/styles/*.css`:

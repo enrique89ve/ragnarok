@@ -84,7 +84,6 @@ export function toSimpleCardData(card: CardSource): SimpleCardData | null {
 		hasStage3Variants: hasStage3Variants(processedCard),
 		bloodPrice: readNumberProperty(processedCard, 'bloodPrice'),
 		chainPartner: readNumberProperty(processedCard, 'chainPartner'),
-		einpieces: readNumberProperty(processedCard, 'einpieces'),
 		...(cardAny.cardClass !== undefined && typeof cardAny.cardClass !== 'string' ? {} : {}),
 	};
 }

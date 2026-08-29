@@ -73,7 +73,6 @@ export interface SimpleCardData {
 	hasStage3Variants?: boolean;
 	bloodPrice?: number;
 	chainPartner?: number;
-	einpieces?: number;
 }
 
 export type SimpleCardStatTone = StatGemTone;

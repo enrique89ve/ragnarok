@@ -1,6 +1,11 @@
 import { getCardKeywordSemantics, normalizeCardKeyword } from '../../components/card/cardPresentationContract';
 import type { CardInstance } from '../../types';
 import { toSimpleCardData, type SimpleCardData } from '../../components/card/cardDataAdapter';
+import {
+	getActiveRuntimeStates,
+	getEinherjarReturnsRemaining,
+	RUNTIME_STATE_DEFINITIONS,
+} from '../runtimeStateContract';
 
 export type CardInspectorSource = 'hand' | 'player-battlefield' | 'opponent-battlefield';
 
@@ -35,14 +40,6 @@ export interface CardInspectorModel {
 	readonly combatStates: readonly CardInspectorFeature[];
 }
 
-interface RuntimeStateDefinition {
-	readonly id: string;
-	readonly name: string;
-	readonly description: string;
-	readonly isActive: (card: CardInstance, keywords: ReadonlySet<string>) => boolean;
-	readonly value?: (card: CardInstance) => string | undefined;
-}
-
 const SOURCE_LABELS: Record<CardInspectorSource, string> = {
 	hand: 'Your hand',
 	'player-battlefield': 'Allied battlefield',
@@ -54,123 +51,6 @@ const compareStat = (current: number, base: number): CardInspectorStat['state'] 
 	if (current < base) return 'damaged';
 	return 'base';
 };
-
-const readNumber = (source: object, key: string): number | undefined => {
-	const value = (source as Record<string, unknown>)[key];
-	return typeof value === 'number' ? value : undefined;
-};
-
-const withTurns = (turns: number | undefined): string | undefined => {
-	if (turns === undefined) return undefined;
-	return `${turns} turn${turns === 1 ? '' : 's'} remaining`;
-};
-
-const RUNTIME_STATES: readonly RuntimeStateDefinition[] = [
-	{
-		id: 'ready',
-		name: 'Ready to attack',
-		description: 'This unit can be selected as an attacker now.',
-		isActive: card => card.canAttack === true && !card.isSummoningSick && !card.isFrozen && !card.isDormant && !card.isSubmerged,
-	},
-	{
-		id: 'divine_shield',
-		name: 'Divine Shield',
-		description: 'Absorbs the next source of damage.',
-		isActive: card => card.hasDivineShield === true,
-	},
-	{
-		id: 'stealth',
-		name: 'Stealth',
-		description: 'Cannot be targeted until the protection is broken.',
-		isActive: card => card.isStealth === true,
-	},
-	{
-		id: 'taunt',
-		name: 'Taunt',
-		description: 'Enemies must attack this unit before other targets.',
-		isActive: (card, keywords) => card.isTaunt === true || keywords.has('taunt'),
-	},
-	{
-		id: 'frozen',
-		name: 'Frozen',
-		description: 'Cannot attack while frozen.',
-		isActive: card => card.isFrozen === true,
-	},
-	{
-		id: 'burning',
-		name: 'Burning',
-		description: 'Has increased attack and takes self-damage.',
-		isActive: card => card.isBurning === true,
-	},
-	{
-		id: 'poisoned',
-		name: 'Poisoned',
-		description: 'Takes damage at the start of its turn.',
-		isActive: card => card.isPoisonedDoT === true,
-	},
-	{
-		id: 'bleeding',
-		name: 'Bleeding',
-		description: 'Takes additional damage when damaged.',
-		isActive: card => card.isBleeding === true,
-	},
-	{
-		id: 'paralyzed',
-		name: 'Paralyzed',
-		description: 'Has a chance to fail actions.',
-		isActive: card => card.isParalyzed === true,
-	},
-	{
-		id: 'weakened',
-		name: 'Weakened',
-		description: 'Current attack is reduced.',
-		isActive: card => card.isWeakened === true,
-	},
-	{
-		id: 'vulnerable',
-		name: 'Vulnerable',
-		description: 'Takes additional damage from all sources.',
-		isActive: card => card.isVulnerable === true,
-	},
-	{
-		id: 'marked',
-		name: 'Marked',
-		description: 'Can be targeted through stealth and protection.',
-		isActive: card => card.isMarked === true,
-	},
-	{
-		id: 'dormant',
-		name: 'Dormant',
-		description: 'Cannot act or be targeted until it awakens.',
-		isActive: card => card.isDormant === true,
-		value: card => withTurns(card.dormantTurnsLeft),
-	},
-	{
-		id: 'submerged',
-		name: 'Submerged',
-		description: 'Hidden and untargetable until it surfaces.',
-		isActive: card => card.isSubmerged === true,
-		value: card => withTurns(card.submergeTurnsLeft),
-	},
-	{
-		id: 'coiled',
-		name: 'Coiled',
-		description: 'Attack is locked while the coil source remains in play.',
-		isActive: card => typeof card.coiledBy === 'string' && card.coiledBy.length > 0,
-	},
-	{
-		id: 'evolution_ready',
-		name: 'Evolution ready',
-		description: 'The evolution condition has been completed.',
-		isActive: card => card.petEvolutionMet === true,
-	},
-	{
-		id: 'ragnarok_chain',
-		name: 'Ragnarok Chain',
-		description: 'The linked partner is currently present on the battlefield.',
-		isActive: card => typeof card.chainPartnerInstanceId === 'string' && card.chainPartnerInstanceId.length > 0,
-	},
-];
 
 function buildStats(card: CardInstance, simpleCard: SimpleCardData): CardInspectorStat[] {
 	const stats: CardInspectorStat[] = [];
@@ -205,8 +85,10 @@ function buildFacts(card: CardInstance, simpleCard: SimpleCardData): CardInspect
 	if (card.card.realm) facts.push({ label: 'Realm', value: card.card.realm });
 	if ('armorValue' in card.card) facts.push({ label: 'Armor', value: String(card.card.armorValue) });
 	if (card.nft_id) facts.push({ label: 'NFT', value: card.nft_id });
-	const einpieces = readNumber(simpleCard, 'einpieces');
-	if (einpieces !== undefined) facts.push({ label: 'Einherjar returns', value: String(einpieces) });
+	const einherjarReturns = getEinherjarReturnsRemaining(card);
+	if (einherjarReturns !== undefined) {
+		facts.push({ label: 'Einherjar returns remaining', value: String(einherjarReturns) });
+	}
 	return facts;
 }
 
@@ -240,8 +122,8 @@ export function buildCardInspectorModel(card: CardInstance, source: CardInspecto
 	if (!simpleCard) return null;
 
 	const keywordIds = (card.instanceKeywords ?? card.card.keywords ?? []).map(normalizeCardKeyword);
-	const keywordSet = new Set(keywordIds);
 	const isSilenced = card.silenced === true || card.isSilenced === true;
+	const activeStateIds = new Set(getActiveRuntimeStates(card).map(state => state.id));
 	const keywords = keywordIds.map<CardInspectorFeature>(id => {
 		const definition = getCardKeywordSemantics(id);
 		return {
@@ -261,11 +143,11 @@ export function buildCardInspectorModel(card: CardInstance, source: CardInspecto
 		stats: buildStats(card, simpleCard),
 		keywords,
 		modifiers: buildModifiers(card),
-		combatStates: RUNTIME_STATES.map(state => ({
+		combatStates: RUNTIME_STATE_DEFINITIONS.map(state => ({
 			id: state.id,
 			name: state.name,
 			description: state.description,
-			active: state.isActive(card, keywordSet),
+			active: activeStateIds.has(state.id),
 			...(state.value?.(card) ? { value: state.value(card) } : {}),
 		})),
 	};

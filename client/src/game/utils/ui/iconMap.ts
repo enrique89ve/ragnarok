@@ -13,6 +13,7 @@ import {
 	AlertTriangle,
 	Apple,
 	ArrowDown,
+	ArrowUp,
 	Axe,
 	Ban,
 	Bone,
@@ -120,6 +121,7 @@ export const ICON_MAP = {
 	plus: Plus, // add
 	warning: AlertTriangle, // warning
 	arrowDown: ArrowDown, // weakened
+	arrowUp: ArrowUp, // advantage/increased
 	circle: Bug, // neutral element placeholder
 	link: Settings, // chain link (closest semantic)
 	dice: Wand, // wager (dice for randomness; closest wand)
@@ -131,7 +133,6 @@ export const ICON_MAP = {
 	help: HelpCircle, // help
 	day: Sun, // day/turn_start
 	night: Moon, // night/turn_end
-	hourglass: Moon, // turn counter (closest: moon/cyclical)
 	moon: Moon, // dormant/asleep
 	shine: Sparkles, // dawn
 	star: Star, // five-pointed star

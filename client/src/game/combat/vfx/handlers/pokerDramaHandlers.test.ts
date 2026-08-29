@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CombatPhase, PokerHandRank } from '../../../types/PokerCombatTypes';
-import { emitHandRankAnnounced, emitPhaseEntered } from '../events';
+import { emitHandRankAnnounced, emitPhaseEntered, emitSpellCast, emitWagerActivated } from '../events';
 import { setVisualEventRendererEnabled } from '../emitter';
 import { resetVisualEffectRegistry } from '../registry';
 import { useCombatFeedbackStore } from '../../feedback/combatFeedbackStore';
@@ -10,6 +10,8 @@ import { registerPokerDramaVisualEffects } from './pokerDramaHandlers';
 const playHandRankAnnouncement = vi.fn();
 const playPhaseDramaVFX = vi.fn();
 const playThorHammerVFX = vi.fn();
+const playPokerSpellCast = vi.fn();
+const playWagerActivate = vi.fn();
 
 vi.mock('../../../animations/ThorHammerVFX', () => ({
 	playThorHammerVFX: (...args: unknown[]) => playThorHammerVFX(...args),
@@ -30,6 +32,8 @@ vi.mock('../../animations/PokerDramaVFX', () => ({
 	playRagnarokVFX: vi.fn(),
 	playStreakAnnouncementVFX: vi.fn(),
 	playHandImprovementVFX: vi.fn(),
+	playPokerSpellCast: (...args: unknown[]) => playPokerSpellCast(...args),
+	playWagerActivate: (...args: unknown[]) => playWagerActivate(...args),
 }));
 
 describe('poker drama handlers — one event one FX', () => {
@@ -43,6 +47,8 @@ describe('poker drama handlers — one event one FX', () => {
 		playHandRankAnnouncement.mockReset();
 		playPhaseDramaVFX.mockReset();
 		playThorHammerVFX.mockReset();
+		playPokerSpellCast.mockReset();
+		playWagerActivate.mockReset();
 		unregister = registerPokerDramaVisualEffects();
 	});
 
@@ -77,5 +83,14 @@ describe('poker drama handlers — one event one FX', () => {
 		expect(useCombatFeedbackStore.getState().cinemaHolders).toContain('poker-cinema');
 		vi.advanceTimersByTime(50);
 		expect(playPhaseDramaVFX).toHaveBeenCalledWith(CombatPhase.FAITH);
+	});
+
+	it('routes spell and wager visuals through typed events', () => {
+		emitSpellCast({ effectType: 'bluff_rune', side: 'player' });
+		emitWagerActivated({ wagerType: 'betting_round_damage', side: 'opponent' });
+
+		vi.advanceTimersByTime(50);
+		expect(playPokerSpellCast).toHaveBeenCalledWith('bluff_rune', 'player');
+		expect(playWagerActivate).toHaveBeenCalledWith('betting_round_damage', 'opponent');
 	});
 });

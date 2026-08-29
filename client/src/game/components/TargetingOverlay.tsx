@@ -1,8 +1,15 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useId, useState } from 'react';
+import ReactDOM from 'react-dom';
 import { useTargetingStore } from '../stores/targetingStore';
 import { useTargetingAdapter } from '../hooks';
 import './TargetingOverlay.css';
 import { GameIcon } from '../utils/ui/GameIcon';
+import {
+  ARENA_CANVAS_SIZE,
+  ARENA_VFX_LAYERS,
+  getArenaLocalPoint,
+  getArenaVfxLayer,
+} from '../combat/arenaVfxTargets';
 
 interface ArrowPath {
   startX: number;
@@ -11,6 +18,36 @@ interface ArrowPath {
   endY: number;
   controlX: number;
   controlY: number;
+}
+
+interface ArenaCardPosition {
+  centerX: number;
+  centerY: number;
+  width: number;
+  height: number;
+}
+
+function toArenaPoint(
+  point: { x: number; y: number },
+  layer: HTMLElement,
+): { x: number; y: number } | null {
+  return getArenaLocalPoint(point, layer);
+}
+
+function toArenaCardPosition(
+  position: { centerX: number; centerY: number; width: number; height: number },
+  layer: HTMLElement,
+): ArenaCardPosition | undefined {
+  const center = toArenaPoint({ x: position.centerX, y: position.centerY }, layer);
+  const rect = layer.getBoundingClientRect();
+  if (!center || rect.width <= 0 || rect.height <= 0) return undefined;
+
+  return {
+    centerX: center.x,
+    centerY: center.y,
+    width: position.width * (ARENA_CANVAS_SIZE.width / rect.width),
+    height: position.height * (ARENA_CANVAS_SIZE.height / rect.height),
+  };
 }
 
 export function TargetingOverlay() {
@@ -32,9 +69,18 @@ export function TargetingOverlay() {
     cardPositions: legacyStore.cardPositions,
     damagePreview: legacyStore.damagePreview
   };
-  
+
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [arrowPath, setArrowPath] = useState<ArrowPath | null>(null);
+  const idPrefix = useId().replace(/[^a-zA-Z0-9_-]/g, '');
+  const gradientId = `targeting-${idPrefix}-gradient`;
+  const glowId = `targeting-${idPrefix}-glow`;
+  const markerId = `targeting-${idPrefix}-head`;
+
+  useEffect(() => {
+    setPortalTarget(getArenaVfxLayer(ARENA_VFX_LAYERS.vfx));
+  }, []);
   
   useEffect(() => {
     if (!isTargeting) return;
@@ -48,28 +94,55 @@ export function TargetingOverlay() {
   }, [isTargeting]);
   
   useEffect(() => {
-    if (!isTargeting || !attackerPosition) {
+    if (!isTargeting || !attackerPosition || !portalTarget) {
       setArrowPath(null);
       return;
     }
-    
-    const startX = attackerPosition.centerX;
-    const startY = attackerPosition.centerY;
+
+    const attackerPoint = toArenaPoint(
+      { x: attackerPosition.centerX, y: attackerPosition.centerY },
+      portalTarget,
+    );
+    if (!attackerPoint) {
+      setArrowPath(null);
+      return;
+    }
+
+    const startX = attackerPoint.x;
+    const startY = attackerPoint.y;
     
     let endX: number, endY: number;
     
     if (hoveredTargetId && hoveredPosition) {
       const targetPos = cardPositions.get(hoveredTargetId);
       if (targetPos) {
-        endX = targetPos.centerX;
-        endY = targetPos.centerY;
+        const targetPoint = toArenaPoint(
+          { x: targetPos.centerX, y: targetPos.centerY },
+          portalTarget,
+        );
+        if (!targetPoint) {
+          setArrowPath(null);
+          return;
+        }
+        endX = targetPoint.x;
+        endY = targetPoint.y;
       } else {
-        endX = hoveredPosition.x;
-        endY = hoveredPosition.y;
+        const targetPoint = toArenaPoint(hoveredPosition, portalTarget);
+        if (!targetPoint) {
+          setArrowPath(null);
+          return;
+        }
+        endX = targetPoint.x;
+        endY = targetPoint.y;
       }
     } else {
-      endX = mousePos.x;
-      endY = mousePos.y;
+      const mousePoint = toArenaPoint(mousePos, portalTarget);
+      if (!mousePoint) {
+        setArrowPath(null);
+        return;
+      }
+      endX = mousePoint.x;
+      endY = mousePoint.y;
     }
     
     const midX = (startX + endX) / 2;
@@ -83,32 +156,38 @@ export function TargetingOverlay() {
       controlX: midX,
       controlY: midY
     });
-  }, [isTargeting, attackerPosition, hoveredTargetId, hoveredPosition, mousePos, cardPositions]);
-  
-  if (!isTargeting || !arrowPath) {
+  }, [isTargeting, attackerPosition, hoveredTargetId, hoveredPosition, mousePos, cardPositions, portalTarget]);
+
+  if (!portalTarget || !isTargeting || !arrowPath) {
     return null;
   }
   
   const pathD = `M ${arrowPath.startX} ${arrowPath.startY} Q ${arrowPath.controlX} ${arrowPath.controlY} ${arrowPath.endX} ${arrowPath.endY}`;
   
-  const angle = Math.atan2(
-    arrowPath.endY - arrowPath.controlY,
-    arrowPath.endX - arrowPath.controlX
-  ) * (180 / Math.PI);
-  
   const isValidTarget = hoveredTargetId !== null;
   const isLethal = damagePreview?.isLethalToTarget;
   
-  return (
-    <div className="targeting-overlay">
-      <svg className="targeting-svg" viewBox={`0 0 ${window.innerWidth} ${window.innerHeight}`}>
+  const targetPosition = hoveredTargetId
+    ? cardPositions.get(hoveredTargetId)
+    : undefined;
+  const arenaTargetPosition = targetPosition
+    ? toArenaCardPosition(targetPosition, portalTarget)
+    : undefined;
+
+  return ReactDOM.createPortal(
+    <div className="targeting-overlay" data-vfx-layer={ARENA_VFX_LAYERS.vfx}>
+      <svg
+        className="targeting-svg"
+        viewBox={`0 0 ${ARENA_CANVAS_SIZE.width} ${ARENA_CANVAS_SIZE.height}`}
+        aria-hidden="true"
+      >
         <defs>
-          <linearGradient id="arrow-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor={isLethal ? "#ff4444" : "#ffcc00"} stopOpacity="0.3" />
             <stop offset="100%" stopColor={isLethal ? "#ff0000" : "#ff8800"} stopOpacity="1" />
           </linearGradient>
-          
-          <filter id="arrow-glow">
+
+          <filter id={glowId}>
             <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
             <feMerge>
               <feMergeNode in="coloredBlur"/>
@@ -117,7 +196,7 @@ export function TargetingOverlay() {
           </filter>
           
           <marker
-            id="arrowhead"
+            id={markerId}
             markerWidth="12"
             markerHeight="12"
             refX="10"
@@ -134,11 +213,11 @@ export function TargetingOverlay() {
         <path
           d={pathD}
           className={`arrow-path ${isValidTarget ? 'valid-target' : ''} ${isLethal ? 'lethal' : ''}`}
-          stroke="url(#arrow-gradient)"
+          stroke={`url(#${gradientId})`}
           strokeWidth="6"
           fill="none"
-          filter="url(#arrow-glow)"
-          markerEnd="url(#arrowhead)"
+          filter={`url(#${glowId})`}
+          markerEnd={`url(#${markerId})`}
         />
         
         <circle
@@ -152,10 +231,11 @@ export function TargetingOverlay() {
       {damagePreview && hoveredTargetId && (
         <DamagePreviewBadge 
           preview={damagePreview}
-          position={cardPositions.get(hoveredTargetId)}
+          position={arenaTargetPosition}
         />
       )}
-    </div>
+    </div>,
+    portalTarget,
   );
 }
 

@@ -5,6 +5,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { PokerHandRank, TRADITIONAL_HAND_NAMES } from '../../types/PokerCombatTypes';
+import PokerHandIcon from './PokerHandIcon';
 
 interface HandStrengthIndicatorProps {
 	handRank: PokerHandRank;
@@ -47,7 +48,9 @@ export const HandStrengthIndicator: React.FC<HandStrengthIndicatorProps> = ({
 				data-hand-rank={handRank}
 				aria-label={`Current hand: ${traditionalHandName}, ${handName}, ${tierLabel}`}
 			>
-				<span className="hand-strength-sigil" aria-hidden="true">♠</span>
+					<span className="hand-strength-sigil" aria-hidden="true">
+						<PokerHandIcon />
+					</span>
 				<span className="hand-strength-copy">
 					<strong className="hand-strength-name">{handName}</strong>
 					<span className="hand-strength-meta">{traditionalHandName} · {tierLabel}</span>

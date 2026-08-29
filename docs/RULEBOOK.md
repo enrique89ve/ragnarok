@@ -562,62 +562,62 @@ Destiny.
 
 ### Triggered Effects
 
-| Keyword | Icon | Description |
+| Keyword | Semantic icon | Description |
 |---------|------|-------------|
-| **Battlecry** | ⚔️ | Triggers when you play this card from your hand |
-| **Deathrattle** | 💀 | Triggers when this minion dies |
-| **Combo** | 🎭 | Bonus effect if you played another card first this turn |
-| **Inspire** | 💫 | Triggers each time you use your Hero Power |
-| **Frenzy** | 😤 | Triggers the first time this survives damage |
-| **Spellburst** | ✴️ | Triggers after you cast a spell (once per game) |
-| **Overkill** | 💥 | Triggers when dealing excess lethal damage |
-| **Outcast** | ↔️ | Bonus if this is the leftmost or rightmost card in hand |
+| **Battlecry** | `battlecry` SVG | Triggers when you play this card from your hand |
+| **Deathrattle** | `deathrattle` SVG | Triggers when this minion dies |
+| **Combo** | `combo` SVG | Bonus effect if you played another card first this turn |
+| **Inspire** | `inspire` SVG | Triggers each time you use your Hero Power |
+| **Frenzy** | `frenzy` SVG | Triggers the first time this survives damage |
+| **Spellburst** | `spellburst` SVG | Triggers after you cast a spell (once per game) |
+| **Overkill** | `overkill` SVG | Triggers when dealing excess lethal damage |
+| **Outcast** | `outcast` SVG | Bonus if this is the leftmost or rightmost card in hand |
 
 ### Persistent Effects
 
-| Keyword | Icon | Description |
+| Keyword | Semantic icon | Description |
 |---------|------|-------------|
-| **Taunt** | 🛡️ | Enemies must attack this minion first |
-| **Divine Shield** | ✨ | The first damage this minion takes is ignored |
-| **Stealth** | 👁️ | Cannot be targeted until it attacks |
-| **Windfury** | 🌪️ | Can attack twice each turn |
-| **Lifesteal** | ❤️ | Damage dealt also heals your hero |
-| **Poisonous** | ☠️ | Destroy any minion damaged by this |
-| **Reborn** | ♻️ | Returns to life with 1 Health |
+| **Taunt** | `taunt` SVG | Enemies must attack this minion first |
+| **Divine Shield** | `divine_shield` SVG | The first damage this minion takes is ignored |
+| **Stealth** | `stealth` SVG | Cannot be targeted until it attacks |
+| **Windfury** | `windfury` SVG | Can attack twice each turn |
+| **Lifesteal** | `lifesteal` SVG | Damage dealt also heals your hero |
+| **Poisonous** | `poisonous` SVG | Destroy any minion damaged by this |
+| **Reborn** | `reborn` SVG | Returns to life with 1 Health |
 
 ### Action Keywords
 
-| Keyword | Icon | Description |
+| Keyword | Semantic icon | Description |
 |---------|------|-------------|
-| **Charge** | ⚡ | Can attack immediately |
-| **Rush** | 🏃 | Can attack minions immediately |
-| **Freeze** | ❄️ | Frozen characters lose their next attack |
-| **Silence** | 🔇 | Removes all card text and enchantments |
-| **Discover** | 🔍 | Choose one of three cards to add to your hand |
-| **Adapt** | 🦎 | Choose one of three bonuses |
+| **Charge** | `charge` SVG | Can attack immediately |
+| **Rush** | `rush` SVG | Can attack minions immediately |
+| **Freeze** | `freeze` SVG | Frozen characters lose their next attack |
+| **Silence** | `silence` SVG | Removes all card text and enchantments |
+| **Discover** | `discover` SVG | Choose one of three cards to add to your hand |
+| **Adapt** | `adapt` SVG | Choose one of three bonuses |
 
 ### Resource Keywords
 
-| Keyword | Icon | Description |
+| Keyword | Semantic icon | Description |
 |---------|------|-------------|
-| **Overload** | ⚡ | Locks some mana crystals next turn |
-| **Spell Damage** | 🔮 | Your spells deal extra damage |
-| **Echo** | 🔊 | Can be played multiple times per turn |
-| **Tradeable** | 🔄 | Drag to deck to spend 1 mana and draw a new card |
+| **Overload** | `overload` SVG | Locks some mana crystals next turn |
+| **Spell Damage** | `spell_damage` SVG | Your spells deal extra damage |
+| **Echo** | `echo` SVG | Can be played multiple times per turn |
+| **Tradeable** | `tradeable` SVG | Drag to deck to spend 1 mana and draw a new card |
 
 ### Special Keywords
 
-| Keyword | Icon | Description |
+| Keyword | Semantic icon | Description |
 |---------|------|-------------|
-| **Rune** | ❓ | Hidden enchantment that triggers when a specific condition is met |
-| **Dormant** | 💤 | Starts asleep, awakens after 2 turns |
-| **Colossal** | 🦑 | Summons additional appendage minions |
-| **Corrupt** | 🌀 | Upgrades in hand after playing a higher-cost card |
-| **Runic Bond** | 🧲 | Attach to a friendly Automaton to combine stats and abilities |
-| **Yggdrasil Golem** | 🌲 | Summons an Yggdrasil Golem that grows stronger with each one summoned |
-| **Einherjar** | 🔁 | When this dies, shuffle a copy into your deck with +1/+1 (max 3 returns) |
-| **Blood Price** | 🩸 | Can be played by paying health instead of mana |
-| **Prophecy** | ⏳ | Creates a visible countdown that triggers an effect when it reaches 0 |
+| **Rune** | `secret` SVG | Hidden enchantment that triggers when a specific condition is met |
+| **Dormant** | `dormant` SVG + runtime counter | Starts asleep; `dormantTurnsLeft` shows when it awakens |
+| **Colossal** | `colossal` SVG | Summons additional appendage minions |
+| **Corrupt** | `corrupt` SVG | Upgrades in hand after playing a higher-cost card |
+| **Runic Bond** | `magnetic` SVG | Attach to a friendly Automaton to combine stats and abilities |
+| **Yggdrasil Golem** | `yggdrasil_golem` SVG | Summons an Yggdrasil Golem that grows stronger with each one summoned |
+| **Einherjar** | `einherjar` SVG + runtime counter | When this dies, shuffle a copy into your deck with +1/+1 (max 3 returns) |
+| **Blood Price** | `blood_price` SVG | Can be played by paying health instead of mana |
+| **Prophecy** | `prophecy` SVG | Creates a visible countdown that triggers an effect when it reaches 0 |
 
 ---
 
@@ -878,15 +878,16 @@ The **3-3-1 Family-Based Evolution System**: 38 Norse-themed pet families, each 
 
 Status effects apply temporary conditions to pieces/heroes during combat.
 
-| Effect | Icon | Duration | Description |
+| Effect | Semantic icon | Duration | Description |
 |--------|------|----------|-------------|
-| **Poisoned** | ☠️ | Ticks | 3% max HP damage per turn |
-| **Burning** | 🔥 | Ticks | 5% max HP damage per turn |
-| **Frozen** | ❄️ | 1+ turns | Cannot attack or use abilities |
-| **Blessed** | ✨ | Ticks | 2% max HP regeneration per turn |
-| **Cursed** | 💀 | Varies | Reduced effectiveness |
-| **Shielded** | 🛡️ | Until broken | Absorbs damage |
-| **Enraged** | 😤 | Varies | Increased damage dealt |
+| **Poisoned** | `poisoned` SVG | Ticks | Takes 3 damage at the start of its turn |
+| **Burning** | `burning` SVG | Ticks | Takes 3 damage when attacking and deals increased damage |
+| **Frozen** | `frozen` SVG | 1+ turns | Cannot attack while frozen |
+| **Bleeding** | `bleeding` SVG | Varies | Takes additional damage when damaged |
+| **Paralyzed** | `paralyzed` SVG | Varies | Has a chance to fail actions |
+| **Weakened** | `weakened` SVG | Varies | Current attack is reduced |
+| **Vulnerable** | `vulnerable` SVG | Varies | Takes additional damage from all sources |
+| **Marked** | `marked` SVG | Varies | Can be targeted through stealth and protection |
 
 ---
 

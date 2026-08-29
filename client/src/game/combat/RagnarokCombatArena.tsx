@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import React, { useEffect, useId, useState, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePokerCombatAdapter, getActionPermissions, getPokerCombatAdapterState } from '../hooks/usePokerCombatAdapter';
 import { useGameStore } from '../stores/gameStore';
@@ -46,7 +46,6 @@ import { useRagnarokCombatController } from './hooks/useRagnarokCombatController
 import { HeroBattlePopup } from './components/HeroBattlePopup';
 import { KingPassivePopup } from './components/KingPassivePopup';
 import type { ShowdownCelebration as ShowdownCelebrationState } from './hooks/useCombatEvents';
-import { debug } from '../config/debugConfig';
 import { GameLog } from '../components/GameLog';
 import { useGameLogIntegration } from '../hooks/useGameLogIntegration';
 import { usePokerDrama } from './hooks/usePokerDrama';
@@ -80,25 +79,13 @@ import { useCampaignStore, getMission } from '../campaign';
 import { isBettingPhase } from './modules/PhaseManager';
 import { resolveHeroPortrait } from '../utils/art/artMapping';
 import { getHeroFeud } from '../pvp/pvpData';
-import type { CardInstance } from '../types';
+import type { CardInstance, RealmEffect } from '../types';
 import { derivePokerDecisionView } from './decision/pokerDecisionView';
 import { BattlefieldCardInspector } from './components/BattlefieldCardInspector';
 import type { CardInspectorSource } from './cardInspector/cardInspectorModel';
 import { resolveBattlefieldCardClickIntent, type BattlefieldCardSide } from './cardInspector/battlefieldCardIntent';
-
-const CrossedSwordsIcon = () => (
-	<svg className="btn-icon" viewBox="0 0 20 20" fill="currentColor">
-		<path d="M3.5 1l1 3.5 1.2 1.2 4.3 4.3 4.3-4.3L15.5 4.5l1-3.5h1L16 5.3l-1.2 1.2L10 11.3l-1.5 1.5 1.1 1.1a1 1 0 01-1.4 1.4l-1.1-1.1-1.8 1.8a1 1 0 01-1.4-1.4l1.8-1.8-1.1-1.1a1 1 0 011.4-1.4l1.1 1.1L8.6 10 4.3 5.7 3.1 4.5 1 5.5V4.5L2.5 1h1z"/>
-		<path d="M11.4 12.4l1.5-1.5 4.8 4.8-1.2 1.2L18 18.5a1 1 0 01-1.4 1.4l-1.6-1.6-1.2 1.2-4.8-4.8z" opacity="0.85"/>
-	</svg>
-);
-
-const CloseIcon = () => (
-	<svg className="btn-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-		<path d="M5 5l10 10" />
-		<path d="M15 5 5 15" />
-	</svg>
-);
+import { GameIcon } from '../utils/ui/GameIcon';
+import type { IconName } from '../utils/ui/iconMap';
 
 const PHASE_LABELS: Partial<Record<CombatPhase, string>> = {
 	[CombatPhase.MULLIGAN]: 'Mulligan',
@@ -112,22 +99,22 @@ const PHASE_LABELS: Partial<Record<CombatPhase, string>> = {
 
 // WAGER_DESCRIPTIONS map moved to client/src/game/combat/data/wagerDescriptions.ts
 // for sharing with future components (was previously duplicated across
-// WagerEffectsHUD — now deleted — and inline here).
 
-const BATTLE_INTEL_GLYPHS: Record<string, string> = {
-	buff_all_attack: 'ATK',
-	debuff_all_attack: 'WEAK',
-	buff_all_health: 'VIT',
-	damage_all_end_turn: 'BURN',
-	heal_all_start_turn: 'HEAL',
-	cost_increase: 'COST',
-	keyword_grant: 'KEY',
-	return_to_hand_on_death: 'RETURN',
-	stealth_on_play: 'SHADE',
-};
+const BATTLE_INTEL_GLYPHS = {
+	buff_all_attack: 'swords',
+	debuff_all_attack: 'arrowDown',
+	damage_all_end_turn: 'flame',
+	heal_all_start_turn: 'heart',
+	cost_increase: 'gem',
+	keyword_grant: 'sparkles',
+	return_to_hand_on_death: 'refresh',
+	banish_on_death: 'skull',
+	stealth_on_play: 'eye',
+	debuff_all_health: 'arrowDown',
+} as const satisfies Record<RealmEffect['type'], IconName>;
 
-function getBattleIntelGlyph(effectType: string): string {
-	return BATTLE_INTEL_GLYPHS[effectType] ?? 'AURA';
+function getBattleIntelGlyph(effectType: RealmEffect['type']): IconName {
+	return BATTLE_INTEL_GLYPHS[effectType];
 }
 
 type WagerEffectCard = {
@@ -687,7 +674,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
       {attackingCard && (
         <div className="attack-mode-banner">
           <span className="attack-mode-icon" aria-hidden="true">
-            <CrossedSwordsIcon />
+            <GameIcon name="swords" size={20} className="btn-icon" aria-hidden="true" />
           </span>
           <span className="attack-mode-text">
             <strong>{attackingCard.card?.name}</strong> is attacking — click a target
@@ -697,7 +684,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
             className="attack-mode-cancel"
             onClick={() => selectAttacker(null)}
           >
-            <CloseIcon />
+            <GameIcon name="x" size={16} className="btn-icon" aria-hidden="true" />
             <span>Clear Target</span>
           </button>
         </div>
@@ -778,6 +765,18 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
 };
 
 export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onCombatEnd }) => {
+	const hourglassPrefix = useId().replace(/[^a-zA-Z0-9_-]/g, '');
+	const hourglassIds = {
+		gold: `hourglass-${hourglassPrefix}-gold`,
+		goldCap: `hourglass-${hourglassPrefix}-gold-cap`,
+		sand: `hourglass-${hourglassPrefix}-sand`,
+		glow: `hourglass-${hourglassPrefix}-glow`,
+		topClip: `hourglass-${hourglassPrefix}-top-clip`,
+		bottomClip: `hourglass-${hourglassPrefix}-bottom-clip`,
+		innerShadow: `hourglass-${hourglassPrefix}-inner-shadow`,
+		outerGlow: `hourglass-${hourglassPrefix}-outer-glow`,
+	} as const;
+
   useGameLogIntegration();
   useEventAnimationBridge();
   const resetKingEvents = useKingPassiveEventStore(s => s.reset);
@@ -906,6 +905,42 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
     heroBattlePopups,
     removeHeroBattlePopup,
   } = useRagnarokCombatController({ onCombatEnd });
+
+  // First-strike damage and phase transition are committed immediately from
+  // the canonical combat state. The overlay receives a snapshot so changing
+  // its choreography cannot delay or become the authority for gameplay.
+  const [firstStrikePresentation, setFirstStrikePresentation] = useState<{
+    readonly target: 'player' | 'opponent';
+    readonly damage: number;
+    readonly attackerName: string;
+    readonly defenderName: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!combatState || !isActive) {
+      setFirstStrikePresentation(null);
+      return;
+    }
+
+    const firstStrike = combatState.firstStrike;
+    if (combatState.phase !== CombatPhase.FIRST_STRIKE || !firstStrike || firstStrike.completed) return;
+
+    setFirstStrikePresentation(current => {
+      if (current?.target === firstStrike.target && current.damage === firstStrike.damage) return current;
+      return {
+        target: firstStrike.target,
+        damage: firstStrike.damage,
+        attackerName: firstStrike.target === 'player'
+          ? combatState.opponent.playerName
+          : combatState.player.playerName,
+        defenderName: firstStrike.target === 'player'
+          ? combatState.player.playerName
+          : combatState.opponent.playerName,
+      };
+    });
+
+    getPokerCombatAdapterState().completeFirstStrike();
+  }, [combatState, isActive]);
 
   const quipOpponentHp = readViewerCombatHeroHp(combatState, 'opponent');
   const quipOpponentHP = quipOpponentHp?.current ?? 100;
@@ -1136,61 +1171,52 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
             <div className={`hourglass-timer ${outerDecisionView.hasClock && outerDecisionView.timerTone === 'low' ? 'low-time' : ''} ${outerDecisionView.hasClock && (outerDecisionView.timerTone === 'critical' || outerDecisionView.timerTone === 'expired') ? 'critical' : ''} ${outerDecisionView.hasClock ? '' : 'hourglass-timer--parked'}`}>
               <svg className="hourglass-svg" viewBox="0 0 60 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <defs>
-                  <linearGradient id="hg-gold" x1="0" y1="0" x2="1" y2="1">
+                  <linearGradient id={hourglassIds.gold} x1="0" y1="0" x2="1" y2="1">
                     <stop offset="0%" stopColor="#fff4dc" />
                     <stop offset="22%" stopColor="#f5d060" />
                     <stop offset="50%" stopColor="#d4a017" />
                     <stop offset="78%" stopColor="#a07818" />
                     <stop offset="100%" stopColor="#5c4008" />
                   </linearGradient>
-                  <linearGradient id="hg-gold-cap" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id={hourglassIds.goldCap} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#fff4dc" />
                     <stop offset="22%" stopColor="#ffe680" />
                     <stop offset="55%" stopColor="#d4a017" />
                     <stop offset="100%" stopColor="#5c4008" />
                   </linearGradient>
-                  <linearGradient id="hg-sand-grad" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id={hourglassIds.sand} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#fff4a8" />
                     <stop offset="35%" stopColor="#f5c842" />
                     <stop offset="100%" stopColor="#a07010" />
                   </linearGradient>
-                  <linearGradient id="hg-glass-shine" x1="0.2" y1="0" x2="0.8" y2="1">
-                    <stop offset="0%" stopColor="rgba(255,255,255,0.32)" />
-                    <stop offset="50%" stopColor="rgba(255,255,255,0)" />
-                    <stop offset="100%" stopColor="rgba(255,255,255,0.1)" />
-                  </linearGradient>
-                  <radialGradient id="hg-glow">
+                  <radialGradient id={hourglassIds.glow}>
                     <stop offset="0%" stopColor="rgba(245,208,96,0.78)" />
                     <stop offset="55%" stopColor="rgba(245,208,96,0.22)" />
                     <stop offset="100%" stopColor="rgba(245,208,96,0)" />
                   </radialGradient>
-                  <radialGradient id="hg-rune-glow" cx="0.5" cy="0.5" r="0.5">
-                    <stop offset="0%" stopColor="rgba(255,244,220,0.55)" />
-                    <stop offset="100%" stopColor="rgba(255,244,220,0)" />
-                  </radialGradient>
-                  <clipPath id="hg-top-clip">
+                  <clipPath id={hourglassIds.topClip}>
                     <path d="M14 12 C14 12 14 32 30 42 C46 32 46 12 46 12 Z" />
                   </clipPath>
-                  <clipPath id="hg-bottom-clip">
+                  <clipPath id={hourglassIds.bottomClip}>
                     <path d="M14 72 C14 72 14 52 30 42 C46 52 46 72 46 72 Z" />
                   </clipPath>
-                  <filter id="hg-inner-shadow">
+                  <filter id={hourglassIds.innerShadow}>
                     <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#000" floodOpacity="0.5" />
                   </filter>
-                  <filter id="hg-outer-glow" x="-30%" y="-30%" width="160%" height="160%">
+                  <filter id={hourglassIds.outerGlow} x="-30%" y="-30%" width="160%" height="160%">
                     <feGaussianBlur stdDeviation="1.2" />
                   </filter>
                 </defs>
 
                 {/* Ambient glow behind hourglass — painterly atmospheric halo */}
-                <ellipse cx="30" cy="42" rx="26" ry="38" fill="url(#hg-glow)" className="hg-ambient-glow" />
+                <ellipse cx="30" cy="42" rx="26" ry="38" fill={`url(#${hourglassIds.glow})`} className="hg-ambient-glow" />
                 {/* Warm gold dust haze around body — extra painterly bloom */}
-                <ellipse cx="30" cy="42" rx="18" ry="28" fill="url(#hg-glow)" opacity="0.55" />
+                <ellipse cx="30" cy="42" rx="18" ry="28" fill={`url(#${hourglassIds.glow})`} opacity="0.55" />
                 {/* Soft cold rim from above — atmospheric depth */}
                 <ellipse cx="30" cy="20" rx="14" ry="4" fill="rgba(180, 210, 255, 0.08)" />
 
                 {/* Top cap — layered bevel + side spires */}
-                <rect x="8" y="3" width="44" height="7" rx="1" fill="url(#hg-gold-cap)" stroke="#5c4008" strokeWidth="0.8" />
+                <rect x="8" y="3" width="44" height="7" rx="1" fill={`url(#${hourglassIds.goldCap})`} stroke="#5c4008" strokeWidth="0.8" />
                 <rect x="10" y="1.4" width="40" height="2.2" rx="0.6" fill="#fff4dc" opacity="0.85" />
                 <line x1="12" y1="6.5" x2="48" y2="6.5" stroke="rgba(120,80,16,0.55)" strokeWidth="0.4" />
                 {/* Top cap Norse diamond + interlace dots */}
@@ -1200,11 +1226,11 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
                 <circle cx="22" cy="6.5" r="0.4" fill="#8b6508" opacity="0.6" />
                 <circle cx="38" cy="6.5" r="0.4" fill="#8b6508" opacity="0.6" />
                 {/* Top cap side spires */}
-                <path d="M8 6.5 L4 4 L4 9 Z" fill="url(#hg-gold-cap)" stroke="#5c4008" strokeWidth="0.5" />
-                <path d="M52 6.5 L56 4 L56 9 Z" fill="url(#hg-gold-cap)" stroke="#5c4008" strokeWidth="0.5" />
+                <path d="M8 6.5 L4 4 L4 9 Z" fill={`url(#${hourglassIds.goldCap})`} stroke="#5c4008" strokeWidth="0.5" />
+                <path d="M52 6.5 L56 4 L56 9 Z" fill={`url(#${hourglassIds.goldCap})`} stroke="#5c4008" strokeWidth="0.5" />
 
                 {/* Bottom cap — mirror */}
-                <rect x="8" y="74" width="44" height="7" rx="1" fill="url(#hg-gold-cap)" stroke="#5c4008" strokeWidth="0.8" />
+                <rect x="8" y="74" width="44" height="7" rx="1" fill={`url(#${hourglassIds.goldCap})`} stroke="#5c4008" strokeWidth="0.8" />
                 <rect x="10" y="80.4" width="40" height="2.2" rx="0.6" fill="#fff4dc" opacity="0.85" />
                 <line x1="12" y1="77.5" x2="48" y2="77.5" stroke="rgba(120,80,16,0.55)" strokeWidth="0.4" />
                 <path d="M30 75.4 L31.6 77.5 L30 79.6 L28.4 77.5 Z" fill="#fff4dc" opacity="0.95" />
@@ -1212,19 +1238,19 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
                 <circle cx="46" cy="77.5" r="0.6" fill="#fff4dc" opacity="0.7" />
                 <circle cx="22" cy="77.5" r="0.4" fill="#8b6508" opacity="0.6" />
                 <circle cx="38" cy="77.5" r="0.4" fill="#8b6508" opacity="0.6" />
-                <path d="M8 77.5 L4 75 L4 80 Z" fill="url(#hg-gold-cap)" stroke="#5c4008" strokeWidth="0.5" />
-                <path d="M52 77.5 L56 75 L56 80 Z" fill="url(#hg-gold-cap)" stroke="#5c4008" strokeWidth="0.5" />
+                <path d="M8 77.5 L4 75 L4 80 Z" fill={`url(#${hourglassIds.goldCap})`} stroke="#5c4008" strokeWidth="0.5" />
+                <path d="M52 77.5 L56 75 L56 80 Z" fill={`url(#${hourglassIds.goldCap})`} stroke="#5c4008" strokeWidth="0.5" />
 
                 {/* Glass frame — thicker gold, fantasy weight, painterly soft outer edge */}
                 <path
                   d="M14 12 C14 12 14 32 30 42 C14 52 14 72 14 72 M46 12 C46 12 46 32 30 42 C46 52 46 72 46 72"
-                  stroke="url(#hg-gold)" strokeWidth="2.6" strokeLinecap="round" fill="none"
+                  stroke={`url(#${hourglassIds.gold})`} strokeWidth="2.6" strokeLinecap="round" fill="none"
                 />
                 {/* Outer soft glow stroke (atmospheric bloom) */}
                 <path
                   d="M14 12 C14 12 14 32 30 42 C14 52 14 72 14 72 M46 12 C46 12 46 32 30 42 C46 52 46 72 46 72"
                   stroke="rgba(255,200,80,0.4)" strokeWidth="5" strokeLinecap="round" fill="none"
-                  filter="url(#hg-outer-glow)"
+                  filter={`url(#${hourglassIds.outerGlow})`}
                 />
                 {/* Inner gold accent line (parallel) for fantasy depth */}
                 <path
@@ -1235,19 +1261,19 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
                 {/* Sand in top bulb — drains down */}
                 <rect
                   className="hg-sand-top"
-                  clipPath="url(#hg-top-clip)"
+                  clipPath={`url(#${hourglassIds.topClip})`}
                   x="13" width="34"
-                  fill="url(#hg-sand-grad)"
-                  filter="url(#hg-inner-shadow)"
+                  fill={`url(#${hourglassIds.sand})`}
+                  filter={`url(#${hourglassIds.innerShadow})`}
                   style={{ y: 12 + (24 - topH * 0.8), height: topH * 0.8, transition: 'height 1s linear, y 1s linear' }}
                 />
 
                 {/* Sand in bottom bulb — fills up */}
                 <rect
                   className="hg-sand-bottom"
-                  clipPath="url(#hg-bottom-clip)"
+                  clipPath={`url(#${hourglassIds.bottomClip})`}
                   x="13" width="34"
-                  fill="url(#hg-sand-grad)"
+                  fill={`url(#${hourglassIds.sand})`}
                   style={{ y: 72 - botH * 0.8, height: botH * 0.8, transition: 'height 1s linear, y 1s linear' }}
                 />
 
@@ -1275,7 +1301,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
                 />
 
                 {/* Center neck ring ornament — fantasy: double ring + jewel */}
-                <ellipse cx="30" cy="42" rx="5" ry="2.4" fill="none" stroke="url(#hg-gold)" strokeWidth="1.4" />
+                <ellipse cx="30" cy="42" rx="5" ry="2.4" fill="none" stroke={`url(#${hourglassIds.gold})`} strokeWidth="1.4" />
                 <ellipse cx="30" cy="42" rx="3" ry="1.4" fill="#b8860b" opacity="0.7" />
                 <circle cx="30" cy="42" r="0.8" fill="#fff4dc" />
                 <text
@@ -1337,7 +1363,9 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
                       )}
                       {activeRealmModifiers.map((eff, index) => (
                         <div key={`${eff.type}-${index}`} className={`battle-intel-row with-icon ${eff.target}`}>
-                          <span className="battle-intel-row-icon">{getBattleIntelGlyph(eff.type)}</span>
+                          <span className="battle-intel-row-icon" aria-hidden="true">
+                            <GameIcon name={getBattleIntelGlyph(eff.type)} size={14} />
+                          </span>
                           <span className="battle-intel-row-text">
                             {eff.type.replace(/_/g, ' ')}{eff.value > 0 ? ` +${eff.value}` : ''} ({eff.target})
                           </span>
@@ -1363,14 +1391,18 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
                       <div className="battle-intel-section-title">Wagers</div>
                       {wagerIntel.player.map((effect) => (
                         <div key={`player-${effect.cardName}-${effect.description}`} className="battle-intel-row with-icon player" data-card-family="nft">
-                          <span className="battle-intel-row-icon">WGR</span>
+                          <span className="battle-intel-row-icon" aria-hidden="true">
+                            <GameIcon name="dice" size={14} />
+                          </span>
                           <span className="battle-intel-row-text">{effect.description}</span>
                           <span className="battle-intel-source">{effect.cardName}</span>
                         </div>
                       ))}
                       {wagerIntel.opponent.map((effect) => (
                         <div key={`opponent-${effect.cardName}-${effect.description}`} className="battle-intel-row with-icon opponent" data-card-family="nft">
-                          <span className="battle-intel-row-icon">WGR</span>
+                          <span className="battle-intel-row-icon" aria-hidden="true">
+                            <GameIcon name="dice" size={14} />
+                          </span>
                           <span className="battle-intel-row-text">{effect.description}</span>
                           <span className="battle-intel-source">{effect.cardName}</span>
                         </div>
@@ -1452,20 +1484,16 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
       <PixiParticleCanvas realm={activeRealmId || 'midgard'} />
       <AnimationOverlay />
       
-      {/* First Strike Animation - plays when attacker deals initial damage */}
-      {combatState.firstStrike && !combatState.firstStrike.completed ? (
-        <>
-          {debug.combat('[CombatArena] Rendering FirstStrikeAnimation, phase:', combatState.phase, 'target:', combatState.firstStrike.target)}
-          <FirstStrikeAnimation
-            onComplete={() => {
-              debug.combat('[CombatArena] FirstStrikeAnimation onComplete called');
-              getPokerCombatAdapterState().completeFirstStrike();
-            }}
-          />
-        </>
-      ) : combatState.firstStrike ? (
-        <>{debug.combat('[CombatArena] FirstStrike completed, not showing animation')}</>
-      ) : null}
+      {/* First Strike is a presentation snapshot; gameplay was committed above. */}
+      {firstStrikePresentation && (
+        <FirstStrikeAnimation
+          target={firstStrikePresentation.target}
+          damage={firstStrikePresentation.damage}
+          attackerName={firstStrikePresentation.attackerName}
+          defenderName={firstStrikePresentation.defenderName}
+          onComplete={() => setFirstStrikePresentation(null)}
+        />
+      )}
       
       {/* Minion Elemental Buff Popup */}
       {elementalBuff.pendingMinionBuff && (
@@ -1515,10 +1543,10 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
             resolutionType: resolution?.resolutionType || showdownCelebration.resolution.resolutionType,
             playerHand: resolution?.playerHand || showdownCelebration.resolution.playerHand,
             opponentHand: resolution?.opponentHand || showdownCelebration.resolution.opponentHand,
-            playerDamage: resolution?.playerDamage || 0,
-            opponentDamage: resolution?.opponentDamage || 0,
-            playerFinalHealth: resolution?.playerFinalHealth || 0,
-            opponentFinalHealth: resolution?.opponentFinalHealth || 0,
+            playerDamage: resolution?.playerDamage ?? showdownCelebration.resolution.playerDamage,
+            opponentDamage: resolution?.opponentDamage ?? showdownCelebration.resolution.opponentDamage,
+            playerFinalHealth: resolution?.playerFinalHealth ?? showdownCelebration.resolution.playerFinalHealth,
+            opponentFinalHealth: resolution?.opponentFinalHealth ?? showdownCelebration.resolution.opponentFinalHealth,
             whoFolded: resolution?.whoFolded || showdownCelebration.resolution.whoFolded,
             foldPenalty: resolution?.foldPenalty || showdownCelebration.resolution.foldPenalty
           }}

@@ -19,6 +19,7 @@ export interface GameIconProps {
 	className?: string;
 	color?: string;
 	'aria-label'?: string;
+	'aria-hidden'?: boolean | 'true' | 'false';
 }
 
 export const GameIcon: React.FC<GameIconProps> = ({
@@ -28,6 +29,7 @@ export const GameIcon: React.FC<GameIconProps> = ({
 	className,
 	color,
 	'aria-label': ariaLabel,
+	'aria-hidden': ariaHidden,
 }) => {
 	const IconComponent = ICON_MAP[name] ?? HelpCircle;
 	return (
@@ -36,8 +38,9 @@ export const GameIcon: React.FC<GameIconProps> = ({
 			strokeWidth={strokeWidth}
 			className={className}
 			color={color}
-			aria-label={ariaLabel ?? name}
-			role={ariaLabel ? 'img' : undefined}
+			aria-label={ariaHidden ? undefined : ariaLabel ?? name}
+			aria-hidden={ariaHidden}
+			role={ariaHidden ? undefined : ariaLabel ? 'img' : undefined}
 		/>
 	);
 };

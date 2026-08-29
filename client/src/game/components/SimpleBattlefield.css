@@ -485,16 +485,21 @@
   opacity: 0.7;
 }
 
-.bf-card-wrapper.ready-to-evolve::after {
-  content: '⬆';
+.bf-evolution-badge {
   position: absolute;
   top: -8px;
   right: -4px;
-  font-size: var(--text-base);
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-5);
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(34, 211, 238, 0.6);
   color: #22d3ee;
-  text-shadow: 0 0 8px rgba(34, 211, 238, 0.9);
   pointer-events: none;
   z-index: 20;
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.45);
   animation: evolveArrowBounce 1.2s ease-in-out infinite;
 }
 
@@ -680,18 +685,6 @@
     0 0 6px 2px rgba(148, 163, 184, 0.25);
 }
 
-.bf-card-wrapper.has-taunt::after {
-  content: '\1F6E1';
-  position: absolute;
-  top: -6px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: var(--text-sm);
-  z-index: 20;
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
-  pointer-events: none;
-}
-
 .bf-card-wrapper.has-taunt.valid-target {
   border-color: transparent;
 }
@@ -748,7 +741,7 @@
 /* ==========================================================================
    STATUS EFFECT OVERLAYS — Visual feedback for 8 combat debuffs
    Each effect uses a colored border-glow + optional overlay via box-shadow.
-   Badge row shows emoji icons above the card.
+   Badge row shows semantic SVG icons above the card.
    ========================================================================== */
 
 /* ── Status badge bar ── */
@@ -809,7 +802,6 @@
   animation: einherjar-glow 3s ease-in-out infinite;
 }
 
-.einherjar-icon { font-size: var(--text-10); line-height: 1; }
 .einherjar-count { font-size: var(--text-10); font-weight: 800; color: #1a1610; text-shadow: 0 0 4px rgba(255,255,255,0.5); }
 
 @keyframes einherjar-glow {
@@ -841,8 +833,6 @@
   opacity: 0.5;
 }
 
-.chain-icon { font-size: var(--text-10); line-height: 1; }
-
 @keyframes chain-active-glow {
   0%, 100% { opacity: 0.85; }
   50% { opacity: 1; }
@@ -867,9 +857,48 @@
 	animation: dormant-pulse 2.5s ease-in-out infinite;
 }
 
-.dormant-icon {
-	font-size: var(--text-2xl);
+.bf-dormant-overlay > svg {
+	display: block;
 	filter: drop-shadow(0 0 6px rgba(120, 100, 255, 0.6));
+}
+
+/* Recovered sleep cue: decorative Z marks reinforce Dormant but never carry
+   the state or its countdown. */
+.bf-dormant-zs {
+	position: absolute;
+	top: 17%;
+	right: 22%;
+	width: 32px;
+	height: 28px;
+	pointer-events: none;
+}
+
+.bf-dormant-z {
+	position: absolute;
+	color: #ddd6fe;
+	font-family: var(--type-display), Georgia, serif;
+	font-size: var(--text-sm);
+	font-weight: 900;
+	line-height: 1;
+	text-shadow: 0 0 7px rgba(167, 139, 250, 0.75);
+	animation: dormant-z-float 2.8s ease-in-out infinite;
+}
+
+.bf-dormant-z--one {
+	top: 10px;
+	right: 12px;
+}
+
+.bf-dormant-z--two {
+	top: 0;
+	right: 0;
+	font-size: var(--text-xs);
+	animation-delay: 0.7s;
+}
+
+@keyframes dormant-z-float {
+	0%, 100% { opacity: 0.55; transform: translate3d(0, 4px, 0) scale(0.9); }
+	50% { opacity: 1; transform: translate3d(3px, -2px, 0) scale(1); }
 }
 
 .dormant-turns {
@@ -886,7 +915,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.bf-dormant-overlay { animation: none; }
+	.bf-dormant-overlay,
+	.bf-dormant-z,
+	.bf-evolution-badge { animation: none; }
 	.bf-card-wrapper.is-dormant { filter: saturate(0.4) brightness(0.75); }
 }
 
@@ -1083,11 +1114,6 @@
   animation: submerge-pulse 3s ease-in-out infinite;
 }
 
-.submerge-icon {
-  font-size: 26px;
-  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.7));
-}
-
 .submerge-turns {
   font-size: var(--text-sm);
   font-weight: 900;
@@ -1124,8 +1150,6 @@
   animation: coil-grip 2.5s ease-in-out infinite;
 }
 
-.coil-icon { font-size: var(--text-xs); line-height: 1; }
-
 @keyframes coil-grip {
   0%, 100% { opacity: 0.8; }
   50% { opacity: 1; }
@@ -1147,8 +1171,6 @@
   box-shadow: 0 2px 6px rgba(0,0,0,0.4), 0 0 10px rgba(245, 158, 11, 0.5);
 }
 
-.wager-icon { font-size: var(--text-11); line-height: 1; }
-
 /* ═══════════════════════════════════════════════
    FLYING — feather badge, sky tint
    ═══════════════════════════════════════════════ */
@@ -1169,8 +1191,6 @@
   pointer-events: none;
   box-shadow: 0 2px 4px rgba(0,0,0,0.3), 0 0 8px rgba(125, 211, 252, 0.4);
 }
-
-.flying-icon { font-size: var(--text-11); line-height: 1; }
 
 /* Flying badge moves aside when taunt shield is present */
 .bf-card-wrapper.has-flying.has-taunt .bf-flying-badge {
@@ -1300,6 +1320,11 @@
   .bf-coil-badge {
     animation: none;
     opacity: 1;
+  }
+
+  .bf-evolution-badge,
+  .bf-dormant-z {
+    animation: none;
   }
 }
 

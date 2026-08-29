@@ -45,6 +45,19 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
   const announcedTurnIdRef = useRef<string | null>(null);
   const expiredTurnIdRef = useRef<string | null>(null);
   const mulliganDeadlineRef = useRef<{ readonly key: string; readonly deadlineAtMs: number } | null>(null);
+  // The adapter API is recreated when its selected combat state changes.
+  // Keep the timer loop attached to the logical turn instead of restarting it
+  // because a presentation-only countdown update changed a callback identity.
+  const updateTimerRef = useRef(updateTimer);
+  const sendPokerActionRef = useRef(sendPokerAction);
+  const sendPokerTurnStartedRef = useRef(sendPokerTurnStarted);
+  const confirmMulliganRef = useRef(confirmMulligan);
+  const addHeroBattlePopupRef = useRef(addHeroBattlePopup);
+  updateTimerRef.current = updateTimer;
+  sendPokerActionRef.current = sendPokerAction;
+  sendPokerTurnStartedRef.current = sendPokerTurnStarted;
+  confirmMulliganRef.current = confirmMulligan;
+  addHeroBattlePopupRef.current = addHeroBattlePopup;
 
   const cardGameMulliganActive = useGameStore(state => state.gameState?.mulligan?.active);
 
@@ -61,7 +74,7 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
         const mulligan = useGameStore.getState().gameState?.mulligan;
         if (!mulligan?.active || mulligan.playerReady) return;
         if (Date.now() < existingDeadline.deadlineAtMs) return;
-        confirmMulligan?.();
+        confirmMulliganRef.current?.();
       }, 250);
       return () => clearInterval(timer);
     }
@@ -104,7 +117,7 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
           ? decisionView.remainingSeconds * 1_000
           : Math.max(0, combatState.turnDeadlineAtMs - nowMs);
         if (turnPolicy.shouldBroadcastTurnStart) {
-          const sent = sendPokerTurnStarted?.({
+          const sent = sendPokerTurnStartedRef.current?.({
             combatId: combatState.combatId,
             turnId: combatState.turnId,
             phase: combatState.phase,
@@ -150,9 +163,9 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
         if (newTime === 10) {
           proceduralAudio.play('timer_warning');
         }
-        updateTimer(newTime);
+        updateTimerRef.current(newTime);
       } else {
-        updateTimer(0);
+        updateTimerRef.current(0);
         if (!freshTurnPolicy.shouldResolveTimeout || !freshState.turnId || freshState.turnDeadlineAtMs === null) return;
         if (expiredTurnIdRef.current === freshState.turnId) {
           return;
@@ -163,14 +176,14 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
         const actorId = timeoutIntent.actorId;
         const autoAction = timeoutIntent.action;
         if (autoAction === CombatAction.BRACE) {
-          addHeroBattlePopup?.({
+          addHeroBattlePopupRef.current?.({
             action: CombatAction.BRACE,
             target: isLocalActor ? 'player' : 'opponent',
             text: getPokerActionDefinition(CombatAction.BRACE).label,
             subtitle: 'Time expired',
           });
         } else {
-          addHeroBattlePopup?.({
+          addHeroBattlePopupRef.current?.({
             action: CombatAction.DEFEND,
             target: isLocalActor ? 'player' : 'opponent',
             text: getPokerActionDefinition(CombatAction.DEFEND).label,
@@ -185,7 +198,7 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
 
         expiredTurnIdRef.current = freshState.turnId;
         if (isP2PCombat && isLocalActor) {
-          sendPokerAction?.({
+          sendPokerActionRef.current?.({
             playerId: actorId,
             action: autoAction,
             origin: 'timeout',
@@ -211,14 +224,9 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
     combatState?.opponent?.playerId,
     combatState?.isAllInShowdown,
     isActive,
-    updateTimer,
     isP2PCombat,
     opponentKind,
     p2pTransportConnected,
-    sendPokerAction,
-    sendPokerTurnStarted,
-    confirmMulligan,
     cardGameMulliganActive,
-    addHeroBattlePopup,
 	]);
 }

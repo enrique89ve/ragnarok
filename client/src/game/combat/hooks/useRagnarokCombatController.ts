@@ -843,9 +843,18 @@ export function useRagnarokCombatController(
     getPokerCombatAdapterState().startNextHandDelayed(resolution);
     setResolution(null);
   }, [resolution, grantPokerHandRewards, advanceTurnPhase]);
-  
+
+  const handleCombatEndRef = useRef(handleCombatEnd);
+  useEffect(() => {
+    handleCombatEndRef.current = handleCombatEnd;
+  }, [handleCombatEnd]);
+
   useEffect(() => {
     if (showdownCelebration && !heroDeathState?.isAnimating) {
+      // Commit the resolved hand immediately. The celebration is a retained
+      // presentation snapshot and must not own phase/reward progression.
+      if (resolution) handleCombatEndRef.current();
+
       if (showdownBackupTimerRef.current) {
         clearTimeout(showdownBackupTimerRef.current);
       }
@@ -857,7 +866,7 @@ export function useRagnarokCombatController(
         if (mulliganStillActive) { combatEndFiredRef.current = false; return; }
         debug.warn('[RagnarokCombatArena] Showdown backup timer fired - forcing combat end', { hasResolution: !!resolution });
         setShowdownCelebration(null);
-        handleCombatEnd();
+        handleCombatEndRef.current();
       }, SHOWDOWN_BACKUP_MS);
     }
     
@@ -867,7 +876,8 @@ export function useRagnarokCombatController(
         showdownBackupTimerRef.current = null;
       }
     };
-  // handleCombatEnd excluded: stable ref-based callback; including it re-fires the 6s backup timer on every render
+  // handleCombatEnd is read through a ref so the backup timer is not
+  // recreated on every render.
   }, [showdownCelebration, heroDeathState?.isAnimating, resolution]);
 
   // RESOLUTION phase escape timer — safety net for rare freezes where showdown never triggers

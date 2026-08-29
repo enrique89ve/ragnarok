@@ -23,7 +23,7 @@ import {
   getExtraFoldPenalty as utilGetExtraFoldPenalty,
   clearCombatSpellEffects
 } from '../../utils/poker/pokerSpellUtils';
-import { playPokerSpellCast } from '../../combat/animations/PokerDramaVFX';
+import { emitSpellCast } from '../../combat/vfx/events';
 
 const initialState: PokerSpellSliceState = {
   pokerSpellState: null,
@@ -100,10 +100,6 @@ export const createPokerSpellSlice: StateCreator<
         details: { spellId: spell.id, effectType: spell.pokerSpellEffect.effectType }
       });
 
-      // 3-family separation: trigger the indigo cast animation on
-      // Family 2 (poker-spell) frames. Caster side determines target zone.
-      playPokerSpellCast(spell.pokerSpellEffect.effectType, caster);
-
       if (result.immediateEffects) {
         for (const effect of result.immediateEffects) {
           if (effect.type === 'skip_to_showdown') {
@@ -121,6 +117,10 @@ export const createPokerSpellSlice: StateCreator<
           }
         }
       }
+
+			// Presentation is emitted after the complete gameplay commit. The poker
+			// VFX registry owns scheduling and rendering; this slice owns state only.
+			emitSpellCast({ effectType: spell.pokerSpellEffect.effectType, side: caster });
     }
     
     return result;

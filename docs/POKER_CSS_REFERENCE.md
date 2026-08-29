@@ -497,9 +497,18 @@ On `.hud-matchup-badge` / `.matchup-result`:
 | `spell-screen-effects.css` element tints (6 declarations) | no grep hit in TSX for matching data attribute; verify or delete. |
 | `.unified-hand-section` `flex: 1` | removed per [POKER_ARENA_UI.md §7](./POKER_ARENA_UI.md) but verify no stale reference. |
 | Orphaned art: `client/public/art/orphaned/` (28 MB, 226 files) | see [POKER_ARENA_DOM_TREE.md §Image hygiene](./POKER_ARENA_DOM_TREE.md) |
-| Dead components per [POKER_ARENA_UI.md §2](./POKER_ARENA_UI.md): `ArenaPokerHand.tsx`, `HeroBridge.tsx`, `WagerEffectsHUD.tsx` | delete in cleanup |
+| Historical dead components per [POKER_ARENA_UI.md §2](./POKER_ARENA_UI.md): `ArenaPokerHand.tsx`, `HeroBridge.tsx`, `WagerEffectsHUD.tsx` | already removed after zero-usage audit |
 
-### 6.5 Layout shift suspects
+### 6.5 Runtime state markers
+
+Board state markers are rendered by `BattlefieldStateMark.tsx` from the shared
+`runtimeStateContract.ts`. Keep the SVG/icon resolution in that component and
+keep state truth in `CardInstance`; CSS owns only placement, color, glow, and
+reduced-motion behavior. Do not reintroduce emoji pseudo-elements, legacy
+`einpieces`/`isCoiled` fields, or selectors that infer gameplay from a visual
+class.
+
+### 6.6 Layout shift suspects
 
 See [POKER_ARENA_DOM_TREE.md](./POKER_ARENA_DOM_TREE.md) §"Suspects for layout shift on phase change" for the full list. Top fixes:
 

@@ -2,7 +2,8 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 9000;
+  /* The overlay is portaled into the bounded poker VFX layer. */
+  z-index: 690;
 }
 
 .targeting-svg {
@@ -34,8 +35,8 @@
 }
 
 @keyframes lethalPulse {
-  0%, 100% { stroke-width: 8; filter: url(#arrow-glow) drop-shadow(0 0 10px #ff0000); }
-  50% { stroke-width: 12; filter: url(#arrow-glow) drop-shadow(0 0 20px #ff0000); }
+  0%, 100% { stroke-width: 8; }
+  50% { stroke-width: 12; }
 }
 
 .arrow-origin {
@@ -66,7 +67,7 @@
     0 0 20px rgba(255, 136, 0, 0.5),
     0 4px 12px rgba(0, 0, 0, 0.5);
   animation: badgeAppear 0.2s ease-out;
-  z-index: 9001;
+  z-index: 691;
 }
 
 .damage-preview-badge.lethal {

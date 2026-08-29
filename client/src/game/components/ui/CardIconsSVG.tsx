@@ -8,6 +8,7 @@
 
 import React from 'react';
 import { normalizeCardKeyword } from '../card/cardPresentationContract';
+import type { RuntimeStateId } from '../../combat/runtimeStateContract';
 
 type IconProps = React.SVGProps<SVGSVGElement>;
 export type KeywordIconComponent = React.FC<IconProps>;
@@ -503,6 +504,22 @@ export const IconSpellTrigger: React.FC<IconProps> = (p) => (
 
 /* ─── COMBAT STATE ICONS ─────────────────────────────────── */
 
+/** Hourglass — the unit is newly summoned and waiting to act. */
+export const IconSummoningSickState: React.FC<IconProps> = (p) => (
+	<svg {...svgBase} {...p}>
+		<path d="M6 3h12M6 21h12M7 3c0 4 2 5.2 5 7.2C9 12.2 7 14 7 21M17 3c0 4-2 5.2-5 7.2 3 2 5 3.8 5 10" strokeWidth={1.8} />
+		<path d="M9.5 17h5" strokeWidth={1.8} opacity={0.72} />
+	</svg>
+);
+
+/** Crossed blade — the unit has spent its available attacks this turn. */
+export const IconExhaustedState: React.FC<IconProps> = (p) => (
+	<svg {...svgBase} {...p}>
+		<path d="M6 5l13 13M18 5L5 18" strokeWidth={1.8} />
+		<path d="M7 3l4 4M17 17l4 4M17 3l-4 4M7 17l-4 4" strokeWidth={1.4} opacity={0.62} />
+	</svg>
+);
+
 /** Raised blade and target — the unit is ready to attack. */
 export const IconReadyState: React.FC<IconProps> = (p) => (
 	<svg {...svgBase} {...p}>
@@ -709,8 +726,10 @@ export const getKeywordIcon = (keyword: string): KeywordIconComponent | null =>
 	KEYWORD_ICON_MAP[normalizeCardKeyword(keyword)] ?? null;
 
 /** Runtime combat states use their own semantic map so they do not pollute keyword chrome. */
-export const COMBAT_STATE_ICON_MAP: Record<string, React.FC<IconProps>> = {
+export const COMBAT_STATE_ICON_MAP: Record<RuntimeStateId, React.FC<IconProps>> = {
 	ready: IconReadyState,
+	summoning_sick: IconSummoningSickState,
+	exhausted: IconExhaustedState,
 	divine_shield: IconDivineShield,
 	stealth: IconStealth,
 	taunt: IconTaunt,

@@ -1019,10 +1019,11 @@ export function playClashSound() {
 //   - One-shot vignette overlay (family palette).
 //   - Stamp .is-casting / .is-activating on the right frame so the
 //     per-family keyframe (added in CardFrame.css) plays.
-// Wire-up lives in the slices (pokerSpellSlice / pokerCombatSlice).
+// Wire-up lives at the VisualEvent boundary; gameplay slices only emit events.
 // ============================================================
 
 import type { PokerSpellEffectType } from '../../types/CardTypes';
+import type { WagerType } from '../vfx/events';
 
 const POKER_SPELL_PALETTES: Record<PokerSpellEffectType, ParticleColor> = {
 	bluff_rune:       { primary: '#38bdf8', secondary: '#7dd3fc', glow: 'rgba(56,189,248,0.55)' },
@@ -1042,7 +1043,7 @@ const POKER_SPELL_PALETTES: Record<PokerSpellEffectType, ParticleColor> = {
 	destiny_override: { primary: '#f5c542', secondary: '#fef3c7', glow: 'rgba(245,197,66,0.55)' },
 };
 
-const WAGER_PALETTES: Record<string, ParticleColor> = {
+const WAGER_PALETTES: Record<WagerType, ParticleColor> = {
 	showdown_win_armor:             { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
 	showdown_coin_flip:             { primary: '#facc15', secondary: '#fef9c3', glow: 'rgba(250,204,21,0.6)' },
 	showdown_win_rank_damage:       { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
@@ -1101,7 +1102,7 @@ export function playPokerSpellCast(
  * on the wager-bearing minion frame, gold vignette fade.
  */
 export function playWagerActivate(
-	wagerType: string,
+	wagerType: WagerType,
 	side: 'player' | 'opponent'
 ): void {
 	const container = getOrCreateContainer();

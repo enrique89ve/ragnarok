@@ -1,29 +1,39 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useUnifiedCombatStore } from '../../stores/unifiedCombatStore';
 import { debug } from '../../config/debugConfig';
 import { GameIcon } from '../../utils/ui/GameIcon';
+import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../arenaVfxTargets';
 
-interface FirstStrikeAnimationProps {
-  onComplete: () => void;
-}
+export type FirstStrikeAnimationProps = {
+  readonly target: 'player' | 'opponent';
+  readonly damage: number;
+  readonly attackerName: string;
+  readonly defenderName: string;
+  readonly onComplete: () => void;
+};
 
-export const FirstStrikeAnimation: React.FC<FirstStrikeAnimationProps> = ({ onComplete }) => {
+export const FirstStrikeAnimation: React.FC<FirstStrikeAnimationProps> = ({
+  target,
+  damage,
+  attackerName,
+  defenderName,
+  onComplete,
+}) => {
   const [phase, setPhase] = useState<'charge' | 'strike' | 'damage' | 'done'>('charge');
-  const firstStrike = useUnifiedCombatStore(state => state.pokerCombatState?.firstStrike);
-  const playerName = useUnifiedCombatStore(state => state.pokerCombatState?.player.playerName);
-  const opponentName = useUnifiedCombatStore(state => state.pokerCombatState?.opponent.playerName);
-
-  const target = firstStrike?.target;
-  const damage = firstStrike?.damage ?? 15;
-  const attackerName = target === 'player' ? opponentName : playerName;
-  const defenderName = target === 'player' ? playerName : opponentName;
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  const onCompleteRef = useRef(onComplete);
 
   useEffect(() => {
-    if (!firstStrike || firstStrike.completed) {
-      onComplete();
-      return;
-    }
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  useEffect(() => {
+    setPortalTarget(getArenaVfxLayer(ARENA_VFX_LAYERS.vfx));
+  }, []);
+
+  useEffect(() => {
+    if (!portalTarget) return undefined;
 
     debug.animation('[FirstStrike] Animation starting, target:', target, 'damage:', damage);
     setPhase('charge');
@@ -39,7 +49,7 @@ export const FirstStrikeAnimation: React.FC<FirstStrikeAnimationProps> = ({ onCo
     const doneTimer = setTimeout(() => {
       debug.animation('[FirstStrike] Animation complete, calling onComplete');
       setPhase('done');
-      onComplete();
+      onCompleteRef.current();
     }, 2200);
 
     return () => {
@@ -47,18 +57,17 @@ export const FirstStrikeAnimation: React.FC<FirstStrikeAnimationProps> = ({ onCo
       clearTimeout(strikeTimer);
       clearTimeout(doneTimer);
     };
-    // Include target and damage to restart animation on new combat, but not onComplete
-  }, [firstStrike?.completed, firstStrike?.target, firstStrike?.damage]);
+    // Target and damage identify a new presentation; callback identity must
+    // not restart an already-running visual.
+  }, [target, damage, portalTarget]);
 
-  if (!firstStrike || firstStrike.completed) {
-    return null;
-  }
+  if (!portalTarget) return null;
 
-  return (
+  return ReactDOM.createPortal(
     <div className="first-strike-overlay" style={{
       position: 'absolute',
       inset: 0,
-      zIndex: 1000,
+      zIndex: 680,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -163,7 +172,8 @@ export const FirstStrikeAnimation: React.FC<FirstStrikeAnimationProps> = ({ onCo
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </div>,
+    portalTarget,
   );
 };
 

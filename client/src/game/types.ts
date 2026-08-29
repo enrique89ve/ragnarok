@@ -742,6 +742,7 @@ export interface CardInstance {
   buffs?: BuffInstance[];
   isPlayed?: boolean;
   hasSuperMinionBonus?: boolean;
+  hasElementalBuff?: boolean;
   attacksPerformed?: number;
   isPlayerOwned?: boolean;
   isBurning?: boolean;

@@ -56,7 +56,6 @@ import { compareHands } from '../../combat/modules/HandEvaluator';
 import { debug } from '../../config/debugConfig';
 import { applyStaminaShield, getExtraFoldPenalty } from '../../utils/poker/pokerSpellUtils';
 import { cryptoRng, seededRngFromString } from '../../utils/seededRng';
-import { playWagerActivate } from '../../combat/animations/PokerDramaVFX';
 import {
   createNotarizedPokerTurnClock,
   createPokerTurnClock,
@@ -68,7 +67,7 @@ import {
 	type PokerTurnIdentityInput,
 } from '@shared/p2p-wire/pokerTurnClock';
 import { validatePokerActionIntent } from '../../combat/rules/pokerActionRules';
-import { emitCommunityCardRevealed, emitPhaseEntered } from '../../combat/vfx/events';
+import { emitCommunityCardRevealed, emitPhaseEntered, emitWagerActivated, isWagerType } from '../../combat/vfx/events';
 
 function findPokerResourceViolation(state: PokerCombatState): ResourceInvariantViolation | null {
 	for (const participant of [state.player, state.opponent]) {
@@ -1038,7 +1037,7 @@ export const createPokerCombatSlice: StateCreator<
                 notifyOpponentHpDebit(phasedCombat, hit, 'betting_round_damage');
                 phasedCombat = hit.state;
               }
-              playWagerActivate('betting_round_damage', 'player');
+				  emitWagerActivated({ wagerType: 'betting_round_damage', side: 'player' });
             }
           }
           for (const m of (gs.players?.opponent?.battlefield || [])) {
@@ -1046,7 +1045,7 @@ export const createPokerCombatSlice: StateCreator<
             if (w?.type === 'betting_round_damage') {
               const hit = applyPokerHpDelta(phasedCombat, phasedCombat.player.playerId, -(w.value || 0));
               if (hit) phasedCombat = hit.state;
-              playWagerActivate('betting_round_damage', 'opponent');
+				  emitWagerActivated({ wagerType: 'betting_round_damage', side: 'opponent' });
             }
           }
         }
@@ -1195,7 +1194,7 @@ export const createPokerCombatSlice: StateCreator<
             if (w?.type === 'on_opponent_fold_heal') {
               if (winner === 'player') playerFinalHealth = Math.min(playerFinalHealth + (w.value || 0), playerMaxHP);
               else opponentFinalHealth = Math.min(opponentFinalHealth + (w.value || 0), opponentMaxHP);
-              playWagerActivate('on_opponent_fold_heal', winner);
+			      emitWagerActivated({ wagerType: 'on_opponent_fold_heal', side: winner });
             }
           }
           // fold_penalty_to_healing: loser's minion converts fold HP loss into healing
@@ -1205,7 +1204,7 @@ export const createPokerCombatSlice: StateCreator<
               const loserCommittedHP = winner === 'player' ? opponentCommitted : playerCommitted;
               if (winner === 'player') opponentFinalHealth = Math.min(opponentCurrentHP + loserCommittedHP, opponentMaxHP);
               else playerFinalHealth = Math.min(playerCurrentHP + loserCommittedHP, playerMaxHP);
-              playWagerActivate('fold_penalty_to_healing', loserSide);
+			      emitWagerActivated({ wagerType: 'fold_penalty_to_healing', side: loserSide });
             }
           }
         }
@@ -1397,10 +1396,11 @@ export const createPokerCombatSlice: StateCreator<
               break;
           }
 
-          // 3-family separation: trigger the gold activation animation
-          // on Family 3 (nft) wager-bearing frames. Fires for every
-          // wager type that flows through this resolver.
-          playWagerActivate(wager.type, side);
+		  // 3-family separation: emit the typed presentation event for
+		  // Family 3 (nft) wager-bearing frames. Gameplay remains local here.
+		  if (isWagerType(wager.type)) {
+		    emitWagerActivated({ wagerType: wager.type, side });
+		  }
         };
 
         for (const m of playerBf) {

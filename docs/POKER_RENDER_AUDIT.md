@@ -21,6 +21,26 @@ varios textos flotantes, banners y toasts.
 | `BattlefieldCardInspector` / `HeroDossierModal` | Inspección solicitada | Modal bajo demanda, con chrome del juego; nunca debe aparecer como reacción automática. |
 | Pixi + GSAP | Impacto, energía, rayos y movimiento | Canal principal para ataques y manos especiales; evitar texto largo dentro del efecto. |
 
+## Símbolos de estado del tablero
+
+El tablero usa hechos resueltos de `CardInstance` y el contrato compartido en
+`client/src/game/combat/runtimeStateContract.ts`. La intención visual de sueño
+se conserva en Dormant mediante el icono SVG dedicado, el contador de turnos y
+dos marcas `z` decorativas de baja intensidad. Esas marcas no son estado, no
+determinan elegibilidad y se desactivan con `prefers-reduced-motion`.
+
+| Estado visible | Fuente actual | Sustitución del legado |
+| --- | --- | --- |
+| Summoning sickness | `isSummoningSick` + excepciones Charge/Rush | Hourglass SVG, ya no `moon` |
+| Dormant | `isDormant`, `dormantTurnsLeft` | Dormant SVG + contador + `z` decorativas, ya no emoji/`zzzFloat` |
+| Exhausted | `attacksPerformed` + `canAttack` | Crossed-blade SVG, no inferencia genérica de `canAttack === false` |
+| Coil | `coiledBy` | Coil SVG, ya no `isCoiled` |
+| Einherjar | `einherjar` keyword + `einherjarGeneration` | Runtime counter, ya no `einpieces` |
+
+`BattlefieldStateMark` centraliza la etiqueta accesible y la resolución de
+iconos keyword/combat. `SimpleBattlefield` solo decide qué hechos ya activos
+debe presentar en cada slot.
+
 ## Redundancias que debemos evitar
 
 1. Una acción de ataque no debe renderizar a la vez `CombatFeedbackStack`,

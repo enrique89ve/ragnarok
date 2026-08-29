@@ -25,16 +25,7 @@ import type { CardInstance } from '../../types';
 import type { Position } from '../../types/Position';
 import type { ShowdownCelebration } from '../hooks/useCombatEvents';
 import { ARENA_VFX_TARGETS, arenaVfxTargetProps } from '../arenaVfxTargets';
-
-// Inline SVG used by the small hand-strength badge under the hero portrait.
-const CardFanIcon = () => (
-	<svg className="btn-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-		<path d="M5.2 4.6 10.1 3a1.7 1.7 0 0 1 2.1 1.1l2.2 6.8a1.7 1.7 0 0 1-1.1 2.1l-4.9 1.6a1.7 1.7 0 0 1-2.1-1.1L4 6.7a1.7 1.7 0 0 1 1.2-2.1Z"/>
-		<path d="m8.3 6.5 3.8-1.2"/>
-		<path d="m9.1 9 3.7-1.2"/>
-		<path d="M12.7 6.6 14.2 6a1.7 1.7 0 0 1 2.1 1.1l1.1 3.6a1.7 1.7 0 0 1-1.1 2.1l-1.7.6"/>
-	</svg>
-);
+import PokerHandIcon from '../components/PokerHandIcon';
 
 export interface PlayerZoneProps {
 	readonly playerPet: object | null | undefined;
@@ -159,7 +150,7 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({
 								aria-label={`Current hand: ${playerHandEval.displayName}`}
 							>
 								<span className="strength-icon" aria-hidden="true">
-									<CardFanIcon />
+									<PokerHandIcon />
 								</span>
 								<span className="strength-name">{playerHandEval.displayName}</span>
 							</div>

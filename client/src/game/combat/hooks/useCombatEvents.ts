@@ -16,6 +16,10 @@ export interface ShowdownCelebration {
     resolutionType: 'showdown' | 'fold';
     playerHand: { rank: number; cards: PokerCard[] };
     opponentHand: { rank: number; cards: PokerCard[] };
+    playerDamage: number;
+    opponentDamage: number;
+    playerFinalHealth: number;
+    opponentFinalHealth: number;
     whoFolded?: 'player' | 'opponent';
     foldPenalty?: number;
   };
@@ -137,6 +141,10 @@ export function useCombatEvents(options: UseCombatEventsOptions): void {
             resolutionType: result.resolutionType,
             playerHand: result.playerHand,
             opponentHand: result.opponentHand,
+            playerDamage: result.playerDamage || 0,
+            opponentDamage: result.opponentDamage || 0,
+            playerFinalHealth: result.playerFinalHealth || 0,
+            opponentFinalHealth: result.opponentFinalHealth || 0,
             whoFolded: result.whoFolded,
             foldPenalty: result.foldPenalty
           },

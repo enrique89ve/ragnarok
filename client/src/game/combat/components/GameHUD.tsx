@@ -1,39 +1,10 @@
 import React from 'react';
 import { getElementColor, ELEMENT_LABELS, type ElementType } from '../../utils/elements/elementAdvantage';
 import { getElementIcon } from '../../components/ui/ElementIconsSVG';
+import { GameIcon } from '../../utils/ui/GameIcon';
 import { ARENA_VFX_TARGETS, arenaVfxTargetProps } from '../arenaVfxTargets';
 import { getPokerTurnBadgePresentation } from '../decision/pokerTurnBadgePresentation';
 import '../styles/game-hud.css';
-
-const glyphStrokeProps = {
-	fill: 'none',
-	stroke: 'currentColor',
-	strokeWidth: 1.7,
-	strokeLinecap: 'round' as const,
-	strokeLinejoin: 'round' as const,
-};
-
-const DeckGlyph = () => (
-	<svg viewBox="0 0 20 20" aria-hidden="true">
-		<rect x="5.2" y="4.4" width="9.6" height="12" rx="1.6" {...glyphStrokeProps} />
-		<path d="M7 7.4h6M7 10h6M7 12.6h4.4" {...glyphStrokeProps} />
-		<path d="M3.8 6.1 5.2 4.8M3.8 13.9l1.4 1.3" {...glyphStrokeProps} opacity="0.6" />
-	</svg>
-);
-
-const HandGlyph = () => (
-	<svg viewBox="0 0 20 20" aria-hidden="true">
-		<path d="M4.6 14.8 6.9 6.7a1.2 1.2 0 0 1 1.5-.8l5.7 1.7a1.2 1.2 0 0 1 .8 1.5l-2.3 8.1a1.2 1.2 0 0 1-1.5.8l-5.7-1.7a1.2 1.2 0 0 1-.8-1.5Z" {...glyphStrokeProps} />
-		<path d="m9.2 6.6 4.6 1.3M8.5 9.1l4.6 1.4M7.9 11.7l3.8 1.1" {...glyphStrokeProps} opacity="0.8" />
-	</svg>
-);
-
-const StakesGlyph = () => (
-	<svg viewBox="0 0 20 20" aria-hidden="true">
-		<circle cx="10" cy="10" r="6.2" {...glyphStrokeProps} />
-		<path d="M10 6.3v7.4M7.4 8.4c0-1.1 1-1.9 2.6-1.9s2.6.8 2.6 1.9-1 1.7-2.6 1.9-2.6.8-2.6 1.9S8.4 14 10 14s2.6-.8 2.6-1.9" {...glyphStrokeProps} />
-	</svg>
-);
 
 interface GameHUDProps {
 	turnNumber: number;
@@ -89,7 +60,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 					{...arenaVfxTargetProps(ARENA_VFX_TARGETS.riskDisplay)}
 				>
 					<span className="hud-chip-icon">
-						<StakesGlyph />
+						<GameIcon name="scale" size={18} aria-hidden="true" />
 					</span>
 					Stakes <span className="hud-numeric">{pot}</span> HP
 				</span>
@@ -119,7 +90,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 						{React.createElement(getElementIcon(playerElement!), { 'aria-hidden': true })}
 					</span>
 					<span className="hud-matchup-arrow">
-						{playerHasAdvantage ? '\u25B2' : opponentHasAdvantage ? '\u25BC' : '\u2014'}
+						{playerHasAdvantage ? <GameIcon name="arrowUp" size={14} /> : opponentHasAdvantage ? <GameIcon name="arrowDown" size={14} /> : <span aria-hidden="true">vs</span>}
 					</span>
 					<span className="hud-matchup-icon" style={{ color: getElementColor(opponentElement!) }}>
 						{React.createElement(getElementIcon(opponentElement!), { 'aria-hidden': true })}
@@ -130,7 +101,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 			<div className={`hud-deck-badge hud-player-deck ${playerDeckCount <= 0 ? 'empty' : playerDeckCount <= 5 ? 'low-deck' : ''}`}>
 				<span className="hud-badge-label">Your Deck</span>
 				<span className="hud-icon">
-					<DeckGlyph />
+					<GameIcon name="book" size={20} aria-hidden="true" />
 				</span>
 				<span className="hud-count">{playerDeckCount}</span>
 			</div>
@@ -138,7 +109,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 			<div className={`hud-deck-badge hud-opponent-deck ${opponentDeckCount <= 0 ? 'empty' : opponentDeckCount <= 5 ? 'low-deck' : ''}`}>
 				<span className="hud-badge-label">Enemy Deck</span>
 				<span className="hud-icon">
-					<DeckGlyph />
+					<GameIcon name="book" size={20} aria-hidden="true" />
 				</span>
 				<span className="hud-count">{opponentDeckCount}</span>
 			</div>
@@ -146,7 +117,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 			<div className="hud-deck-badge hud-opponent-hand">
 				<span className="hud-badge-label">Enemy Hand</span>
 				<span className="hud-icon">
-					<HandGlyph />
+					<GameIcon name="hand" size={20} aria-hidden="true" />
 				</span>
 				<span className="hud-count">{opponentHandCount}</span>
 			</div>

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildBattlefieldLayoutItems } from './SimpleBattlefield';
+import {
+	buildBattlefieldLayoutItems,
+	hasBattlefieldWagerEffect,
+	hasUniqueBattlefieldInstanceIds,
+	isBattlefieldTarget,
+} from './SimpleBattlefield';
 
 interface TestCard {
 	readonly instanceId: string;
@@ -41,5 +46,24 @@ describe('SimpleBattlefield layout identity', () => {
 
 		expect(keys(after)).toEqual(['A', 'C']);
 		expect(after.map(item => item.card)).toEqual([before[0], before[2]]);
+	});
+
+	it('detects duplicate instance ids as invalid battlefield identity state', () => {
+		expect(hasUniqueBattlefieldInstanceIds(cards('A', 'B'))).toBe(true);
+		expect(hasUniqueBattlefieldInstanceIds(cards('A', 'A'))).toBe(false);
+	});
+
+	it('uses canonical valid target ids for either battlefield side', () => {
+		const playerCard = cards('friendly-target')[0];
+		const opponentCard = cards('enemy-target')[0];
+
+		expect(isBattlefieldTarget(playerCard, ['friendly-target'])).toBe(true);
+		expect(isBattlefieldTarget(opponentCard, ['friendly-target'])).toBe(false);
+	});
+
+	it('treats null and undefined wager effects as inactive', () => {
+		expect(hasBattlefieldWagerEffect({ card: { wagerEffect: null } })).toBe(false);
+		expect(hasBattlefieldWagerEffect({ card: { wagerEffect: undefined } })).toBe(false);
+		expect(hasBattlefieldWagerEffect({ card: { wagerEffect: { type: 'wager' } } })).toBe(true);
 	});
 });
