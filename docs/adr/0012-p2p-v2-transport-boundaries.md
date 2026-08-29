@@ -15,9 +15,10 @@ gameplay or matchmaking authority.
 The client owns one transport boundary, `GameTransport`. Its implementations
 deliver validated P2P messages and report lifecycle state; they do not apply
 game commands, choose winners, or decide when a battle is ready. The
-`TransportManager` resolves a pure capability/policy decision before opening a
-transport and persists that decision in a match-scoped session across
-reconnects.
+The client resolves a pure capability/policy decision before opening a
+transport, passes the resulting plan to `TransportManager`, and persists the
+decision in a match-scoped session across reconnects. The manager executes the
+plan and owns attempt lifecycle/fallback only.
 
 The current relay remains the baseline implementation:
 
@@ -55,19 +56,23 @@ ticket, peer identity, seed, army, and initial-state gates stay in force.
 - The relay remains usable after each migration step.
 - `peerStore` keeps its compatibility event surface while the manager owns
   initial transport selection; `useWireSync` does not choose a transport.
-- One manager-owned connection budget is passed to WebRTC and applies to the
-  relay fallback too; the store does not maintain a second connect timer.
+- The policy resolves independent WebRTC and relay budgets. The manager owns
+  each selected attempt's timeout and gives relay its full budget after a
+  WebRTC failure; the store does not maintain a second connect timer.
 - Public transport configuration is served from
   `GET /api/p2p/transport-config`. Server-only `P2P_*` values take precedence
-  over legacy `VITE_*` values, with bounded validation and relay-safe defaults.
+  for active values, with bounded validation and relay-safe defaults.
   The response contains no tickets, SDP, or ICE credentials.
-- Missing ICE servers do not by themselves classify WebRTC as unsupported;
-  browser capability and signed transport role are separate decisions.
+- Browser capabilities include an optional `navigator.connection.type` hint.
+  Cellular selects the aggressive WebRTC budget. On shared networks, missing
+  ICE servers selects relay-only; local development may still try host-only
+  WebRTC candidates.
 - A pre-connect WebRTC failure sends `transport_fallback_v1` once. After
   `transport_ready_v1`, fallback messages are ignored and no live switch is
   performed. A successful relay fallback locks relay for the match session.
-- After the DataChannel connects, Control WS loss is a signaling degradation,
-  not a gameplay transport failure.
+- After the DataChannel connects, Control WS loss, errors, malformed frames,
+  and `control_error_v1` are signaling degradation, not gameplay transport
+  failures.
 - `isHost` remains a gameplay perspective supplied by match/manual assignment;
   WebRTC `offerer`/`answerer` is never treated as gameplay authority.
 - STUN, Control WS signaling, and native WebRTC remain separate opt-in

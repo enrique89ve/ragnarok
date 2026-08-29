@@ -11,7 +11,7 @@ describe('P2P transport config wire contract', () => {
 			version: 1,
 			webrtcEnabled: true,
 			relayEnabled: true,
-			connectTimeoutMs: 20_000,
+			timeouts: { webrtcNormalMs: 8_000, webrtcAggressiveMs: 5_000, relayConnectMs: 8_000 },
 			iceServers: [{ urls: 'stun:stun.example.test:3478' }],
 		})).toMatchObject({ version: 1, iceServers: [{ urls: 'stun:stun.example.test:3478' }] });
 	});
@@ -21,7 +21,7 @@ describe('P2P transport config wire contract', () => {
 			version: 1,
 			webrtcEnabled: true,
 			relayEnabled: true,
-			connectTimeoutMs: 100,
+			timeouts: { webrtcNormalMs: 100, webrtcAggressiveMs: 5_000, relayConnectMs: 8_000 },
 			iceServers: [{ urls: 'turn:user:password@turn.example.test' }],
 		})).toBeNull();
 	});

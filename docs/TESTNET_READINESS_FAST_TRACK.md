@@ -406,13 +406,14 @@ subprotocol, logs, memoria privada y adapter de poker sin `globalThis`.
 
 ### Canario de transporte
 
-La política runtime sigue siendo relay-first y `P2P_WEBRTC_ENABLED=false` por
-defecto. El endpoint `GET /api/p2p/transport-config` permite cambiar el modo
+La política runtime mantiene `P2P_WEBRTC_ENABLED=false` por defecto. El
+endpoint `GET /api/p2p/transport-config` permite cambiar el modo y los budgets
 sin reconstruir el navegador, pero solo debe habilitar WebRTC para un canario
 controlado. Antes de ampliar el rollout hay que validar dos browsers reales en
-Chrome/Safari móvil y redes distintas, incluyendo timeout, fallback coordinado,
-reconnect con relay sticky y ausencia de secretos en logs/respuestas. Los
-tests de mocks y el build no sustituyen esa evidencia operativa.
+Chrome/Safari móvil y redes distintas, incluyendo Wi-Fi, celular, presupuesto
+agresivo, fallback coordinado, relay con presupuesto independiente, reconnect
+con relay sticky, política `no-ice` y ausencia de secretos en logs/respuestas.
+Los tests de mocks y el build no sustituyen esa evidencia operativa.
 
 ### Smoke humano P2P
 

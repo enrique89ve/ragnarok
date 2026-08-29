@@ -95,6 +95,7 @@ __tests__/
 !client/src/game/config/featureFlags.test.ts
 !client/src/game/p2p/transport/WebRTCTransport.test.ts
 !client/src/game/p2p/transport/TransportManager.test.ts
+!client/src/game/p2p/transport/transportCapabilities.test.ts
 !client/src/game/p2p/transport/transportPolicy.test.ts
 !client/src/game/p2p/transport/transportSession.test.ts
 !client/src/game/p2p/transport/transportConfigClient.test.ts

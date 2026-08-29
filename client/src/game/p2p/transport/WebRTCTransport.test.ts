@@ -5,6 +5,7 @@ import {
 	buildP2PControlWebSocketUrl,
 	createWebRTCTransport,
 } from './WebRTCTransport';
+import { getTransportFailureReason } from './transportTypes';
 import { P2P_CONTROL_PROTOCOL_VERSION } from '@shared/p2p-wire/control';
 
 const ticket = {
@@ -244,7 +245,10 @@ describe('WebRTC transport boundary', () => {
 			reason: 'ice_failed',
 		});
 
-		await expect(pending).rejects.toThrow('Opponent selected relay transport');
+		const error = await pending.then(() => null, rejection => rejection);
+		expect(error).toBeInstanceOf(Error);
+		expect(error).toMatchObject({ message: 'Opponent selected relay transport' });
+		expect(getTransportFailureReason(error)).toBe('ice_failed');
 		expect(socket.sent.map(payload => JSON.parse(payload))).not.toContainEqual(expect.objectContaining({ type: 'transport_fallback_v1' }));
 	});
 
@@ -296,6 +300,18 @@ describe('WebRTC transport boundary', () => {
 		await settleMicrotasks();
 		connection.dataChannel?.open();
 		await pending;
+
+		socket.triggerMessage({
+			type: 'control_error_v1',
+			protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+			code: 'protocol',
+		});
+		socket.triggerMessage({ type: 'unexpected_control_message' });
+		await settleMicrotasks();
+
+		expect(transport.state).toBe('connected');
+		expect(transport.controlState).toBe('degraded');
+		expect(connection.dataChannel?.readyState).toBe('open');
 
 		socket.triggerClose();
 

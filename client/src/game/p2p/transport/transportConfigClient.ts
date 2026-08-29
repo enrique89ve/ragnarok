@@ -1,14 +1,10 @@
 import { debug } from '../../config/debugConfig';
 import {
 	P2P_TRANSPORT_CONFIG_PATH,
+	P2P_TRANSPORT_DEFAULT_TIMEOUTS,
 	parseP2PTransportConfig,
 	type P2PTransportConfig,
 } from '@shared/p2p-wire/transportConfig';
-import {
-	getP2PIceServers,
-	isP2PWebRTCEnabled,
-	isP2PWebSocketFallbackEnabled,
-} from '../../config/featureFlags';
 
 const CONFIG_CACHE_TTL_MS = 30_000;
 const CONFIG_REQUEST_TIMEOUT_MS = 1_500;
@@ -17,13 +13,13 @@ let cachedConfig: P2PTransportConfig | null = null;
 let cachedAt = 0;
 let requestPromise: Promise<P2PTransportConfig> | null = null;
 
-function fallbackConfig(): P2PTransportConfig {
+function safeRelayOnlyConfig(): P2PTransportConfig {
 	return {
 		version: 1,
-		webrtcEnabled: isP2PWebRTCEnabled(),
-		relayEnabled: isP2PWebSocketFallbackEnabled(),
-		connectTimeoutMs: 20_000,
-		iceServers: getP2PIceServers(),
+		webrtcEnabled: false,
+		relayEnabled: true,
+		timeouts: P2P_TRANSPORT_DEFAULT_TIMEOUTS,
+		iceServers: [],
 	};
 }
 
@@ -39,9 +35,9 @@ function getConfigUrl(): string | null {
 }
 
 async function fetchConfig(): Promise<P2PTransportConfig> {
-	const fallback = fallbackConfig();
+	const fallback = safeRelayOnlyConfig();
 	const url = getConfigUrl();
-	if (!url || typeof fetch !== 'function' || typeof AbortController !== 'function') return fallback;
+	if (!url || typeof fetch !== 'function' || typeof AbortController !== 'function') return cachedConfig ?? fallback;
 
 	const controller = new AbortController();
 	const timeoutId = setTimeout(() => controller.abort(), CONFIG_REQUEST_TIMEOUT_MS);
@@ -54,7 +50,11 @@ async function fetchConfig(): Promise<P2PTransportConfig> {
 		cachedAt = Date.now();
 		return parsed;
 	} catch (error) {
-		debug.warn('[P2P transport] using local fallback config:', error);
+		if (cachedConfig) {
+			debug.warn('[P2P transport] using last-known-good runtime config:', error);
+			return cachedConfig;
+		}
+		debug.warn('[P2P transport] using safe relay-only config:', error);
 		return fallback;
 	} finally {
 		clearTimeout(timeoutId);

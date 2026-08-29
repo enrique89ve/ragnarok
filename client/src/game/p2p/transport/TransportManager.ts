@@ -17,8 +17,7 @@ import type {
 	TransportStateListener,
 } from './transportTypes';
 import { createTransportFailure, getTransportFailureReason } from './transportTypes';
-import type { TransportCapabilities } from './transportCapabilities';
-import { resolveTransportPlan } from './transportPolicy';
+import type { TransportPlan } from './transportPolicy';
 import type { TransportSession } from './transportSession';
 import {
 	recordRelayFallback,
@@ -33,12 +32,9 @@ export type TransportManagerOptions = {
 	readonly relayUrl: string;
 	readonly controlUrl: string;
 	readonly matchTicket: P2PMatchTicket | null;
-	readonly webrtcEnabled: boolean;
-	readonly wsFallbackEnabled: boolean;
 	readonly isHostHint: boolean;
-	readonly capabilities: TransportCapabilities;
+	readonly plan: TransportPlan;
 	readonly session: TransportSession;
-	readonly connectTimeoutMs: number;
 	readonly iceServers?: readonly import('@shared/p2p-wire/transportConfig').P2PIceServerConfig[];
 };
 
@@ -59,8 +55,8 @@ function toError(value: unknown, fallback: string): Error {
 	return value instanceof Error ? value : new Error(fallback);
 }
 
-function safeConnectTimeout(value: number): number {
-	if (!Number.isFinite(value)) return 20_000;
+function safeConnectBudget(value: number): number {
+	if (!Number.isFinite(value)) return 8_000;
 	return Math.min(30_000, Math.max(1_000, Math.floor(value)));
 }
 
@@ -168,8 +164,9 @@ export function createTransportManager(
 		};
 	};
 
-	const connectOne = async (transport: GameTransport, attemptId: number, deadlineAt: number): Promise<void> => {
+	const connectOne = async (transport: GameTransport, attemptId: number, budgetMs: number): Promise<void> => {
 		attachSelected(transport, attemptId);
+		const deadlineAt = Date.now() + safeConnectBudget(budgetMs);
 		await connectWithinBudget(transport, deadlineAt, `${transport.kind} transport connection timed out`);
 		if (!options.session.isCurrent(attemptId) || closed) {
 			try { transport.close(); } catch { /* stale attempt */ }
@@ -192,15 +189,7 @@ export function createTransportManager(
 		setState('connecting');
 		connectPromise = (async () => {
 			const attemptId = options.session.beginAttempt();
-			const deadlineAt = Date.now() + safeConnectTimeout(options.connectTimeoutMs);
-			const session = options.session.getSnapshot();
-			const plan = resolveTransportPlan({
-				webrtcEnabled: options.webrtcEnabled,
-				relayEnabled: options.wsFallbackEnabled,
-				capabilities: options.capabilities,
-				matchRole: options.matchTicket?.role ?? null,
-				relayLocked: session.relayLocked,
-			});
+			const plan = options.plan;
 			if (plan.mode === 'unavailable') {
 				setState('failed');
 				const error = new Error(`No P2P transport available: ${plan.reason}`);
@@ -219,16 +208,15 @@ export function createTransportManager(
 				recordWebRTCAttempt();
 				let webRtc: GameTransport | null = null;
 				try {
-					const connectTimeoutMs = remainingBudget(deadlineAt);
 					webRtc = createWebRTC({
 						controlUrl: options.controlUrl,
 						roomId: options.roomId,
 						peerId: options.peerId,
 						matchTicket,
-						connectTimeoutMs,
+						connectTimeoutMs: safeConnectBudget(plan.webrtcConnectMs),
 						...(options.iceServers ? { iceServers: options.iceServers } : {}),
 					});
-					await connectOne(webRtc, attemptId, deadlineAt);
+					await connectOne(webRtc, attemptId, plan.webrtcConnectMs);
 					recordWebRTCConnected();
 					return;
 				} catch (error) {
@@ -251,14 +239,13 @@ export function createTransportManager(
 				recordRelayFallback(getTransportFailureReason(webRtcError) ?? 'manual');
 			}
 			try {
-				if (remainingBudget(deadlineAt) <= 0) throw webRtcError ?? new Error('P2P transport connection timed out');
 				const relay = createRelay({
 					url: options.relayUrl,
 					roomId: options.roomId,
 					peerId: options.peerId,
 					matchTicket: options.matchTicket,
 				});
-				await connectOne(relay, attemptId, deadlineAt);
+				await connectOne(relay, attemptId, plan.relayConnectMs);
 			} catch (error) {
 				setState('failed');
 				const finalError = toError(error, 'Relay connection failed');

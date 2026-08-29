@@ -148,24 +148,25 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 		disposeResources();
 	};
 
+	const degradeControl = (message: string): boolean => {
+		if (state !== 'connected') return false;
+		controlState = 'degraded';
+		debug.warn(`[WebRTCTransport] ${message}; keeping DataChannel alive`);
+		return true;
+	};
+
+	const failControl = (message: string, reason: P2PTransportFallbackReason = 'ice_failed'): void => {
+		if (!degradeControl(message)) fail(message, reason);
+	};
+
 	const sendControl = (message: P2PControlClientMessage): void => {
 		if (socket?.readyState !== WebSocket.OPEN) {
-			if (state === 'connected') {
-				controlState = 'degraded';
-				debug.warn('[WebRTCTransport] Control WebSocket degraded; keeping DataChannel alive');
-				return;
-			}
-			fail('Control WebSocket is not open', 'ice_failed');
+			failControl('Control WebSocket is not open');
 			return;
 		}
 		try { socket.send(JSON.stringify(message)); }
 		catch {
-			if (state === 'connected') {
-				controlState = 'degraded';
-				debug.warn('[WebRTCTransport] Control WebSocket send failed; keeping DataChannel alive');
-				return;
-			}
-			fail('Control WebSocket send failed', 'ice_failed');
+			failControl('Control WebSocket send failed');
 		}
 	};
 
@@ -252,40 +253,36 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 	const handleControlMessage = async (input: unknown): Promise<void> => {
 		const message = parseP2PControlServerMessage(input);
 		if (!message) {
-			fail('Malformed Control WebSocket message', 'ice_failed');
+			failControl('Malformed Control WebSocket message');
 			return;
 		}
 		if (message.type === 'control_error_v1') {
-			fail(`Control WebSocket rejected: ${message.code}`);
+			failControl(`Control WebSocket rejected: ${message.code}`);
 			return;
 		}
 		if (message.type === 'transport_fallback_v1') {
-			if (state !== 'connected') fail('Opponent selected relay transport', undefined, false);
+			if (state !== 'connected') fail('Opponent selected relay transport', message.reason, false);
 			return;
 		}
 		if (message.type === 'transport_ready_v1') return;
 		if (message.type === 'control_peer_left_v1') {
-			if (state === 'connected') {
-				controlState = 'degraded';
-				debug.warn('[WebRTCTransport] Opponent control connection lost; keeping DataChannel alive');
-				return;
-			}
+			if (degradeControl('Opponent control connection lost')) return;
 			fail('Control peer left before WebRTC connection completed');
 			return;
 		}
 		if (message.type === 'control_open_v1') {
 			if (message.matchId !== options.roomId || message.peerId !== options.peerId || message.role !== options.matchTicket.role) {
-				fail('Control WebSocket identity mismatch');
+				failControl('Control WebSocket identity mismatch');
 				return;
 			}
 			controlState = 'connected';
 			remotePeer = message.opponentPeerId;
 			const connection = setupPeerConnection();
-			if (connection && message.role === 'offerer') void createOffer(connection).catch(() => fail('WebRTC offer failed', 'ice_failed'));
+			if (connection && message.role === 'offerer') void createOffer(connection).catch(() => failControl('WebRTC offer failed'));
 			return;
 		}
 		if (message.type === 'webrtc_offer_v1') {
-			if (!peerConnection) return fail('WebRTC offer arrived before control open', 'ice_failed');
+			if (!peerConnection) return failControl('WebRTC offer arrived before control open');
 			await peerConnection.setRemoteDescription({ type: 'offer', sdp: message.sdp });
 			remoteDescriptionSet = true;
 			for (const candidate of pendingIceCandidates.splice(0)) await peerConnection.addIceCandidate(candidate);
@@ -296,14 +293,14 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 			return;
 		}
 		if (message.type === 'webrtc_answer_v1') {
-			if (!peerConnection) return fail('WebRTC answer arrived before control open', 'ice_failed');
+			if (!peerConnection) return failControl('WebRTC answer arrived before control open');
 			await peerConnection.setRemoteDescription({ type: 'answer', sdp: message.sdp });
 			remoteDescriptionSet = true;
 			for (const candidate of pendingIceCandidates.splice(0)) await peerConnection.addIceCandidate(candidate);
 			return;
 		}
 		if (message.type === 'ice_candidate_v1') {
-			if (!peerConnection) return fail('ICE candidate arrived before control open', 'ice_failed');
+			if (!peerConnection) return failControl('ICE candidate arrived before control open');
 			const candidate = { candidate: message.candidate, sdpMid: message.sdpMid, sdpMLineIndex: message.sdpMLineIndex } satisfies WebRTCIceCandidateInit;
 			if (remoteDescriptionSet) await peerConnection.addIceCandidate(candidate);
 			else pendingIceCandidates.push(candidate);
@@ -329,26 +326,21 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 				let payload: unknown = event.data;
 				if (typeof payload === 'string') {
 					try { payload = JSON.parse(payload); }
-					catch { fail('Malformed Control WebSocket JSON', 'ice_failed'); return; }
+					catch {
+						failControl('Malformed Control WebSocket JSON');
+						return;
+					}
 				}
-				void handleControlMessage(payload).catch(() => fail('Control WebSocket message handling failed', 'ice_failed'));
+				void handleControlMessage(payload).catch(() => {
+					failControl('Control WebSocket message handling failed');
+				});
 			};
 			control.onerror = () => {
-				if (state === 'connected') {
-					controlState = 'degraded';
-					debug.warn('[WebRTCTransport] Control WebSocket degraded; keeping DataChannel alive');
-					return;
-				}
-				fail('Control WebSocket error', 'ice_failed');
+				failControl('Control WebSocket error');
 			};
 			control.onclose = () => {
 				if (closed) return;
-				if (state === 'connected') {
-					controlState = 'degraded';
-					debug.warn('[WebRTCTransport] Control WebSocket closed; keeping DataChannel alive');
-					return;
-				}
-				fail('Control WebSocket closed', 'ice_failed');
+				failControl('Control WebSocket closed');
 			};
 		});
 		return connectPromise;

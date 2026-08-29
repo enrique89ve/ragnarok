@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { P2PMessage } from '../messages';
 import { createTransportManager } from './TransportManager';
@@ -13,6 +13,7 @@ import type {
 	TransportState,
 	TransportStateListener,
 } from './transportTypes';
+import { createTransportFailure } from './transportTypes';
 
 const ticket = {
 	token: 'payload.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
@@ -69,15 +70,21 @@ function managerOptions(overrides: Partial<Parameters<typeof createTransportMana
 		relayUrl: 'ws://game.test/ws/p2p',
 		controlUrl: 'ws://game.test/ws/control',
 		matchTicket: ticket,
-		webrtcEnabled: true,
-		wsFallbackEnabled: true,
 		isHostHint: false,
-		capabilities: { webRtc: true, webSocket: true, iceServersConfigured: false },
+		plan: {
+			mode: 'webrtc-first',
+			relayFallback: true,
+			webrtcConnectMs: 20_000,
+			relayConnectMs: 8_000,
+		},
 		session: createTransportSession(ticket.roomId),
-		connectTimeoutMs: 20_000,
 		...overrides,
 	};
 }
+
+afterEach(() => {
+	vi.useRealTimers();
+});
 
 describe('TransportManager', () => {
 	it('uses WebRTC when it connects and exposes the selected transport', async () => {
@@ -158,6 +165,45 @@ describe('TransportManager', () => {
 		});
 	});
 
+	it('gives relay a fresh budget after an aggressive WebRTC timeout', async () => {
+		vi.useFakeTimers();
+		const webRtc = fakeTransport('webrtc', () => new Promise<void>(() => undefined));
+		const relay = fakeTransport('websocket-relay', async () => { relay.setState('connected'); });
+		const manager = createTransportManager(managerOptions({
+			plan: { mode: 'webrtc-first', relayFallback: true, webrtcConnectMs: 5_000, relayConnectMs: 8_000 },
+		}), {
+			createWebRTC: () => webRtc.transport,
+			createRelay: () => relay.transport,
+		});
+
+		const pending = manager.connect();
+		await vi.advanceTimersByTimeAsync(5_001);
+		await pending;
+
+		expect(webRtc.close).toHaveBeenCalledTimes(1);
+		expect(relay.connect).toHaveBeenCalledTimes(1);
+		expect(manager.kind).toBe('websocket-relay');
+	});
+
+	it('preserves the remote fallback reason in local telemetry', async () => {
+		resetTransportTelemetryForTests();
+		const webRtc = fakeTransport('webrtc', async () => {
+			throw createTransportFailure('Opponent selected relay transport', 'timeout');
+		});
+		const relay = fakeTransport('websocket-relay', async () => { relay.setState('connected'); });
+		const manager = createTransportManager(managerOptions(), {
+			createWebRTC: () => webRtc.transport,
+			createRelay: () => relay.transport,
+		});
+
+		await manager.connect();
+
+		expect(getTransportTelemetrySnapshot()).toMatchObject({
+			webrtcFailedByReason: { timeout: 1 },
+			relayFallbackByReason: { timeout: 1 },
+		});
+	});
+
 	it('keeps a relay fallback sticky when a reconnect recreates the manager', async () => {
 		const session = createTransportSession(ticket.roomId);
 		const firstWebRtc = fakeTransport('webrtc', async () => { throw new Error('ICE failed'); });
@@ -173,7 +219,10 @@ describe('TransportManager', () => {
 		const secondWebRtc = fakeTransport('webrtc', async () => { secondWebRtc.setState('connected'); });
 		const secondRelay = fakeTransport('websocket-relay', async () => { secondRelay.setState('connected'); });
 		const createWebRTC = vi.fn(() => secondWebRtc.transport);
-		const secondManager = createTransportManager(managerOptions({ session }), {
+		const secondManager = createTransportManager(managerOptions({
+			session,
+			plan: { mode: 'relay-only', reason: 'session-relay-locked', relayConnectMs: 8_000 },
+		}), {
 			createWebRTC,
 			createRelay: () => secondRelay.transport,
 		});
@@ -189,7 +238,9 @@ describe('TransportManager', () => {
 		const relay = fakeTransport('websocket-relay', async () => { relay.setState('connected'); });
 		const createWebRTC = vi.fn(() => webRtc.transport);
 		const createRelay = vi.fn(() => relay.transport);
-		const manager = createTransportManager(managerOptions({ webrtcEnabled: false }), {
+		const manager = createTransportManager(managerOptions({
+			plan: { mode: 'relay-only', reason: 'webrtc-disabled', relayConnectMs: 8_000 },
+		}), {
 			createWebRTC,
 			createRelay,
 		});
@@ -206,7 +257,9 @@ describe('TransportManager', () => {
 		const webRtc = fakeTransport('webrtc', async () => { throw new Error('unsupported'); });
 		const relay = fakeTransport('websocket-relay', async () => { relay.setState('connected'); });
 		const errors: unknown[] = [];
-		const manager = createTransportManager(managerOptions({ wsFallbackEnabled: false }), {
+		const manager = createTransportManager(managerOptions({
+			plan: { mode: 'webrtc-first', relayFallback: false, webrtcConnectMs: 20_000, relayConnectMs: 8_000 },
+		}), {
 			createWebRTC: () => webRtc.transport,
 			createRelay: () => relay.transport,
 		});

@@ -34,7 +34,9 @@ import {
 } from '../p2p/transport/TransportManager';
 import { loadP2PTransportConfig } from '../p2p/transport/transportConfigClient';
 import { detectBrowserTransportCapabilities } from '../p2p/transport/transportCapabilities';
+import { resolveTransportPlan } from '../p2p/transport/transportPolicy';
 import { createTransportSession, type TransportSession } from '../p2p/transport/transportSession';
+import { isSharedNetworkEnvironment } from '../config/featureFlags';
 import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from '../../data/HiveSessionIdentity';
 import type { ArmySelection } from '../types/ChessTypes';
 import type { WireMessage } from '../p2p/messages';
@@ -75,6 +77,7 @@ let activeTransport: ManagedTransport | null = null;
 let activeTransportSession: TransportSession | null = null;
 // Last roomId used — needed by `attemptReconnect` to rejoin the same room.
 let lastRoomId: string | null = null;
+let transportOpenGeneration = 0;
 
 // ── Types ──
 
@@ -469,6 +472,7 @@ async function openTransport(
 	set: (state: Partial<PeerStore>) => void,
 	preserveSession: boolean,
 ): Promise<void> {
+	const openGeneration = ++transportOpenGeneration;
 	// Close any previous transport before opening a new one — protects against
 	// stale connections after a reconnect or a quick-match retry.
 	if (activeTransport) {
@@ -479,19 +483,29 @@ async function openTransport(
 	lastRoomId = roomId;
 	set({ lastRoomId: roomId });
 	const config = await loadP2PTransportConfig();
+	if (openGeneration !== transportOpenGeneration || lastRoomId !== roomId) {
+		throw new Error('Stale P2P transport open attempt');
+	}
 	const session = getTransportSession(roomId, preserveSession);
+	const capabilities = detectBrowserTransportCapabilities(config.iceServers);
+	const plan = resolveTransportPlan({
+		webrtcEnabled: config.webrtcEnabled,
+		relayEnabled: config.relayEnabled,
+		capabilities,
+		timeouts: config.timeouts,
+		sharedNetwork: isSharedNetworkEnvironment(),
+		matchRole: get().matchTicket?.role ?? null,
+		relayLocked: session.getSnapshot().relayLocked,
+	});
 	const transport = createTransportManager({
 		relayUrl: deriveRelayUrl(),
 		controlUrl: deriveControlUrl(),
 		roomId,
 		peerId,
 		matchTicket: get().matchTicket,
-		webrtcEnabled: config.webrtcEnabled,
-		wsFallbackEnabled: config.relayEnabled,
 		isHostHint: get().isHost,
-		capabilities: detectBrowserTransportCapabilities(config.iceServers),
+		plan,
 		session,
-		connectTimeoutMs: config.connectTimeoutMs,
 		iceServers: config.iceServers,
 	});
 	activeTransport = transport;
@@ -809,6 +823,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	},
 
 	disconnect: () => {
+	transportOpenGeneration += 1;
 		clearAllTimers();
 		messageBuffer.length = 0;
 		if (activeTransport) {

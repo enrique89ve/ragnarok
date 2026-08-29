@@ -8,7 +8,9 @@ import router from './p2pTransportConfig';
 const envKeys = [
 	'P2P_WEBRTC_ENABLED',
 	'P2P_WS_FALLBACK_ENABLED',
-	'P2P_CONNECT_TIMEOUT_MS',
+	'P2P_WEBRTC_NORMAL_MS',
+	'P2P_WEBRTC_AGGRESSIVE_MS',
+	'P2P_RELAY_CONNECT_MS',
 	'P2P_ICE_SERVERS',
 ] as const;
 const originalEnv = Object.fromEntries(envKeys.map(key => [key, process.env[key]]));
@@ -42,7 +44,9 @@ describe('P2P transport config route', () => {
 	beforeEach(() => {
 		process.env.P2P_WEBRTC_ENABLED = 'true';
 		process.env.P2P_WS_FALLBACK_ENABLED = 'true';
-		process.env.P2P_CONNECT_TIMEOUT_MS = '9000';
+		process.env.P2P_WEBRTC_NORMAL_MS = '9000';
+		process.env.P2P_WEBRTC_AGGRESSIVE_MS = '5000';
+		process.env.P2P_RELAY_CONNECT_MS = '8000';
 		process.env.P2P_ICE_SERVERS = 'stun:stun.example.test:3478';
 	});
 
@@ -59,7 +63,7 @@ describe('P2P transport config route', () => {
 			version: 1,
 			webrtcEnabled: true,
 			relayEnabled: true,
-			connectTimeoutMs: 9_000,
+			timeouts: { webrtcNormalMs: 9_000, webrtcAggressiveMs: 5_000, relayConnectMs: 8_000 },
 			iceServers: [{ urls: 'stun:stun.example.test:3478' }],
 		});
 	});

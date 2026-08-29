@@ -1,10 +1,10 @@
 import {
 	P2PIceServerConfigSchema,
+	P2P_TRANSPORT_DEFAULT_TIMEOUTS,
 	parseP2PTransportConfig,
 	type P2PTransportConfig,
+	type P2PTransportTimeouts,
 } from '../../shared/p2p-wire/transportConfig';
-
-const DEFAULT_CONNECT_TIMEOUT_MS = 20_000;
 
 function readFirst(env: NodeJS.ProcessEnv, keys: readonly string[]): string | undefined {
 	for (const key of keys) {
@@ -20,11 +20,28 @@ function resolveBoolean(value: string | undefined, fallback: boolean): boolean {
 	return fallback;
 }
 
-function resolveConnectTimeout(value: string | undefined): number {
-	if (!value) return DEFAULT_CONNECT_TIMEOUT_MS;
+function resolveTimeout(value: string | undefined, fallback: number): number {
+	if (!value) return fallback;
 	const parsed = Number(value);
-	if (!Number.isInteger(parsed)) return DEFAULT_CONNECT_TIMEOUT_MS;
+	if (!Number.isInteger(parsed)) return fallback;
 	return Math.min(30_000, Math.max(1_000, parsed));
+}
+
+function resolveTransportTimeouts(env: NodeJS.ProcessEnv): P2PTransportTimeouts {
+	return {
+		webrtcNormalMs: resolveTimeout(
+			readFirst(env, ['P2P_WEBRTC_NORMAL_MS']),
+			P2P_TRANSPORT_DEFAULT_TIMEOUTS.webrtcNormalMs,
+		),
+		webrtcAggressiveMs: resolveTimeout(
+			readFirst(env, ['P2P_WEBRTC_AGGRESSIVE_MS']),
+			P2P_TRANSPORT_DEFAULT_TIMEOUTS.webrtcAggressiveMs,
+		),
+		relayConnectMs: resolveTimeout(
+			readFirst(env, ['P2P_RELAY_CONNECT_MS']),
+			P2P_TRANSPORT_DEFAULT_TIMEOUTS.relayConnectMs,
+		),
+	};
 }
 
 function resolvePublicIceServers(env: NodeJS.ProcessEnv): P2PTransportConfig['iceServers'] {
@@ -44,7 +61,7 @@ export function resolveP2PTransportConfig(env: NodeJS.ProcessEnv): P2PTransportC
 		version: 1,
 		webrtcEnabled: resolveBoolean(readFirst(env, ['P2P_WEBRTC_ENABLED', 'VITE_P2P_WEBRTC_ENABLED']), false),
 		relayEnabled: resolveBoolean(readFirst(env, ['P2P_WS_FALLBACK_ENABLED', 'VITE_P2P_WS_FALLBACK_ENABLED']), true),
-		connectTimeoutMs: resolveConnectTimeout(readFirst(env, ['P2P_CONNECT_TIMEOUT_MS', 'VITE_P2P_CONNECT_TIMEOUT_MS'])),
+		timeouts: resolveTransportTimeouts(env),
 		iceServers: resolvePublicIceServers(env),
 	});
 	if (!parsed) throw new Error('Failed to build the validated P2P transport config');

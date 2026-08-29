@@ -202,7 +202,8 @@ transport config when present. `TransportManager` tries it only when the
 runtime policy enables it and the browser exposes the required capabilities.
 The known-good `/ws/p2p` relay remains the default and receives the connection
 if WebRTC fails before the match opens. Once the DataChannel is connected, a
-Control WS close degrades signaling only and does not close the game transport.
+Control WS close, error, malformed control frame, or `control_error_v1`
+degrades signaling only and does not close the game transport.
 No live transport switch is performed after gameplay begins.
 Likewise, `control_peer_left_v1` means the opponent left the control plane: it
 fails an in-progress WebRTC attempt, but only degrades control after the
@@ -217,17 +218,30 @@ assignment and is preserved across transport selection. The WebRTC
 
 The browser reads `GET /api/p2p/transport-config` before opening a P2P
 transport. The response is versioned and contains `webrtcEnabled`,
-`relayEnabled`, a bounded `connectTimeoutMs`, and public ICE server URLs only.
-`P2P_WEBRTC_ENABLED`, `P2P_WS_FALLBACK_ENABLED`, `P2P_CONNECT_TIMEOUT_MS`, and
-`P2P_ICE_SERVERS` are server-side runtime values and take precedence over the
-legacy `VITE_*` values. Invalid values resolve to safe defaults; no ticket,
+`relayEnabled`, independent bounded `timeouts` (`webrtcNormalMs`,
+`webrtcAggressiveMs`, `relayConnectMs`), and public ICE server URLs only.
+`P2P_WEBRTC_ENABLED`, `P2P_WS_FALLBACK_ENABLED`, `P2P_WEBRTC_NORMAL_MS`,
+`P2P_WEBRTC_AGGRESSIVE_MS`, `P2P_RELAY_CONNECT_MS`, and `P2P_ICE_SERVERS` are
+server-side runtime values. Legacy flags may be read only for transition
+compatibility; timeout values use only the new independent names. Invalid
+values resolve to safe defaults; no ticket,
 SDP, username, or credential is returned by this endpoint.
 
 The pure transport policy distinguishes browser WebRTC capability, WebSocket
-availability, signed offerer/answerer role, and ICE configuration. An empty ICE
-list is valid configuration and is not treated as proof that WebRTC is
-unsupported. The client caches a valid response briefly and falls back to the
-baked relay-first configuration if the endpoint is unavailable.
+availability, signed offerer/answerer role, network type, shared-network
+runtime, and ICE configuration. `cellular` selects `webrtcAggressiveMs`; other
+known or unknown network types select `webrtcNormalMs`. On shared networks,
+missing ICE servers selects relay-only (`no-ice`); local development may still
+attempt WebRTC with host candidates. The client caches a valid response briefly
+and uses this precedence when refreshing: fresh runtime config, last-known-good
+runtime config, then a safe relay-only default. An unavailable config endpoint
+never re-enables WebRTC from baked client flags.
+
+The resolved `TransportPlan` carries the selected WebRTC and relay budgets to
+the manager. They are independent: a WebRTC timeout does not consume the
+relay budget. If WebRTC fails after its budget, the relay receives its full
+`relayConnectMs` opportunity. The manager executes the plan but does not
+recompute policy.
 
 Before the DataChannel is ready, a failed WebRTC attempt sends one
 `transport_fallback_v1` with a bounded reason. The server forwards it only
@@ -244,9 +258,9 @@ recreated manager from reintroducing WebRTC mid-match.
 - Same-tab network loss enters `grace_period`/`reconnecting`; the local seed,
   transcript, seq counters, chess sender state, and queued messages are
   preserved. Reconnect allows two automatic attempts inside a 60s window
-  (`2s`, then `15s` scheduling). Each recreated manager receives the same
-  bounded connection budget, and a relay fallback remains sticky for the
-  match. If the window expires, the disconnected side receives a local
+	(`2s`, then `15s` scheduling). Each recreated manager receives independent
+	bounded WebRTC and relay budgets, and a relay fallback remains sticky for
+	the match. If the window expires, the disconnected side receives a local
   technical result.
 - On reconnect, `useWireSync` does not run a new seed handshake. It sends
   version/engine probes and `state_sync_request` for transcript recovery.
