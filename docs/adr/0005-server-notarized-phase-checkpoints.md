@@ -9,7 +9,7 @@ server never participates during a match
 **Current testnet scope**: [ADR 0007](./0007-p2p-gameplay-only-testnet.md)
 uses these checkpoints without Hive `match_result` signing, settlement or
 post-`Accept` Keychain prompts. Quick Match `Accept` is the one explicit
-match-specific signature per player; the checkpoint relay never signs.
+match-specific signature per player; the Control WS referee never signs.
 
 ## Context
 
@@ -24,18 +24,20 @@ these boundaries.
 
 ## Decision
 
-The existing `/ws/p2p` route has one server-consumed message:
-`phase_checkpoint_propose_v1`. Each authenticated room peer computes the same
+The authenticated `/ws/control` route consumes `phase_checkpoint_propose_v1`
+for signed Quick Match rooms. Each authenticated room peer computes the same
 canonical client-side projection and submits only its 32-byte `stateRoot` plus
-the transition, epoch and previous checkpoint id.
+the transition, epoch and previous checkpoint id. `/ws/p2p` retains the same
+consumer only for legacy/direct compatibility.
 
-The relay keeps one last commit and at most two votes per room. When both
-proposals match byte-for-byte it emits a server-only
-`__sys.event=phase_checkpoint` containing `phase_checkpoint_commit_v1`. When
-they differ it emits `phase_checkpoint_dispute_v1` and clears the votes so
-both peers can retry. The room freezes only after three mismatches on the
+The shared referee keeps one last commit and at most two votes per room. When
+both proposals match byte-for-byte it emits `phase_checkpoint_commit_v1` over
+the authenticated Control WS. When they differ it emits
+`phase_checkpoint_dispute_v1` and clears the votes so both peers can retry.
+The legacy relay compatibility path emits the same typed result inside its
+existing server envelope. The room freezes only after three mismatches on the
 same epoch. Equivocation keeps the first vote and does not freeze the room.
-The relay never chooses a winner. A client cannot forge commit or dispute
+The referee never chooses a winner. A client cannot forge commit or dispute
 frames because client frames beginning with `__` are rejected.
 
 Allowed transitions are exactly:
@@ -54,11 +56,12 @@ state hash, pending combat handoff, mines, poker deck and state normalized to
 attacker/defender, and poker-spell mechanics. It excludes clocks, timestamps,
 viewer slot names, selection state, animation markers, art and audio.
 
-Relay work is O(1) per proposal and O(1) memory per room. Empty-room checkpoint
-state is retained for 120 seconds and removed by one global sweep, so reconnect
-does not require a timer per match. Transport host (seed parity, cards hash
-frame, recovery publisher) is derived from lexical peer-id order and therefore
-does not change with reconnect order. Cards *apply* is symmetric; see
+Referee work is O(1) per proposal and O(1) memory per room. The legacy relay
+retains empty-room checkpoint state for 120 seconds and removes it by one
+global sweep; the Control WS drops its room state when its last control member
+leaves. Transport host (seed parity,
+cards hash frame, recovery publisher) is derived from lexical peer-id order and
+therefore does not change with reconnect order. Cards *apply* is symmetric; see
 `PVP_WIRE_PROTOCOL.md` OPEN-8.
 
 ## Trust boundary

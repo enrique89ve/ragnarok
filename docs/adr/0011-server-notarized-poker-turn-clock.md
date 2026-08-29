@@ -10,7 +10,8 @@
 In P2P, a client must not be able to autodeclare when a 60s poker decision
 window started or whether an action arrived in time. The existing
 `PokerTurnClock` window `(turnId, startedAtMs, deadlineAtMs, durationMs)` stays
-the mathematical contract. The relay certifies the timestamps.
+the mathematical contract. The authenticated Control WS referee certifies the
+timestamps.
 
 ## Foundational assumption
 
@@ -23,17 +24,17 @@ locally. The server answers only:
 
 It does not compute cards, HP, mana, stamina, betting, or hand rank.
 
-## Current design
+## Previous client-only design (superseded)
 
 `poker_turn_started` is a peer-advisory envelope. The active player announces
 `remainingMs` / `sentAtMs`. The receiver rebuilds a deadline from its own
 `Date.now()`. A delayed announcement extends the window. Timeout vs player
 origin already exists in the game core (`PokerActionOrigin`).
 
-## Day-one design
+## Implemented testnet design
 
-Reuse `poker_turn_started` as a dual proposal, consumed by the relay the same
-way `phase_checkpoint_propose_v1` is consumed. Both peers propose the same
+Reuse `poker_turn_started` as a dual proposal, consumed by the Control WS
+referee the same way `phase_checkpoint_propose_v1` is consumed. Both peers propose the same
 canonical identity (`combatId`, `phase`, piece-id `activePlayerId`,
 `actionsThisRound`, `turnId` from `buildPokerTurnId`). The first valid
 proposal stamps `serverStartedAtMs`. The deadline is always
@@ -41,9 +42,12 @@ proposal stamps `serverStartedAtMs`. The deadline is always
 `serverStartedAtMs + DEFAULT_POKER_TURN_DURATION_MS`
 
 The second matching proposal commits. A late second vote never restarts the
-60s. Client `durationMs` / `remainingMs` / `sentAtMs` are ignored. The relay
-emits `__sys.event=poker_turn_notary` with a server-only commit or dispute.
-Clients cannot forge commit frames (`__` reserved).
+60s. Client `durationMs` / `remainingMs` / `sentAtMs` are ignored. The Control
+WS referee emits a server-only `poker_turn_notary_commit_v1` or dispute. A
+timed `poker_action_time_gate_v1` then passes through the same authenticated
+referee for server-receive-time gating before delivery to the opponent.
+Clients cannot forge commit frames because server results are not accepted from
+the gameplay plane.
 
 Memory is O(1) per room: previous committed turn + current pending-or-committed
 turn (at most two votes). Empty rooms keep that tombstone for the same 120s

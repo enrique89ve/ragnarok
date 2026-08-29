@@ -1,8 +1,10 @@
 /**
  * Server-notarized poker turn clock contract.
  *
- * The relay certifies when a logical poker turn started and when it expires.
- * It never imports gameplay, cards, HP, mana, betting, or presentation code.
+ * The authenticated Control WS referee certifies when a logical poker turn
+ * started and when it expires. The legacy relay can host the same coordinator
+ * for direct compatibility. It never imports gameplay, cards, HP, mana,
+ * betting, or presentation code.
  * A clock is committed only when both authenticated room peers submit the
  * same turn identity. Client timestamps and durations are ignored.
  */

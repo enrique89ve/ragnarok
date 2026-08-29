@@ -57,6 +57,7 @@ export function MatchSetupP2P({ children, fallback = null }: MatchSetupP2PProps)
 	const remoteAcceptanceVerified = usePeerStore((s) => s.p2pSessionRemoteAuthorized);
 	const localBattleReady = usePeerStore((s) => s.p2pBattleReadyLocal);
 	const remoteBattleReady = usePeerStore((s) => s.p2pBattleReadyRemote);
+	const expectedRemoteLoadoutHash = usePeerStore((s) => s.p2pBattleReadyExpectedRemoteLoadoutHash);
 
 	const handshakeReady =
 		connectionState === 'connected' &&
@@ -77,6 +78,7 @@ export function MatchSetupP2P({ children, fallback = null }: MatchSetupP2PProps)
 		matchSeed,
 		opponentArmy,
 		p2pInitApplied,
+		expectedRemoteLoadoutHash,
 		localBattleReady,
 		remoteBattleReady,
 	});

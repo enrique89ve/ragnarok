@@ -118,6 +118,7 @@ export type PeerStore = {
 	p2pSessionAuthError: string | null;
 	p2pBattleReadyLocal: P2PBattleReadyProof | null;
 	p2pBattleReadyRemote: P2PBattleReadyProof | null;
+	p2pBattleReadyExpectedRemoteLoadoutHash: string | null;
 	p2pBattleReadyError: string | null;
 	/**
 	 * True once cards handshake init has populated local gameState —
@@ -153,6 +154,7 @@ export type PeerStore = {
 	setP2pBattleReady: (state: {
 		readonly local?: P2PBattleReadyProof | null;
 		readonly remote?: P2PBattleReadyProof | null;
+		readonly expectedRemoteLoadoutHash?: string | null;
 		readonly error?: string | null;
 	}) => void;
 	clearP2pBattleReady: () => void;
@@ -194,6 +196,7 @@ type PeerRuntimeState = Pick<
 	| 'p2pSessionAuthError'
 	| 'p2pBattleReadyLocal'
 	| 'p2pBattleReadyRemote'
+	| 'p2pBattleReadyExpectedRemoteLoadoutHash'
 	| 'p2pBattleReadyError'
 	| 'p2pInitApplied'
 >;
@@ -226,6 +229,7 @@ export function hasVolatileP2PRuntimeState(state: HiveSessionChangeRuntimeState)
 		state.peer.p2pSessionAuthError,
 		state.peer.p2pBattleReadyLocal,
 		state.peer.p2pBattleReadyRemote,
+		state.peer.p2pBattleReadyExpectedRemoteLoadoutHash,
 		state.peer.p2pBattleReadyError,
 		state.peer.p2pInitApplied,
 		state.matchmaking.status !== 'idle',
@@ -688,6 +692,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	p2pSessionAuthError: null,
 	p2pBattleReadyLocal: null,
 	p2pBattleReadyRemote: null,
+	p2pBattleReadyExpectedRemoteLoadoutHash: null,
 	p2pBattleReadyError: null,
 	p2pInitApplied: false,
 	hardReloadResume: false,
@@ -717,11 +722,13 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	setP2pBattleReady: (state) => set({
 		...(state.local !== undefined ? { p2pBattleReadyLocal: state.local } : {}),
 		...(state.remote !== undefined ? { p2pBattleReadyRemote: state.remote } : {}),
+		...(state.expectedRemoteLoadoutHash !== undefined ? { p2pBattleReadyExpectedRemoteLoadoutHash: state.expectedRemoteLoadoutHash } : {}),
 		...(state.error !== undefined ? { p2pBattleReadyError: state.error } : {}),
 	}),
 	clearP2pBattleReady: () => set({
 		p2pBattleReadyLocal: null,
 		p2pBattleReadyRemote: null,
+		p2pBattleReadyExpectedRemoteLoadoutHash: null,
 		p2pBattleReadyError: null,
 	}),
 	setP2pInitApplied: (applied) => set({ p2pInitApplied: applied }),
@@ -798,6 +805,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			p2pSessionAuthError: null,
 			p2pBattleReadyLocal: null,
 			p2pBattleReadyRemote: null,
+			p2pBattleReadyExpectedRemoteLoadoutHash: null,
 			p2pBattleReadyError: null,
 		});
 
@@ -837,6 +845,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			p2pSessionAuthError: isReconnect ? get().p2pSessionAuthError : null,
 			p2pBattleReadyLocal: isReconnect ? get().p2pBattleReadyLocal : null,
 			p2pBattleReadyRemote: isReconnect ? get().p2pBattleReadyRemote : null,
+			p2pBattleReadyExpectedRemoteLoadoutHash: isReconnect ? get().p2pBattleReadyExpectedRemoteLoadoutHash : null,
 			p2pBattleReadyError: isReconnect ? get().p2pBattleReadyError : null,
 		});
 
@@ -874,6 +883,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			p2pSessionAuthError: isReconnect ? get().p2pSessionAuthError : null,
 			p2pBattleReadyLocal: isReconnect ? get().p2pBattleReadyLocal : null,
 			p2pBattleReadyRemote: isReconnect ? get().p2pBattleReadyRemote : null,
+			p2pBattleReadyExpectedRemoteLoadoutHash: isReconnect ? get().p2pBattleReadyExpectedRemoteLoadoutHash : null,
 			p2pBattleReadyError: isReconnect ? get().p2pBattleReadyError : null,
 			bufferedMessageCount: messageBuffer.length,
 		});
@@ -914,6 +924,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			p2pSessionAuthError: null,
 			p2pBattleReadyLocal: null,
 			p2pBattleReadyRemote: null,
+			p2pBattleReadyExpectedRemoteLoadoutHash: null,
 			p2pBattleReadyError: null,
 			p2pInitApplied: false,
 			hardReloadResume: false,

@@ -3,10 +3,9 @@ import { parseWireMessage } from '../messageSchemas';
 import type { P2PMessage } from '../messages';
 import {
 	P2P_CONTROL_PROTOCOL_VERSION,
-	P2P_CONTROL_WS_PROTOCOL,
-	P2P_CONTROL_WS_PROTOCOL_PREFIX,
 	parseP2PControlServerMessage,
 	type P2PControlClientMessage,
+	type P2PControlServerMessage,
 	type P2PTransportFallbackReason,
 } from '@shared/p2p-wire/control';
 import type { P2PIceServerConfig } from '@shared/p2p-wire/transportConfig';
@@ -18,6 +17,14 @@ import type {
 	TransportStateListener,
 } from './transportTypes';
 import { createTransportFailure } from './transportTypes';
+import {
+	buildP2PControlWebSocketProtocols,
+	buildP2PControlWebSocketUrl,
+} from './P2PControlChannel';
+export {
+	buildP2PControlWebSocketProtocols,
+	buildP2PControlWebSocketUrl,
+} from './P2PControlChannel';
 
 export type WebRTCIceServerConfig = P2PIceServerConfig;
 
@@ -38,17 +45,6 @@ export type WebRTCTransportOptions = {
 
 export type WebRTCControlState = 'idle' | 'connecting' | 'connected' | 'degraded' | 'closed';
 
-export function buildP2PControlWebSocketUrl(options: Pick<WebRTCTransportOptions, 'controlUrl' | 'roomId' | 'peerId'>): string {
-	return `${options.controlUrl}?match=${encodeURIComponent(options.roomId)}&peer=${encodeURIComponent(options.peerId)}`;
-}
-
-export function buildP2PControlWebSocketProtocols(matchTicket: P2PMatchTicket): string[] {
-	return [
-		P2P_CONTROL_WS_PROTOCOL,
-		`${P2P_CONTROL_WS_PROTOCOL_PREFIX}${matchTicket.token}`,
-	];
-}
-
 function isOpenDataChannel(channel: RTCDataChannel | null): channel is RTCDataChannel {
 	return channel?.readyState === 'open';
 }
@@ -61,8 +57,11 @@ function safeConnectTimeout(value: number | undefined): number {
 export function createWebRTCTransport(options: WebRTCTransportOptions): GameTransport & {
 	readonly peer: string;
 	readonly controlState: WebRTCControlState;
+	readonly sendControlMessage: (message: P2PControlClientMessage) => void;
+	readonly onControlMessage: (listener: (message: P2PControlServerMessage) => void) => () => void;
 } {
 	const messageListeners = new Set<TransportMessageListener>();
+	const controlMessageListeners = new Set<(message: P2PControlServerMessage) => void>();
 	const stateListeners = new Set<TransportStateListener>();
 	let state: TransportState = 'idle';
 	let socket: WebSocket | null = null;
@@ -148,15 +147,13 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 		disposeResources();
 	};
 
-	const degradeControl = (message: string): boolean => {
-		if (state !== 'connected') return false;
-		controlState = 'degraded';
-		debug.warn(`[WebRTCTransport] ${message}; keeping DataChannel alive`);
-		return true;
-	};
-
 	const failControl = (message: string, reason: P2PTransportFallbackReason = 'ice_failed'): void => {
-		if (!degradeControl(message)) fail(message, reason);
+		if (state === 'connected') {
+			debug.warn(`[WebRTCTransport] ${message}; restarting the authenticated control and gameplay session`);
+			fail(message, reason, false);
+			return;
+		}
+		fail(message, reason);
 	};
 
 	const sendControl = (message: P2PControlClientMessage): void => {
@@ -173,6 +170,12 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 	const emitMessage = (message: P2PMessage): void => {
 		for (const listener of messageListeners) {
 			try { listener(message); } catch (error) { debug.error('[WebRTCTransport] message listener failed:', error); }
+		}
+	};
+
+	const emitControlMessage = (message: P2PControlServerMessage): void => {
+		for (const listener of controlMessageListeners) {
+			try { listener(message); } catch (error) { debug.error('[WebRTCTransport] control message listener failed:', error); }
 		}
 	};
 
@@ -260,13 +263,24 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 			failControl(`Control WebSocket rejected: ${message.code}`);
 			return;
 		}
+		if (message.type === 'phase_checkpoint_commit_v1'
+			|| message.type === 'phase_checkpoint_dispute_v1'
+			|| message.type === 'poker_turn_notary_commit_v1'
+			|| message.type === 'poker_turn_notary_dispute_v1'
+			|| message.type === 'poker_action_time_gate_v1') {
+			emitControlMessage(message);
+			return;
+		}
 		if (message.type === 'transport_fallback_v1') {
 			if (state !== 'connected') fail('Opponent selected relay transport', message.reason, false);
 			return;
 		}
 		if (message.type === 'transport_ready_v1') return;
 		if (message.type === 'control_peer_left_v1') {
-			if (degradeControl('Opponent control connection lost')) return;
+			if (state === 'connected') {
+				failControl('Opponent control connection lost');
+				return;
+			}
 			fail('Control peer left before WebRTC connection completed');
 			return;
 		}
@@ -378,6 +392,11 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 			return () => stateListeners.delete(listener);
 		},
 		close,
+		sendControlMessage: sendControl,
+		onControlMessage: (listener): (() => void) => {
+			controlMessageListeners.add(listener);
+			return () => controlMessageListeners.delete(listener);
+		},
 		get peer(): string { return remotePeer; },
 	};
 }

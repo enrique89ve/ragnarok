@@ -4,6 +4,17 @@ import {
 	P2P_MATCH_TICKET_WS_PROTOCOL_PREFIX,
 	type P2PTransportRole,
 } from '../p2pAvailability';
+import {
+	PhaseCheckpointCommitSchema,
+	PhaseCheckpointDisputeSchema,
+	PhaseCheckpointProposalSchema,
+} from './phaseCheckpoint';
+import { CompactPokerActionSchema } from './combat';
+import {
+	PokerTurnClockProposalSchema,
+	PokerTurnNotaryCommitSchema,
+	PokerTurnNotaryDisputeSchema,
+} from './pokerTimeNotary';
 
 export const P2P_CONTROL_WS_PROTOCOL = 'ragnarok-p2p-control-v1';
 export const P2P_CONTROL_WS_PROTOCOL_PREFIX = `${P2P_MATCH_TICKET_WS_PROTOCOL_PREFIX}control.`;
@@ -71,6 +82,20 @@ const TransportFallbackSchema = z.object({
 	reason: z.enum(P2P_TRANSPORT_FALLBACK_REASONS),
 }).strict();
 
+const PokerActionControlSchema = z.object({
+	type: z.literal('poker_action_time_gate_v1'),
+	protocolVersion: z.literal(P2P_CONTROL_PROTOCOL_VERSION),
+	matchId: MatchIdSchema,
+	playerId: z.string().min(1).max(128),
+	action: z.enum(['attack', 'counter', 'engage', 'brace', 'defend']),
+	origin: z.enum(['player', 'timeout']),
+	hpCommitment: z.number().int().min(0).max(500).optional(),
+	compact: CompactPokerActionSchema.optional(),
+	turnId: z.string().min(1).max(256),
+	decisionId: z.string().min(1).max(256),
+	sentAtMs: z.number().int().nonnegative().optional(),
+}).strict();
+
 export const P2PControlClientMessageSchema = z.discriminatedUnion('type', [
 	ControlHelloSchema,
 	WebRtcOfferSchema,
@@ -78,6 +103,11 @@ export const P2PControlClientMessageSchema = z.discriminatedUnion('type', [
 	IceCandidateSchemaEnvelope,
 	TransportReadySchema,
 	TransportFallbackSchema,
+	PokerActionControlSchema,
+	// Referee proposals use the same authenticated Control WS as signaling.
+	// They never enter the gameplay DataChannel.
+	PhaseCheckpointProposalSchema,
+	PokerTurnClockProposalSchema,
 ]);
 
 export type P2PControlClientMessage = z.infer<typeof P2PControlClientMessageSchema>;
@@ -113,6 +143,11 @@ export const P2PControlServerMessageSchema = z.discriminatedUnion('type', [
 	IceCandidateSchemaEnvelope,
 	TransportReadySchema,
 	TransportFallbackSchema,
+	PokerActionControlSchema,
+	PhaseCheckpointCommitSchema,
+	PhaseCheckpointDisputeSchema,
+	PokerTurnNotaryCommitSchema,
+	PokerTurnNotaryDisputeSchema,
 ]);
 
 export type P2PControlServerMessage = z.infer<typeof P2PControlServerMessageSchema>;

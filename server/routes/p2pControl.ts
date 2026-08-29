@@ -32,6 +32,11 @@ import { verifyP2PMatchTicketForRoom, type P2PMatchTicketPayload } from '../serv
 import { isP2PRelayOriginAllowed } from '../services/p2pRelayOrigin';
 import { hasP2PControlProtocol, readP2PControlTicketToken } from '../services/p2pControlProtocol';
 import { verifyP2PActiveMatchTicket } from '../services/p2pActiveMatchRegistry';
+import {
+	markP2PActiveMatchTerminalFromCheckpoint,
+	p2pPhaseCheckpointCoordinator,
+	p2pPokerTimeNotary,
+} from '../services/p2pReferee';
 
 type ControlMember = {
 	readonly connectionId: string;
@@ -106,6 +111,25 @@ function isSignalingMessage(message: P2PControlClientMessage): boolean {
 
 function isTransportControlMessage(message: P2PControlClientMessage): boolean {
 	return message.type === 'transport_ready_v1' || message.type === 'transport_fallback_v1';
+}
+
+function sendRefereeResult(
+	room: ControlRoom,
+	sender: ControlMember,
+	result: {
+		readonly status: 'pending' | 'message';
+		readonly recipients?: 'sender' | 'room';
+		readonly message?: Record<string, unknown>;
+	},
+): void {
+	if (result.status !== 'message' || !result.message || !result.recipients) return;
+	if (result.recipients === 'sender') {
+		sendMessage(sender.ws, result.message);
+		return;
+	}
+	for (const member of room) {
+		if (member.hello) sendMessage(member.ws, result.message);
+	}
 }
 
 function notifyRoomOpen(roomId: string, room: ControlRoom): void {
@@ -289,7 +313,7 @@ export function attachP2PControl(server: HttpServer): void {
 				ws.close();
 				return;
 			}
-			if (message.matchId !== roomId) {
+			if ('matchId' in message && message.matchId !== roomId) {
 				recordP2PControlDrop('match_mismatch');
 				sendError(ws, 'match_mismatch');
 				return;
@@ -311,6 +335,44 @@ export function attachP2PControl(server: HttpServer): void {
 				if (member.transportReady || member.transportFallback) return;
 				member.transportFallback = true;
 				recordP2PTransportFallback(message.reason);
+			}
+			if (message.type === 'poker_action_time_gate_v1') {
+				const gate = p2pPokerTimeNotary.gatePokerAction({
+					roomId,
+					action: message,
+					receivedAtMs: Date.now(),
+				});
+				if (gate.status === 'drop') {
+					recordP2PControlDrop(`poker_action_${gate.reason}`);
+					return;
+				}
+				const opponent = currentRoom.find(candidate => candidate !== member && candidate.hello);
+				if (!opponent || opponent.ws.readyState !== WebSocket.OPEN) return;
+				sendMessage(opponent.ws, message);
+				recordP2PControlMessage();
+				return;
+			}
+			if (message.type === 'phase_checkpoint_propose_v1') {
+				const result = p2pPhaseCheckpointCoordinator.submit({
+					roomId,
+					peerId,
+					proposal: message,
+				});
+				markP2PActiveMatchTerminalFromCheckpoint(roomId, result);
+				sendRefereeResult(currentRoom, member, result);
+				if (result.status === 'message') recordP2PControlMessage();
+				return;
+			}
+			if (message.type === 'poker_turn_started') {
+				const result = p2pPokerTimeNotary.submit({
+					roomId,
+					peerId,
+					proposal: message,
+					nowMs: Date.now(),
+				});
+				sendRefereeResult(currentRoom, member, result);
+				if (result.status === 'message') recordP2PControlMessage();
+				return;
 			}
 			if (!isSignalingMessage(message) && !isTransportControlMessage(message)) return;
 			const opponent = currentRoom.find(candidate => candidate !== member && candidate.hello);
@@ -334,7 +396,11 @@ export function attachP2PControl(server: HttpServer): void {
 					matchId: roomId, opponentPeerId: peerId,
 				});
 			}
-			if (currentRoom.length === 0) rooms.delete(roomId);
+			if (currentRoom.length === 0) {
+				rooms.delete(roomId);
+				p2pPhaseCheckpointCoordinator.dropRoom(roomId);
+				p2pPokerTimeNotary.dropRoom(roomId);
+			}
 		};
 		ws.on('close', handleDeparture);
 		ws.on('error', () => recordP2PControlError('socket_error'));

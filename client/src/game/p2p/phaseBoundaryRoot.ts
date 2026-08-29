@@ -18,6 +18,7 @@ export { computePokerCombatStateHash } from './pokerStateHash';
 
 const ENCODER = new TextEncoder();
 const PHASE_BOUNDARY_ROOT_VERSION = 1 as const;
+const INITIAL_MATCH_ROOT_VERSION = 2 as const;
 type CanonicalRole = 'attacker' | 'defender';
 
 function canonicalChess(store: UnifiedCombatStore) {
@@ -110,6 +111,40 @@ function canonicalPokerSpells(store: UnifiedCombatStore, playerRole: CanonicalRo
 		pendingSpellIds: store.pendingPokerSpells.map((spell) => spell.id).sort(),
 		isSpellPetPhase: store.isSpellPetPhase,
 	};
+}
+
+/**
+ * Full match-start commitment used by BattleReady.  `computeStateHash()` only
+ * covers the cards GameState, while this projection also binds the canonical
+ * chess board and both independently announced loadouts.  The two loadout
+ * hashes are sorted because viewer-local order is not canonical.
+ */
+export function computeInitialMatchRoot(input: Readonly<{
+	readonly matchId: string;
+	readonly matchSeed: string;
+	readonly engineHash: string;
+	readonly rulesetHash: string;
+	readonly cardsHash: Hash256;
+	readonly localLoadoutHash: string;
+	readonly remoteLoadoutHash: string;
+	readonly combatStore: UnifiedCombatStore;
+}>): Hash256 | null {
+	if (input.combatStore.boardState.pieces.length === 0) return null;
+	const projection = {
+		version: INITIAL_MATCH_ROOT_VERSION,
+		matchId: input.matchId,
+		matchSeed: input.matchSeed,
+		engineHash: input.engineHash,
+		rulesetHash: input.rulesetHash,
+		cardsHash: input.cardsHash,
+		loadoutHashes: [input.localLoadoutHash, input.remoteLoadoutHash].sort(),
+		chess: canonicalChess(input.combatStore),
+	};
+	const digest = bytesToHex(sha256(ENCODER.encode(canonicalStringify([
+		'ragnarok-initial-match-root',
+		projection,
+	]))));
+	return Hash256Schema.parse(digest);
 }
 
 export function computePhaseBoundaryStateRoot(input: Readonly<{

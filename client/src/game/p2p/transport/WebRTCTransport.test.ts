@@ -273,7 +273,7 @@ describe('WebRTC transport boundary', () => {
 		expect(transport.state).toBe('failed');
 	});
 
-	it('keeps the DataChannel alive when Control WS closes after connection', async () => {
+	it('reconnects the full session when Control WS closes after connection', async () => {
 		const socket = createFakeControlSocket();
 		const connection = createFakePeerConnection();
 		const WebSocketConstructor = vi.fn(function WebSocketMock() { return socket; });
@@ -309,18 +309,17 @@ describe('WebRTC transport boundary', () => {
 		socket.triggerMessage({ type: 'unexpected_control_message' });
 		await settleMicrotasks();
 
-		expect(transport.state).toBe('connected');
-		expect(transport.controlState).toBe('degraded');
-		expect(connection.dataChannel?.readyState).toBe('open');
+		expect(transport.state).toBe('failed');
+		expect(transport.controlState).toBe('closed');
+		expect(connection.dataChannel?.close).toHaveBeenCalled();
 
 		socket.triggerClose();
 
-		expect(transport.state).toBe('connected');
-		expect(transport.controlState).toBe('degraded');
-		expect(connection.dataChannel?.readyState).toBe('open');
+		expect(transport.state).toBe('failed');
+		expect(transport.controlState).toBe('closed');
 	});
 
-	it('isolates control_peer_left after connection from the game transport', async () => {
+	it('reconnects the full session when control_peer_left arrives after connection', async () => {
 		const socket = createFakeControlSocket();
 		const connection = createFakePeerConnection();
 		const WebSocketConstructor = vi.fn(function WebSocketMock() { return socket; });
@@ -355,10 +354,10 @@ describe('WebRTC transport boundary', () => {
 			opponentPeerId: 'peer-b',
 		});
 
-		expect(transport.state).toBe('connected');
-		expect(transport.controlState).toBe('degraded');
-		expect(connection.dataChannel?.close).not.toHaveBeenCalled();
-		expect(connection.close).not.toHaveBeenCalled();
+		expect(transport.state).toBe('failed');
+		expect(transport.controlState).toBe('closed');
+		expect(connection.dataChannel?.close).toHaveBeenCalled();
+		expect(connection.close).toHaveBeenCalled();
 	});
 
 	it('fails WebRTC when control_peer_left arrives before connection', async () => {

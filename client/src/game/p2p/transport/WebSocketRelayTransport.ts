@@ -13,6 +13,8 @@ import type {
 	TransportState,
 	TransportStateListener,
 } from './transportTypes';
+import { createP2PControlChannel, type P2PControlChannel } from './P2PControlChannel';
+import type { P2PControlClientMessage, P2PControlServerMessage } from '@shared/p2p-wire/control';
 
 export type WebSocketRelayTransport = GameTransport & {
 	readonly peer: string;
@@ -20,6 +22,9 @@ export type WebSocketRelayTransport = GameTransport & {
 	readonly isHostHint: boolean;
 	on: (event: TransportEvent, listener: TransportListener) => void;
 	off: (event: TransportEvent, listener: TransportListener) => void;
+	readonly controlAvailable?: boolean;
+	readonly sendControlMessage?: (message: P2PControlClientMessage) => void;
+	readonly onControlMessage?: (listener: (message: P2PControlServerMessage) => void) => () => void;
 };
 
 /**
@@ -31,9 +36,32 @@ export function createWebSocketRelayTransport(
 	options: LocalWebSocketTransportOptions,
 ): WebSocketRelayTransport {
 	const relay = new LocalWebSocketTransport(options);
+	const control: P2PControlChannel | null = options.controlUrl && options.matchTicket?.role
+		? createP2PControlChannel({
+			controlUrl: options.controlUrl,
+			roomId: options.roomId,
+			peerId: options.peerId,
+			matchTicket: options.matchTicket,
+			transportKind: 'websocket-relay',
+		})
+		: null;
 	const stateListeners = new Set<TransportStateListener>();
+	const controlMessageListeners = new Set<(message: P2PControlServerMessage) => void>();
 	let state: TransportState = 'idle';
 	let connectPromise: Promise<void> | null = null;
+	let relayReady = false;
+	let controlReady = control === null;
+
+	const maybeSetConnected = (): void => {
+		if (relayReady && controlReady && state === 'connecting') setState('connected');
+	};
+
+	const emitControlMessage = (message: P2PControlServerMessage): void => {
+		for (const listener of controlMessageListeners) {
+			try { listener(message); }
+			catch (error) { debug.error('[WebSocketRelayTransport] control listener failed:', error); }
+		}
+	};
 
 	const setState = (next: TransportState): void => {
 		if (state === next) return;
@@ -44,10 +72,22 @@ export function createWebSocketRelayTransport(
 		}
 	};
 
-	relay.on('open', () => setState('connected'));
+	relay.on('open', () => {
+		relayReady = true;
+		maybeSetConnected();
+	});
 	relay.on('close', () => setState('failed'));
 	relay.on('error', () => {
 		if (state !== 'closed') setState('failed');
+	});
+	control?.onMessage(emitControlMessage);
+	control?.onStateChange(next => {
+		controlReady = next === 'connected';
+		if (next === 'degraded' && state === 'connected') {
+			setState('failed');
+			relay.close();
+		}
+		maybeSetConnected();
 	});
 
 	const connect = (): Promise<void> => {
@@ -55,9 +95,11 @@ export function createWebSocketRelayTransport(
 		if (connectPromise) return connectPromise;
 
 		setState('connecting');
-		connectPromise = new Promise<void>((resolve, reject) => {
+		const relayConnect = new Promise<void>((resolve, reject) => {
 			const onOpen = (): void => {
 				cleanup();
+				relayReady = true;
+				maybeSetConnected();
 				resolve();
 			};
 			const onClose = (): void => {
@@ -80,6 +122,15 @@ export function createWebSocketRelayTransport(
 			relay.on('error', onError);
 			relay.connect();
 		});
+		const controlConnect = control?.connect() ?? Promise.resolve();
+		connectPromise = Promise.all([relayConnect, controlConnect])
+			.then(() => undefined)
+			.catch(error => {
+				control?.close();
+				relay.close();
+				throw error instanceof Error ? error : new Error('P2P relay/control connection failed');
+			})
+			.finally(() => { connectPromise = null; });
 
 		return connectPromise;
 	};
@@ -98,8 +149,8 @@ export function createWebSocketRelayTransport(
 		return () => stateListeners.delete(callback);
 	};
 
-	return {
-		kind: 'websocket-relay',
+	const baseTransport: WebSocketRelayTransport = {
+		kind: 'websocket-relay' as const,
 		get state(): TransportState { return state; },
 		connect,
 		send: (message: P2PMessage): void => {
@@ -110,6 +161,7 @@ export function createWebSocketRelayTransport(
 		onStateChange,
 		close: (): void => {
 			setState('closed');
+			control?.close();
 			relay.close();
 		},
 		get peer(): string { return relay.peer; },
@@ -117,5 +169,15 @@ export function createWebSocketRelayTransport(
 		get isHostHint(): boolean { return relay.isHostHint; },
 		on: (event, listener) => relay.on(event, listener),
 		off: (event, listener) => relay.off(event, listener),
+	};
+	if (!control) return baseTransport;
+	return {
+		...baseTransport,
+		controlAvailable: true,
+		sendControlMessage: (message: P2PControlClientMessage) => control.send(message),
+		onControlMessage: (listener: (message: P2PControlServerMessage) => void) => {
+			controlMessageListeners.add(listener);
+			return () => controlMessageListeners.delete(listener);
+		},
 	};
 }

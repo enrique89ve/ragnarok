@@ -1,6 +1,25 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+vi.hoisted(() => {
+	const mem = new Map<string, string>();
+	(globalThis as { localStorage?: unknown }).localStorage = {
+		getItem: (key: string) => mem.get(key) ?? null,
+		setItem: (key: string, value: string) => {
+			mem.set(key, value);
+		},
+		removeItem: (key: string) => {
+			mem.delete(key);
+		},
+		clear: () => {
+			mem.clear();
+		},
+		key: () => null,
+		length: 0,
+	};
+});
 
 import { canonicalStringify } from '@shared/protocol-core/hash';
+import { Hash256Schema } from '@shared/p2p-wire/integrity';
 import {
 	CombatAction,
 	CombatPhase,
@@ -8,7 +27,10 @@ import {
 	type PokerCard,
 	type PokerCombatState,
 } from '../types/PokerCombatTypes';
+import { getDefaultArmySelection } from '../data/ChessPieceConfig';
+import { useUnifiedCombatStore } from '../stores/unifiedCombatStore';
 import { canonicalizePokerCombatState } from './phaseBoundaryProjection';
+import { computeInitialMatchRoot } from './phaseBoundaryRoot';
 import { computePokerCombatStateHash } from './pokerStateHash';
 
 const ACE_SPADES: PokerCard = { suit: 'spades', value: 'A', numericValue: 14 };
@@ -140,5 +162,67 @@ describe('phase boundary poker projection', () => {
 		};
 		expect(computePokerCombatStateHash(timeoutState))
 			.not.toBe(computePokerCombatStateHash(first));
+	});
+});
+
+const cardsHash = Hash256Schema.parse('a'.repeat(64));
+
+afterEach(() => useUnifiedCombatStore.getState().reset());
+
+describe('computeInitialMatchRoot', () => {
+	it('binds the canonical chess board, match context, cards root, and both loadouts', () => {
+		const army = getDefaultArmySelection();
+		useUnifiedCombatStore.getState().initializeBoard(army, army, () => 'piece-id');
+
+		const store = useUnifiedCombatStore.getState();
+		const root = computeInitialMatchRoot({
+			matchId: 'match-1',
+			matchSeed: 'seed-1',
+			engineHash: 'engine-v1',
+			rulesetHash: 'rules-v1',
+			cardsHash,
+			localLoadoutHash: 'loadout-a',
+			remoteLoadoutHash: 'loadout-b',
+			combatStore: store,
+		});
+		const reversedLoadoutRoot = computeInitialMatchRoot({
+			matchId: 'match-1',
+			matchSeed: 'seed-1',
+			engineHash: 'engine-v1',
+			rulesetHash: 'rules-v1',
+			cardsHash,
+			localLoadoutHash: 'loadout-b',
+			remoteLoadoutHash: 'loadout-a',
+			combatStore: store,
+		});
+
+		expect(root).toBeTruthy();
+		expect(root).toBe(reversedLoadoutRoot);
+	});
+
+	it('changes when a canonical initial chess fact changes', () => {
+		const army = getDefaultArmySelection();
+		useUnifiedCombatStore.getState().initializeBoard(army, army, () => 'piece-id');
+		const base = {
+			matchId: 'match-1',
+			matchSeed: 'seed-1',
+			engineHash: 'engine-v1',
+			rulesetHash: 'rules-v1',
+			cardsHash,
+			localLoadoutHash: 'loadout-a',
+			remoteLoadoutHash: 'loadout-b',
+		};
+		const before = computeInitialMatchRoot({ ...base, combatStore: useUnifiedCombatStore.getState() });
+		const firstPiece = useUnifiedCombatStore.getState().boardState.pieces[0];
+		if (!firstPiece) throw new Error('Expected initialized chess piece');
+		useUnifiedCombatStore.setState({
+			boardState: {
+				...useUnifiedCombatStore.getState().boardState,
+				pieces: [{ ...firstPiece, health: firstPiece.health - 1 }, ...useUnifiedCombatStore.getState().boardState.pieces.slice(1)],
+			},
+		});
+		const after = computeInitialMatchRoot({ ...base, combatStore: useUnifiedCombatStore.getState() });
+
+		expect(after).not.toBe(before);
 	});
 });

@@ -51,6 +51,7 @@ function parseIncomingJsonObject(raw: string): Record<string, unknown> | null {
 
 export interface LocalWebSocketTransportOptions {
 	readonly url: string;       // e.g. 'ws://localhost:5000/ws/p2p'
+	readonly controlUrl?: string; // e.g. 'ws://localhost:5000/ws/control'
 	readonly roomId: string;
 	readonly peerId: string;
 	readonly matchTicket?: P2PMatchTicket | null;

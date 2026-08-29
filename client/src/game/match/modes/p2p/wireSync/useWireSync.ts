@@ -21,7 +21,7 @@ import { getWasmHash, loadWasmEngine } from '../../../../engine/wasmLoader';
 import { computeStateHash } from '../../../../engine/engineBridge';
 import { flipGameState, computeCardsPrevStateHash } from '../../../../engine/wireHash';
 import { computeChessPrevStateHash } from '../../../../engine/chessHash';
-import { computePokerCombatStateHash } from '../../../../p2p/phaseBoundaryRoot';
+import { computeInitialMatchRoot, computePokerCombatStateHash } from '../../../../p2p/phaseBoundaryRoot';
 import { isSharedNetworkEnvironment } from '../../../../config/featureFlags';
 import { findExistingMatchResult, type SlashEvidenceParams } from '../../../../../data/blockchain/slashEvidence';
 import { GAME_COMMAND_TYPES } from '../../../../core/commands';
@@ -34,7 +34,7 @@ import {
 	retryPendingChessTransition,
 	setChessSendObserver,
 } from '../../../../p2p/chessWireSender';
-import { getP2PProcessFlags, getP2PTransportRole, isCardsHostFrame } from '../../../../p2p/p2pPerspective';
+import { getP2PProcessFlags, getP2PTransportRole, isCardsHostFrame, createP2PViewerPerspective, mapViewerValuesToCanonical } from '../../../../p2p/p2pPerspective';
 import {
 	snapshotLocalCardsDeck,
 	savedDecksStorageKey,
@@ -98,14 +98,17 @@ import {
 	phaseCheckpointClient,
 	type PhaseCheckpointRequestResult,
 } from '../../../../p2p/phaseCheckpointClient';
-import type { Hash256 } from '@shared/p2p-wire/integrity';
-import { isRetryablePhaseCheckpointDispute, type PhaseCheckpointPhase } from '@shared/p2p-wire/phaseCheckpoint';
+import { parseHash256, type Hash256 } from '@shared/p2p-wire/integrity';
+import { isRetryablePhaseCheckpointDispute, type PhaseCheckpointPhase, type PhaseCheckpointProposal } from '@shared/p2p-wire/phaseCheckpoint';
 import { isRetryablePokerTurnNotaryDispute } from '@shared/p2p-wire/pokerTimeNotary';
+import type { PokerTurnClockProposal } from '@shared/p2p-wire/pokerTimeNotary';
 import { settleRemoteCommand } from './remoteCommandSettlement';
 import { getCachedMatchAcceptance } from '../../../../p2p/matchAcceptance';
 import { buildMatchAcceptanceMessage, readMatchAcceptanceProof } from '../../../../../../../shared/p2pMatchAcceptance';
 import { useMatchmakingStore } from '../../../../stores/matchmakingStore';
-import { compareBattleReadyProofs, type P2PBattleReadyProof } from '../../../../p2p/battleReady';
+import { buildBattleReadyLoadoutCommitmentPayload, compareBattleReadyProofs, type P2PBattleReadyProof } from '../../../../p2p/battleReady';
+import { createSeededIdGen } from '../../../../utils/seededRng';
+import { P2P_CONTROL_PROTOCOL_VERSION, type P2PControlServerMessage } from '@shared/p2p-wire/control';
 
 export type { GameCommandEnvelope, WireGameCommand } from '../../../../hooks/p2pEnvelope';
 export type { P2PMessage } from '../../../../p2p/messages';
@@ -252,6 +255,37 @@ export function useWireSync() {
 	void isFirstMover; // Intentional: reserved for OPEN-8 migration (see comment above).
 	const send = usePeerStore(state => state.send);
 	const p2pInitApplied = usePeerStore(state => state.p2pInitApplied);
+	const opponentArmy = usePeerStore(state => state.opponentArmy);
+	const p2pSessionLocalAuthorized = usePeerStore(state => state.p2pSessionLocalAuthorized);
+	const p2pSessionRemoteAuthorized = usePeerStore(state => state.p2pSessionRemoteAuthorized);
+	const matchSeed = useGameStore(state => state.matchSeed);
+	const myCanonicalSide = useGameStore(state => state.myCanonicalSide);
+	const initialCombatPieceCount = useUnifiedCombatStore(state => state.boardState.pieces.length);
+
+	/**
+	 * A WebRTC DataChannel is the gameplay plane, not a server-observable
+	 * referee channel. Route checkpoint proposals through authenticated Control
+	 * WS whenever the selected transport has one; direct legacy rooms retain
+	 * the old relay-compatible path because they have no signed control role.
+	 */
+	const sendPhaseCheckpointProposal = useCallback((proposal: PhaseCheckpointProposal): void => {
+		const activeConnection = usePeerStore.getState().connection;
+		if (activeConnection?.controlAvailable && activeConnection.sendControlMessage) {
+			activeConnection.sendControlMessage(proposal);
+			return;
+		}
+		send(proposal);
+	}, [send]);
+
+	const sendPokerTurnProposal = useCallback((proposal: Omit<PokerTurnClockProposal, 'type'>): void => {
+		const message: PokerTurnClockProposal = { type: 'poker_turn_started', ...proposal };
+		const activeConnection = usePeerStore.getState().connection;
+		if (activeConnection?.controlAvailable && activeConnection.sendControlMessage) {
+			activeConnection.sendControlMessage(message);
+			return;
+		}
+		send(message);
+	}, [send]);
 
 	const playCard = useGameStore(state => state.playCard);
 	const attackWithCard = useGameStore(state => state.attackWithCard);
@@ -600,17 +634,40 @@ export function useWireSync() {
 		return () => clearTimeout(timeout);
 	}, [connection, connectionState]);
 
+	// Build the canonical chess projection before BattleReady is emitted. The
+	// coordinator is intentionally still unmounted at this point, so the
+	// readiness proof cannot rely on a UI component having initialized the board.
+	useEffect(() => {
+		if (connectionState !== 'connected' || !p2pInitApplied || !matchSeed || !myCanonicalSide || !opponentArmy) return;
+		if (initialCombatPieceCount > 0) return;
+		const localArmy = selectArmy(useWarbandStore.getState());
+		if (!localArmy) return;
+		const perspective = createP2PViewerPerspective(myCanonicalSide);
+		const canonicalArmies = mapViewerValuesToCanonical({
+			perspective,
+			localValue: localArmy,
+			remoteValue: opponentArmy,
+		});
+		useUnifiedCombatStore.getState().initializeBoard(
+			canonicalArmies.player,
+			canonicalArmies.opponent,
+			createSeededIdGen(matchSeed, 'chess-pieces'),
+		);
+	}, [connectionState, initialCombatPieceCount, matchSeed, myCanonicalSide, opponentArmy, p2pInitApplied]);
+
 	// Battle readiness is a bilateral protocol fact, not an inference from the
 	// transport being open. Both peers publish the same engine/ruleset/root
 	// contract and the setup gate only opens after both proofs agree.
 	const hasInitialGameState = useGameStore(state => state.gameState !== null);
 	useEffect(() => {
-		if (!connection || connectionState !== 'connected' || !p2pInitApplied || !hasInitialGameState) {
+		if (!connection || connectionState !== 'connected' || !p2pInitApplied || !hasInitialGameState || initialCombatPieceCount === 0) {
 			battleReadySentMatchRef.current = null;
 			return undefined;
 		}
 		const matchId = matchIdRef.current;
 		if (!matchId || battleReadySentMatchRef.current === matchId) return undefined;
+		const quickMatchCommitted = useMatchmakingStore.getState().matchCommitted;
+		if (quickMatchCommitted && (!p2pSessionLocalAuthorized || !p2pSessionRemoteAuthorized)) return undefined;
 		let cancelled = false;
 
 		void (async () => {
@@ -625,19 +682,32 @@ export function useWireSync() {
 					: await getCardRegistryHash();
 				const army = selectArmy(useWarbandStore.getState());
 				if (!army) throw new Error('Local army is not available for battle readiness');
-				const loadoutHash = await sha256Hash(canonicalStringify({
-					army: {
-						king: army.king.id,
-						queen: army.queen.id,
-						rook: army.rook.id,
-						bishop: army.bishop.id,
-						knight: army.knight.id,
-					},
-					deckCardIds: [...selectDeckCardIds(useWarbandStore.getState())],
-				}));
+				const localDeckCardIds = selectDeckCardIds(useWarbandStore.getState());
+				const loadoutHash = await sha256Hash(canonicalStringify(buildBattleReadyLoadoutCommitmentPayload({
+					army,
+					deckCardIds: localDeckCardIds,
+				})));
+				const remoteArmy = usePeerStore.getState().opponentArmy;
+				const remoteDeck = remoteCardsDeckRef.current?.deck;
+				if (!remoteArmy || !remoteDeck) throw new Error('Opponent loadout is not available for battle readiness');
+				const expectedRemoteLoadoutHash = await sha256Hash(canonicalStringify(buildBattleReadyLoadoutCommitmentPayload({
+					army: remoteArmy,
+					deckCardIds: remoteDeck.cardIds,
+				})));
 				const gameState = useGameStore.getState().gameState;
 				if (!gameState) throw new Error('Initial game state is not available for battle readiness');
-				const initialStateRoot = await computeStateHash(isHostFrame ? gameState : flipGameState(gameState));
+				const cardsHash = parseHash256(computeCardsPrevStateHash(gameState, isHostFrame));
+				if (!cardsHash) throw new Error('Initial cards state root is empty');
+				const initialStateRoot = computeInitialMatchRoot({
+					matchId,
+					matchSeed: useGameStore.getState().matchSeed ?? '',
+					engineHash,
+					rulesetHash,
+					cardsHash,
+					localLoadoutHash: loadoutHash,
+					remoteLoadoutHash: expectedRemoteLoadoutHash,
+					combatStore: useUnifiedCombatStore.getState(),
+				});
 				if (!initialStateRoot) throw new Error('Initial game state root is empty');
 				if (cancelled || !isCurrentConnectedMatch(matchId)) return;
 
@@ -650,9 +720,12 @@ export function useWireSync() {
 				};
 				battleReadySentMatchRef.current = matchId;
 				const remoteProof = usePeerStore.getState().p2pBattleReadyRemote;
-				const comparison = remoteProof ? compareBattleReadyProofs(proof, remoteProof) : null;
+				const comparison = remoteProof ? compareBattleReadyProofs(proof, remoteProof, {
+					expectedRemoteLoadoutHash,
+				}) : null;
 				usePeerStore.getState().setP2pBattleReady({
 					local: proof,
+					expectedRemoteLoadoutHash,
 					...(comparison && !comparison.ok ? { error: comparison.reason } : { error: null }),
 				});
 				send({ type: 'battle_ready_v1', ...proof });
@@ -669,7 +742,7 @@ export function useWireSync() {
 		return () => {
 			cancelled = true;
 		};
-	}, [connection, connectionState, hasInitialGameState, isCurrentConnectedMatch, isHostFrame, p2pInitApplied, send]);
+	}, [connection, connectionState, hasInitialGameState, initialCombatPieceCount, isCurrentConnectedMatch, isHostFrame, p2pInitApplied, p2pSessionLocalAuthorized, p2pSessionRemoteAuthorized, send]);
 
 	// Detect when connection closes and notify the player
 	useEffect(() => {
@@ -814,7 +887,7 @@ export function useWireSync() {
 						break;
 					}
 					if (data.type === 'phase_checkpoint_dispute_v1' && isRetryablePhaseCheckpointDispute(data.reason)) {
-						phaseCheckpointClient.retryPending(send);
+						phaseCheckpointClient.retryPending(sendPhaseCheckpointProposal);
 						GameEventBus.emitNotification({
 							level: 'warning',
 							message: 'Phase roots disagreed. The relay did not pick a winner — retrying the same boundary.',
@@ -843,8 +916,7 @@ export function useWireSync() {
 					if (isRetryablePokerTurnNotaryDispute(data.reason)) {
 						const pokerState = getP2PPokerCombatAdapter().getPokerState();
 						if (pokerState?.turnId && pokerState.activePlayerId && isTimedPokerDecisionPhase(pokerState.phase)) {
-							send({
-								type: 'poker_turn_started',
+							sendPokerTurnProposal({
 								combatId: pokerState.combatId,
 								turnId: pokerState.turnId,
 								phase: pokerState.phase,
@@ -895,7 +967,9 @@ export function useWireSync() {
 						initialStateRoot: data.initialStateRoot,
 					};
 					const localProof = usePeerStore.getState().p2pBattleReadyLocal;
-					const comparison = localProof ? compareBattleReadyProofs(localProof, remoteProof) : null;
+					const comparison = localProof ? compareBattleReadyProofs(localProof, remoteProof, {
+						expectedRemoteLoadoutHash: usePeerStore.getState().p2pBattleReadyExpectedRemoteLoadoutHash,
+					}) : null;
 					if (comparison && !comparison.ok) {
 						debug.error('[wireSync] battle-ready proof mismatch:', comparison.reason);
 						usePeerStore.getState().setP2pBattleReady({
@@ -2636,6 +2710,20 @@ export function useWireSync() {
 				}
 			};
 
+			const handleControlMessage = (data: P2PControlServerMessage): void => {
+				if (data.type === 'poker_action_time_gate_v1') {
+					const { protocolVersion: _protocolVersion, matchId: _matchId, type: _controlType, ...wirePayload } = data;
+					const message = parseWireMessage({ type: 'poker_action', ...wirePayload });
+					if (message?.type === 'poker_action') void processMessage(message);
+					return;
+				}
+				if (data.type !== 'phase_checkpoint_commit_v1'
+				&& data.type !== 'phase_checkpoint_dispute_v1'
+				&& data.type !== 'poker_turn_notary_commit_v1'
+				&& data.type !== 'poker_turn_notary_dispute_v1') return;
+			void processMessage(data);
+		};
+
 		// Connection-scoped cancellation flag. Closed over by `processQueue` so a
 		// long-running message processing loop bails out as soon as React unmounts
 		// the hook (or `connection`/`connectionState` deps change). Without this,
@@ -2692,18 +2780,20 @@ export function useWireSync() {
 
 		const handleMessageWrapper = (data: unknown) => handleMessage(data);
 		connection.on('data', handleMessageWrapper);
+		const removeControlMessage = connection.onControlMessage?.(handleControlMessage);
 		debug.log('[wireSync] Data listener attached to connection (heartbeats will now be processed)');
 
 		return () => {
 			cancelled = true;
 			connection.off('data', handleMessageWrapper);
+			removeControlMessage?.();
 			debug.log('[wireSync] Data listener detached');
 			if (pendingSyncRef.current) {
 				clearTimeout(pendingSyncRef.current);
 				pendingSyncRef.current = null;
 			}
 		};
-	}, [connection, connectionState, isHostFrame, isWsHost, sendsCardsInit, adoptsRemoteCardsInit, sendsCardsRecoverySnapshot, send, playCard, attackWithCard, endTurn, performHeroPower, toggleMulliganCard, confirmMulligan, skipMulligan, applyOpponentCommandToStore, isCurrentConnectedMatch]);
+	}, [connection, connectionState, isHostFrame, isWsHost, sendsCardsInit, adoptsRemoteCardsInit, sendsCardsRecoverySnapshot, send, sendPhaseCheckpointProposal, sendPokerTurnProposal, playCard, attackWithCard, endTurn, performHeroPower, toggleMulliganCard, confirmMulligan, skipMulligan, applyOpponentCommandToStore, isCurrentConnectedMatch]);
 
 	const syncGameState = useCallback(() => {
 		if (connectionState !== 'connected' || !sendsCardsRecoverySnapshot) return;
@@ -3052,8 +3142,7 @@ export function useWireSync() {
 		if (connectionState !== 'connected') return;
 		if (!input.turnId) return;
 		const sentAtMs = Date.now();
-		send({
-			type: 'poker_action',
+		const pokerAction = {
 			playerId: input.playerId,
 			action: input.action,
 			origin: input.origin,
@@ -3065,7 +3154,20 @@ export function useWireSync() {
 				action: input.action as CompactPokerActionName,
 				hpCommitment: input.hpCommitment,
 			}),
-		});
+		} as const;
+		const activeConnection = usePeerStore.getState().connection;
+		if (activeConnection?.controlAvailable && activeConnection.sendControlMessage) {
+			const matchId = matchIdRef.current;
+			if (!matchId) return;
+			activeConnection.sendControlMessage({
+				type: 'poker_action_time_gate_v1',
+				protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+				matchId,
+				...pokerAction,
+			});
+			return;
+		}
+		send({ type: 'poker_action', ...pokerAction });
 	}, [connectionState, send]);
 
 	const sendPokerTurnStarted = useCallback((input: {
@@ -3078,8 +3180,8 @@ export function useWireSync() {
 		remainingMs?: number;
 	}): boolean => {
 		if (connectionState !== 'connected') return false;
-		send({
-			type: 'poker_turn_started',
+		if (!isTimedPokerDecisionPhase(input.phase)) return false;
+		sendPokerTurnProposal({
 			combatId: input.combatId,
 			turnId: input.turnId,
 			phase: input.phase,
@@ -3090,7 +3192,7 @@ export function useWireSync() {
 			sentAtMs: Date.now(),
 		});
 		return true;
-	}, [connectionState, send]);
+	}, [connectionState, sendPokerTurnProposal]);
 
 	/**
 	 * Propose a match result to the opponent for dual-signature verification.
@@ -3168,9 +3270,9 @@ export function useWireSync() {
 			fromPhase: input.fromPhase,
 			toPhase: input.toPhase,
 			stateRoot: input.stateRoot,
-			send,
+			send: sendPhaseCheckpointProposal,
 		});
-	}, [connectionState, send]);
+	}, [connectionState, sendPhaseCheckpointProposal]);
 
 	return {
 		syncGameState,

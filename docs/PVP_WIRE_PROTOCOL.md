@@ -72,33 +72,29 @@ never emits Hive `match_anchor`/`match_result` or canonical economy.
 ## §1 Architecture Overview
 
 A PvP match runs primarily between two browser clients ("peers"). The server
-owns five bounded responsibilities:
+owns four bounded responsibilities plus future settlement:
 
 1. **Matchmaking**: an in-memory, ELO-aware queue that issues per-peer
-   `queueToken` bearer secrets and per-peer `P2PMatchTicket` relay
-   credentials (`server/routes/matchmakingRoutes.ts`).
-2. **Relay**: a WebSocket fan-out that forwards opaque JSON frames between
-   the two peers in a room (`server/routes/p2pRelay.ts`). The relay does
-   NOT inspect game logic; it only validates frame envelope shape,
-   enforces a whitelist of `type` values, and applies the two notaries
-   below.
-3. **Phase notarization**: at `chess ↔ poker_combat` and `* → game_over`, the
-   relay compares two opaque deterministic roots. It never receives or runs
-   gameplay state. See [ADR 0005](adr/0005-server-notarized-phase-checkpoints.md).
-4. **Time notarization**: at each timed poker decision (`pre_flop`, `faith`,
-   `foresight`, `destiny`) both peers propose the same `turnId`. The relay
-   stamps `serverStartedAtMs` on the first valid proposal and commits
-   `deadline = start + 60_000` when the second matches. It then gates
-   `poker_action` by receive time vs that deadline. It never runs poker.
-   See [ADR 0011](adr/0011-server-notarized-poker-turn-clock.md).
-5. **Future arbitration** (post-match, off-wire): outside those fixed
+   `queueToken` bearer secrets and per-peer `P2PMatchTicket` credentials
+   (`server/routes/matchmakingRoutes.ts`).
+2. **Gameplay data plane**: WebRTC DataChannel when the runtime policy allows
+   it, with `/ws/p2p` as the server relay fallback. Neither path is gameplay
+   authority.
+3. **Control/referee plane**: authenticated `/ws/control` carries WebRTC
+   signaling, transport lifecycle, phase checkpoint proposals/results and
+   poker time-notary proposals/results. Quick Match uses Control WS for all
+   referee traffic; the legacy relay handler remains for direct compatibility.
+   See [ADR 0005](adr/0005-server-notarized-phase-checkpoints.md) and
+   [ADR 0011](adr/0011-server-notarized-poker-turn-clock.md).
+4. **Future arbitration** (post-match, off-wire): outside those fixed
    checkpoints the server is *not* part of real-time gameplay validation.
    Dual-signed `match_result`, Hive broadcast and slash processing remain
    deferred ranked settlement work and are not executed in the current testnet.
 
-The relay does not have a database of game state and cannot adjudicate moves.
+The server does not have a database of game state and cannot adjudicate moves.
 It holds only constant-sized phase agreement and poker-turn deadline metadata
-and is **not a source of truth about gameplay**.
+and is **not a source of truth about gameplay**. Referee messages use the
+authenticated Control WS independently of gameplay transport in Quick Match.
 
 **Client bridge dependency rule**: P2P wire handlers must not reach gameplay
 stores through `globalThis`. Poker P2P behavior goes through the explicit
@@ -162,9 +158,11 @@ hop. For a turn-based card game this latency is negligible.
   envelopes).
 - Frames that fail validation are silently dropped (no client-visible error).
   This is intentional — surfacing failure shape would be a probe channel.
-- `phase_checkpoint_propose_v1` is consumed by the relay instead of fanned out.
-  Matching proposals produce server-only `__sys.event=phase_checkpoint`; a
-  mismatch freezes the room and never selects a winner.
+- For authenticated Quick Match sessions, referee proposals are sent on the
+  separate Control WS and never enter this gameplay socket. The relay still
+  consumes `phase_checkpoint_propose_v1` and `poker_turn_started` for legacy
+  direct rooms and older clients. Matching proposals produce the same
+  server-only commit/dispute result; a mismatch never selects a winner.
 
 **Keepalive**: WS-level ping/pong every 15s (`p2pRelay.ts:235-243`). An
 app-level `heartbeat` envelope (sent by `useWireSync`) runs on top.
@@ -186,13 +184,17 @@ to the WebSocket upgrade as well as `/api`.
 
 The first client frame must be `control_hello_v1` with the same `matchId` and
 authenticated `peerId` from the upgrade. Once both peers have completed the
-hello, the server emits `control_open_v1` to each. Only these bounded messages
-are routed to the opponent:
+hello, the server emits `control_open_v1` to each. These bounded messages are
+either routed to the opponent or delivered back as referee results:
 
 - `webrtc_offer_v1` from the `offerer`;
 - `webrtc_answer_v1` from the `answerer`;
 - `ice_candidate_v1`;
-- `transport_ready_v1` and `transport_fallback_v1`.
+- `transport_ready_v1` and `transport_fallback_v1`;
+- `phase_checkpoint_propose_v1` and `poker_turn_started` are submitted to the
+  server referee; their commit/dispute results are never sent over gameplay.
+- `poker_action_time_gate_v1` is submitted to the Time Notary and, when
+  accepted, is delivered only to the opponent through Control WS.
 
 SDP, ICE, frame size, message rate, room size, origin, and match bindings are
 validated at the boundary. Control WS never forwards `P2PMessage` gameplay
@@ -200,15 +202,20 @@ frames and never chooses a winner. `WebRTCTransport` consumes this contract
 behind `GameTransport`, using the public ICE list from the validated runtime
 transport config when present. `TransportManager` tries it only when the
 runtime policy enables it and the browser exposes the required capabilities.
-The known-good `/ws/p2p` relay remains the default and receives the connection
-if WebRTC fails before the match opens. Once the DataChannel is connected, a
-Control WS close, error, malformed control frame, or `control_error_v1`
-degrades signaling only and does not close the game transport.
+The known-good `/ws/p2p` relay remains the fallback and receives gameplay if
+WebRTC fails before the match opens. Quick Match also keeps the authenticated
+Control WS open after fallback so referee traffic remains independent of
+gameplay. A control close, error, malformed control frame, or
+`control_error_v1` fails the active transport after it has opened, allowing the
+existing reconnect/toast path to restore both sockets instead of leaving a
+phase transition waiting forever. Legacy direct rooms without a signed
+transport role keep their relay-compatible referee path.
 No live transport switch is performed after gameplay begins.
 Likewise, `control_peer_left_v1` means the opponent left the control plane: it
-fails an in-progress WebRTC attempt, but only degrades control after the
-DataChannel is connected. A real gameplay disconnect must come from the game
-transport itself or the existing heartbeat/reconnect policy.
+fails an in-progress WebRTC attempt and fails an already-open signed Quick
+Match transport so the normal reconnect/toast flow restores both channels. A
+real gameplay disconnect must come from the game transport itself or the
+existing heartbeat/reconnect policy.
 
 The gameplay `isHost` perspective is supplied by the match/manual host
 assignment and is preserved across transport selection. The WebRTC
@@ -335,12 +342,17 @@ in phases 0-2 before any gameplay action is sent.
 
 ### Phase 1 — Connection
 
-Both peers open WebSockets to `/ws/p2p?room=<matchId>&peer=<peerId>`. The
-relay verifies the peer-specific `P2PMatchTicket` from the WebSocket
-subprotocol, including the ticket account's current starter receipt whenever
-tickets are required (`production`, `testnet`, or `mainnet`). The relay sends
-`__sys.open` once both arrive. Each peer transitions `peerStore.connectionState`
-to `'connected'`.
+Both peers open the gameplay socket `/ws/p2p?room=<matchId>&peer=<peerId>` and,
+for signed Quick Match, the authenticated control socket
+`/ws/control?match=<matchId>&peer=<peerId>`. Each route verifies the
+peer-specific `P2PMatchTicket` from its WebSocket subprotocol, including the
+ticket account's current starter receipt whenever tickets are required
+(`production`, `testnet`, or `mainnet`). Quick Match is considered connected
+only when both gameplay and control channels are open; direct legacy rooms may
+use gameplay-only compatibility. The gameplay relay sends `__sys.open` once
+both peers arrive, and the control route sends `control_open_v1` after both
+authenticated hellos. Each peer transitions `peerStore.connectionState` to
+`'connected'` only after the selected transport has both channels ready.
 
 ### Phase 2 — Seed Exchange (commit-reveal)
 
@@ -483,11 +495,11 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `gameState` | host → client | host recovery | `hash_mismatch` recovery snapshot only, compressed as `json+gzip+base64url@1` |
 | `chess_command` (envelope) | both | both (symmetric) | Phase 3 chess: discriminated union of `chess_move` (quiet), `chess_attack` (instant-kill capture), and `chess_combat_initiated` (non-instant capture into poker) — see §5 |
 | `transition_receipt_v1` | receiver → command sender | both (symmetric) | Post-commit chess receipt binding the command intent to the receiver's pre/post chess+cards integrity roots. A rejection or root mismatch quarantines further local chess actions. |
-| `phase_checkpoint_propose_v1` | peer → relay | both | Fixed-size proposal for a deterministic phase boundary; consumed by the relay and never fanned out. |
-| `phase_checkpoint_commit_v1` / `phase_checkpoint_dispute_v1` | relay → peers inside `__sys.event=phase_checkpoint` | relay only | Commit if roots match. Mismatch retries; freeze only after 3 strikes. The relay never picks a winner. |
-| `poker_turn_started` | peer → relay | both | Timed-poker turn identity proposal; consumed by the relay and never fanned out. Client `durationMs` / `remainingMs` / `sentAtMs` are ignored. |
-| `poker_turn_notary_commit_v1` / `poker_turn_notary_dispute_v1` | relay → peers inside `__sys.event=poker_turn_notary` | relay only | Commit if both peers proposed the same `turnId`. The first proposal stamps the start; the deadline is always 60s. Mismatch retries; freeze after 3 strikes. The relay never picks a winner. |
-| `poker_action` | both | both (symmetric) | Phase 3 poker: deterministic local apply + relay to peer; required `origin` and `turnId`. The relay time-gates by server receive time vs the notarized deadline, then fans out. Compact tuple remains optional. |
+| `phase_checkpoint_propose_v1` | peer → Control WS referee | both | Fixed-size proposal for a deterministic phase boundary; legacy direct rooms may submit it through the relay compatibility path. |
+| `phase_checkpoint_commit_v1` / `phase_checkpoint_dispute_v1` | Control WS referee → peers | server referee only | Commit if roots match. Mismatch retries; freeze only after 3 strikes. The referee never picks a winner. |
+| `poker_turn_started` | peer → Control WS referee | both | Timed-poker turn identity proposal; legacy direct rooms may submit it through the relay compatibility path. Client `durationMs` / `remainingMs` / `sentAtMs` are ignored. |
+| `poker_turn_notary_commit_v1` / `poker_turn_notary_dispute_v1` | Control WS referee → peers | server referee only | Commit if both peers proposed the same `turnId`. The first proposal stamps the start; the deadline is always 60s. Mismatch retries; freeze after 3 strikes. The referee never picks a winner. |
+| `poker_action` / `poker_action_time_gate_v1` | both | both (symmetric) | Phase 3 poker: deterministic local apply + server-gated delivery to the peer; Quick Match sends the control wrapper through Control WS, while legacy direct rooms may use the relay. Required `origin` and `turnId`; compact tuple remains optional. |
 | `poker_hash_check` | host → client | host | Turn-scoped Poker integrity probe; compared only when phase, turn id and action count match locally |
 | `hash_check` | host → client | host | Periodic state-hash sanity check |
 | `hash_mismatch` | client → host | client | Reports a divergent state hash |
@@ -711,18 +723,21 @@ Implementation:
   the action so the transcript cannot carry two interpretations.
 - `poker_turn_started` is a dual proposal to the Time Notary, not peer-advisory
   clock sync. Both peers send it when they discover a timed `turnId`. The
-  relay consumes the frame (it is never fanned out), ignores client
-  `durationMs` / `remainingMs` / `sentAtMs`, stamps `serverStartedAtMs` on the
-  first valid proposal, and commits `deadline = start + 60_000` when the
-  second identity matches. Reconnect replays that same commit; it does not
-  grant another 60s. See ADR 0011.
+  Control WS referee consumes the frame (it is never fanned out), ignores
+  client `durationMs` / `remainingMs` / `sentAtMs`, stamps
+  `serverStartedAtMs` on the first valid proposal, and commits
+  `deadline = start + 60_000` when the second identity matches. Reconnect
+  replays that same commit; it does not grant another 60s. See ADR 0011.
 - The browser renders a countdown from `PokerTurnClock` via
   `createNotarizedPokerTurnClock`, which projects `remainingMsAtCommit` onto
   local `Date.now()`. That may lag the server by one RTT. Acceptance
-  authority is the relay receive timestamp versus `serverDeadlineAtMs`, not
-  either wall clock. A `poker_action` is forwarded only after the turn is
+  authority is the Control WS receive timestamp versus `serverDeadlineAtMs`,
+  not either wall clock. A `poker_action` is forwarded only after the turn is
   `committed`; a pending notary or a previous `turnId` is dropped.
-- `origin: 'timeout'` is accepted by the relay only at or after the notarized
+- `poker_action_time_gate_v1` carries the same validated action fields through
+  Control WS. The referee applies the notary gate before delivering it to the
+  opponent; the receiver unwraps it into the normal `poker_action` envelope.
+- `origin: 'timeout'` is accepted by the Control WS referee only at or after the notarized
   deadline, and by the local engine only when the action equals the shared
   derivation: no pending wager → `DEFEND`, pending wager → `BRACE`. Timeout
   `DEFEND` preserves stamina; it never grants the manual-check `+1 STA`

@@ -16,16 +16,30 @@ type ActiveMatchTicketAccess =
 const activeMatches = new Map<string, P2PActiveMatch>();
 const activeMatchIdsByPeerId = new Map<string, string>();
 const activeMatchExpiryTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const releasedPeersByMatchId = new Map<string, Set<string>>();
+const terminalAtByMatchId = new Map<string, number>();
 
-export const P2P_ACTIVE_MATCH_TTL_MS = 5 * 60 * 1000;
+/**
+ * A match is not queue state.  Keep its authority binding alive while the
+ * ticket is still valid; this cap only prevents an abandoned in-memory match
+ * from living forever if neither peer sends an explicit leave/terminal event.
+ */
+export const P2P_ACTIVE_MATCH_SAFETY_TTL_MS = 24 * 60 * 60 * 1000;
+export const P2P_ACTIVE_MATCH_TERMINAL_RETENTION_MS = 10 * 60 * 1000;
+
+// Compatibility name for callers that used the old queue-lifetime constant.
+// New code should use P2P_ACTIVE_MATCH_SAFETY_TTL_MS explicitly.
+export const P2P_ACTIVE_MATCH_TTL_MS = P2P_ACTIVE_MATCH_SAFETY_TTL_MS;
 
 export function registerP2PActiveMatch(matchId: string, match: P2PActiveMatch): void {
 	activeMatches.set(matchId, match);
 	activeMatchIdsByPeerId.set(match.player1, matchId);
 	activeMatchIdsByPeerId.set(match.player2, matchId);
+	releasedPeersByMatchId.delete(matchId);
+	terminalAtByMatchId.delete(matchId);
 	const existingTimer = activeMatchExpiryTimers.get(matchId);
 	if (existingTimer) clearTimeout(existingTimer);
-	const expiryTimer = setTimeout(() => removeP2PActiveMatch(matchId), P2P_ACTIVE_MATCH_TTL_MS);
+	const expiryTimer = setTimeout(() => removeP2PActiveMatch(matchId), P2P_ACTIVE_MATCH_SAFETY_TTL_MS);
 	expiryTimer.unref?.();
 	activeMatchExpiryTimers.set(matchId, expiryTimer);
 }
@@ -37,13 +51,27 @@ export function removeP2PActiveMatch(matchId: string): void {
 		if (activeMatchIdsByPeerId.get(match.player2) === matchId) activeMatchIdsByPeerId.delete(match.player2);
 	}
 	activeMatches.delete(matchId);
+	releasedPeersByMatchId.delete(matchId);
+	terminalAtByMatchId.delete(matchId);
 	const expiryTimer = activeMatchExpiryTimers.get(matchId);
 	if (expiryTimer) clearTimeout(expiryTimer);
 	activeMatchExpiryTimers.delete(matchId);
 }
 
 export function releaseP2PActiveMatchPeer(peerId: string): void {
+	const matchId = activeMatchIdsByPeerId.get(peerId);
+	if (!matchId) return;
 	activeMatchIdsByPeerId.delete(peerId);
+	const releasedPeers = releasedPeersByMatchId.get(matchId) ?? new Set<string>();
+	releasedPeers.add(peerId);
+	releasedPeersByMatchId.set(matchId, releasedPeers);
+}
+
+/** Mark a match terminal while retaining its signed binding briefly for audit/retry. */
+export function markP2PActiveMatchTerminal(matchId: string, terminalAt = Date.now()): boolean {
+	if (!activeMatches.has(matchId)) return false;
+	terminalAtByMatchId.set(matchId, terminalAt);
+	return true;
 }
 
 export function getP2PActiveMatchById(matchId: string): P2PActiveMatch | undefined {
@@ -67,11 +95,18 @@ export function clearP2PActiveMatches(): void {
 	activeMatchExpiryTimers.clear();
 	activeMatches.clear();
 	activeMatchIdsByPeerId.clear();
+	releasedPeersByMatchId.clear();
+	terminalAtByMatchId.clear();
 }
 
 export function sweepP2PActiveMatches(now = Date.now()): void {
 	for (const [matchId, match] of activeMatches.entries()) {
-		if (now - match.createdAt > P2P_ACTIVE_MATCH_TTL_MS) removeP2PActiveMatch(matchId);
+		const terminalAt = terminalAtByMatchId.get(matchId);
+		if (terminalAt !== undefined && now - terminalAt >= P2P_ACTIVE_MATCH_TERMINAL_RETENTION_MS) {
+			removeP2PActiveMatch(matchId);
+			continue;
+		}
+		if (now - match.createdAt >= P2P_ACTIVE_MATCH_SAFETY_TTL_MS) removeP2PActiveMatch(matchId);
 	}
 }
 
@@ -83,6 +118,9 @@ export function verifyP2PActiveMatchTicket(input: {
 }): ActiveMatchTicketAccess {
 	const match = getP2PActiveMatchById(input.roomId);
 	if (!match) return { ok: false, reason: 'not_found' };
+	if (!hasP2PActiveMatchPeer(input.peerId, input.roomId)) {
+		return { ok: false, reason: 'peer_not_in_match' };
+	}
 	const peerView = getP2PMatchPeerView(match, input.peerId);
 	if (!peerView) return { ok: false, reason: 'peer_not_in_match' };
 	if (peerView.matchTicket.token !== input.token) return { ok: false, reason: 'ticket_mismatch' };

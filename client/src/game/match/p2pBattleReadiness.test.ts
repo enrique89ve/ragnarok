@@ -50,6 +50,7 @@ function baseInput(overrides: Partial<P2PBattleReadinessInput> = {}): P2PBattleR
 		matchSeed: 'seed-1',
 		opponentArmy: army,
 		p2pInitApplied: true,
+		expectedRemoteLoadoutHash: 'loadout-b',
 		localBattleReady: proof(),
 		remoteBattleReady: proof({ loadoutHash: 'loadout-b' }),
 		now: 1_000,
@@ -86,6 +87,22 @@ describe('computeP2PBattleReadiness', () => {
 		expect(computeP2PBattleReadiness(baseInput({
 			remoteBattleReady: proof({ initialStateRoot: 'root-v2', loadoutHash: 'loadout-b' }),
 		}))).toEqual({ ready: false, reason: 'Initial state root mismatch' });
+	});
+
+	it('rejects a BattleReady loadout claim that differs from the announced opponent deck', () => {
+		expect(computeP2PBattleReadiness(baseInput({
+		remoteBattleReady: proof({ loadoutHash: 'forged-loadout' }),
+	}))).toEqual({
+		ready: false,
+		reason: 'Opponent loadout proof does not match the announced loadout',
+	});
+	});
+
+	it('does not open while the opponent loadout commitment is still unavailable', () => {
+		expect(computeP2PBattleReadiness(baseInput({ expectedRemoteLoadoutHash: null }))).toEqual({
+		ready: false,
+		reason: 'Opponent loadout commitment is not available',
+	});
 	});
 
 	it('keeps direct challenge compatibility without weakening the bilateral BattleReady gate', () => {

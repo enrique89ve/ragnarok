@@ -45,8 +45,6 @@ import {
 	type P2PRelayTelemetrySnapshot,
 } from '../services/p2pTelemetry';
 import { verifyP2PMatchTicketForRoom } from '../services/p2pMatchTicketSigner';
-import { createP2PPhaseCheckpointCoordinator } from '../services/p2pPhaseCheckpointCoordinator';
-import { createP2PPokerTimeNotary } from '../services/p2pPokerTimeNotary';
 import {
 	isP2PRelayOriginAllowed,
 } from '../services/p2pRelayOrigin';
@@ -56,6 +54,11 @@ import {
 } from '../services/p2pRelayProtocol';
 import { verifyP2PActiveMatchTicket } from '../services/p2pActiveMatchRegistry';
 import { hasStarterCeremonyClaim } from '../services/starterClaimRegistry';
+import {
+	markP2PActiveMatchTerminalFromCheckpoint,
+	p2pPhaseCheckpointCoordinator,
+	p2pPokerTimeNotary,
+} from '../services/p2pReferee';
 import { log } from '../static';
 
 type RoomMember = {
@@ -65,8 +68,6 @@ type RoomMember = {
 
 const rooms = new Map<string, RoomMember[]>();
 const relayAliveSockets = new WeakSet<WebSocket>();
-const phaseCheckpointCoordinator = createP2PPhaseCheckpointCoordinator();
-const pokerTimeNotary = createP2PPokerTimeNotary();
 const emptyCheckpointRoomExpiry = new Map<string, number>();
 
 const ROOM_MAX_PEERS = 2;
@@ -454,7 +455,8 @@ export function attachP2PRelay(server: HttpServer): void {
 					recordP2PRelayDrop('malformed_phase_checkpoint');
 					return;
 				}
-				const result = phaseCheckpointCoordinator.submit({ roomId, peerId, proposal });
+				const result = p2pPhaseCheckpointCoordinator.submit({ roomId, peerId, proposal });
+				markP2PActiveMatchTerminalFromCheckpoint(roomId, result);
 				if (result.status === 'pending') return;
 				if (result.recipients === 'sender') {
 					sendPhaseCheckpoint(ws, result.message);
@@ -480,7 +482,7 @@ export function attachP2PRelay(server: HttpServer): void {
 					recordP2PRelayDrop('malformed_poker_turn_notary');
 					return;
 				}
-				const result = pokerTimeNotary.submit({
+				const result = p2pPokerTimeNotary.submit({
 					roomId,
 					peerId,
 					proposal,
@@ -507,7 +509,7 @@ export function attachP2PRelay(server: HttpServer): void {
 					recordP2PRelayDrop('malformed_poker_action_time_gate');
 					return;
 				}
-				const gate = pokerTimeNotary.gatePokerAction({
+				const gate = p2pPokerTimeNotary.gatePokerAction({
 					roomId,
 					action: gateInput,
 					receivedAtMs: Date.now(),
@@ -579,8 +581,8 @@ export function attachP2PRelay(server: HttpServer): void {
 		for (const [roomId, expiresAt] of emptyCheckpointRoomExpiry) {
 			if (expiresAt > now || rooms.has(roomId)) continue;
 			emptyCheckpointRoomExpiry.delete(roomId);
-			phaseCheckpointCoordinator.dropRoom(roomId);
-			pokerTimeNotary.dropRoom(roomId);
+			p2pPhaseCheckpointCoordinator.dropRoom(roomId);
+			p2pPokerTimeNotary.dropRoom(roomId);
 		}
 	}, CHECKPOINT_SWEEP_INTERVAL_MS);
 	checkpointSweepTimer.unref?.();

@@ -6,6 +6,7 @@ import {
 	type TransportListener,
 } from '../../stores/wsTransport';
 import type { P2PMatchTicket } from '@shared/p2pAvailability';
+import type { P2PControlClientMessage, P2PControlServerMessage } from '@shared/p2p-wire/control';
 import {
 	createWebRTCTransport,
 	type WebRTCTransportOptions,
@@ -44,7 +45,23 @@ export type ManagedTransport = GameTransport & {
 	readonly isHostHint: boolean;
 	on: (event: TransportEvent, listener: TransportListener) => void;
 	off: (event: TransportEvent, listener: TransportListener) => void;
+	/** Optional authenticated control-plane referee channel. */
+	readonly controlAvailable?: boolean;
+	sendControlMessage?: (message: P2PControlClientMessage) => void;
+	onControlMessage?: (listener: (message: P2PControlServerMessage) => void) => () => void;
 };
+
+type ControlCapableTransport = GameTransport & {
+	readonly sendControlMessage: (message: P2PControlClientMessage) => void;
+	readonly onControlMessage: (listener: (message: P2PControlServerMessage) => void) => () => void;
+};
+
+function hasControlChannel(transport: GameTransport): transport is ControlCapableTransport {
+	return 'sendControlMessage' in transport
+		&& typeof transport.sendControlMessage === 'function'
+		&& 'onControlMessage' in transport
+		&& typeof transport.onControlMessage === 'function';
+}
 
 export type TransportManagerDependencies = {
 	readonly createWebRTC?: (options: WebRTCTransportOptions) => GameTransport;
@@ -266,6 +283,7 @@ export function createTransportManager(
 			try {
 				const relay = createRelay({
 					url: options.relayUrl,
+					controlUrl: options.controlUrl,
 					roomId: options.roomId,
 					peerId: options.peerId,
 					matchTicket: options.matchTicket,
@@ -319,6 +337,17 @@ export function createTransportManager(
 		get peer(): string { return remotePeer; },
 		get open(): boolean { return open; },
 		get isHostHint(): boolean { return hostHint; },
+		get controlAvailable(): boolean { return Boolean(selected && hasControlChannel(selected)); },
+		sendControlMessage: message => {
+			if (!selected || !hasControlChannel(selected)) {
+				throw new Error('P2P control plane is not available');
+			}
+			selected.sendControlMessage(message);
+		},
+		onControlMessage: listener => {
+			if (!selected || !hasControlChannel(selected)) return () => undefined;
+			return selected.onControlMessage(listener);
+		},
 		on,
 		off,
 	};

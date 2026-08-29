@@ -17,6 +17,7 @@ export type P2PBattleReadinessInput = {
 	readonly matchSeed: string | null;
 	readonly opponentArmy: ArmySelection | null;
 	readonly p2pInitApplied: boolean;
+	readonly expectedRemoteLoadoutHash?: string | null;
 	readonly localBattleReady: P2PBattleReadyProof | null;
 	readonly remoteBattleReady: P2PBattleReadyProof | null;
 	readonly now?: number;
@@ -58,7 +59,12 @@ export function computeP2PBattleReadiness(input: P2PBattleReadinessInput): P2PBa
 	if (!input.p2pInitApplied) return { ready: false, reason: 'P2P initial state has not been applied' };
 	if (!input.localBattleReady) return { ready: false, reason: 'Local battle-ready proof is not complete' };
 	if (!input.remoteBattleReady) return { ready: false, reason: 'Opponent battle-ready proof is not complete' };
-	const proofComparison = compareBattleReadyProofs(input.localBattleReady, input.remoteBattleReady);
+	if (input.expectedRemoteLoadoutHash === null) {
+		return { ready: false, reason: 'Opponent loadout commitment is not available' };
+	}
+	const proofComparison = compareBattleReadyProofs(input.localBattleReady, input.remoteBattleReady, {
+		expectedRemoteLoadoutHash: input.expectedRemoteLoadoutHash,
+	});
 	if (!proofComparison.ok) return { ready: false, reason: proofComparison.reason };
 	return { ready: true };
 }

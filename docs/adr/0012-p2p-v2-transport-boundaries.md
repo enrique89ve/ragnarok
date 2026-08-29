@@ -14,8 +14,8 @@ gameplay or matchmaking authority.
 
 The client owns one transport boundary, `GameTransport`. Its implementations
 deliver validated P2P messages and report lifecycle state; they do not apply
-game commands, choose winners, or decide when a battle is ready. The
-The client resolves a pure capability/policy decision before opening a
+game commands, choose winners, or decide when a battle is ready. The client
+resolves a pure capability/policy decision before opening a
 transport, passes the resulting plan to `TransportManager`, and persists the
 decision in a match-scoped session across reconnects. The manager executes the
 plan and owns attempt lifecycle/fallback only.
@@ -29,9 +29,10 @@ TransportManager        → initial selection/fallback owner (implemented)
 ```
 
 Matchmaking remains HTTP/API-owned. The separate `/ws/control` endpoint is
-authenticated with the Hive web session and a match ticket, and carries only
-bounded signaling (`offer`, `answer`, `ICE`) plus transport lifecycle messages.
-It never forwards gameplay frames. New tickets carry a deterministic
+authenticated with the Hive web session and a match ticket. It carries bounded
+signaling (`offer`, `answer`, `ICE`), transport lifecycle messages, and the
+server-referee protocol for phase checkpoints and poker turn clocks. It never
+forwards gameplay frames. New tickets carry a deterministic
 `offerer`/`answerer` role; legacy ticket readers remain compatible, but Control
 WS rejects tickets without a role.
 
@@ -70,9 +71,11 @@ ticket, peer identity, seed, army, and initial-state gates stay in force.
 - A pre-connect WebRTC failure sends `transport_fallback_v1` once. After
   `transport_ready_v1`, fallback messages are ignored and no live switch is
   performed. A successful relay fallback locks relay for the match session.
-- After the DataChannel connects, Control WS loss, errors, malformed frames,
-  and `control_error_v1` are signaling degradation, not gameplay transport
-  failures.
+- For a signed Quick Match, Control WS is part of the active transport
+  contract: loss, errors, malformed frames, and `control_error_v1` fail the
+  connection so reconnect restores both gameplay and referee channels. Direct
+  legacy rooms without a signed role may continue using the relay-compatible
+  referee path.
 - `isHost` remains a gameplay perspective supplied by match/manual assignment;
   WebRTC `offerer`/`answerer` is never treated as gameplay authority.
 - STUN, Control WS signaling, and native WebRTC remain separate opt-in
