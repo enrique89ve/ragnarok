@@ -54,6 +54,7 @@ import {
 	hasP2PRelayProtocol,
 	readP2PRelayTicketToken,
 } from '../services/p2pRelayProtocol';
+import { verifyP2PActiveMatchTicket } from '../services/p2pActiveMatchRegistry';
 import { hasStarterCeremonyClaim } from '../services/starterClaimRegistry';
 import { log } from '../static';
 
@@ -106,6 +107,7 @@ const RELAY_ALLOWED_MESSAGE_TYPES: ReadonlySet<string> = new Set([
 	'result_reject',
 	'version_check',
 	'wasm_hash_check',
+	'battle_ready_v1',
 	'hash_check',
 	'poker_hash_check',
 	'hash_mismatch',
@@ -193,8 +195,9 @@ async function validateRelayTicketUpgrade(input: {
 	if (!hasP2PRelayProtocol(input.protocolHeader)) {
 		return { ok: false, status: 426, telemetryReason: 'missing_protocol', reason: 'Upgrade Required' };
 	}
+	const ticketToken = readP2PRelayTicketToken(input.protocolHeader);
 	const ticket = verifyP2PMatchTicketForRoom({
-		token: readP2PRelayTicketToken(input.protocolHeader),
+		token: ticketToken,
 		roomId: input.roomId,
 		peerId: input.peerId,
 	});
@@ -205,6 +208,16 @@ async function validateRelayTicketUpgrade(input: {
 			telemetryReason: relayErrorForTicketReason(ticket.reason),
 			reason: 'Forbidden',
 		};
+	}
+	if (ticket.ok && ticket.payload.scope === 'matchmaking' && isRelayTicketRequired() && ticketToken) {
+		const activeMatch = verifyP2PActiveMatchTicket({
+			token: ticketToken,
+			roomId: input.roomId,
+			peerId: input.peerId,
+		});
+		if (!activeMatch.ok) {
+			return { ok: false, status: 403, telemetryReason: 'ticket_mismatch', reason: 'Forbidden' };
+		}
 	}
 	if (ticket.ok && !await isP2PRelayTicketStarterClaimAllowed({
 		ticketRequired: isRelayTicketRequired(),

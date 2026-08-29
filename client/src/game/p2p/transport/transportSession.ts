@@ -10,6 +10,7 @@ export type TransportSessionSnapshot = Readonly<{
 
 export type TransportSession = Readonly<{
 	beginAttempt: () => number;
+	invalidate: () => void;
 	getSnapshot: () => TransportSessionSnapshot;
 	isCurrent: (attemptId: number) => boolean;
 	selectTransport: (attemptId: number, kind: TransportKind) => boolean;
@@ -27,6 +28,9 @@ export function createTransportSession(matchId: string): TransportSession {
 			attemptId += 1;
 			return attemptId;
 		},
+		invalidate: (): void => {
+			attemptId += 1;
+		},
 		getSnapshot: (): TransportSessionSnapshot => ({
 			matchId,
 			attemptId,
@@ -37,6 +41,7 @@ export function createTransportSession(matchId: string): TransportSession {
 		isCurrent: candidate => candidate === attemptId,
 		selectTransport: (candidate, kind): boolean => {
 			if (candidate !== attemptId) return false;
+			if (relayLocked && kind === 'webrtc') return false;
 			if (initialTransport === null) initialTransport = kind;
 			currentTransport = kind;
 			return true;

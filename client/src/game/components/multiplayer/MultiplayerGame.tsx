@@ -21,6 +21,7 @@ import { useMatchmaking } from '../../hooks/useMatchmaking';
 import { useMatchmakingStore } from '../../stores/matchmakingStore';
 import { useWarbandStore, selectArmy } from '../../../lib/stores/useWarbandStore';
 import { P2PStatusBadge } from './P2PStatusBadge';
+import { P2PStatusToast } from './P2PStatusToast';
 import { useP2PMatchResume } from '../../p2p/useP2PMatchResume';
 import { clearP2PMatchResume } from '../../p2p/p2pMatchResume';
 import { resolveHeroPortrait } from '../../utils/art/artMapping';
@@ -311,10 +312,11 @@ export const MultiplayerGame: React.FC = () => {
 		//         gameState (`initGameFromHandshake`). Until then the
 		//         coordinator stays unmounted so input cannot hit empty/stale
 		//         state (TD-15).
-		//   2. <MatchSetupP2P/> — final Quick Match gate. It waits for the
-		//      bilateral Accept proofs, peer-specific relay ticket and complete
-		//      handshake before wiring MatchContext and mounting the coordinator.
-		//      Legacy manual rooms retain their compatibility path.
+		//   2. <MatchSetupP2P/> — final P2P gate. Quick Match additionally waits
+		//      for bilateral Accept proofs and its peer-specific relay ticket;
+		//      direct challenges retain their ticket/auth compatibility path.
+		//      Both paths require the bilateral BattleReady proof and handshake
+		//      before wiring MatchContext and mounting the coordinator.
 		// The P2PProvider wrapping all of renderInner keeps useWireSync mounted
 		// behind the spinner so `cards_deck` / seed exchange still arrive.
 		const guard = computeP2PRenderGuard({
@@ -350,5 +352,10 @@ export const MultiplayerGame: React.FC = () => {
 	if (!hasHiveSession) {
 		return <P2PHiveSessionRequired onBack={handleBack} />;
 	}
-	return <P2PProvider>{renderInner()}</P2PProvider>;
+	return (
+		<P2PProvider>
+			<P2PStatusToast />
+			{renderInner()}
+		</P2PProvider>
+	);
 };

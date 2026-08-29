@@ -304,4 +304,18 @@ describe('TransportManager', () => {
 		expect(relay.close).toHaveBeenCalledTimes(1);
 		expect(manager.state).toBe('closed');
 	});
+
+	it('cancels a pending adapter connection when the manager closes', async () => {
+		const webRtc = fakeTransport('webrtc', () => new Promise<void>(() => undefined));
+		const manager = createTransportManager(managerOptions(), {
+			createWebRTC: () => webRtc.transport,
+		});
+
+		const pending = manager.connect();
+		manager.close();
+
+		await expect(pending).rejects.toThrow('Transport manager closed');
+		expect(manager.state).toBe('closed');
+		expect(webRtc.close).toHaveBeenCalled();
+	});
 });

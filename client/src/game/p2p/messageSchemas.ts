@@ -369,6 +369,15 @@ const SessionAuthorizeSchema = z.object({
 	}).strict().optional(),
 }).strict();
 
+const BattleReadySchema = z.object({
+	type: z.literal('battle_ready_v1'),
+	matchId: NonEmptyString(128),
+	engineHash: NonEmptyString(256),
+	rulesetHash: NonEmptyString(256),
+	loadoutHash: NonEmptyString(256),
+	initialStateRoot: NonEmptyString(256),
+}).strict();
+
 const SessionRenewalSchema = z.object({
 	type: z.literal('session_renewal'),
 	matchId: NonEmptyString(64),
@@ -426,6 +435,7 @@ const SCHEMA_BY_TYPE = {
 	result_reject: ResultRejectSchema,
 	version_check: VersionCheckSchema,
 	wasm_hash_check: WasmHashCheckSchema,
+	battle_ready_v1: BattleReadySchema,
 	hash_check: HashCheckSchema,
 	poker_hash_check: PokerHashCheckSchema,
 	hash_mismatch: HashMismatchSchema,

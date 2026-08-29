@@ -20,6 +20,7 @@ describe('transport session', () => {
 		});
 		expect(session.selectTransport(firstAttempt, 'websocket-relay')).toBe(false);
 		expect(session.selectTransport(secondAttempt, 'websocket-relay')).toBe(true);
+		expect(session.selectTransport(secondAttempt, 'webrtc')).toBe(false);
 	});
 
 	it('rejects stale attempt mutations', () => {
@@ -30,5 +31,18 @@ describe('transport session', () => {
 		expect(session.isCurrent(staleAttempt)).toBe(false);
 		expect(session.isCurrent(currentAttempt)).toBe(true);
 		expect(session.lockRelay(staleAttempt)).toBe(false);
+	});
+
+	it('invalidates an in-flight attempt without changing the match identity', () => {
+		const session = createTransportSession('match-3');
+		const attempt = session.beginAttempt();
+
+		session.invalidate();
+
+		expect(session.isCurrent(attempt)).toBe(false);
+		expect(session.getSnapshot()).toMatchObject({
+			matchId: 'match-3',
+			attemptId: attempt + 1,
+		});
 	});
 });

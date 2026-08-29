@@ -388,6 +388,25 @@ Triggered by `useWireSync.ts:166-251` (effect dependent on
 
 Seed exchange has a 10s timeout. On timeout, the peer disconnects.
 
+### Phase 2.1 — BattleReady
+
+After the transport, identity/session, seed, loadout, and initial-state
+handshakes complete, each peer sends exactly one `battle_ready_v1` proof for
+the active match:
+
+```text
+{ matchId, engineHash, rulesetHash, loadoutHash, initialStateRoot }
+```
+
+The receiver validates the match binding and compares the engine, ruleset, and
+canonical initial-state root. `loadoutHash` must be present on both proofs;
+the two players may legitimately have different loadouts. Quick Match also
+requires bilateral Accept authorization and its active peer-specific ticket.
+Direct challenges preserve their existing ticket/session compatibility path,
+but both paths remain blocked until local and remote BattleReady proofs agree.
+This proof is transport-independent and is never added to canonical gameplay
+state.
+
 ### Phase 3 — Move Loop
 
 Each phase of the game (cards / chess / poker) emits its own envelope type;
@@ -438,9 +457,9 @@ packages the result (`BlockchainSubscriber.ts:272-294`):
   (`useWireSync.ts:248-250`).
 - The relay garbage-collects socket membership when both peers disconnect and
   retains only the constant-size phase checkpoint tombstone for 120s.
-- The server's `activeMatches` map evicts the match after 300s
-  (`ACTIVE_MATCH_TTL_MS` in `matchmakingRoutes.ts`, applied uniformly at
-  both the periodic sweep and the post-pair `setTimeout`).
+- The server's active-match registry evicts the match after 300s
+  (`P2P_ACTIVE_MATCH_TTL_MS` in `p2pActiveMatchRegistry.ts`, applied uniformly
+  at both the periodic sweep and the post-pair timer).
 
 ---
 
@@ -455,6 +474,7 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `seed_reveal` | both | both | Phase 2: reveal salt + Hive username |
 | `version_check` | both | both | Phase 2: build-hash diagnostic |
 | `wasm_hash_check` | both | both | Phase 2: engine-hash check (disconnect on mismatch) |
+| `battle_ready_v1` | both | both | Phase 2: bilateral match, engine, ruleset, loadout, and initial-state proof; game start stays blocked until both proofs agree |
 | `army_announcement` | both | both | Phase 2: announce selected chess army |
 | `cards_deck` | both | both | Phase 2: announce the deck half of the immutable deck+claims snapshot |
 | `deck_verify` | both | both | Phase 2: bind source-aware `protocolVersion: 2` claims to the announced deck; shared-network init waits for identity + IndexedDB + server approval |
@@ -478,7 +498,7 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `ping` / `pong` | both | both | Lower-level RTT probe |
 | `opponentDisconnected` | — | — | **Dropped.** Not a legal relay type. Departure is `__sys.close` only. |
 | `spectator_state` | host | host | Future / unused in beta |
-| `session_authorize` | peer→peer | both | Quick Match carries the already-verified `Accept` proof `{ matchId, ephemeralPubkey, hiveSig, acceptance }` into the handshake. Both peers must verify the bilateral proof before Battle Ready; it never opens a second Keychain prompt. Manual/direct legacy authorization remains outside this migration. |
+| `session_authorize` | peer→peer | both | Quick Match carries the already-verified `Accept` proof `{ matchId, ephemeralPubkey, hiveSig, acceptance }` into the handshake. Both peers must verify the bilateral proof before BattleReady; it never opens a second Keychain prompt. Direct challenges retain their existing session/ticket authorization path. |
 | `session_renewal` | peer→peer | both | **Future ADR 0004 settlement path**; disabled because current matches cannot request a reload Keychain signature |
 | `session_resumed` | peer→peer | both | **Future ADR 0004 settlement path**; not a current testnet release gate |
 | `state_sync_request` | peer→peer | both | Ask the **peer** for missing transcript leaves after reconnect or hard-reload rejoin. The relay only fans the request out. |

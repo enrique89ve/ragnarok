@@ -3,6 +3,7 @@ import {
 	MAX_P2P_MATCH_TICKET_TOKEN_LENGTH,
 	P2P_MATCH_TICKET_SIGNATURE_ALGORITHM,
 	type P2PMatchTicket,
+	type P2PMatchTicketScope,
 	type P2PTransportRole,
 	isSafePeerId,
 	isSafeRoomOrMatchId,
@@ -16,6 +17,7 @@ export type P2PMatchTicketPayload = {
 	readonly purpose: 'p2p-room';
 	readonly roomId: string;
 	readonly peerId: string;
+	readonly scope: P2PMatchTicketScope;
 	readonly role?: P2PTransportRole;
 	readonly account?: string;
 	readonly issuedAt: number;
@@ -76,7 +78,7 @@ function decodePayload(value: string): unknown {
 function readPayload(input: unknown): P2PMatchTicketPayload | null {
 	if (typeof input !== 'object' || input === null || Array.isArray(input)) return null;
 	const record = input as Record<string, unknown>;
-	const allowed = new Set(['v', 'purpose', 'roomId', 'peerId', 'role', 'account', 'issuedAt', 'expiresAt', 'nonce', 'sigAlg']);
+	const allowed = new Set(['v', 'purpose', 'roomId', 'peerId', 'scope', 'role', 'account', 'issuedAt', 'expiresAt', 'nonce', 'sigAlg']);
 	for (const key of Object.keys(record)) {
 		if (!allowed.has(key)) return null;
 	}
@@ -84,6 +86,7 @@ function readPayload(input: unknown): P2PMatchTicketPayload | null {
 	if (record.purpose !== 'p2p-room') return null;
 	if (typeof record.roomId !== 'string' || !isSafeRoomOrMatchId(record.roomId)) return null;
 	if (typeof record.peerId !== 'string' || !isSafePeerId(record.peerId)) return null;
+	if (record.scope !== undefined && record.scope !== 'matchmaking' && record.scope !== 'direct-challenge') return null;
 	if (record.role !== undefined && record.role !== 'offerer' && record.role !== 'answerer') return null;
 	if (record.account !== undefined) {
 		if (typeof record.account !== 'string') return null;
@@ -100,6 +103,7 @@ function readPayload(input: unknown): P2PMatchTicketPayload | null {
 		purpose: 'p2p-room',
 		roomId: record.roomId,
 		peerId: record.peerId,
+		scope: record.scope === 'matchmaking' ? 'matchmaking' : 'direct-challenge',
 		...(record.role === 'offerer' || record.role === 'answerer' ? { role: record.role } : {}),
 		...(typeof record.account === 'string' ? { account: normalizeHiveUsername(record.account) } : {}),
 		issuedAt: record.issuedAt,
@@ -119,6 +123,7 @@ function signaturesMatch(expectedHex: string, receivedHex: string): boolean {
 export function buildP2PMatchTicket(input: {
 	readonly roomId: string;
 	readonly peerId: string;
+	readonly scope?: P2PMatchTicketScope;
 	readonly role?: P2PTransportRole;
 	readonly account?: string;
 	readonly now?: number;
@@ -136,6 +141,7 @@ export function buildP2PMatchTicket(input: {
 		purpose: 'p2p-room',
 		roomId: input.roomId,
 		peerId: input.peerId,
+		scope: input.scope ?? 'direct-challenge',
 		...(input.role ? { role: input.role } : {}),
 		...(normalizedAccount ? { account: normalizedAccount } : {}),
 		issuedAt,
@@ -148,6 +154,7 @@ export function buildP2PMatchTicket(input: {
 		token,
 		roomId: payload.roomId,
 		peerId: payload.peerId,
+		scope: payload.scope,
 		expiresAt: payload.expiresAt,
 		...(payload.role ? { role: payload.role } : {}),
 	};

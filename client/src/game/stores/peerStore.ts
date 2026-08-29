@@ -40,6 +40,7 @@ import { isSharedNetworkEnvironment } from '../config/featureFlags';
 import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from '../../data/HiveSessionIdentity';
 import type { ArmySelection } from '../types/ChessTypes';
 import type { WireMessage } from '../p2p/messages';
+import type { P2PBattleReadyProof } from '../p2p/battleReady';
 import type { P2PConnectionAvailabilityState, P2PMatchTicket, ServerSignedChallenge } from '@shared/p2pAvailability';
 import { useMatchmakingStore, type MatchmakingStatus } from './matchmakingStore';
 export { isP2PConnectionStateBusy } from '@shared/p2pAvailability';
@@ -115,6 +116,9 @@ export type PeerStore = {
 	p2pSessionLocalAuthorized: boolean;
 	p2pSessionRemoteAuthorized: boolean;
 	p2pSessionAuthError: string | null;
+	p2pBattleReadyLocal: P2PBattleReadyProof | null;
+	p2pBattleReadyRemote: P2PBattleReadyProof | null;
+	p2pBattleReadyError: string | null;
 	/**
 	 * True once cards handshake init has populated local gameState —
 	 * both peers set this after `initGameFromHandshake` (seed + both
@@ -146,6 +150,12 @@ export type PeerStore = {
 		readonly remoteAuthorized?: boolean;
 		readonly error?: string | null;
 	}) => void;
+	setP2pBattleReady: (state: {
+		readonly local?: P2PBattleReadyProof | null;
+		readonly remote?: P2PBattleReadyProof | null;
+		readonly error?: string | null;
+	}) => void;
+	clearP2pBattleReady: () => void;
 	setMatchChallenges: (matchChallenge: ServerSignedChallenge | null, opponentMatchChallenge: ServerSignedChallenge | null) => void;
 	setMatchTicket: (ticket: P2PMatchTicket | null) => void;
 	clearMatchChallenges: () => void;
@@ -182,6 +192,9 @@ type PeerRuntimeState = Pick<
 	| 'p2pSessionLocalAuthorized'
 	| 'p2pSessionRemoteAuthorized'
 	| 'p2pSessionAuthError'
+	| 'p2pBattleReadyLocal'
+	| 'p2pBattleReadyRemote'
+	| 'p2pBattleReadyError'
 	| 'p2pInitApplied'
 >;
 
@@ -211,6 +224,9 @@ export function hasVolatileP2PRuntimeState(state: HiveSessionChangeRuntimeState)
 		state.peer.p2pSessionLocalAuthorized,
 		state.peer.p2pSessionRemoteAuthorized,
 		state.peer.p2pSessionAuthError,
+		state.peer.p2pBattleReadyLocal,
+		state.peer.p2pBattleReadyRemote,
+		state.peer.p2pBattleReadyError,
 		state.peer.p2pInitApplied,
 		state.matchmaking.status !== 'idle',
 		state.matchmaking.queueToken,
@@ -512,6 +528,18 @@ async function openTransport(
 
 	return new Promise<void>((resolve, reject) => {
 		let settled = false;
+		const isActiveAttempt = (): boolean => (
+			openGeneration === transportOpenGeneration
+			&& lastRoomId === roomId
+			&& activeTransport === transport
+		);
+		const rejectStaleAttempt = (): void => {
+			try { transport.close(); } catch { /* already closed */ }
+			if (!settled) {
+				settled = true;
+				reject(new Error('Stale P2P transport event ignored'));
+			}
+		};
 		const resolveConnection = (): void => {
 			if (settled) return;
 			settled = true;
@@ -525,6 +553,10 @@ async function openTransport(
 
 		transport.on('open', (...args: unknown[]) => {
 			if (settled) return;
+			if (!isActiveAttempt()) {
+				rejectStaleAttempt();
+				return;
+			}
 			const payload = readOpenPayload(args[0]);
 			clearReconnectWindow();
 			set({
@@ -546,6 +578,7 @@ async function openTransport(
 		});
 
 		transport.on('close', (...args: unknown[]) => {
+			if (!isActiveAttempt()) return;
 			const side = parseDisconnectSide(args[0]);
 			const { connectionState } = get();
 			if (connectionState === 'connected') {
@@ -567,6 +600,7 @@ async function openTransport(
 		});
 
 		transport.on('error', (...args: unknown[]) => {
+			if (!isActiveAttempt()) return;
 			const err = (args[0] instanceof Error) ? args[0] : new Error('Transport error');
 			debug.error('[PeerStore] transport error:', err.message);
 			const { connectionState } = get();
@@ -583,6 +617,10 @@ async function openTransport(
 
 		void transport.connect().catch((error: unknown) => {
 			const connectionError = error instanceof Error ? error : new Error('Transport connection failed');
+			if (!isActiveAttempt()) {
+				rejectConnection(connectionError);
+				return;
+			}
 			if (!settled) {
 				set({ error: connectionError.message, connectionState: 'error' });
 				rejectConnection(connectionError);
@@ -648,6 +686,9 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	p2pSessionLocalAuthorized: false,
 	p2pSessionRemoteAuthorized: false,
 	p2pSessionAuthError: null,
+	p2pBattleReadyLocal: null,
+	p2pBattleReadyRemote: null,
+	p2pBattleReadyError: null,
 	p2pInitApplied: false,
 	hardReloadResume: false,
 
@@ -672,6 +713,16 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		...(state.localAuthorized !== undefined ? { p2pSessionLocalAuthorized: state.localAuthorized } : {}),
 		...(state.remoteAuthorized !== undefined ? { p2pSessionRemoteAuthorized: state.remoteAuthorized } : {}),
 		...(state.error !== undefined ? { p2pSessionAuthError: state.error } : {}),
+	}),
+	setP2pBattleReady: (state) => set({
+		...(state.local !== undefined ? { p2pBattleReadyLocal: state.local } : {}),
+		...(state.remote !== undefined ? { p2pBattleReadyRemote: state.remote } : {}),
+		...(state.error !== undefined ? { p2pBattleReadyError: state.error } : {}),
+	}),
+	clearP2pBattleReady: () => set({
+		p2pBattleReadyLocal: null,
+		p2pBattleReadyRemote: null,
+		p2pBattleReadyError: null,
 	}),
 	setP2pInitApplied: (applied) => set({ p2pInitApplied: applied }),
 	setHardReloadResume: (value) => set({ hardReloadResume: value }),
@@ -745,6 +796,9 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			p2pSessionLocalAuthorized: false,
 			p2pSessionRemoteAuthorized: false,
 			p2pSessionAuthError: null,
+			p2pBattleReadyLocal: null,
+			p2pBattleReadyRemote: null,
+			p2pBattleReadyError: null,
 		});
 
 		debug.log(`[PeerStore][host] opening room=${peerId.slice(0, 8)}…`);
@@ -781,6 +835,9 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			p2pSessionLocalAuthorized: isReconnect ? get().p2pSessionLocalAuthorized : false,
 			p2pSessionRemoteAuthorized: isReconnect ? get().p2pSessionRemoteAuthorized : false,
 			p2pSessionAuthError: isReconnect ? get().p2pSessionAuthError : null,
+			p2pBattleReadyLocal: isReconnect ? get().p2pBattleReadyLocal : null,
+			p2pBattleReadyRemote: isReconnect ? get().p2pBattleReadyRemote : null,
+			p2pBattleReadyError: isReconnect ? get().p2pBattleReadyError : null,
 		});
 
 		debug.log(`[PeerStore][join] joining room=${remoteId.slice(0, 8)}… as peer=${peerId.slice(0, 8)}…`);
@@ -815,6 +872,9 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			p2pSessionLocalAuthorized: isReconnect ? get().p2pSessionLocalAuthorized : false,
 			p2pSessionRemoteAuthorized: isReconnect ? get().p2pSessionRemoteAuthorized : false,
 			p2pSessionAuthError: isReconnect ? get().p2pSessionAuthError : null,
+			p2pBattleReadyLocal: isReconnect ? get().p2pBattleReadyLocal : null,
+			p2pBattleReadyRemote: isReconnect ? get().p2pBattleReadyRemote : null,
+			p2pBattleReadyError: isReconnect ? get().p2pBattleReadyError : null,
 			bufferedMessageCount: messageBuffer.length,
 		});
 
@@ -852,6 +912,9 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			p2pSessionLocalAuthorized: false,
 			p2pSessionRemoteAuthorized: false,
 			p2pSessionAuthError: null,
+			p2pBattleReadyLocal: null,
+			p2pBattleReadyRemote: null,
+			p2pBattleReadyError: null,
 			p2pInitApplied: false,
 			hardReloadResume: false,
 		});

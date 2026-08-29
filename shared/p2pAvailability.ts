@@ -15,6 +15,7 @@ export const P2P_MATCH_TICKET_WS_PROTOCOL_PREFIX = 'ragnarok-p2p-ticket.';
 export const MAX_P2P_MATCH_TICKET_TOKEN_LENGTH = 2048;
 
 export type P2PTransportRole = 'offerer' | 'answerer';
+export type P2PMatchTicketScope = 'matchmaking' | 'direct-challenge';
 
 const HIVE_USERNAME_RE = /^[a-z][a-z0-9.-]{2,15}$/;
 const SAFE_ID_RE = /^[A-Za-z0-9._:-]+$/;
@@ -89,6 +90,7 @@ export type P2PMatchTicket = {
 	readonly peerId: string;
 	readonly expiresAt: number;
 	readonly role?: P2PTransportRole;
+	readonly scope?: P2PMatchTicketScope;
 };
 
 export type PresenceHeartbeatResponse = {
@@ -308,7 +310,7 @@ export function readServerSignedChallenge(input: unknown): ServerSignedChallenge
 	};
 }
 
-const MATCH_TICKET_KEYS = new Set(['token', 'roomId', 'peerId', 'expiresAt', 'role']);
+const MATCH_TICKET_KEYS = new Set(['token', 'roomId', 'peerId', 'expiresAt', 'role', 'scope']);
 
 export function readP2PMatchTicket(input: unknown): P2PMatchTicket | null {
 	if (!isRecord(input) || !hasOnlyKeys(input, MATCH_TICKET_KEYS)) return null;
@@ -321,6 +323,7 @@ export function readP2PMatchTicket(input: unknown): P2PMatchTicket | null {
 	if (typeof input.peerId !== 'string' || !isSafePeerId(input.peerId)) return null;
 	if (!isNonNegativeInteger(input.expiresAt)) return null;
 	if (input.role !== undefined && input.role !== 'offerer' && input.role !== 'answerer') return null;
+	if (input.scope !== undefined && input.scope !== 'matchmaking' && input.scope !== 'direct-challenge') return null;
 
 	return {
 		token: input.token,
@@ -328,6 +331,7 @@ export function readP2PMatchTicket(input: unknown): P2PMatchTicket | null {
 		peerId: input.peerId,
 		expiresAt: input.expiresAt,
 		...(input.role === 'offerer' || input.role === 'answerer' ? { role: input.role } : {}),
+		...(input.scope === 'matchmaking' || input.scope === 'direct-challenge' ? { scope: input.scope } : {}),
 	};
 }
 

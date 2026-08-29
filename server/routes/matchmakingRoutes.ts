@@ -30,6 +30,17 @@ import {
 } from '../../shared/p2pMatchAcceptance';
 import { getHiveWebSessionUsername } from '../services/hiveWebSession';
 import { log } from '../static';
+import {
+	clearP2PActiveMatches,
+	getP2PActiveMatchById,
+	getP2PActiveMatchCount,
+	getP2PActiveMatchIdForPeer,
+	hasP2PActiveMatchPeer,
+	registerP2PActiveMatch,
+	releaseP2PActiveMatchPeer,
+	removeP2PActiveMatch,
+	sweepP2PActiveMatches,
+} from '../services/p2pActiveMatchRegistry';
 
 const router = Router();
 
@@ -113,11 +124,8 @@ type SharedQueueStarterClaimAccess =
 const matchmakingQueue: QueuedPlayer[] = [];
 const pendingMatchOffers = new Map<string, PendingMatchOffer>();
 const pendingOfferIdsByPeerId = new Map<string, string>();
-const activeMatches = new Map<string, P2PActiveMatch>();
-const activeMatchIdsByPeerId = new Map<string, string>();
 
 const QUEUE_STALE_MS = 5 * 60 * 1000; // 5 minutes
-const ACTIVE_MATCH_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 function pendingOfferForPeer(peerId: string): PendingMatchOffer | null {
 	const offerId = pendingOfferIdsByPeerId.get(peerId);
@@ -160,15 +168,6 @@ function removeQueuedPeer(peerId: string): void {
 	if (index !== -1) matchmakingQueue.splice(index, 1);
 }
 
-function removeActiveMatch(matchId: string): void {
-	const match = activeMatches.get(matchId);
-	if (match) {
-		activeMatchIdsByPeerId.delete(match.player1);
-		activeMatchIdsByPeerId.delete(match.player2);
-	}
-	activeMatches.delete(matchId);
-}
-
 function describeUnknownError(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }
@@ -197,11 +196,7 @@ function removeStaleQueueEntries() {
 		log(`Removed ${before - matchmakingQueue.length} stale queue entries`, 'Matchmaking');
 		saveQueue();
 	}
-	activeMatches.forEach((match, matchId) => {
-		if (now - match.createdAt > ACTIVE_MATCH_TTL_MS) {
-			removeActiveMatch(matchId);
-		}
-	});
+	sweepP2PActiveMatches(now);
 	for (const [offerId, pending] of pendingMatchOffers.entries()) {
 		if (pending.offerA.expiresAt <= now) deletePendingMatchOffer(offerId);
 	}
@@ -250,7 +245,7 @@ export function getP2PMatchmakingStats(): {
 	);
 	return {
 		queueLength: matchmakingQueue.length,
-		activeMatches: activeMatches.size,
+		activeMatches: getP2PActiveMatchCount(),
 		queuedPlayersWithUsername: matchmakingQueue.filter(player => typeof player.username === 'string').length,
 		oldestQueuedMs: oldestTimestamp === null ? null : Math.max(0, now - oldestTimestamp),
 	};
@@ -260,8 +255,7 @@ export function clearP2PMatchmakingStateForTests(): void {
 	matchmakingQueue.splice(0, matchmakingQueue.length);
 	pendingMatchOffers.clear();
 	pendingOfferIdsByPeerId.clear();
-	activeMatches.clear();
-	activeMatchIdsByPeerId.clear();
+	clearP2PActiveMatches();
 }
 
 function findBestEloMatch(newPlayer: QueuedPlayer): QueuedPlayer | null {
@@ -398,16 +392,12 @@ async function getExistingQueueResponse(req: Request, peerId: string): Promise<E
 }
 
 async function getActiveMatchStatusResponse(req: Request, peerId: string): Promise<ExistingQueueResponse | null> {
-	const matchId = activeMatchIdsByPeerId.get(peerId);
+	const matchId = getP2PActiveMatchIdForPeer(peerId);
 	if (!matchId) return null;
-	const match = activeMatches.get(matchId);
-	if (!match) {
-		activeMatchIdsByPeerId.delete(peerId);
-		return null;
-	}
+	const match = getP2PActiveMatchById(matchId);
+	if (!match) return null;
 	const peerView = getP2PMatchPeerView(match, peerId);
 	if (!peerView) {
-		activeMatchIdsByPeerId.delete(peerId);
 		return null;
 	}
 	if (!hasValidQueueToken(req, peerView.queueTokenHash)) {
@@ -417,7 +407,7 @@ async function getActiveMatchStatusResponse(req: Request, peerId: string): Promi
 		};
 	}
 	if (!await canQueuedPlayerUseSharedP2P({ username: peerView.username })) {
-		removeActiveMatch(matchId);
+		removeP2PActiveMatch(matchId);
 		return {
 			statusCode: 403,
 			body: { success: false, error: 'starter claim required' },
@@ -439,16 +429,12 @@ async function getActiveMatchStatusResponse(req: Request, peerId: string): Promi
 }
 
 function getActiveMatchLeaveResponse(req: Request, peerId: string): ExistingQueueResponse | null {
-	const matchId = activeMatchIdsByPeerId.get(peerId);
+	const matchId = getP2PActiveMatchIdForPeer(peerId);
 	if (!matchId) return null;
-	const match = activeMatches.get(matchId);
-	if (!match) {
-		activeMatchIdsByPeerId.delete(peerId);
-		return null;
-	}
+	const match = getP2PActiveMatchById(matchId);
+	if (!match) return null;
 	const peerView = getP2PMatchPeerView(match, peerId);
 	if (!peerView) {
-		activeMatchIdsByPeerId.delete(peerId);
 		return null;
 	}
 	if (!hasValidQueueToken(req, peerView.queueTokenHash)) {
@@ -457,12 +443,12 @@ function getActiveMatchLeaveResponse(req: Request, peerId: string): ExistingQueu
 			body: { success: false, error: 'queue token required' },
 		};
 	}
-	activeMatchIdsByPeerId.delete(peerId);
+	releaseP2PActiveMatchPeer(peerId);
 	const otherStillMapped = match.player1 === peerId
-		? activeMatchIdsByPeerId.get(match.player2) === matchId
-		: activeMatchIdsByPeerId.get(match.player1) === matchId;
+		? hasP2PActiveMatchPeer(match.player2, matchId)
+		: hasP2PActiveMatchPeer(match.player1, matchId);
 	if (!otherStillMapped) {
-		removeActiveMatch(matchId);
+		removeP2PActiveMatch(matchId);
 	}
 	return {
 		statusCode: 200,
@@ -498,17 +484,19 @@ function tryBuildMatchTickets(
 	try {
 		return {
 			ok: true,
-			player1MatchTicket: buildP2PMatchTicket({
-				roomId: matchId,
-				peerId: opponent.peerId,
-				role: resolveP2PTransportRole(opponent.peerId, newPlayer.peerId),
+				player1MatchTicket: buildP2PMatchTicket({
+					roomId: matchId,
+					peerId: opponent.peerId,
+					scope: 'matchmaking',
+					role: resolveP2PTransportRole(opponent.peerId, newPlayer.peerId),
 				account: opponent.username,
 				now,
 			}),
-			player2MatchTicket: buildP2PMatchTicket({
-				roomId: matchId,
-				peerId: newPlayer.peerId,
-				role: resolveP2PTransportRole(newPlayer.peerId, opponent.peerId),
+				player2MatchTicket: buildP2PMatchTicket({
+					roomId: matchId,
+					peerId: newPlayer.peerId,
+					scope: 'matchmaking',
+					role: resolveP2PTransportRole(newPlayer.peerId, opponent.peerId),
 				account: newPlayer.username,
 				now,
 			}),
@@ -517,16 +505,6 @@ function tryBuildMatchTickets(
 		log(`Match ticket signing unavailable for matched pair: ${describeUnknownError(error)}`, 'Matchmaking');
 		return { ok: false, error: 'P2P match ticket signing unavailable' };
 	}
-}
-
-function registerActiveMatch(matchId: string, activeMatch: P2PActiveMatch): void {
-	activeMatches.set(matchId, activeMatch);
-	activeMatchIdsByPeerId.set(activeMatch.player1, matchId);
-	activeMatchIdsByPeerId.set(activeMatch.player2, matchId);
-	const activeMatchExpiryTimer = setTimeout(() => {
-		removeActiveMatch(matchId);
-	}, ACTIVE_MATCH_TTL_MS);
-	activeMatchExpiryTimer.unref?.();
 }
 
 function createPendingMatchOffer(
@@ -597,7 +575,7 @@ function commitPendingMatch(pending: PendingMatchOffer): MatchCreationResult {
 		player1QueueTokenHash: pending.playerA.queueTokenHash,
 		player2QueueTokenHash: pending.playerB.queueTokenHash,
 	};
-	registerActiveMatch(pending.offerA.matchId, activeMatch);
+	registerP2PActiveMatch(pending.offerA.matchId, activeMatch);
 	deletePendingMatchOffer(pending.offerA.offerId);
 	const peerView = getP2PMatchPeerView(activeMatch, pending.playerB.peerId);
 	if (!peerView) return { ok: false, statusCode: 500, error: 'P2P match peer view unavailable' };
@@ -771,8 +749,8 @@ router.post('/accept', validateQueuePeerId, requireMatchmakingSession, async (re
 	// Accept is retry-safe after the commit. This is important when the first
 	// response is lost: the client re-sends the cached proof and must not open
 	// Keychain again just because the pending offer has already been consumed.
-	const activeMatchId = activeMatchIdsByPeerId.get(peerId);
-	const activeMatch = activeMatchId ? activeMatches.get(activeMatchId) : undefined;
+	const activeMatchId = getP2PActiveMatchIdForPeer(peerId);
+	const activeMatch = activeMatchId ? getP2PActiveMatchById(activeMatchId) : undefined;
 	if (activeMatch && proof.offerId === activeMatch.offerId && proof.matchId === activeMatchId) {
 		const activeResponse = await getActiveMatchStatusResponse(req, peerId);
 		if (activeResponse) return res.status(activeResponse.statusCode).json(activeResponse.body);
@@ -902,7 +880,7 @@ router.get('/stats', (req: Request, res: Response) => {
 	res.json({
 		success: true,
 		queueLength: matchmakingQueue.length,
-		activeMatches: activeMatches.size,
+		activeMatches: getP2PActiveMatchCount(),
 	});
 });
 

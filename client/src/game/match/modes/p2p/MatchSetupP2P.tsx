@@ -21,7 +21,8 @@
  *
  * Lifetime invariants:
  *   - Quick Match children only render after bilateral acceptance and complete
- *     P2P readiness; legacy manual rooms retain the handshake-only path.
+ *     P2P readiness; direct challenge rooms retain their ticket/auth
+ *     compatibility path while sharing the BattleReady gate.
  *   - on unmount, useMatchStore is cleared.
  */
 
@@ -54,29 +55,31 @@ export function MatchSetupP2P({ children, fallback = null }: MatchSetupP2PProps)
 	const matchTicket = usePeerStore((s) => s.matchTicket);
 	const localAcceptanceVerified = usePeerStore((s) => s.p2pSessionLocalAuthorized);
 	const remoteAcceptanceVerified = usePeerStore((s) => s.p2pSessionRemoteAuthorized);
+	const localBattleReady = usePeerStore((s) => s.p2pBattleReadyLocal);
+	const remoteBattleReady = usePeerStore((s) => s.p2pBattleReadyRemote);
 
 	const handshakeReady =
 		connectionState === 'connected' &&
 		p2pInitApplied &&
 		matchSeed !== null &&
 		matchId !== null;
-	const battleReadiness = serverMatchCommitted
-		? computeP2PBattleReadiness({
-			activeMatchKind: 'peer',
-			serverMatchCommitted,
-			localAcceptanceVerified,
-			remoteAcceptanceVerified,
-			matchTicket,
-			expectedRoomId,
-			expectedPeerId: myPeerId,
-			connectionState,
-			remotePeerId,
-			matchId,
-			matchSeed,
-			opponentArmy,
-			p2pInitApplied,
-		})
-		: { ready: true as const };
+	const battleReadiness = computeP2PBattleReadiness({
+		activeMatchKind: 'peer',
+		serverMatchCommitted,
+		localAcceptanceVerified,
+		remoteAcceptanceVerified,
+		matchTicket,
+		expectedRoomId,
+		expectedPeerId: myPeerId,
+		connectionState,
+		remotePeerId,
+		matchId,
+		matchSeed,
+		opponentArmy,
+		p2pInitApplied,
+		localBattleReady,
+		remoteBattleReady,
+	});
 	const ready = handshakeReady && battleReadiness.ready;
 
 	useEffect(() => {

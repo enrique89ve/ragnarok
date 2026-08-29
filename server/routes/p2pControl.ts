@@ -31,6 +31,7 @@ import { getHiveWebSessionUsernameFromCookie } from '../services/hiveWebSession'
 import { verifyP2PMatchTicketForRoom, type P2PMatchTicketPayload } from '../services/p2pMatchTicketSigner';
 import { isP2PRelayOriginAllowed } from '../services/p2pRelayOrigin';
 import { hasP2PControlProtocol, readP2PControlTicketToken } from '../services/p2pControlProtocol';
+import { verifyP2PActiveMatchTicket } from '../services/p2pActiveMatchRegistry';
 
 type ControlMember = {
 	readonly connectionId: string;
@@ -57,6 +58,10 @@ function shouldRequireControlSession(): boolean {
 	return process.env.NODE_ENV === 'production'
 		|| process.env.VITE_NETWORK_STAGE === 'testnet'
 		|| process.env.VITE_NETWORK_STAGE === 'mainnet';
+}
+
+function shouldRequireActiveMatchTicket(): boolean {
+	return shouldRequireControlSession();
 }
 
 function isAllowedOrigin(req: IncomingMessage): boolean {
@@ -132,6 +137,10 @@ function validateUpgrade(req: IncomingMessage, roomId: string, peerId: string): 
 	});
 	if (!ticket.ok) {
 		return { ok: false, status: ticket.reason === 'server_unconfigured' ? 503 : 403, reason: 'Forbidden' };
+	}
+	if (shouldRequireActiveMatchTicket() && ticket.payload.scope === 'matchmaking' && token) {
+		const activeMatch = verifyP2PActiveMatchTicket({ token, roomId, peerId });
+		if (!activeMatch.ok) return { ok: false, status: 403, reason: 'Match is not active' };
 	}
 	if (!isP2PTransportRole(ticket.payload.role)) {
 		return { ok: false, status: 403, reason: 'Control role missing' };

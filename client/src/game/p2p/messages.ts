@@ -13,6 +13,7 @@ import type { GameCommandEnvelope } from '../hooks/p2pEnvelope';
 import type { ArmySelection } from '../types/ChessTypes';
 import type { GameStateWirePayload } from './stateFrameCodec';
 import type { MatchAcceptanceProof } from '../../../../shared/p2pMatchAcceptance';
+import type { P2PBattleReadyProof } from './battleReady';
 
 /**
  * Challenge shape allowed inside `session_authorize`.
@@ -59,6 +60,7 @@ export type WireMessage =
 	| { type: 'result_reject'; reason: string }
 	| { type: 'version_check'; buildHash: string }
 	| { type: 'wasm_hash_check'; wasmHash: string }
+	| ({ type: 'battle_ready_v1' } & P2PBattleReadyProof)
 	| { type: 'hash_check'; stateHash: string; chessStateHash: string; chessMoveCount: number; turnNumber: number }
 	| { type: 'poker_hash_check'; pokerStateHash: string; phase: 'pre_flop' | 'faith' | 'foresight' | 'destiny'; turnId: string; actionsThisRound: number }
 	| { type: 'hash_mismatch'; turnNumber: number; myHash: string }

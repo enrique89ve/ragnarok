@@ -1,5 +1,5 @@
 /**
- * P2PStatusBadge.tsx — Connection status indicator + reconnect overlay
+ * P2PStatusBadge.tsx — Compact connection status indicator
  *
  * Shows: connected (green), reconnecting (amber with countdown),
  * grace period (amber with countdown), error (red), buffered messages count.
@@ -22,12 +22,6 @@ function reconnectStatusLabel(hardReloadResume: boolean, attemptCount: number): 
 	return attemptCount > 0 ? `Attempt ${attemptCount}/2` : 'Reconnecting';
 }
 
-function reconnectPolicyCopy(hardReloadResume: boolean): string {
-	return hardReloadResume
-		? 'This device holds the match. The server only reopens the room (2 attempts, 60s).'
-		: 'Two reconnect attempts are allowed. The disconnected side loses after 60s.';
-}
-
 function badgeCaption(input: {
 	readonly connectionState: string;
 	readonly transportRoleLabel: string;
@@ -48,7 +42,7 @@ function shouldShowBadge(connectionState: string): boolean {
 		|| connectionState === 'error';
 }
 
-function shouldShowReconnectOverlay(connectionState: string): boolean {
+function shouldShowReconnectCountdown(connectionState: string): boolean {
 	return connectionState === 'reconnecting' || connectionState === 'grace_period';
 }
 
@@ -75,7 +69,7 @@ export const P2PStatusBadge: React.FC<P2PStatusBadgeProps> = ({ className = '' }
 
 	const config = STATUS_CONFIG[connectionState as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.connected;
 	const transportRoleLabel = formatP2PTransportRole(getP2PTransportRole(isHost));
-	const showCountdown = shouldShowReconnectOverlay(connectionState) && reconnectCountdown > 0;
+	const showCountdown = shouldShowReconnectCountdown(connectionState) && reconnectCountdown > 0;
 	const unstableSubject = disconnectSide === 'opponent' ? 'Opponent unstable' : 'Connection unstable';
 	const reconnectLabel = reconnectStatusLabel(hardReloadResume, reconnectAttemptCount);
 
@@ -152,35 +146,6 @@ export const P2PStatusBadge: React.FC<P2PStatusBadgeProps> = ({ className = '' }
 					<Download size={13} strokeWidth={2.2} aria-hidden="true" />
 				</button>
 			</div>
-
-			{/* Reconnecting overlay (semi-transparent, doesn't block game — like Madden) */}
-			{shouldShowReconnectOverlay(connectionState) && (
-				<div
-					style={{
-						position: 'fixed',
-						top: 0,
-						left: 0,
-						right: 0,
-						zIndex: 899,
-						background: 'linear-gradient(180deg, rgba(0,0,0,0.6) 0%, transparent 100%)',
-						padding: '48px 0 24px',
-						textAlign: 'center',
-						pointerEvents: 'none',
-					}}
-				>
-					<p style={{ color: config.color, fontSize: '16px', fontWeight: 700, letterSpacing: '0.05em' }}>
-						{connectionState === 'reconnecting' ? reconnectLabel : unstableSubject}
-					</p>
-					{showCountdown && (
-						<p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12px', marginTop: '4px' }}>
-							{reconnectCountdown}s remaining before technical result
-						</p>
-					)}
-					<p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '11px', marginTop: '8px' }}>
-						{reconnectPolicyCopy(hardReloadResume)}
-					</p>
-				</div>
-			)}
 		</>
 	);
 };

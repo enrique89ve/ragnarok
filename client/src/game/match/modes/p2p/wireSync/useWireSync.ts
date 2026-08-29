@@ -8,7 +8,7 @@ import { useUnifiedCombatStore } from '../../../../stores/unifiedCombatStore';
 import { debug } from '../../../../config/debugConfig';
 import { getRagnarokNetworkConfig } from '../../../../config/networkConfig';
 import { verifyDeckOwnership } from '../../../../../data/blockchain/deckVerification';
-import { sha256Hash } from '../../../../../data/blockchain/hashUtils';
+import { canonicalStringify, sha256Hash } from '../../../../../data/blockchain/hashUtils';
 import { computeMatchResultCommitmentHash } from '../../../../../data/blockchain/matchResultPackager';
 import { verifyDeckClaims as verifyDeckClaimsOnServer } from '../../../../../data/chainAPI';
 import { getNFTBridge } from '../../../../nft';
@@ -82,6 +82,7 @@ import { settleRemotePokerAction } from './pokerP2PActionCommit';
 import { commitRemotePokerDecision, hasRemotePokerDecision } from './remotePokerDecisionLedger';
 import { stripRelayMatchTicketFromSessionChallenge } from '../../../../p2p/sessionAuthChallenge';
 import { decodeWireGameState, encodeGameStateForWire } from '../../../../p2p/stateFrameCodec';
+import { getCardRegistryHash } from '../../../../data/effects/registryHash';
 import {
 	CHESS_INTEGRITY_PROTOCOL_VERSION,
 	CHESS_INTEGRITY_SCOPE,
@@ -104,6 +105,7 @@ import { settleRemoteCommand } from './remoteCommandSettlement';
 import { getCachedMatchAcceptance } from '../../../../p2p/matchAcceptance';
 import { buildMatchAcceptanceMessage, readMatchAcceptanceProof } from '../../../../../../../shared/p2pMatchAcceptance';
 import { useMatchmakingStore } from '../../../../stores/matchmakingStore';
+import { compareBattleReadyProofs, type P2PBattleReadyProof } from '../../../../p2p/battleReady';
 
 export type { GameCommandEnvelope, WireGameCommand } from '../../../../hooks/p2pEnvelope';
 export type { P2PMessage } from '../../../../p2p/messages';
@@ -249,6 +251,7 @@ export function useWireSync() {
 	const isFirstMover = _authority?.kind === 'p2p-symmetric' && _authority.myRole === 'first-mover';
 	void isFirstMover; // Intentional: reserved for OPEN-8 migration (see comment above).
 	const send = usePeerStore(state => state.send);
+	const p2pInitApplied = usePeerStore(state => state.p2pInitApplied);
 
 	const playCard = useGameStore(state => state.playCard);
 	const attackWithCard = useGameStore(state => state.attackWithCard);
@@ -277,6 +280,7 @@ export function useWireSync() {
 	// compatibility path below.
 	const sessionKeyRef = useRef<SessionKey | null>(null);
 	const sessionAuthorizeSentRef = useRef(false);
+	const battleReadySentMatchRef = useRef<string | null>(null);
 	const opponentSessionPubkeyRef = useRef<string | null>(null);
 	const opponentSessionHiveSigRef = useRef<string | null>(null);
 	// ADR 0004 §Decision.4 — per-action signed transcript (issue 03). Both
@@ -415,11 +419,13 @@ export function useWireSync() {
 			sessionAuthorizeSentRef.current = false;
 			opponentSessionPubkeyRef.current = null;
 			opponentSessionHiveSigRef.current = null;
+			battleReadySentMatchRef.current = null;
 			usePeerStore.getState().setP2pSessionAuthorization({
 				localAuthorized: false,
 				remoteAuthorized: false,
 				error: null,
 			});
+			usePeerStore.getState().clearP2pBattleReady();
 			signedTranscriptRef.current = null;
 			myBroadcasterRef.current = null;
 			return undefined;
@@ -575,6 +581,8 @@ export function useWireSync() {
 			remoteDeckAnnounceRef.current = null;
 			remoteDeckClaimsRef.current = null;
 			remoteDeckVerificationRef.current = 'pending';
+			battleReadySentMatchRef.current = null;
+			usePeerStore.getState().clearP2pBattleReady();
 			return undefined;
 		}
 		if (seedResolvedRef.current) return undefined;
@@ -591,6 +599,77 @@ export function useWireSync() {
 		}, 10_000);
 		return () => clearTimeout(timeout);
 	}, [connection, connectionState]);
+
+	// Battle readiness is a bilateral protocol fact, not an inference from the
+	// transport being open. Both peers publish the same engine/ruleset/root
+	// contract and the setup gate only opens after both proofs agree.
+	const hasInitialGameState = useGameStore(state => state.gameState !== null);
+	useEffect(() => {
+		if (!connection || connectionState !== 'connected' || !p2pInitApplied || !hasInitialGameState) {
+			battleReadySentMatchRef.current = null;
+			return undefined;
+		}
+		const matchId = matchIdRef.current;
+		if (!matchId || battleReadySentMatchRef.current === matchId) return undefined;
+		let cancelled = false;
+
+		void (async () => {
+			try {
+				const cachedAcceptance = getCachedMatchAcceptance();
+				await loadWasmEngine();
+				const engineHash = cachedAcceptance?.offer.matchId === matchId
+					? cachedAcceptance.proof.engineHash
+					: getWasmHash();
+				const rulesetHash = cachedAcceptance?.offer.matchId === matchId
+					? cachedAcceptance.proof.rulesetHash
+					: await getCardRegistryHash();
+				const army = selectArmy(useWarbandStore.getState());
+				if (!army) throw new Error('Local army is not available for battle readiness');
+				const loadoutHash = await sha256Hash(canonicalStringify({
+					army: {
+						king: army.king.id,
+						queen: army.queen.id,
+						rook: army.rook.id,
+						bishop: army.bishop.id,
+						knight: army.knight.id,
+					},
+					deckCardIds: [...selectDeckCardIds(useWarbandStore.getState())],
+				}));
+				const gameState = useGameStore.getState().gameState;
+				if (!gameState) throw new Error('Initial game state is not available for battle readiness');
+				const initialStateRoot = await computeStateHash(isHostFrame ? gameState : flipGameState(gameState));
+				if (!initialStateRoot) throw new Error('Initial game state root is empty');
+				if (cancelled || !isCurrentConnectedMatch(matchId)) return;
+
+				const proof: P2PBattleReadyProof = {
+					matchId,
+					engineHash,
+					rulesetHash,
+					loadoutHash,
+					initialStateRoot,
+				};
+				battleReadySentMatchRef.current = matchId;
+				const remoteProof = usePeerStore.getState().p2pBattleReadyRemote;
+				const comparison = remoteProof ? compareBattleReadyProofs(proof, remoteProof) : null;
+				usePeerStore.getState().setP2pBattleReady({
+					local: proof,
+					...(comparison && !comparison.ok ? { error: comparison.reason } : { error: null }),
+				});
+				send({ type: 'battle_ready_v1', ...proof });
+			} catch (error) {
+				if (cancelled) return;
+				debug.error('[wireSync] battle readiness failed:', error);
+				usePeerStore.getState().setP2pBattleReady({
+					local: null,
+					error: error instanceof Error ? error.message : 'Battle readiness failed',
+				});
+			}
+		})();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [connection, connectionState, hasInitialGameState, isCurrentConnectedMatch, isHostFrame, p2pInitApplied, send]);
 
 	// Detect when connection closes and notify the player
 	useEffect(() => {
@@ -799,6 +878,38 @@ export function useWireSync() {
 							duration: 8000,
 						});
 					}
+					break;
+				}
+
+				case 'battle_ready_v1': {
+					const activeMatchId = matchIdRef.current;
+					if (!activeMatchId || data.matchId !== activeMatchId) {
+						debug.warn('[wireSync] battle_ready_v1 ignored — match identity mismatch');
+						break;
+					}
+					const remoteProof: P2PBattleReadyProof = {
+						matchId: data.matchId,
+						engineHash: data.engineHash,
+						rulesetHash: data.rulesetHash,
+						loadoutHash: data.loadoutHash,
+						initialStateRoot: data.initialStateRoot,
+					};
+					const localProof = usePeerStore.getState().p2pBattleReadyLocal;
+					const comparison = localProof ? compareBattleReadyProofs(localProof, remoteProof) : null;
+					if (comparison && !comparison.ok) {
+						debug.error('[wireSync] battle-ready proof mismatch:', comparison.reason);
+						usePeerStore.getState().setP2pBattleReady({
+							remote: null,
+							error: comparison.reason,
+						});
+						GameEventBus.emitNotification({
+							level: 'error',
+							message: `${comparison.reason}. Match start is paused until both clients use the same build.`,
+							duration: 8000,
+						});
+						break;
+					}
+					usePeerStore.getState().setP2pBattleReady({ remote: remoteProof, error: null });
 					break;
 				}
 

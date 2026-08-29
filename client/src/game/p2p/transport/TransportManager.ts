@@ -68,17 +68,25 @@ async function connectWithinBudget(
 	transport: GameTransport,
 	deadlineAt: number,
 	message: string,
+	abortPromise?: Promise<never>,
 ): Promise<void> {
 	const remaining = remainingBudget(deadlineAt);
 	if (remaining <= 0) throw createTransportFailure(message, 'timeout');
 	let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
 	try {
-		await Promise.race([
+		const pending = [
 			transport.connect(),
 			new Promise<never>((_, reject) => {
 				timeoutHandle = setTimeout(() => reject(createTransportFailure(message, 'timeout')), remaining);
 			}),
-		]);
+		];
+		if (abortPromise) pending.push(abortPromise);
+		await Promise.race(pending);
+	} catch (error) {
+		// A timeout or manager close must actively close the adapter. Otherwise
+		// its late `connect()` resolution can publish a stale open event.
+		try { transport.close(); } catch { /* adapter may already be closed */ }
+		throw error;
 	} finally {
 		if (timeoutHandle) clearTimeout(timeoutHandle);
 	}
@@ -101,6 +109,7 @@ export function createTransportManager(
 	let hostHint = options.isHostHint;
 	let open = false;
 	let closed = false;
+	let cancelPendingConnect: (() => void) | null = null;
 
 	const emit = (event: TransportEvent, ...args: unknown[]): void => {
 		for (const listener of eventListeners.get(event) ?? []) {
@@ -164,15 +173,28 @@ export function createTransportManager(
 		};
 	};
 
-	const connectOne = async (transport: GameTransport, attemptId: number, budgetMs: number): Promise<void> => {
+	const connectOne = async (
+		transport: GameTransport,
+		attemptId: number,
+		budgetMs: number,
+		abortPromise?: Promise<never>,
+	): Promise<void> => {
 		attachSelected(transport, attemptId);
 		const deadlineAt = Date.now() + safeConnectBudget(budgetMs);
-		await connectWithinBudget(transport, deadlineAt, `${transport.kind} transport connection timed out`);
+		await connectWithinBudget(
+			transport,
+			deadlineAt,
+			`${transport.kind} transport connection timed out`,
+			abortPromise,
+		);
 		if (!options.session.isCurrent(attemptId) || closed) {
 			try { transport.close(); } catch { /* stale attempt */ }
 			throw new Error('Transport connection attempt became stale');
 		}
 		if (!open) {
+			if (transport.state !== 'connected') {
+				throw new Error(`${transport.kind} transport did not confirm an open state`);
+			}
 			if (!options.session.selectTransport(attemptId, transport.kind)) throw new Error('Transport connection attempt became stale');
 			open = true;
 			remotePeer = 'peer' in transport && typeof transport.peer === 'string' ? transport.peer : '';
@@ -189,6 +211,9 @@ export function createTransportManager(
 		setState('connecting');
 		connectPromise = (async () => {
 			const attemptId = options.session.beginAttempt();
+			const abortPromise = new Promise<never>((_, reject) => {
+				cancelPendingConnect = () => reject(createTransportFailure('Transport manager closed', 'manual'));
+			});
 			const plan = options.plan;
 			if (plan.mode === 'unavailable') {
 				setState('failed');
@@ -216,17 +241,17 @@ export function createTransportManager(
 						connectTimeoutMs: safeConnectBudget(plan.webrtcConnectMs),
 						...(options.iceServers ? { iceServers: options.iceServers } : {}),
 					});
-					await connectOne(webRtc, attemptId, plan.webrtcConnectMs);
+					await connectOne(webRtc, attemptId, plan.webrtcConnectMs, abortPromise);
 					recordWebRTCConnected();
 					return;
 				} catch (error) {
 					webRtcError = toError(error, 'WebRTC connection failed');
 					recordWebRTCFailed(getTransportFailureReason(error) ?? 'manual');
-					try { webRtc?.close(); } catch { /* already closed */ }
 					cleanupSelected();
 					selected = null;
 				}
 			}
+			if (closed) throw webRtcError ?? new Error('Transport manager is closed');
 
 			if (plan.mode === 'webrtc-first' && !plan.relayFallback) {
 				setState('failed');
@@ -245,7 +270,7 @@ export function createTransportManager(
 					peerId: options.peerId,
 					matchTicket: options.matchTicket,
 				});
-				await connectOne(relay, attemptId, plan.relayConnectMs);
+				await connectOne(relay, attemptId, plan.relayConnectMs, abortPromise);
 			} catch (error) {
 				setState('failed');
 				const finalError = toError(error, 'Relay connection failed');
@@ -257,12 +282,16 @@ export function createTransportManager(
 			await connectPromise;
 		} finally {
 			connectPromise = null;
+			cancelPendingConnect = null;
 		}
 	};
 
 	const close = (): void => {
 		if (closed) return;
 		closed = true;
+		options.session.invalidate();
+		cancelPendingConnect?.();
+		cancelPendingConnect = null;
 		cleanupSelected();
 		try { selected?.close(); } catch { /* already closed */ }
 		selected = null;

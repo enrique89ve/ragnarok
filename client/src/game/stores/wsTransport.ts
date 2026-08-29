@@ -119,11 +119,14 @@ export class LocalWebSocketTransport {
 
 	send(data: unknown): void {
 		const ws = this.ws;
-		if (!ws || ws.readyState !== WebSocket.OPEN) return;
+		if (!ws || ws.readyState !== WebSocket.OPEN) {
+			throw new Error('WebSocket relay is not open');
+		}
 		try {
 			ws.send(JSON.stringify(data));
 		} catch (err) {
 			debug.warn('[WSTransport] send failed:', err);
+			throw err instanceof Error ? err : new Error('WebSocket relay send failed');
 		}
 	}
 
