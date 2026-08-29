@@ -46,7 +46,6 @@ export function createP2PControlChannel(options: Readonly<{
 	readonly roomId: string;
 	readonly peerId: string;
 	readonly matchTicket: P2PMatchTicket;
-	readonly transportKind: 'webrtc' | 'websocket-relay';
 	readonly connectTimeoutMs?: number;
 }>): P2PControlChannel {
 	const messageListeners = new Set<(message: P2PControlServerMessage) => void>();
@@ -123,6 +122,7 @@ export function createP2PControlChannel(options: Readonly<{
 	};
 
 	const handleMessage = (raw: unknown): void => {
+		if (closed || state === 'closed') return;
 		let payload: unknown = raw;
 		if (typeof payload === 'string') {
 			try { payload = JSON.parse(payload); }
@@ -147,14 +147,6 @@ export function createP2PControlChannel(options: Readonly<{
 			remotePeer = message.opponentPeerId;
 			setState('connected');
 			settleConnect();
-			try {
-				send({
-					type: 'transport_ready_v1',
-					protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
-					matchId: options.roomId,
-					kind: options.transportKind,
-				});
-			} catch { /* the peer may close immediately after control_open */ }
 			return;
 		}
 		if (message.type === 'control_peer_left_v1') {

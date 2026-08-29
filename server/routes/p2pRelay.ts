@@ -56,6 +56,8 @@ import { verifyP2PActiveMatchTicket } from '../services/p2pActiveMatchRegistry';
 import { hasStarterCeremonyClaim } from '../services/starterClaimRegistry';
 import {
 	markP2PActiveMatchTerminalFromCheckpoint,
+	markP2PRefereePlaneConnected,
+	markP2PRefereePlaneDisconnected,
 	p2pPhaseCheckpointCoordinator,
 	p2pPokerTimeNotary,
 } from '../services/p2pReferee';
@@ -68,12 +70,9 @@ type RoomMember = {
 
 const rooms = new Map<string, RoomMember[]>();
 const relayAliveSockets = new WeakSet<WebSocket>();
-const emptyCheckpointRoomExpiry = new Map<string, number>();
 
 const ROOM_MAX_PEERS = 2;
 const KEEPALIVE_INTERVAL_MS = 15_000;
-const CHECKPOINT_RECONNECT_RETENTION_MS = 120_000;
-const CHECKPOINT_SWEEP_INTERVAL_MS = 30_000;
 const CHECKPOINT_TOKEN_CAPACITY = 8;
 const CHECKPOINT_TOKEN_REFILL_MS = 2_000;
 // Initial GameState sync is gzip-framed before relay fan-out; keep frames tight.
@@ -381,8 +380,8 @@ export function attachP2PRelay(server: HttpServer): void {
 		if (!room) {
 			room = [];
 			rooms.set(roomId, room);
+			markP2PRefereePlaneConnected(roomId, 'relay');
 		}
-		emptyCheckpointRoomExpiry.delete(roomId);
 
 		if (room.length >= ROOM_MAX_PEERS) {
 			recordP2PRelayError('room_full');
@@ -545,10 +544,7 @@ export function attachP2PRelay(server: HttpServer): void {
 			}
 			if (currentRoom.length === 0) {
 				rooms.delete(roomId);
-				emptyCheckpointRoomExpiry.set(
-					roomId,
-					Date.now() + CHECKPOINT_RECONNECT_RETENTION_MS,
-				);
+				markP2PRefereePlaneDisconnected(roomId, 'relay');
 			}
 		};
 
@@ -576,14 +572,4 @@ export function attachP2PRelay(server: HttpServer): void {
 	}, KEEPALIVE_INTERVAL_MS);
 	keepaliveTimer.unref?.();
 
-	const checkpointSweepTimer = setInterval(() => {
-		const now = Date.now();
-		for (const [roomId, expiresAt] of emptyCheckpointRoomExpiry) {
-			if (expiresAt > now || rooms.has(roomId)) continue;
-			emptyCheckpointRoomExpiry.delete(roomId);
-			p2pPhaseCheckpointCoordinator.dropRoom(roomId);
-			p2pPokerTimeNotary.dropRoom(roomId);
-		}
-	}, CHECKPOINT_SWEEP_INTERVAL_MS);
-	checkpointSweepTimer.unref?.();
 }

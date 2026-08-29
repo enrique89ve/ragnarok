@@ -14,7 +14,11 @@ import type {
 	TransportStateListener,
 } from './transportTypes';
 import { createP2PControlChannel, type P2PControlChannel } from './P2PControlChannel';
-import type { P2PControlClientMessage, P2PControlServerMessage } from '@shared/p2p-wire/control';
+import {
+	P2P_CONTROL_PROTOCOL_VERSION,
+	type P2PControlClientMessage,
+	type P2PControlServerMessage,
+} from '@shared/p2p-wire/control';
 
 export type WebSocketRelayTransport = GameTransport & {
 	readonly peer: string;
@@ -42,7 +46,6 @@ export function createWebSocketRelayTransport(
 			roomId: options.roomId,
 			peerId: options.peerId,
 			matchTicket: options.matchTicket,
-			transportKind: 'websocket-relay',
 		})
 		: null;
 	const stateListeners = new Set<TransportStateListener>();
@@ -51,9 +54,32 @@ export function createWebSocketRelayTransport(
 	let connectPromise: Promise<void> | null = null;
 	let relayReady = false;
 	let controlReady = control === null;
+	let transportReadySent = false;
+	let cancelRelayConnect: (() => void) | null = null;
+
+	const sendTransportReady = (): void => {
+		if (!control || transportReadySent) return;
+		control.send({
+			type: 'transport_ready_v1',
+			protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+			matchId: options.roomId,
+			kind: 'websocket-relay',
+		});
+		transportReadySent = true;
+	};
 
 	const maybeSetConnected = (): void => {
-		if (relayReady && controlReady && state === 'connecting') setState('connected');
+		if (!relayReady || !controlReady || state !== 'connecting') return;
+		try {
+			sendTransportReady();
+		} catch (error) {
+			debug.error('[WebSocketRelayTransport] failed to announce transport readiness:', error);
+			setState('failed');
+			control?.close();
+			relay.close();
+			return;
+		}
+		setState('connected');
 	};
 
 	const emitControlMessage = (message: P2PControlServerMessage): void => {
@@ -76,7 +102,9 @@ export function createWebSocketRelayTransport(
 		relayReady = true;
 		maybeSetConnected();
 	});
-	relay.on('close', () => setState('failed'));
+	relay.on('close', () => {
+		if (state !== 'closed') setState('failed');
+	});
 	relay.on('error', () => {
 		if (state !== 'closed') setState('failed');
 	});
@@ -93,29 +121,40 @@ export function createWebSocketRelayTransport(
 	const connect = (): Promise<void> => {
 		if (state === 'connected') return Promise.resolve();
 		if (connectPromise) return connectPromise;
+		if (state === 'closed') return Promise.reject(new Error('WebSocket relay is closed'));
 
 		setState('connecting');
 		const relayConnect = new Promise<void>((resolve, reject) => {
+			let settled = false;
+			let cancel: (() => void) | null = null;
+			const cleanup = (): void => {
+				relay.off('open', onOpen);
+				relay.off('close', onClose);
+				relay.off('error', onError);
+				if (cancelRelayConnect === cancel) cancelRelayConnect = null;
+			};
 			const onOpen = (): void => {
+				if (settled) return;
+				settled = true;
 				cleanup();
 				relayReady = true;
 				maybeSetConnected();
 				resolve();
 			};
 			const onClose = (): void => {
+				if (settled) return;
+				settled = true;
 				cleanup();
 				reject(new Error('WebSocket relay closed before connecting'));
 			};
 			const onError = (args: unknown): void => {
+				if (settled) return;
+				settled = true;
 				cleanup();
 				reject(args instanceof Error ? args : new Error('WebSocket relay failed to connect'));
 			};
-			const cleanup = (): void => {
-				relay.off('open', onOpen);
-				relay.off('close', onClose);
-				relay.off('error', onError);
-				connectPromise = null;
-			};
+			cancel = onClose;
+			cancelRelayConnect = cancel;
 
 			relay.on('open', onOpen);
 			relay.on('close', onClose);
@@ -126,8 +165,10 @@ export function createWebSocketRelayTransport(
 		connectPromise = Promise.all([relayConnect, controlConnect])
 			.then(() => undefined)
 			.catch(error => {
+				cancelRelayConnect?.();
 				control?.close();
 				relay.close();
+				if (state !== 'closed') setState('failed');
 				throw error instanceof Error ? error : new Error('P2P relay/control connection failed');
 			})
 			.finally(() => { connectPromise = null; });
@@ -160,7 +201,10 @@ export function createWebSocketRelayTransport(
 		onMessage,
 		onStateChange,
 		close: (): void => {
+			if (state === 'closed') return;
 			setState('closed');
+			cancelRelayConnect?.();
+			cancelRelayConnect = null;
 			control?.close();
 			relay.close();
 		},
@@ -173,6 +217,10 @@ export function createWebSocketRelayTransport(
 	if (!control) return baseTransport;
 	return {
 		...baseTransport,
+		get state(): TransportState { return state; },
+		get peer(): string { return relay.peer; },
+		get open(): boolean { return relay.open; },
+		get isHostHint(): boolean { return relay.isHostHint; },
 		controlAvailable: true,
 		sendControlMessage: (message: P2PControlClientMessage) => control.send(message),
 		onControlMessage: (listener: (message: P2PControlServerMessage) => void) => {

@@ -67,7 +67,6 @@ describe('P2P control channel', () => {
 			roomId: ticket.roomId,
 			peerId: ticket.peerId,
 			matchTicket: ticket,
-			transportKind: 'websocket-relay',
 		});
 		channel.onMessage(message => received.push(message));
 		const pending = channel.connect();
@@ -100,9 +99,18 @@ describe('P2P control channel', () => {
 		})).not.toContain(ticket.token);
 		expect(buildP2PControlWebSocketProtocols(ticket)).toHaveLength(2);
 		expect(sent).toContainEqual(expect.objectContaining({ type: 'control_hello_v1' }));
-		expect(sent).toContainEqual(expect.objectContaining({ type: 'transport_ready_v1', kind: 'websocket-relay' }));
+		expect(sent).not.toContainEqual(expect.objectContaining({ type: 'transport_ready_v1' }));
 		expect(received).toHaveLength(1);
 		channel.close();
+		socket.triggerMessage({
+			type: 'control_open_v1',
+			protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+			matchId: ticket.roomId,
+			peerId: ticket.peerId,
+			opponentPeerId: 'peer-b',
+			role: 'offerer',
+		});
+		expect(channel.state).toBe('closed');
 	});
 
 	it('fails closed when the authenticated control identity does not match', async () => {
@@ -116,7 +124,6 @@ describe('P2P control channel', () => {
 			roomId: ticket.roomId,
 			peerId: ticket.peerId,
 			matchTicket: ticket,
-			transportKind: 'websocket-relay',
 		});
 		const pending = channel.connect();
 		socket.triggerOpen();

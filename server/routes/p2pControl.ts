@@ -34,6 +34,8 @@ import { hasP2PControlProtocol, readP2PControlTicketToken } from '../services/p2
 import { verifyP2PActiveMatchTicket } from '../services/p2pActiveMatchRegistry';
 import {
 	markP2PActiveMatchTerminalFromCheckpoint,
+	markP2PRefereePlaneConnected,
+	markP2PRefereePlaneDisconnected,
 	p2pPhaseCheckpointCoordinator,
 	p2pPokerTimeNotary,
 } from '../services/p2pReferee';
@@ -246,6 +248,7 @@ export function attachP2PControl(server: HttpServer): void {
 		if (!room) {
 			room = [];
 			rooms.set(roomId, room);
+			markP2PRefereePlaneConnected(roomId, 'control');
 		}
 		if (room.length >= ROOM_MAX_PEERS || room.some(member => member.peerId === peerId)) {
 			sendError(ws, 'protocol');
@@ -398,8 +401,7 @@ export function attachP2PControl(server: HttpServer): void {
 			}
 			if (currentRoom.length === 0) {
 				rooms.delete(roomId);
-				p2pPhaseCheckpointCoordinator.dropRoom(roomId);
-				p2pPokerTimeNotary.dropRoom(roomId);
+				markP2PRefereePlaneDisconnected(roomId, 'control');
 			}
 		};
 		ws.on('close', handleDeparture);

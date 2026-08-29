@@ -188,8 +188,9 @@ describe('P2P control websocket', () => {
 		};
 		alice.send(JSON.stringify(checkpoint));
 		bob.send(JSON.stringify(checkpoint));
-		await expect(checkpointOnAlice).resolves.toMatchObject({ type: 'phase_checkpoint_commit_v1', epoch: 1, stateRoot: '1'.repeat(64) });
-		await expect(checkpointOnBob).resolves.toMatchObject({ type: 'phase_checkpoint_commit_v1', epoch: 1, stateRoot: '1'.repeat(64) });
+		const [firstCheckpointOnAlice, firstCheckpointOnBob] = await Promise.all([checkpointOnAlice, checkpointOnBob]);
+		expect(firstCheckpointOnAlice).toMatchObject({ type: 'phase_checkpoint_commit_v1', epoch: 1, stateRoot: '1'.repeat(64) });
+		expect(firstCheckpointOnBob).toMatchObject({ type: 'phase_checkpoint_commit_v1', epoch: 1, stateRoot: '1'.repeat(64) });
 
 		const notaryOnAlice = waitForType(alice, 'poker_turn_notary_commit_v1');
 		const notaryOnBob = waitForType(bob, 'poker_turn_notary_commit_v1');
@@ -205,8 +206,9 @@ describe('P2P control websocket', () => {
 		};
 		alice.send(JSON.stringify(turn));
 		bob.send(JSON.stringify(turn));
-		await expect(notaryOnAlice).resolves.toMatchObject({ type: 'poker_turn_notary_commit_v1', matchId: roomId, turnId: turn.turnId });
-		await expect(notaryOnBob).resolves.toMatchObject({ type: 'poker_turn_notary_commit_v1', matchId: roomId, turnId: turn.turnId });
+		const [firstNotaryOnAlice, firstNotaryOnBob] = await Promise.all([notaryOnAlice, notaryOnBob]);
+		expect(firstNotaryOnAlice).toMatchObject({ type: 'poker_turn_notary_commit_v1', matchId: roomId, turnId: turn.turnId });
+		expect(firstNotaryOnBob).toMatchObject({ type: 'poker_turn_notary_commit_v1', matchId: roomId, turnId: turn.turnId });
 
 		const actionOnBob = waitForType(bob, 'poker_action_time_gate_v1');
 		alice.send(JSON.stringify({
@@ -223,6 +225,55 @@ describe('P2P control websocket', () => {
 
 		bob.send(JSON.stringify({ type: 'webrtc_offer_v1', protocolVersion: 1, matchId: roomId, sdp: 'forbidden-glare' }));
 		await new Promise(resolve => setTimeout(resolve, 100));
+
+		const closeAndWait = (socket: WebSocket): Promise<void> => new Promise(resolve => {
+			if (socket.readyState === WebSocket.CLOSED) {
+				resolve();
+				return;
+			}
+			socket.once('close', () => resolve());
+			socket.close();
+		});
+		await Promise.all([closeAndWait(alice), closeAndWait(bob)]);
+
+		const aliceReconnected = new WebSocket(`${wsUrl}&peer=peer-a`, controlProtocols(aliceTicket.token), { headers: { Cookie: aliceCookie } });
+		const bobReconnected = new WebSocket(`${wsUrl}&peer=peer-b`, controlProtocols(bobTicket.token), { headers: { Cookie: bobCookie } });
+		sockets.push(aliceReconnected, bobReconnected);
+		await Promise.all([
+			new Promise<void>((resolve, reject) => { aliceReconnected.once('open', () => resolve()); aliceReconnected.once('error', reject); }),
+			new Promise<void>((resolve, reject) => { bobReconnected.once('open', () => resolve()); bobReconnected.once('error', reject); }),
+		]);
+		const aliceReconnectedOpen = waitForType(aliceReconnected, 'control_open_v1');
+		const bobReconnectedOpen = waitForType(bobReconnected, 'control_open_v1');
+		aliceReconnected.send(hello('peer-a'));
+		bobReconnected.send(hello('peer-b'));
+		await Promise.all([aliceReconnectedOpen, bobReconnectedOpen]);
+
+		const resumedNotaryOnAlice = waitForType(aliceReconnected, 'poker_turn_notary_commit_v1');
+		const resumedNotaryOnBob = waitForType(bobReconnected, 'poker_turn_notary_commit_v1');
+		aliceReconnected.send(JSON.stringify(turn));
+		bobReconnected.send(JSON.stringify(turn));
+		const [resumedAliceCommit, resumedBobCommit] = await Promise.all([resumedNotaryOnAlice, resumedNotaryOnBob]);
+		expect(resumedAliceCommit.serverStartedAtMs).toBe(firstNotaryOnAlice.serverStartedAtMs);
+		expect(resumedAliceCommit.serverDeadlineAtMs).toBe(firstNotaryOnAlice.serverDeadlineAtMs);
+		expect(resumedBobCommit.serverStartedAtMs).toBe(firstNotaryOnBob.serverStartedAtMs);
+		expect(resumedBobCommit.serverDeadlineAtMs).toBe(firstNotaryOnBob.serverDeadlineAtMs);
+
+		const resumedCheckpointOnAlice = waitForType(aliceReconnected, 'phase_checkpoint_commit_v1');
+		const resumedCheckpointOnBob = waitForType(bobReconnected, 'phase_checkpoint_commit_v1');
+		const nextCheckpoint = {
+			...checkpoint,
+			epoch: 2,
+			fromPhase: 'poker_combat',
+			toPhase: 'chess',
+			previousCheckpointId: firstCheckpointOnAlice.checkpointId,
+			stateRoot: '2'.repeat(64),
+		};
+		aliceReconnected.send(JSON.stringify(nextCheckpoint));
+		bobReconnected.send(JSON.stringify(nextCheckpoint));
+		const [resumedAliceCheckpoint, resumedBobCheckpoint] = await Promise.all([resumedCheckpointOnAlice, resumedCheckpointOnBob]);
+		expect(resumedAliceCheckpoint).toMatchObject({ epoch: 2, previousCheckpointId: firstCheckpointOnAlice.checkpointId, stateRoot: '2'.repeat(64) });
+		expect(resumedBobCheckpoint).toMatchObject({ epoch: 2, previousCheckpointId: firstCheckpointOnBob.checkpointId, stateRoot: '2'.repeat(64) });
 	});
 
 	it('rejects a control upgrade without a session or with a mismatched session account', async () => {
