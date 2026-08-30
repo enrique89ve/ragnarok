@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { MAX_MATCH_ID_LENGTH } from '../p2pAvailability';
 
 import {
 	CHESS_INTEGRITY_PROTOCOL_VERSION,
@@ -14,6 +15,20 @@ const CHESS_HASH = Hash256Schema.parse('1'.repeat(64));
 const CARDS_HASH = Hash256Schema.parse('2'.repeat(64));
 
 describe('computeChessIntegrityRoot', () => {
+	it('accepts a server-issued Quick Match identity up to the canonical bound', () => {
+		const quickMatchId = 'f19afea5-d187-4b32-a0d1-b1bcb63d5de3-ab1fecca-7e50-4768-87d3-7fdd32cbca88';
+		expect(() => computeChessIntegrityRoot({
+			matchId: quickMatchId,
+			chessHash: CHESS_HASH,
+			cardsHash: CARDS_HASH,
+		})).not.toThrow();
+		expect(() => computeChessIntegrityRoot({
+			matchId: 'm'.repeat(MAX_MATCH_ID_LENGTH + 1),
+			chessHash: CHESS_HASH,
+			cardsHash: CARDS_HASH,
+		})).toThrow();
+	});
+
 	it('is deterministic for identical canonical inputs', () => {
 		const input = {
 			matchId: 'match-integrity-1',

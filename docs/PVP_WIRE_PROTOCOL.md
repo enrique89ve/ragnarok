@@ -377,9 +377,13 @@ Triggered by `useWireSync.ts:166-251` (effect dependent on
    - Verifies `SHA256(theirSalt) === theirCommitment`. Mismatch → disconnect.
    - Derives `matchSeed = SHA256(sortedSalts.join(''))` where sorting is
      by lexicographical peer-id order.
-   - Derives `matchId = SHA256(matchSeed + sortedPeerIds.join('')).slice(0,16)`.
-     Sorting matters: chess and cards both hash symmetrically, so both peers
-     must arrive at the same value. Bug fixed in commit `dd9112c`.
+   - Derives the legacy manual-room identity as
+     `SHA256(matchSeed + sortedPeerIds.join('')).slice(0,16)`. Quick Match
+     instead reuses the server-issued `matchId` from the accepted offer so the
+     relay room, acceptance proof, `MatchContext`, and transcript share one
+     identity. Wire schemas accept that canonical identity through
+     `MAX_MATCH_ID_LENGTH` (256 characters). Sorting still matters for the
+     legacy derivation; bug fixed in commit `dd9112c`.
    - Derives `myCanonicalSide = parity(matchSeed[0]) XOR isHost` →
      `'player' | 'opponent'` (`shared/p2p-wire/chess.ts`). This is the
      canonical (global) side, NOT viewer-relative.
@@ -1070,7 +1074,7 @@ the design is settled.
 | **host** | The peer with the lexicographically smaller `peerId`. Stable across reconnect order. Transport role for seed parity, hash beacon, and `hash_mismatch` recovery — not gameplay authority or the cards hash frame. NOT a server. |
 | **instant-kill** | Chess capture that resolves without entering poker. Triggered when the attacker is a pawn, the defender is a pawn, or the defender is a king. Kings do not capture. Predicate `isChessAttackInstantKill` in `shared/p2p-wire/chess.ts`. |
 | **isHost** | The transport-level hint emitted by the relay's `__sys.open`. |
-| **matchId** | `SHA256(matchSeed + sortedPeerIds)`, 16 hex chars. Binds every action to one match. |
+| **matchId** | Match identity that binds every action to one match. Quick Match reuses the server-issued accepted-offer identity; legacy manual rooms derive 16 hex characters from `SHA256(matchSeed + sortedPeerIds)`. Maximum 256 characters. |
 | **matchSeed** | `SHA256(sortedSalts)`, derived in seed_reveal. The root of all per-match randomness. |
 | **myCanonicalSide** | The local viewer's canonical side, derived from `matchSeed` parity XOR `isHost`. |
 | **prevStateHash** | Pre-apply state hash carried in the cards envelope; hashed in the canonical player frame (`myCanonicalSide === 'player'`). Protects against fast-double-click race and cross-peer divergence. |

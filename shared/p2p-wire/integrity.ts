@@ -12,6 +12,7 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 import { z } from 'zod';
 
 import { canonicalStringify } from '../protocol-core/hash';
+import { MAX_MATCH_ID_LENGTH } from '../p2pAvailability';
 
 export const CHESS_INTEGRITY_PROTOCOL_VERSION = 1 as const;
 export const CHESS_INTEGRITY_SCOPE = 'chess+cards' as const;
@@ -23,7 +24,7 @@ export const Hash256Schema = z
 
 export type Hash256 = z.infer<typeof Hash256Schema>;
 
-const MatchIdSchema = z.string().min(1).max(64);
+const MatchIdSchema = z.string().min(1).max(MAX_MATCH_ID_LENGTH);
 const CommandIdSchema = z.string().uuid();
 const TransitionSequenceSchema = z.number().int().min(0).max(0xffff_ffff);
 const ENCODER = new TextEncoder();

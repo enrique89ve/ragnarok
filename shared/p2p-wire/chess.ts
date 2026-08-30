@@ -52,6 +52,7 @@
  */
 
 import { z } from 'zod';
+import { MAX_MATCH_ID_LENGTH } from '../p2pAvailability';
 import { CompactChessCombatInitiatedSchema } from './combat';
 
 // ── Position ───────────────────────────────────────────────────────────────
@@ -164,12 +165,10 @@ export type ChessCommand = z.infer<typeof ChessCommandSchema>;
 
 // ── Envelope ───────────────────────────────────────────────────────────────
 
-const MATCH_ID_MAX = 64;
-
 export const ChessCommandEnvelopeSchema = z
 	.object({
 		type: z.literal('chess_command'),
-		matchId: z.string().min(1).max(MATCH_ID_MAX),
+		matchId: z.string().min(1).max(MAX_MATCH_ID_LENGTH),
 		seq: z.number().int().nonnegative(),
 		commandId: z.string().uuid(),
 		// Both hashes are non-empty by default. Empty-string on the wire is a

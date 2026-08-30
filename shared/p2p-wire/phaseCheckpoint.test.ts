@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { MAX_MATCH_ID_LENGTH } from '../p2pAvailability';
 
 import {
 	PHASE_CHECKPOINT_PROTOCOL_VERSION,
@@ -29,6 +30,18 @@ function proposal() {
 }
 
 describe('phase checkpoint wire contract', () => {
+	it('accepts the server-issued Quick Match identity through the canonical bound', () => {
+		const quickMatchId = 'f19afea5-d187-4b32-a0d1-b1bcb63d5de3-ab1fecca-7e50-4768-87d3-7fdd32cbca88';
+		expect(PhaseCheckpointProposalSchema.safeParse({
+			...proposal(),
+			matchId: quickMatchId,
+		}).success).toBe(true);
+		expect(PhaseCheckpointProposalSchema.safeParse({
+			...proposal(),
+			matchId: 'm'.repeat(MAX_MATCH_ID_LENGTH + 1),
+		}).success).toBe(false);
+	});
+
 	it('produces a deterministic commitment bound to every proposal field', () => {
 		const input = proposal();
 		const id = computePhaseCheckpointId({ roomId: 'room-1', proposal: input });

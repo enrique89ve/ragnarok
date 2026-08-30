@@ -11,6 +11,7 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { z } from 'zod';
 
+import { MAX_MATCH_ID_LENGTH } from '../p2pAvailability';
 import { Hash256Schema, type Hash256 } from './integrity';
 
 export const PHASE_CHECKPOINT_PROTOCOL_VERSION = 1 as const;
@@ -25,7 +26,7 @@ export const PhaseCheckpointPhaseSchema = z.enum([
 
 export type PhaseCheckpointPhase = z.infer<typeof PhaseCheckpointPhaseSchema>;
 
-const MatchIdSchema = z.string().min(1).max(64);
+const MatchIdSchema = z.string().min(1).max(MAX_MATCH_ID_LENGTH);
 const RoomIdSchema = z.string().min(1).max(128);
 const CheckpointEpochSchema = z.number().int().min(1).max(0xffff_ffff);
 

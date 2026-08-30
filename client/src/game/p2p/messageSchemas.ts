@@ -39,7 +39,10 @@ import {
 	DeckCardClaimsSchema,
 	MAX_WARBAND_DECK_CARDS,
 } from '@shared/protocol-core/deckVerification';
-import { CHALLENGE_SIGNATURE_ALGORITHM } from '@shared/p2pAvailability';
+import {
+	CHALLENGE_SIGNATURE_ALGORITHM,
+	MAX_MATCH_ID_LENGTH,
+} from '@shared/p2pAvailability';
 
 import type { P2PMessage } from './messages';
 import {
@@ -50,9 +53,10 @@ import {
 // ── Primitives ─────────────────────────────────────────────────────────────
 
 const NonEmptyString = (max: number) => z.string().min(1).max(max);
-// Quick Match room ids are the two 36-character peer ids joined by a hyphen.
-// Keep one boundary for every game-wire envelope that carries that identity.
-const MatchIdString = NonEmptyString(128);
+// Keep every game-wire envelope aligned with the server-issued match identity
+// contract. Quick Match currently joins two UUID peer ids, but direct matches
+// may legitimately use any identity within the shared canonical bound.
+const MatchIdString = NonEmptyString(MAX_MATCH_ID_LENGTH);
 const HashString = z.string().min(1).max(256);
 const NonNegativeInt = z.number().int().nonnegative();
 const PokerHpCommitment = z.number().int().min(0).max(500);

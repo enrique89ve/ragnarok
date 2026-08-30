@@ -7,6 +7,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { MAX_MATCH_ID_LENGTH } from '../p2pAvailability';
 import {
 	ChessAttackCommandSchema,
 	ChessBoardPositionSchema,
@@ -282,6 +283,16 @@ describe('ChessCommandEnvelopeSchema', () => {
 
 	it('rejects empty matchId', () => {
 		expect(ChessCommandEnvelopeSchema.safeParse({ ...validEnvelope, matchId: '' }).success).toBe(false);
+	});
+
+	it('accepts the server-issued Quick Match identity and rejects values above the canonical bound', () => {
+		const quickMatchId = 'f19afea5-d187-4b32-a0d1-b1bcb63d5de3-ab1fecca-7e50-4768-87d3-7fdd32cbca88';
+		expect(quickMatchId.length).toBeGreaterThan(64);
+		expect(ChessCommandEnvelopeSchema.safeParse({ ...validEnvelope, matchId: quickMatchId }).success).toBe(true);
+		expect(ChessCommandEnvelopeSchema.safeParse({
+			...validEnvelope,
+			matchId: 'm'.repeat(MAX_MATCH_ID_LENGTH + 1),
+		}).success).toBe(false);
 	});
 
 	it('accepts empty prev hashes (well-known race signal — receiver enforces non-empty)', () => {

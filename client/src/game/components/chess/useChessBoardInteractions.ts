@@ -3,10 +3,12 @@ import { useAudio } from '../../../lib/stores/useAudio';
 import { debug } from '../../config/debugConfig';
 import { useChessCombatAdapter } from '../../hooks/useChessCombatAdapter';
 import { useKingChessAbility } from '../../hooks/useKingChessAbility';
+import { useMatchStore } from '../../match/store';
 import { useGameStore } from '../../stores/gameStore';
 import { usePeerStore } from '../../stores/peerStore';
 import { useUnifiedCombatStore } from '../../stores/unifiedCombatStore';
 import { captureChessPrevHashes, sendChessAttack, sendChessCombatInitiated, sendChessMove } from '../../p2p/chessWireSender';
+import { buildChessIntegrityCheckpoint } from '../../p2p/chessIntegrityCheckpoint';
 import { chessIntegrityMonitor } from '../../p2p/chessIntegrityMonitor';
 import type { ChessBoardPosition, ChessPiece } from '../../types/ChessTypes';
 import {
@@ -296,9 +298,14 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
         }
       }
 
+		const isPeerMatch = useMatchStore.getState().activeMatch?.opponent.kind === 'peer';
 		const matchId = useGameStore.getState().matchId;
 		const peerState = usePeerStore.getState();
-		if (matchId && (
+		if (isPeerMatch && !matchId) {
+			debug.warn('[Chess] Move blocked because the active P2P match has no wire identity');
+			return;
+		}
+		if (isPeerMatch && (
 			peerState.connectionState !== 'connected'
 			|| !peerState.battleLifecycle
 			|| peerState.battleLifecycle.phase === 'resolved'
@@ -307,7 +314,7 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
 			debug.warn('[Chess] Move blocked until the P2P competitive session is connected and unresolved');
 			return;
 		}
-		if (matchId && !chessIntegrityMonitor.canStartTransition()) {
+		if (isPeerMatch && !chessIntegrityMonitor.canStartTransition()) {
         debug.warn('[Chess] Move blocked while transition integrity is awaiting confirmation or quarantined');
         return;
       }
@@ -323,14 +330,23 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
       // TD-27c-chess: capture prev-state hashes BEFORE movePiece mutates
       // the local store. The receiver hashes its own state pre-apply, so
       // the sender must mirror that timing or every envelope diverges.
-      // Only capture when matchId is set (P2P session active) — SP path
-      // skips the wire entirely.
-      const prevHashes = matchId ? captureChessPrevHashes() : null;
+      // MatchContext owns mode authority. A peer match must have a complete,
+      // valid checkpoint before gameplay mutates locally; otherwise an
+      // invalid wire identity/hash could create a local-only transition.
+      const prevHashes = isPeerMatch ? captureChessPrevHashes() : null;
+      if (isPeerMatch && (!prevHashes || !matchId || buildChessIntegrityCheckpoint({
+        matchId,
+        chessHash: prevHashes.chess,
+        cardsHash: prevHashes.cards,
+      }) === null)) {
+        debug.warn('[Chess] Move blocked because the P2P transition checkpoint is unavailable');
+        return;
+      }
 
       const collision = movePiece(position);
       if (collision) {
         debug.chess(`Attack initiated: ${collision.attacker.heroName} -> ${collision.defender.heroName}`);
-        if (matchId && prevHashes && movingPiece && fromPos && defender) {
+        if (isPeerMatch && matchId && prevHashes && movingPiece && fromPos && defender) {
           const emit = {
             pieceId: movingPiece.id,
             from: fromPos,
@@ -359,7 +375,7 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
       }
 
       playSoundEffect('card_play');
-      if (matchId && prevHashes && movingPiece && fromPos) {
+      if (isPeerMatch && matchId && prevHashes && movingPiece && fromPos) {
         sendChessMove({
           pieceId: movingPiece.id,
           from: fromPos,

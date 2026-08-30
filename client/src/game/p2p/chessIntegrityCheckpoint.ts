@@ -3,6 +3,7 @@ import {
 	parseHash256,
 	type Hash256,
 } from '@shared/p2p-wire/integrity';
+import { isSafeRoomOrMatchId } from '@shared/p2pAvailability';
 
 import { computeChessPrevStateHash } from '../engine/chessHash';
 import { computeCardsPrevStateHash } from '../engine/wireHash';
@@ -20,6 +21,7 @@ export function buildChessIntegrityCheckpoint(input: Readonly<{
 	chessHash: unknown;
 	cardsHash: unknown;
 }>): ChessIntegrityCheckpoint | null {
+	if (!isSafeRoomOrMatchId(input.matchId)) return null;
 	const chessHash = parseHash256(input.chessHash);
 	const cardsHash = parseHash256(input.cardsHash);
 	if (chessHash === null || cardsHash === null) return null;
