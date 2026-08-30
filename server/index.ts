@@ -89,7 +89,14 @@ app.use(helmet({
       frameAncestors: ["'self'"],
       imgSrc: ["'self'", "https:", "data:", "blob:"],
       objectSrc: ["'none'"],
-      scriptSrc: ["'self'", "https://static.cloudflareinsights.com", "https://cloudflareinsights.com"],
+      // The gameplay engine is compiled/instantiated as WebAssembly in the browser.
+      // `wasm-unsafe-eval` permits WASM compilation without enabling arbitrary JS eval.
+      scriptSrc: [
+        "'self'",
+        "'wasm-unsafe-eval'",
+        "https://static.cloudflareinsights.com",
+        "https://cloudflareinsights.com",
+      ],
       scriptSrcAttr: ["'none'"],
       styleSrc: ["'self'", "https://fonts.googleapis.com", "https:", "'unsafe-inline'"],
       upgradeInsecureRequests: [],
