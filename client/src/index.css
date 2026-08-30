@@ -23,6 +23,11 @@
 	::file-selector-button {
 		border-color: var(--obsidian-700);
 	}
+
+	::selection {
+		background-color: var(--ui-selection-gold);
+		color: var(--obsidian-950);
+	}
 }
 
 /* Force emoji to render as monochrome text glyphs (not colorful platform-specific emoji).

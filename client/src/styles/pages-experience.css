@@ -146,26 +146,6 @@
   max-width: 32rem; /* Keep it focused */
 }
 
-.n-home-hero-path {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 1.25rem 0 1.5rem;
-}
-
-.n-home-hero-path span {
-  border: 1px solid color-mix(in oklch, var(--gold-300) 24%, transparent);
-  background: color-mix(in oklch, var(--obsidian-950) 72%, transparent);
-  clip-path: polygon(7px 0, 100% 0, calc(100% - 7px) 100%, 0 100%);
-  color: var(--ink-100);
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  padding: 0.45rem 0.65rem;
-  text-transform: uppercase;
-}
-
 .n-home-hero-briefing {
   width: min(100%, 18rem);
   border: 1px solid color-mix(in oklch, var(--gold-300) 22%, transparent);
@@ -484,7 +464,7 @@
     linear-gradient(180deg, color-mix(in oklch, var(--gold-300) 90%, var(--gold-600)), color-mix(in oklch, var(--gold-700) 90%, var(--obsidian-950))),
     var(--gold-500);
   border: 1px solid color-mix(in oklch, var(--gold-100) 54%, transparent);
-  bottom: max(5.75rem, calc(env(safe-area-inset-bottom) + 4.75rem));
+  bottom: max(4.75rem, calc(env(safe-area-inset-bottom) + 3.75rem));
   box-shadow:
     0 20px 42px -24px rgba(0, 0, 0, 0.9),
     inset 0 1px 0 color-mix(in oklch, var(--gold-100) 56%, transparent);
@@ -703,7 +683,7 @@
   }
 
   .n-warband-fab {
-    bottom: max(4.5rem, calc(env(safe-area-inset-bottom) + 4rem));
+    bottom: max(3.5rem, calc(env(safe-area-inset-bottom) + 3rem));
     font-size: 0.6rem;
     min-height: 2.75rem;
     min-width: 8.25rem;

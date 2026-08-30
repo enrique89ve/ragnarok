@@ -891,11 +891,6 @@ function HomePage() {
 							<p className="n-hero-copy">
 								Reveal your starter line, push into campaign, then take the same warband into live PvP.
 							</p>
-							<div className="n-home-hero-path" aria-label="Primary play path">
-								<span>Starter</span>
-								<span>Campaign</span>
-								<span>PvP</span>
-							</div>
 							<div className="flex flex-wrap items-center gap-4">
 								{!starterClaimed ? (
 									starterClaimAccess.kind === 'blocked' ? (
