@@ -100,6 +100,30 @@ function waitForType(socket: WebSocket, type: string): Promise<Record<string, un
 	});
 }
 
+function waitForPing(socket: WebSocket): Promise<void> {
+	return new Promise((resolve, reject) => {
+		const timeout = setTimeout(() => {
+			cleanup();
+			reject(new Error('Timed out waiting for control keepalive ping'));
+		}, 3_000);
+		const cleanup = (): void => {
+			clearTimeout(timeout);
+			socket.off('ping', onPing);
+			socket.off('error', onError);
+		};
+		const onError = (error: Error): void => {
+			cleanup();
+			reject(error);
+		};
+		const onPing = (): void => {
+			cleanup();
+			resolve();
+		};
+		socket.once('ping', onPing);
+		socket.once('error', onError);
+	});
+}
+
 function closeSocket(socket: WebSocket): void {
 	if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) socket.close();
 }
@@ -274,6 +298,41 @@ describe('P2P control websocket', () => {
 		const [resumedAliceCheckpoint, resumedBobCheckpoint] = await Promise.all([resumedCheckpointOnAlice, resumedCheckpointOnBob]);
 		expect(resumedAliceCheckpoint).toMatchObject({ epoch: 2, previousCheckpointId: firstCheckpointOnAlice.checkpointId, stateRoot: '2'.repeat(64) });
 		expect(resumedBobCheckpoint).toMatchObject({ epoch: 2, previousCheckpointId: firstCheckpointOnBob.checkpointId, stateRoot: '2'.repeat(64) });
+	});
+
+	it('keeps an authenticated control websocket alive without gameplay actions', async () => {
+		const app = express();
+		app.get('/login/:username', (req, res) => {
+			issueHiveWebSession(res, req.params.username);
+			res.end('ok');
+		});
+		server = createServer(app);
+		attachP2PControl(server, { keepaliveIntervalMs: 20 });
+		const port = await listen(server);
+		const baseUrl = `http://127.0.0.1:${port}`;
+		const aliceCookie = await loginCookie(baseUrl, 'alice');
+		const roomId = 'control-idle-keepalive-1';
+		const aliceTicket = buildP2PMatchTicket({ roomId, peerId: 'peer-a', role: 'offerer', account: 'alice' });
+		const alice = new WebSocket(
+			`ws://127.0.0.1:${port}/ws/control?match=${roomId}&peer=peer-a`,
+			controlProtocols(aliceTicket.token),
+			{ headers: { Cookie: aliceCookie } },
+		);
+		sockets.push(alice);
+		await new Promise<void>((resolve, reject) => {
+			alice.once('open', () => resolve());
+			alice.once('error', reject);
+		});
+		alice.send(JSON.stringify({
+			type: 'control_hello_v1',
+			protocolVersion: 1,
+			matchId: roomId,
+			peerId: 'peer-a',
+		}));
+
+		await expect(waitForPing(alice)).resolves.toBeUndefined();
+		await expect(waitForPing(alice)).resolves.toBeUndefined();
+		expect(alice.readyState).toBe(WebSocket.OPEN);
 	});
 
 	it('rejects a control upgrade without a session or with a mismatched session account', async () => {

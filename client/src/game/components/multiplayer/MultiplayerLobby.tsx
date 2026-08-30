@@ -21,6 +21,8 @@ import { readChallengeSendResponse, readPresenceHeartbeatResponse, type P2PMatch
 import { ensureFriendSession, invalidateFriendSession } from '../social/friendSession';
 import type { ArmySelection } from '../../types/ChessTypes';
 import { isSharedNetworkEnvironment } from '../../config/featureFlags';
+import { useGameStore } from '../../stores/gameStore';
+import { computeP2PBattleReadiness } from '../../match/p2pBattleReadiness';
 import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from '../../../data/HiveSessionIdentity';
 import { resolveProtectedFlowAccess } from '../../auth/protectedFlowAccess';
 import type { MatchOffer } from '@shared/p2pMatchAcceptance';
@@ -216,24 +218,37 @@ type QuickMatchLobbyReadinessInput = {
 	readonly remotePeerId: string | null;
 	readonly opponentArmy: ArmySelection | null;
 	readonly p2pInitApplied: boolean;
+	readonly matchId: string | null;
+	readonly matchSeed: string | null;
+	readonly localBattleReady: Parameters<typeof computeP2PBattleReadiness>[0]['localBattleReady'];
+	readonly remoteBattleReady: Parameters<typeof computeP2PBattleReadiness>[0]['remoteBattleReady'];
+	readonly expectedRemoteLoadoutHash: string | null;
+	readonly now?: number;
 };
 
-function getQuickMatchLobbyReadiness(input: QuickMatchLobbyReadinessInput): { readonly ready: boolean; readonly reason: string } {
-	if (!input.serverMatchCommitted) return { ready: false, reason: 'Match offer has not been committed' };
-	if (!input.localAcceptanceVerified) return { ready: false, reason: 'Waiting for local match authorization' };
-	if (!input.remoteAcceptanceVerified) return { ready: false, reason: 'Waiting for opponent authorization' };
-	if (!input.matchTicket || !input.expectedRoomId || !input.expectedPeerId) {
-		return { ready: false, reason: 'Waiting for the relay ticket' };
-	}
-	if (input.matchTicket.roomId !== input.expectedRoomId || input.matchTicket.peerId !== input.expectedPeerId) {
-		return { ready: false, reason: 'Waiting for a relay ticket for this peer and room' };
-	}
-	if (input.matchTicket.expiresAt <= Date.now()) return { ready: false, reason: 'Relay ticket has expired' };
-	if (input.connectionState !== 'connected') return { ready: false, reason: 'Waiting for the P2P connection' };
-	if (!input.remotePeerId) return { ready: false, reason: 'Waiting for the opponent peer' };
-	if (!input.opponentArmy) return { ready: false, reason: 'Waiting for the opponent loadout' };
-	if (!input.p2pInitApplied) return { ready: false, reason: 'Waiting for the initial P2P state' };
-	return { ready: true, reason: 'Battle ready' };
+export function getQuickMatchLobbyReadiness(input: QuickMatchLobbyReadinessInput): { readonly ready: boolean; readonly reason: string } {
+	const readiness = computeP2PBattleReadiness({
+		activeMatchKind: 'peer',
+		serverMatchCommitted: input.serverMatchCommitted,
+		localAcceptanceVerified: input.localAcceptanceVerified,
+		remoteAcceptanceVerified: input.remoteAcceptanceVerified,
+		matchTicket: input.matchTicket,
+		expectedRoomId: input.expectedRoomId,
+		expectedPeerId: input.expectedPeerId,
+		connectionState: input.connectionState,
+		remotePeerId: input.remotePeerId,
+		matchId: input.matchId,
+		matchSeed: input.matchSeed,
+		opponentArmy: input.opponentArmy,
+		p2pInitApplied: input.p2pInitApplied,
+		expectedRemoteLoadoutHash: input.expectedRemoteLoadoutHash,
+		localBattleReady: input.localBattleReady,
+		remoteBattleReady: input.remoteBattleReady,
+		now: input.now,
+	});
+	return readiness.ready
+		? { ready: true, reason: 'Battle ready' }
+		: { ready: false, reason: readiness.reason };
 }
 
 type AsyncVoidHandler = () => void | Promise<void>;
@@ -700,6 +715,9 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 		p2pSessionLocalAuthorized,
 		p2pSessionRemoteAuthorized,
 		p2pSessionAuthError,
+		p2pBattleReadyLocal,
+		p2pBattleReadyRemote,
+		p2pBattleReadyExpectedRemoteLoadoutHash,
 		reconnectCountdown,
 		reconnectAttemptCount,
 		host,
@@ -773,6 +791,8 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 		reconnectAttemptCount,
 	});
 	const matchTicket = usePeerStore(state => state.matchTicket);
+	const matchId = useGameStore(state => state.matchId);
+	const matchSeed = useGameStore(state => state.matchSeed);
 	const quickBattleReadiness = getQuickMatchLobbyReadiness({
 		serverMatchCommitted: matchCommitted,
 		localAcceptanceVerified: p2pSessionLocalAuthorized,
@@ -784,12 +804,19 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 		remotePeerId,
 		opponentArmy,
 		p2pInitApplied,
+		matchId,
+		matchSeed,
+		localBattleReady: p2pBattleReadyLocal,
+		remoteBattleReady: p2pBattleReadyRemote,
+		expectedRemoteLoadoutHash: p2pBattleReadyExpectedRemoteLoadoutHash,
+		now,
 	});
-	const matchProgress = matchCommitted && !quickBattleReadiness.ready
-		? { ready: false as const, title: 'Preparing battle', detail: quickBattleReadiness.reason }
-		: matchCommitted
-			? { ready: true as const, title: 'Battle ready', detail: 'Both players are authorized. Starting match.' }
-			: legacyMatchProgress;
+	const p2pHandshakeActive = connectionState !== 'disconnected' || matchCommitted || Boolean(matchTicket);
+	const matchProgress = p2pHandshakeActive
+		? quickBattleReadiness.ready
+			? { ready: true as const, title: 'Battle ready', detail: 'Both players are authorized and the battle state matches.' }
+			: { ready: false as const, title: 'Preparing battle', detail: quickBattleReadiness.reason }
+		: legacyMatchProgress;
 
 	const fetchIncomingChallenges = useCallback(async (signal?: AbortSignal) => {
 		if (!hiveUsername) return;

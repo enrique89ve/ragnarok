@@ -4,6 +4,7 @@ import { getHeroAnimationProfile, ELEMENT_COLORS } from '../data/heroAnimationPr
 import type { AnimationArchetype } from '../data/heroAnimationProfiles';
 import { proceduralAudio } from '../../audio/proceduralAudio';
 import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../arenaVfxTargets';
+import { useArenaVfxRoot } from '../arenaVfxContext';
 import { GameIcon } from '../../utils/ui/GameIcon';
 import type { IconName } from '../../utils/ui/iconMap';
 import '../styles/combat-animations.css';
@@ -20,8 +21,8 @@ interface PokerCombatAnimationProps {
 type AnimationPhase = 'idle' | 'windup' | 'attack' | 'impact' | 'particles' | 'complete';
 
 const ATTACK_NAME_HOLD_MS = 1_200;
-const DAMAGE_MESSAGE_HOLD_MS = 1_400;
-const CRITICAL_DAMAGE_MESSAGE_HOLD_MS = 1_600;
+const IMPACT_HOLD_MS = 1_400;
+const CRITICAL_IMPACT_HOLD_MS = 1_600;
 const PARTICLE_HOLD_MS = {
 	light: 1_200,
 	medium: 1_700,
@@ -66,6 +67,7 @@ export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 	winner,
 	onComplete,
 }) => {
+	const arenaRoot = useArenaVfxRoot();
 	const [phase, setPhase] = useState<AnimationPhase>('idle');
 	const [particles, setParticles] = useState<ParticleData[]>([]);
 	const onCompleteRef = useRef(onComplete);
@@ -161,7 +163,7 @@ export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 		}, attackEnd);
 		elapsed = attackEnd;
 
-		const impactEnd = elapsed + (damage >= 10 ? CRITICAL_DAMAGE_MESSAGE_HOLD_MS : DAMAGE_MESSAGE_HOLD_MS);
+		const impactEnd = elapsed + (damage >= 10 ? CRITICAL_IMPACT_HOLD_MS : IMPACT_HOLD_MS);
 		addTimer(() => {
 			setPhase('particles');
 			spawnParticles(
@@ -311,16 +313,6 @@ export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 				<>
 					<div className="impact-flash" style={{ ['--element-color' as string]: elementColor }} />
 					{!isFold && tier.tier === 'heavy' && <div className="super-move-flash" />}
-					<div
-						className="combat-damage-number"
-						style={{
-							left: '50%',
-							top: winner === 'player' ? '30%' : '65%',
-							transform: 'translateX(-50%)',
-						}}
-					>
-						-{damage}
-					</div>
 				</>
 			)}
 
@@ -349,9 +341,7 @@ export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 	);
 
 	const portalTarget =
-		typeof document !== 'undefined'
-			? getArenaVfxLayer(ARENA_VFX_LAYERS.vfx)
-			: null;
+		getArenaVfxLayer(ARENA_VFX_LAYERS.vfx, arenaRoot);
 
 	return portalTarget ? createPortal(content, portalTarget) : content;
 };

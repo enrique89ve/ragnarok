@@ -1,12 +1,18 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { CHALLENGE_SIGNATURE_ALGORITHM, type P2PMatchTicket, type ServerSignedChallenge } from '@shared/p2pAvailability';
+import type { P2PBattleReadyProof } from '../../p2p/battleReady';
 
 let helpers: typeof import('./MultiplayerLobby');
 
 beforeAll(async () => {
 	vi.stubGlobal('window', { location: { origin: 'http://localhost' } });
+	vi.stubGlobal('localStorage', {
+		getItem: vi.fn(() => null),
+		setItem: vi.fn(),
+		removeItem: vi.fn(),
+	});
 	helpers = await import('./MultiplayerLobby');
-});
+}, 30_000);
 
 function challenge(overrides: Partial<ServerSignedChallenge> = {}): ServerSignedChallenge {
 	return {
@@ -28,6 +34,17 @@ function matchTicket(peerId = 'peer-room-1'): P2PMatchTicket {
 		roomId: peerId,
 		peerId,
 		expiresAt: 91_000,
+	};
+}
+
+function battleProof(overrides: Partial<P2PBattleReadyProof> = {}): P2PBattleReadyProof {
+	return {
+		matchId: 'room-1',
+		engineHash: 'engine-v1',
+		rulesetHash: 'rules-v1',
+		loadoutHash: 'loadout-a',
+		initialStateRoot: 'root-v1',
+		...overrides,
 	};
 }
 
@@ -237,5 +254,35 @@ describe('MultiplayerLobby direct challenge helpers', () => {
 			title: 'Reconnecting with opponent',
 			detail: 'Attempt 1/2. 25s before technical result.',
 		});
+	});
+
+	it('does not expose Battle ready before both bilateral proofs match', () => {
+		const base = {
+			serverMatchCommitted: true,
+			localAcceptanceVerified: true,
+			remoteAcceptanceVerified: true,
+			matchTicket: matchTicket('room-1'),
+			expectedRoomId: 'room-1',
+			expectedPeerId: 'room-1',
+			connectionState: 'connected' as const,
+			remotePeerId: 'peer-remote',
+			matchId: 'room-1',
+			matchSeed: 'seed-1',
+			opponentArmy: { king: { id: 'odin' } } as never,
+			p2pInitApplied: true,
+			expectedRemoteLoadoutHash: 'loadout-b',
+			localBattleReady: battleProof(),
+			remoteBattleReady: null,
+			now: 10_000,
+		};
+
+		expect(helpers.getQuickMatchLobbyReadiness(base)).toEqual({
+			ready: false,
+			reason: 'Opponent battle-ready proof is not complete',
+		});
+		expect(helpers.getQuickMatchLobbyReadiness({
+			...base,
+			remoteBattleReady: battleProof({ loadoutHash: 'loadout-b' }),
+		})).toEqual({ ready: true, reason: 'Battle ready' });
 	});
 });

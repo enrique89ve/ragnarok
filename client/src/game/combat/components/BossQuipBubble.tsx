@@ -13,6 +13,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import './BossQuipBubble.css';
 
@@ -48,6 +49,13 @@ export const BossQuipBubble: React.FC<BossQuipBubbleProps> = ({
 	triggerKey = 0,
 }) => {
 	const [visible, setVisible] = useState(false);
+	const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+	const hostAnchorRef = React.useRef<HTMLSpanElement>(null);
+
+	useEffect(() => {
+		const arenaHost = hostAnchorRef.current?.closest('.ragnarok-combat-arena');
+		setPortalTarget(arenaHost?.querySelector<HTMLElement>('.arena-notice-layer') ?? null);
+	}, []);
 
 	useEffect(() => {
 		if (!text) {
@@ -59,7 +67,7 @@ export const BossQuipBubble: React.FC<BossQuipBubbleProps> = ({
 		return () => clearTimeout(t);
 	}, [text, duration, triggerKey]);
 
-	return (
+	const bubble = (
 		<AnimatePresence>
 			{visible && text && (
 				<motion.div
@@ -68,7 +76,7 @@ export const BossQuipBubble: React.FC<BossQuipBubbleProps> = ({
 					animate={{ opacity: 1, y: 0, scale: 1 }}
 					exit={{ opacity: 0, y: -6, scale: 0.96 }}
 					transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
-					className={`boss-quip-bubble ${speakerPortrait ? 'with-portrait' : ''}`}
+					className={`boss-quip-bubble ${speakerPortrait ? 'with-portrait' : ''} ${portalTarget ? 'boss-quip-bubble--portal' : ''}`}
 				>
 					{speakerPortrait && (
 						<img
@@ -87,6 +95,13 @@ export const BossQuipBubble: React.FC<BossQuipBubbleProps> = ({
 				</motion.div>
 			)}
 		</AnimatePresence>
+	);
+
+	return (
+		<>
+			<span ref={hostAnchorRef} className="boss-quip-anchor" aria-hidden="true" />
+			{portalTarget ? ReactDOM.createPortal(bubble, portalTarget) : bubble}
+		</>
 	);
 };
 

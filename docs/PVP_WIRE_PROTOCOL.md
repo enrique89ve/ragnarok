@@ -258,6 +258,14 @@ transport session locks relay for subsequent reconnect attempts, preventing a
 recreated manager from reintroducing WebRTC mid-match.
 
 **Latency and reconnect policy (P0)**:
+- Gameplay inactivity and transport liveness are separate contracts. A quiet
+  chess board does not close `/ws/p2p` or `/ws/control`; both WebSockets stay
+  alive while their protocol-level ping/pong succeeds. Poker's deterministic
+  turn clock may resolve an expired decision, but no game-action silence is
+  interpreted as a network disconnect. The proposed, not-yet-implemented
+  Ragnarok Chess bank/turn/no-progress contract is documented in
+  [ADR 0013](adr/0013-ragnarok-chess-clock-and-no-progress.md); it is gameplay
+  state, never a transport timeout.
 - User actions are sent as compact intent envelopes, not full state dumps.
   Chess/poker carry the minimum semantic action plus optional compact tuples.
   Cards applies `game_command` locally on both peers; host `gameState` is
@@ -278,10 +286,11 @@ recreated manager from reintroducing WebRTC mid-match.
   `match_anchor`, signed transcript, reconnect window, silence proof, and
   dispute window. A high win probability or "one move from victory" state is
   not economic evidence by itself.
-- This mirrors the conservative esports/game precedent: Axie: Origins used a
-  60s disconnect threshold before match loss during its RPS / pre-battle flow,
-  while tournament rules often count a mid-match disconnect as a loss unless
-  both players/admin agree.
+- As a current pacing reference, Axie: Origins gives each player 45 seconds per
+  turn and, after two inactive turns, another 10 seconds before forced
+  surrender. That is an AFK/gameplay policy, not evidence that an otherwise
+  healthy WebSocket should close. Source checked 2026-08-29:
+  https://support.axieinfinity.com/hc/en-us/articles/7997700973595-Origins-Arena-Mode
 - A hard page reload restores from the local sealed snapshot (see
   `P2P_MATCH_RESUME.md`) and rejoins the room with the same 2-attempt / 60s
   window. The relay does not hold the board. Ranked replay from the signed

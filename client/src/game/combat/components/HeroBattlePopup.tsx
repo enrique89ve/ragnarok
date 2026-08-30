@@ -8,7 +8,9 @@ import {
 	getArenaLocalPoint,
 	getArenaVfxHeroTarget,
 	getArenaVfxLayer,
+	type QueryRoot,
 } from '../arenaVfxTargets';
+import { useArenaVfxRoot } from '../arenaVfxContext';
 import { getPokerActionDefinition } from '../decision/pokerActionCatalog';
 import { PokerActionIcon } from './PokerActionIcon';
 import { gameEffectCoordinator } from '@/game/effects/core/gameEffectCoordinator';
@@ -33,11 +35,11 @@ interface HeroBattlePopupProps {
 
 const POPUP_DURATION = 2500;
 
-function getHeroAnchor(target: 'player' | 'opponent', layer: HTMLElement): {
+function getHeroAnchor(target: 'player' | 'opponent', layer: HTMLElement, root: QueryRoot | null): {
 	position: { x: number; y: number };
 	accent?: string;
 } {
-	const el = getArenaVfxHeroTarget(target);
+	const el = getArenaVfxHeroTarget(target, root);
 	if (el) {
 		const rect = el.getBoundingClientRect();
 		const heroSurface = el.querySelector<HTMLElement>('.battlefield-hero-square') ?? el;
@@ -59,10 +61,11 @@ const SinglePopup: React.FC<{
 	popup: HeroBattlePopupData;
 	target: 'player' | 'opponent';
 }> = ({ popup, target }) => {
-	const layer = getArenaVfxLayer(ARENA_VFX_LAYERS.vfx);
+	const arenaRoot = useArenaVfxRoot();
+	const layer = getArenaVfxLayer(ARENA_VFX_LAYERS.vfx, arenaRoot);
 	const anchor = useMemo(
-		() => (layer ? getHeroAnchor(target, layer) : null),
-		[layer, target],
+		() => (layer ? getHeroAnchor(target, layer, arenaRoot) : null),
+		[arenaRoot, layer, target],
 	);
 	const definition = getPokerActionDefinition(popup.action);
 	if (!anchor) return null;
@@ -95,6 +98,7 @@ const SinglePopup: React.FC<{
 };
 
 export const HeroBattlePopup: React.FC<HeroBattlePopupProps> = ({ popup, onComplete }) => {
+	const arenaRoot = useArenaVfxRoot();
 	useEffect(() => {
 		proceduralAudio.play(getPokerActionDefinition(popup.action).sound);
 	}, [popup.action]);
@@ -114,7 +118,7 @@ export const HeroBattlePopup: React.FC<HeroBattlePopupProps> = ({ popup, onCompl
 	const targets: ('player' | 'opponent')[] = popup.target === 'both'
 		? ['player', 'opponent']
 		: [popup.target];
-	const portalTarget = getArenaVfxLayer(ARENA_VFX_LAYERS.vfx);
+	const portalTarget = getArenaVfxLayer(ARENA_VFX_LAYERS.vfx, arenaRoot);
 	if (!portalTarget) return null;
 
 	return createPortal(

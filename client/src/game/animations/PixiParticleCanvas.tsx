@@ -9,7 +9,9 @@ import {
 	ARENA_VFX_LAYERS,
 	getArenaLocalPoint,
 	getArenaVfxLayer,
+	type QueryRoot,
 } from '../combat/arenaVfxTargets';
+import { useArenaVfxRoot } from '../combat/arenaVfxContext';
 
 export interface ParticleColor {
 	primary: string;
@@ -62,6 +64,7 @@ let emitterContainer: Container | null = null;
 let thorContainer: Container | null = null;
 let ambientTimers: ReturnType<typeof setTimeout>[] = [];
 let currentRealm: string | undefined;
+let activeArenaVfxRoot: QueryRoot | null = null;
 
 const PARTICLE_CANVAS_MAX_DPR = 1.5;
 
@@ -78,7 +81,7 @@ function clearAmbientTimers() {
 }
 
 function toArenaPoint(x: number, y: number): { x: number; y: number } | null {
-	const layer = getArenaVfxLayer(ARENA_VFX_LAYERS.vfx);
+	const layer = getArenaVfxLayer(ARENA_VFX_LAYERS.vfx, activeArenaVfxRoot);
 	return layer ? getArenaLocalPoint({ x, y }, layer) : null;
 }
 
@@ -102,6 +105,7 @@ function resetPixiGlobals(app: Application) {
 	filterContainer = null;
 	emitterContainer = null;
 	thorContainer = null;
+	activeArenaVfxRoot = null;
 }
 
 interface RealmParticleConfig {
@@ -521,11 +525,16 @@ export function spawnSparkBurst(
 
 export const PixiParticleCanvas: React.FC<{ realm?: string }> = ({ realm }) => {
 	const containerRef = useRef<HTMLDivElement>(null);
+	const arenaRoot = useArenaVfxRoot();
 	const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(null);
 
 	useEffect(() => {
-		setPortalTarget(getArenaVfxLayer(ARENA_VFX_LAYERS.vfx));
-	}, []);
+		activeArenaVfxRoot = arenaRoot;
+		setPortalTarget(arenaRoot ? getArenaVfxLayer(ARENA_VFX_LAYERS.vfx, arenaRoot) : null);
+		return () => {
+			if (activeArenaVfxRoot === arenaRoot) activeArenaVfxRoot = null;
+		};
+	}, [arenaRoot]);
 
 	useEffect(() => {
 		if (!containerRef.current || !portalTarget) return;

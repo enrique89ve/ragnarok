@@ -28,8 +28,8 @@ export function getTurnNoticePresentation(input: {
   readonly viewerSide: ChessPlayerSide;
 }): ChessNoticePresentation {
   return input.currentTurn === input.viewerSide
-    ? { state: 'self', label: 'ᚱ YOUR COMMAND ᚱ' }
-    : { state: 'opponent', label: 'ᚱ FOE STIRS ᚱ' };
+    ? { state: 'self', label: 'ᚱ YOUR TURN ᚱ' }
+    : { state: 'opponent', label: 'ᚱ ENEMY TURN ᚱ' };
 }
 
 export function getCheckNoticePresentation(input: {

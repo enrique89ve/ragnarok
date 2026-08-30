@@ -1,5 +1,6 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useGameStore } from '../../stores/gameStore';
+import { useP2PActions } from '../../context/useP2PActions';
 import { showStatus } from '../feedback/combatFeedbackStore';
 import { ALL_NORSE_HEROES } from '../../data/norseHeroes';
 import { canCardAttack as canCardAttackCheck } from '../attackUtils';
@@ -32,14 +33,26 @@ export function usePokerCardClickHandlers({
 	addShakingTarget,
 	gameState,
 }: UsePokerCardClickHandlersParams) {
-	const playCard = useGameStore(s => s.playCard);
+	const p2pActions = useP2PActions();
 	const rawAttackingCard = useGameStore(s => s.attackingCard);
 	const selectAttacker = useGameStore(s => s.selectAttacker);
-	const attackWithCard = useGameStore(s => s.attackWithCard);
 	const selectedCard = useGameStore(s => s.selectedCard);
 	const selectCard = useGameStore(s => s.selectCard);
+	const battlecryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	useEffect(() => {
+		return () => {
+			if (battlecryTimerRef.current) clearTimeout(battlecryTimerRef.current);
+			battlecryTimerRef.current = null;
+		};
+	}, []);
 
 	const handlePlayerCardClick = useCallback((card: any) => {
+		if (!isPlayerTurn) {
+			debug.combat('[Card Click] Not player turn - ignoring player battlefield click');
+			return;
+		}
+
 		if (heroPowerTargeting?.active && executeHeroPowerEffect) {
 			const targetType = heroPowerTargeting.targetType;
 			if (targetType === 'friendly_minion' || targetType === 'friendly_mech' || targetType === 'any_minion' || targetType === 'any') {
@@ -61,15 +74,11 @@ export function usePokerCardClickHandlers({
 			if (targetType === 'friendly_minion' || targetType === 'friendly_mech' || targetType === 'any_minion' || targetType === 'any' || targetType === 'minion' || targetType === 'any_character' || targetType === 'character') {
 				const cardId = selectedCard.instanceId || (selectedCard as any).id;
 				debug.combat('[Battlecry Debug] Playing card with target:', { cardId, targetId: card.instanceId });
-				playCard(cardId, card.instanceId, 'minion');
+				p2pActions.playCard(cardId, card.instanceId, 'minion');
 				return;
 			}
 		}
 
-		if (!isPlayerTurn) {
-			debug.combat('[Attack Debug] Not player turn - ignoring click');
-			return;
-		}
 		if (rawAttackingCard) {
 			if (card.instanceId === rawAttackingCard.instanceId) {
 				debug.combat('[Attack Debug] Deselecting attacker:', card.card?.name);
@@ -122,9 +131,14 @@ export function usePokerCardClickHandlers({
 				}
 			}
 		}
-	}, [isPlayerTurn, rawAttackingCard, selectAttacker, selectedCard, playCard, heroPowerTargeting, executeHeroPowerEffect, gameState?.players?.player?.battlefield, addShakingTarget]);
+	}, [isPlayerTurn, rawAttackingCard, selectAttacker, selectedCard, p2pActions, heroPowerTargeting, executeHeroPowerEffect, gameState?.players?.player?.battlefield, addShakingTarget]);
 
 	const handleOpponentCardClick = useCallback((card: any) => {
+		if (!isPlayerTurn) {
+			debug.combat('[Card Click] Not player turn - ignoring opponent battlefield click');
+			return;
+		}
+
 		if (heroPowerTargeting?.active && executeHeroPowerEffect) {
 			const targetType = heroPowerTargeting.targetType;
 			if (targetType === 'enemy_minion' || targetType === 'any_minion' || targetType === 'any') {
@@ -146,20 +160,20 @@ export function usePokerCardClickHandlers({
 			if (targetType === 'enemy_minion' || targetType === 'any_minion' || targetType === 'any' || targetType === 'enemy' || targetType === 'minion' || targetType === 'any_character' || targetType === 'character') {
 				const cardId = selectedCard.instanceId || (selectedCard as any).id;
 				debug.combat('[Battlecry Debug] Playing card with enemy target:', { cardId, targetId: card.instanceId });
-				playCard(cardId, card.instanceId, 'minion');
+				p2pActions.playCard(cardId, card.instanceId, 'minion');
 				return;
 			}
 		}
 
-		if (!isPlayerTurn || !rawAttackingCard) {
+		if (!rawAttackingCard) {
 			debug.combat('[Attack Debug] handleOpponentCardClick - no attacker selected or not player turn');
 			return;
 		}
 		debug.combat('[Attack Debug] Attacking', card.card?.name, 'with', rawAttackingCard?.card?.name);
-		attackWithCard(rawAttackingCard.instanceId, card.instanceId);
-	}, [isPlayerTurn, rawAttackingCard, attackWithCard, selectedCard, playCard, heroPowerTargeting, executeHeroPowerEffect]);
+		p2pActions.attackWithCard(rawAttackingCard.instanceId, card.instanceId);
+	}, [isPlayerTurn, rawAttackingCard, p2pActions, selectedCard, heroPowerTargeting, executeHeroPowerEffect]);
 
-	const handleCardPlay = useCallback((card: any) => {
+	const handleCardPlay = useCallback((card: any, position?: { insertionIndex?: number }) => {
 		debug.combat('[handleCardPlay Debug] Card clicked:', {
 			name: card.card?.name || card.name,
 			type: card.card?.type || card.type,
@@ -221,7 +235,11 @@ export function usePokerCardClickHandlers({
 		if (cardType === 'minion' && battlecry) {
 			const effectType = battlecry.type || 'default';
 			const isAoEBattlecry = effectType === 'aoe_damage' || (effectType === 'damage' && battlecry.affectsAllEnemies);
-			setTimeout(() => {
+			if (battlecryTimerRef.current) clearTimeout(battlecryTimerRef.current);
+			const scheduledGamePhase = gameState?.gamePhase;
+			battlecryTimerRef.current = setTimeout(() => {
+				battlecryTimerRef.current = null;
+				if (useGameStore.getState().gameState?.gamePhase !== scheduledGamePhase) return;
 				emitBattlecryTriggered({
 					sourceId: cardId,
 					sourceName: card.card?.name || card.name || '',
@@ -233,8 +251,8 @@ export function usePokerCardClickHandlers({
 		}
 
 		const useBlood = !!(card as any).payWithBlood;
-		playCard(cardId, undefined, undefined, undefined, useBlood);
-	}, [isPlayerTurn, playCard, selectCard, gameState]);
+		p2pActions.playCard(cardId, undefined, undefined, position?.insertionIndex, useBlood);
+	}, [isPlayerTurn, p2pActions, selectCard, gameState]);
 
 	return { handlePlayerCardClick, handleOpponentCardClick, handleCardPlay };
 }

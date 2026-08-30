@@ -10,8 +10,7 @@ import { recordCombatFeedback } from '../combat/feedback/combatFeedbackStore';
 import {
 	logsFromPokerResourceDiff,
 	manaLogEntry,
-	mapCombatLogToGameLog,
-	overlayLaneForCombatLog,
+	routeCombatLogEntry,
 	shouldForwardCombatLog,
 	type PokerResourceSnapshot,
 } from '../combat/feedback/combatFeedback';
@@ -444,20 +443,19 @@ export function useGameLogIntegration() {
 			forwardedCombatLogIdsRef.current.add(entry.id);
 			if (!shouldForwardCombatLog(entry)) continue;
 
-			const log = mapCombatLogToGameLog(entry, turn, phaseLabel);
-			const overlayLane = overlayLaneForCombatLog(entry);
-			if (overlayLane) {
+			const routed = routeCombatLogEntry(entry, turn, phaseLabel);
+			if (routed.presentation.kind === 'toast') {
 				recordCombatFeedback({
-					log,
+					log: routed.log,
 					overlay: {
-						lane: overlayLane,
-						title: entry.message,
-						tone: entry.type === 'spell' ? 'info' : 'warning',
+						lane: routed.presentation.lane,
+						title: routed.presentation.title,
+						tone: routed.presentation.tone,
 					},
 				});
 				continue;
 			}
-			addEntry(log);
+			addEntry(routed.log);
 		}
 	}, [addEntry, combatLog, gameState?.turnNumber, pokerPhase]);
 }

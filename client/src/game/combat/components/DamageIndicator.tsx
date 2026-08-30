@@ -17,6 +17,7 @@ import {
 	getArenaLocalPoint,
 	getArenaVfxLayer,
 } from '../arenaVfxTargets';
+import { useArenaVfxRoot } from '../arenaVfxContext';
 
 export interface DamageAnimation {
 	id: string;
@@ -45,6 +46,7 @@ export const DamageIndicator: React.FC<DamageIndicatorProps> = ({
 	isHeal = false,
 	onComplete,
 }) => {
+	const arenaRoot = useArenaVfxRoot();
 	const isBig = damage >= 5;
 	const isCritical = damage >= 8;
 	const isCrit = damage >= 10;
@@ -77,7 +79,7 @@ export const DamageIndicator: React.FC<DamageIndicatorProps> = ({
 		isCritical ? 'damage-critical' : '',
 	].filter(Boolean).join(' ');
 
-	const portalTarget = getArenaVfxLayer(ARENA_VFX_LAYERS.vfx);
+	const portalTarget = getArenaVfxLayer(ARENA_VFX_LAYERS.vfx, arenaRoot);
 	const position = portalTarget ? getArenaLocalPoint({ x, y }, portalTarget) : null;
 	if (!portalTarget || !position) return null;
 

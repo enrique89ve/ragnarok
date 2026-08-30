@@ -15,10 +15,10 @@ export interface BattlefieldCardClickContext {
 
 export function resolveBattlefieldCardClickIntent(context: BattlefieldCardClickContext): BattlefieldCardClickIntent {
 	if (context.isInteractionDisabled) return 'inspect';
+	if (!context.isPlayerTurn) return 'inspect';
 	if (context.isHeroPowerTargeting || context.hasSelectedHandCard || context.hasSelectedAttacker) return 'gameplay';
 	if (
 		context.side === 'player' &&
-		context.isPlayerTurn &&
 		context.cardCanAttack &&
 		!context.cardIsSummoningSick &&
 		!context.cardIsFrozen

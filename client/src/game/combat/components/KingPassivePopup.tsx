@@ -7,6 +7,7 @@ import { assetPath } from '../../utils/assetPath';
 import { getKingArtPath, DEFAULT_PORTRAIT } from '../../utils/art/artMapping';
 import { gameEffectCoordinator } from '@/game/effects/core/gameEffectCoordinator';
 import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../arenaVfxTargets';
+import { useArenaVfxRoot } from '../arenaVfxContext';
 import './KingPassivePopup.css';
 
 const POPUP_DURATION = 2200;
@@ -86,6 +87,7 @@ export const KingPassivePopup: React.FC = () => {
 	const events = useKingPassiveEventStore((s) => s.events);
 	const removeEvent = useKingPassiveEventStore((s) => s.removeEvent);
 	const visibleRef = useRef<string[]>([]);
+	const arenaRoot = useArenaVfxRoot();
 
 	const handleComplete = useCallback((id: string) => {
 		visibleRef.current = visibleRef.current.filter((eid) => eid !== id);
@@ -93,7 +95,7 @@ export const KingPassivePopup: React.FC = () => {
 	}, [removeEvent]);
 
 	const visibleEvents = events.slice(0, MAX_SIMULTANEOUS);
-	const portalTarget = getArenaVfxLayer(ARENA_VFX_LAYERS.vfx);
+	const portalTarget = getArenaVfxLayer(ARENA_VFX_LAYERS.vfx, arenaRoot);
 	if (!portalTarget) return null;
 
 	return createPortal(

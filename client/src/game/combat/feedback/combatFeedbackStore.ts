@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { useGameLogStore } from '../../stores/gameLogStore';
 import {
 	FEEDBACK_STACK_CAP,
+	FEEDBACK_PENDING_CAP,
 	FEEDBACK_STAGGER_MS,
 	overlayHoldMs,
 	type FeedbackLane,
@@ -49,6 +50,12 @@ function isCinemaHeld(holders: readonly string[]): boolean {
 	return holders.length > 0;
 }
 
+function cancelFlushTimer(): void {
+	if (!flushTimer) return;
+	flushTimer.cancel();
+	flushTimer = null;
+}
+
 function scheduleDismiss(id: string, holdMs: number, dismiss: (id: string) => void): void {
 	const existing = dismissTimers.get(id);
 	if (existing) existing.cancel();
@@ -59,34 +66,55 @@ function scheduleDismiss(id: string, holdMs: number, dismiss: (id: string) => vo
 		priority: 'normal',
 		delayMs: holdMs,
 		run: () => {
-		dismissTimers.delete(id);
+			dismissTimers.delete(id);
 		dismiss(id);
 		},
 	}));
 }
 
+function sameChip(left: FeedbackChip, right: FeedbackChip): boolean {
+	return left.title === right.title
+		&& left.subtitle === right.subtitle
+		&& left.tone === right.tone;
+}
+
+function enqueuePendingChip(pending: readonly FeedbackChip[], chip: FeedbackChip): readonly FeedbackChip[] {
+	if (pending.some(existing => sameChip(existing, chip))) return pending;
+
+	const next = [...pending, chip];
+	if (next.length <= FEEDBACK_PENDING_CAP) return next;
+
+	const removableIndex = next.findIndex(existing => existing.tone !== 'error');
+	if (removableIndex >= 0) return next.filter((_, index) => index !== removableIndex);
+	return next.slice(1);
+}
+
 export const useCombatFeedbackStore = create<CombatFeedbackState>((set, get) => {
 	const flushPending = () => {
-		if (flushTimer) {
-			flushTimer.cancel();
-			flushTimer = null;
-		}
 		const state = get();
-		if (isCinemaHeld(state.cinemaHolders) || state.pending.length === 0) return;
+		if (
+			isCinemaHeld(state.cinemaHolders)
+			|| state.stack.length >= FEEDBACK_STACK_CAP
+			|| state.pending.length === 0
+		) return;
 		const [next, ...rest] = state.pending;
-		const visible = [...state.stack, next].slice(-FEEDBACK_STACK_CAP);
-		set({ stack: visible, pending: rest });
+		set({ stack: [next], pending: rest });
 		scheduleDismiss(next.id, next.holdMs, get().dismiss);
-		if (rest.length > 0) {
-			flushTimer = gameEffectCoordinator.schedule({
-				owner: 'feedback',
-				lane: 'feedback',
-				key: 'flush',
-				priority: 'normal',
-				delayMs: FEEDBACK_STAGGER_MS,
-				run: flushPending,
-			});
-		}
+	};
+
+	const schedulePendingFlush = (delayMs = FEEDBACK_STAGGER_MS) => {
+		cancelFlushTimer();
+		flushTimer = gameEffectCoordinator.schedule({
+			owner: 'feedback',
+			lane: 'feedback',
+			key: 'flush',
+			priority: 'normal',
+			delayMs,
+			run: () => {
+				flushTimer = null;
+				flushPending();
+			},
+		});
 	};
 
 	return {
@@ -122,8 +150,10 @@ export const useCombatFeedbackStore = create<CombatFeedbackState>((set, get) => 
 				holdMs,
 			};
 			const state = get();
-			if (isCinemaHeld(state.cinemaHolders) || state.stack.length >= FEEDBACK_STACK_CAP) {
-				set({ pending: [...state.pending, full] });
+			const existing = [...state.stack, ...state.pending].find(candidate => sameChip(candidate, full));
+			if (existing) return existing.id;
+			if (isCinemaHeld(state.cinemaHolders) || state.stack.length >= FEEDBACK_STACK_CAP || state.pending.length > 0) {
+				set({ pending: enqueuePendingChip(state.pending, full) });
 				return id;
 			}
 			set({ stack: [...state.stack, full] });
@@ -141,7 +171,10 @@ export const useCombatFeedbackStore = create<CombatFeedbackState>((set, get) => 
 				stack: state.stack.filter((chip) => chip.id !== id),
 				pending: state.pending.filter((chip) => chip.id !== id),
 			}));
-			flushPending();
+			const state = get();
+			if (!isCinemaHeld(state.cinemaHolders) && state.stack.length === 0 && state.pending.length > 0) {
+				schedulePendingFlush();
+			}
 		},
 
 		reset: () => {
@@ -149,10 +182,7 @@ export const useCombatFeedbackStore = create<CombatFeedbackState>((set, get) => 
 			dismissTimers.clear();
 			cinemaHoldTimers.forEach((timer) => timer.cancel());
 			cinemaHoldTimers.clear();
-			if (flushTimer) {
-				flushTimer.cancel();
-				flushTimer = null;
-			}
+			cancelFlushTimer();
 			set({ cinemaHolders: [], stack: [], pending: [] });
 		},
 	};

@@ -1,9 +1,10 @@
 /*
   BossQuipBubble — opponent dialogue overlay during campaign combat.
   Positioned absolutely, anchored to the LEFT of the opponent hero
-  portrait so it doesn't cover the hero face. The opponent hero lives
-  inside .opponent-hero-container; we expect a parent with that class
-  to be position:relative.
+  portrait so it doesn't cover the hero face. The normal fallback stays
+  anchored to .opponent-hero-container; the arena presentation path portals
+  the bubble into the bounded modal layer so it can escape that parent's
+  stacking context without escaping the combat canvas.
 */
 
 .boss-quip-bubble {
@@ -24,6 +25,35 @@
 		inset 0 1px 0 rgba(212, 175, 55, 0.18);
 	font-family: var(--font-ui, 'Inter', system-ui, sans-serif);
 	color: #f3e9c8;
+}
+
+/* Portal path: .arena-notice-layer is the bounded narrative layer. The right
+   edge tracks the opponent hero's canvas x-coordinate, preserving the same
+   visual anchor after leaving .opponent-hero-container's stacking context. */
+.boss-quip-bubble--portal {
+	top: calc(var(--poker-zone-opponentHero-y) + 12px);
+	right: calc(100% - var(--poker-zone-opponentHero-x) + 16px);
+	z-index: 20;
+}
+
+/* The anchor stays in the hero column after the bubble is portalized. It has
+   no layout footprint, but gives the component a local arena host to query. */
+.boss-quip-anchor {
+	position: absolute;
+	width: 0;
+	height: 0;
+	pointer-events: none;
+}
+
+/* Narrative notices sit above ordinary VFX but below the HUD, true modals and
+   full-screen cinematics. This is intentionally not `arena-modal`/topmost. */
+.ragnarok-combat-arena .arena-notice-layer {
+	position: absolute;
+	inset: 0;
+	z-index: 760;
+	overflow: visible;
+	pointer-events: none;
+	isolation: isolate;
 }
 
 /* When a portrait is supplied, lay out as portrait | content row */

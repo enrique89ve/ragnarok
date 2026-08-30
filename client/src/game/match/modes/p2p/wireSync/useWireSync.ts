@@ -3054,10 +3054,10 @@ export function useWireSync() {
 		return out;
 	};
 
-	const wrappedPlayCard = useCallback((cardId: string, targetId?: string, targetType?: 'minion' | 'hero', insertionIndex?: number) => {
-		recordMove('playCard', { cardId, targetId, targetType, insertionIndex }, buildLocalTranscriptId());
+	const wrappedPlayCard = useCallback((cardId: string, targetId?: string, targetType?: 'minion' | 'hero', insertionIndex?: number, payWithBlood?: boolean) => {
+		recordMove('playCard', { cardId, targetId, targetType, insertionIndex, payWithBlood }, buildLocalTranscriptId());
 		void appendAndSendActionEnvelope(buildTranscriptAction(GAME_COMMAND_TYPES.playCard, {
-			cardId, targetId, targetType, insertionIndex,
+			cardId, targetId, targetType, insertionIndex, payWithBlood,
 		}));
 		runCardsLocalAction({
 			type: GAME_COMMAND_TYPES.playCard,
@@ -3065,7 +3065,8 @@ export function useWireSync() {
 			targetId,
 			targetType,
 			insertionIndex,
-		}, () => playCard(cardId, targetId, targetType, insertionIndex));
+			payWithBlood,
+		}, () => playCard(cardId, targetId, targetType, insertionIndex, payWithBlood));
 	}, [playCard, runCardsLocalAction, appendAndSendActionEnvelope]);
 
 	const wrappedAttack = useCallback((attackerId: string, defenderId: string) => {

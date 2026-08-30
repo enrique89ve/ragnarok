@@ -58,6 +58,11 @@ const MESSAGE_RATE_LIMIT: RateLimitBucket = new Map();
 const ROOM_MAX_PEERS = 2;
 const CONTROL_MESSAGE_LIMIT = 40;
 const CONTROL_MESSAGE_WINDOW_MS = 10_000;
+export const P2P_CONTROL_KEEPALIVE_INTERVAL_MS = 15_000;
+
+export type P2PControlServerOptions = Readonly<{
+	readonly keepaliveIntervalMs?: number;
+}>;
 
 type UpgradeAccess =
 	| { readonly ok: true; readonly ticket: P2PMatchTicketPayload }
@@ -203,12 +208,14 @@ export function getP2PControlStats(): P2PControlTelemetrySnapshot {
 	return getP2PControlTelemetrySnapshot({ activeRooms: rooms.size, activeConnections });
 }
 
-export function attachP2PControl(server: HttpServer): void {
+export function attachP2PControl(server: HttpServer, options: P2PControlServerOptions = {}): void {
 	const wss = new WebSocketServer({
 		noServer: true,
 		maxPayload: P2P_CONTROL_MAX_PAYLOAD_BYTES,
 		handleProtocols: (protocols) => protocols.has(P2P_CONTROL_WS_PROTOCOL) ? P2P_CONTROL_WS_PROTOCOL : false,
 	});
+	const aliveSockets = new WeakSet<WebSocket>();
+	const keepaliveIntervalMs = options.keepaliveIntervalMs ?? P2P_CONTROL_KEEPALIVE_INTERVAL_MS;
 	const ticketBySocket = new WeakMap<WebSocket, P2PMatchTicketPayload>();
 
 	async function handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): Promise<void> {
@@ -248,6 +255,8 @@ export function attachP2PControl(server: HttpServer): void {
 	});
 
 	wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
+		aliveSockets.add(ws);
+		ws.on('pong', () => { aliveSockets.add(ws); });
 		const ticket = ticketBySocket.get(ws);
 		const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
 		const roomId = url.searchParams.get('match');
@@ -442,4 +451,22 @@ export function attachP2PControl(server: HttpServer): void {
 		ws.on('close', handleDeparture);
 		ws.on('error', () => recordP2PControlError('socket_error'));
 	});
+
+	// Keep the authenticated referee channel alive through reverse proxies even
+	// when both players are thinking and no signaling/checkpoint frame is sent.
+	// Browsers answer protocol-level ping frames with pong automatically.
+	const keepaliveTimer = setInterval(() => {
+		wss.clients.forEach(ws => {
+			if (!aliveSockets.has(ws)) {
+				recordP2PControlError('keepalive_timeout');
+				ws.terminate();
+				return;
+			}
+			aliveSockets.delete(ws);
+			try { ws.ping(); } catch { /* socket closed */ }
+		});
+	}, keepaliveIntervalMs);
+	keepaliveTimer.unref?.();
+	server.once('close', () => clearInterval(keepaliveTimer));
+	wss.once('close', () => clearInterval(keepaliveTimer));
 }

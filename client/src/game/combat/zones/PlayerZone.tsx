@@ -59,7 +59,6 @@ export interface PlayerZoneProps {
 	readonly heroHealth: number;
 	readonly evolveReadyIds: ReadonlySet<string>;
 	readonly playerBattlefield: ReadonlyArray<unknown>;
-	readonly onCardPlay: ((card: any, pos?: any) => void) | undefined;
 	readonly handleCardPlay: (card: any, pos?: any) => void;
 	readonly registerCardPosition: (card: CardInstance, position: Position) => void;
 	readonly battlefieldRef: React.RefObject<HTMLDivElement | null>;
@@ -98,7 +97,6 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({
 	heroHealth,
 	evolveReadyIds,
 	playerBattlefield,
-	onCardPlay,
 	handleCardPlay,
 	registerCardPosition,
 	battlefieldRef,
@@ -159,7 +157,7 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({
 				</div>
 			)}
 			<div className="unified-hand-section">
-				{handCards.length > 0 && onCardPlay && (
+				{handCards.length > 0 && (
 					<div className="poker-hand-container">
 						<HandFan
 							cards={handCards as any}

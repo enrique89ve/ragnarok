@@ -74,6 +74,7 @@ import { BoardZone } from './zones/BoardZone';
 import { PlayerZone } from './zones/PlayerZone';
 import { MinionField } from './zones/MinionField';
 import { ARENA_VFX_LAYERS, arenaVfxLayerProps } from './arenaVfxTargets';
+import { ArenaVfxRootContext } from './arenaVfxContext';
 import { captureVisualSnapshot, presentationTargetForEntityId } from '../effects/presentation/EffectTargetResolver';
 import { POKER_VIEWPORT_LAYOUT_STYLE, POKER_VIEWPORT_SAFE_AREA } from '../poker';
 import { useCampaignStore, getMission } from '../campaign';
@@ -87,6 +88,8 @@ import type { CardInspectorSource } from './cardInspector/cardInspectorModel';
 import { resolveBattlefieldCardClickIntent, type BattlefieldCardSide } from './cardInspector/battlefieldCardIntent';
 import { GameIcon } from '../utils/ui/GameIcon';
 import type { IconName } from '../utils/ui/iconMap';
+
+const OPENING_REALM_HOLD_MS = 2_500;
 
 const PHASE_LABELS: Partial<Record<CombatPhase, string>> = {
 	[CombatPhase.MULLIGAN]: 'Mulligan',
@@ -122,11 +125,6 @@ type WagerEffectCard = {
 	wagerEffect?: {
 		type?: string;
 	};
-};
-
-type CombatZonePosition = {
-	row?: number;
-	col?: number;
 };
 
 type ExtendedCardData = CardInstance['card'] & {
@@ -214,7 +212,6 @@ interface UnifiedCombatArenaProps {
   handCards?: CardInstance[];
   handCurrentMana?: number;
   handIsPlayerTurn?: boolean;
-  onCardPlay?: (card: CardInstance, position?: CombatZonePosition) => void;
 	  registerCardPosition?: (card: CardInstance, position: Position) => void;
   battlefieldRef?: React.RefObject<HTMLDivElement | null>;
   // Boss dialogue (campaign mode only) — owned by parent RagnarokCombatArena
@@ -232,7 +229,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
   onHeroPowerClick, onWeaponUpgradeClick, isWeaponUpgraded = false,
   heroPowerTargeting, executeHeroPowerEffect,
   handCards = [], handCurrentMana = 0, handIsPlayerTurn = false,
-	  onCardPlay, registerCardPosition, battlefieldRef: externalBattlefieldRef,
+	  registerCardPosition, battlefieldRef: externalBattlefieldRef,
   bossQuipText = null, bossQuipKey = 0, bossPortrait,
 }) => {
   const noopRegisterCardPosition = useCallback(() => {}, []);
@@ -241,12 +238,14 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
   const { combatState } = usePokerCombatAdapter();
   
   // Game state for battlefield — use individual selectors to avoid unnecessary re-renders
-  const gameState = useGameStore(s => s.gameState);
-  const selectAttacker = useGameStore(s => s.selectAttacker);
+	const gameState = useGameStore(s => s.gameState);
+	const selectAttacker = useGameStore(s => s.selectAttacker);
+	const selectCard = useGameStore(s => s.selectCard);
 	const selectedHandCard = useGameStore(s => s.selectedCard);
 	const p2pActions = useP2PActions();
 	const activeMatch = useMatchStore(s => s.activeMatch);
 	const connectionState = usePeerStore(s => s.connectionState);
+	const showDamageNumbers = useSettingsStore(s => s.showDamageNumbers);
 
 	const cardGameIsPlayerTurn = gameState?.currentTurn === 'player';
 	const isP2PCombat = activeMatch?.opponent.kind === 'peer';
@@ -441,9 +440,15 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
     gameState,
   });
 
-  const isCardInteractionDisabled = gameState?.gamePhase === 'game_over';
+	const isCardInteractionDisabled = gameState?.gamePhase === 'game_over';
 	const isHandInteractionDisabled = isCardInteractionDisabled || !pokerDecisionView.localCanAct;
-  const openCardInspector = useCallback((card: CardInstance, source: CardInspectorSource) => {
+	useEffect(() => {
+		if (isPlayerTurn) return;
+		if (selectedHandCard) selectCard(null);
+		if (rawAttackingCard) selectAttacker(null);
+	}, [isPlayerTurn, rawAttackingCard, selectAttacker, selectedHandCard, selectCard]);
+
+	const openCardInspector = useCallback((card: CardInstance, source: CardInspectorSource) => {
     setInspectedCard({ card, source });
   }, []);
   const handleBattlefieldCardClick = useCallback((side: BattlefieldCardSide, card: CardInstance) => {
@@ -633,7 +638,6 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
         heroHealth={readViewerCombatHeroHp(combatState, 'player')?.current ?? 0}
         evolveReadyIds={evolveReadyIds}
         playerBattlefield={playerBattlefield}
-        onCardPlay={onCardPlay}
         handleCardPlay={handleCardPlay}
         registerCardPosition={registerCardPosition || noopRegisterCardPosition}
         battlefieldRef={battlefieldRef as React.RefObject<HTMLDivElement>}
@@ -710,7 +714,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
       />
 
       {/* Damage Animations — gated by showDamageNumbers setting */}
-      {useSettingsStore.getState().showDamageNumbers && damageAnimations.map(anim => (
+      {showDamageNumbers && damageAnimations.map(anim => (
         <DamageIndicator
           id={anim.id}
           key={anim.id}
@@ -742,6 +746,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
 };
 
 export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onCombatEnd }) => {
+  const [arenaRoot, setArenaRoot] = useState<HTMLDivElement | null>(null);
 	const hourglassPrefix = useId().replace(/[^a-zA-Z0-9_-]/g, '');
 	const hourglassIds = {
 		gold: `hourglass-${hourglassPrefix}-gold`,
@@ -808,18 +813,49 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
   }, [bossQuipMissionId]);
   const [quipText, setQuipText] = useState<string | null>(null);
   const [quipKey, setQuipKey] = useState(0);
+  const [openingNarrativeReady, setOpeningNarrativeReady] = useState(false);
+  const openingNarrativeReadyRef = useRef(false);
+  const pendingOpeningQuipsRef = useRef<string[]>([]);
   const lowHPQuipFiredRef = useRef(false);
   const lethalQuipFiredRef = useRef(false);
   const combatStartQuipFiredRef = useRef(false);
 
-  // Combat-start quip — fires once when the arena mounts with quips data.
+  const presentQuip = useCallback((text: string) => {
+    setQuipText(text);
+    setQuipKey(k => k + 1);
+  }, []);
+
+  // Narrative feedback is allowed to queue while the opening sequence is
+  // still showing First Strike, matchup, or a realm shift. Gameplay remains
+  // authoritative; this only controls when readable copy enters the arena.
+  const requestQuipText = useCallback((text: string | null) => {
+    if (!text) {
+      setQuipText(null);
+      return;
+    }
+    if (!openingNarrativeReadyRef.current) {
+      pendingOpeningQuipsRef.current.push(text);
+      return;
+    }
+    setQuipText(text);
+  }, []);
+
+  useEffect(() => {
+    openingNarrativeReadyRef.current = openingNarrativeReady;
+  }, [openingNarrativeReady]);
+
+  // Combat-start quip — fires once after the opening presentation has made
+  // room for readable narrative copy. A phase/threshold quip that arrived
+  // during the opening takes precedence so it is not lost or overlapped.
   useEffect(() => {
     if (combatStartQuipFiredRef.current) return;
-    if (!bossQuips?.onCombatStart) return;
+    if (!openingNarrativeReady) return;
+    const queuedQuip = pendingOpeningQuipsRef.current.shift();
+    const openingQuip = queuedQuip ?? bossQuips?.onCombatStart;
+    if (!openingQuip) return;
     combatStartQuipFiredRef.current = true;
-    setQuipText(bossQuips.onCombatStart);
-    setQuipKey(k => k + 1);
-  }, [bossQuips]);
+    presentQuip(openingQuip);
+  }, [bossQuips, openingNarrativeReady, presentQuip]);
 
   // Opponent HP for boss quips is read after the combat controller mounts.
 
@@ -841,7 +877,6 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
     available.
   */
   const feudFiredRef = useRef(false);
-  const feudTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     combatState,
@@ -868,7 +903,6 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
     isOpponentTargetable,
     isPlayerTargetable,
     sharedRegisterCardPosition,
-    sharedHandleCardPlay,
     handleOpponentHeroClick,
     handlePlayerHeroClick,
     executeHeroPowerEffect,
@@ -925,7 +959,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
   useBossPhases({
     opponentCurrentHP: quipOpponentHP,
     opponentMaxHP: quipOpponentMaxHP,
-    setQuipText,
+    setQuipText: requestQuipText,
     setQuipKey,
     setFlash: setPhaseFlash,
   });
@@ -935,9 +969,9 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
     if (quipOpponentMaxHP <= 0) return;
     if (quipOpponentHP / quipOpponentMaxHP > 0.5) return;
     lowHPQuipFiredRef.current = true;
-    setQuipText(bossQuips.onLowHP);
+    requestQuipText(bossQuips.onLowHP);
     setQuipKey(k => k + 1);
-  }, [bossQuips, quipOpponentHP, quipOpponentMaxHP]);
+  }, [bossQuips, quipOpponentHP, quipOpponentMaxHP, requestQuipText]);
   useEffect(() => {
     if (lethalQuipFiredRef.current) return;
     if (!lowHPQuipFiredRef.current) return;
@@ -945,9 +979,9 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
     if (quipOpponentMaxHP <= 0) return;
     if (quipOpponentHP / quipOpponentMaxHP > 0.15) return;
     lethalQuipFiredRef.current = true;
-    setQuipText(bossQuips.onLethal);
+    requestQuipText(bossQuips.onLethal);
     setQuipKey(k => k + 1);
-  }, [bossQuips, quipOpponentHP, quipOpponentMaxHP]);
+  }, [bossQuips, quipOpponentHP, quipOpponentMaxHP, requestQuipText]);
 
   const pokerDrama = usePokerDrama({ combatState, isActive });
 
@@ -961,7 +995,19 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
 
   // Element matchup banner — show once when combat first initializes
   const [showMatchupBanner, setShowMatchupBanner] = useState(false);
+  const [openingMatchupComplete, setOpeningMatchupComplete] = useState(false);
+  const [queuedRealmAnnouncement, setQueuedRealmAnnouncement] = useState<string | null>(null);
+  const [visibleRealmAnnouncement, setVisibleRealmAnnouncement] = useState<string | null>(null);
   const matchupBannerShownRef = useRef(false);
+  const openingRealmHandledRef = useRef(false);
+  const lastPresentedRealmAnnouncementRef = useRef<string | null>(null);
+  const realmAnnouncementTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMatchupComplete = useCallback(() => {
+    setShowMatchupBanner(false);
+    setOpeningMatchupComplete(true);
+  }, []);
+
   useEffect(() => {
     if (!combatState || matchupBannerShownRef.current) return;
 
@@ -980,10 +1026,12 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
     }
   }, [combatState, firstStrikePresentation]);
 
-  // Hero feud taunt — fires 2.5s after combat start in PvP if heroes
-  // have a canonical rivalry. Delayed so it doesn't collide with boss quips.
+  // Hero feud taunt — waits for the same opening gate as campaign quips.
+  // The matchup component owns its readable dwell; no independent timer can
+  // race the first-strike or matchup copy anymore.
   useEffect(() => {
     if (feudFiredRef.current) return;
+    if (!openingNarrativeReady) return;
     if (!combatState) return;
     if (bossQuipMissionId) return; // campaign has its own quip system
     const playerHero = combatState.player?.pet?.norseHeroId;
@@ -992,14 +1040,9 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
     const feud = getHeroFeud(playerHero, opponentHero);
     if (!feud) return;
     feudFiredRef.current = true;
-    // Show tagline first, then the opponent's quip directed at the player
-    feudTimerRef.current = setTimeout(() => {
-      const opponentQuip = playerHero < opponentHero ? feud.bQuip : feud.aQuip;
-      setQuipText(opponentQuip);
-      setQuipKey(k => k + 1);
-    }, 2500);
-    return () => { if (feudTimerRef.current) clearTimeout(feudTimerRef.current); };
-  }, [combatState, bossQuipMissionId]);
+    const opponentQuip = playerHero < opponentHero ? feud.bQuip : feud.aQuip;
+    presentQuip(opponentQuip);
+  }, [combatState, bossQuipMissionId, openingNarrativeReady, presentQuip]);
 
   useEffect(() => {
     return () => { resetKingEvents(); };
@@ -1007,6 +1050,54 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
 
   // Realm selector — drives board skin + ambient particles (extracted to hook)
   const { realmAnnouncement, realmClass, activeRealmId, activeRealmName } = useRealmAnnouncement();
+
+  // Realm shifts are readable notices too. Capture one that arrives during
+  // the opening so useRealmAnnouncement's short lifetime cannot hide it
+  // behind First Strike or the matchup banner.
+  useEffect(() => {
+    if (!realmAnnouncement) return;
+    if (realmAnnouncement === lastPresentedRealmAnnouncementRef.current) return;
+    setQueuedRealmAnnouncement(current => current === realmAnnouncement ? current : realmAnnouncement);
+  }, [realmAnnouncement]);
+
+  const presentRealmAnnouncement = useCallback((announcement: string, completesOpening: boolean) => {
+    if (realmAnnouncementTimerRef.current) clearTimeout(realmAnnouncementTimerRef.current);
+    setVisibleRealmAnnouncement(announcement);
+    realmAnnouncementTimerRef.current = setTimeout(() => {
+      realmAnnouncementTimerRef.current = null;
+      setVisibleRealmAnnouncement(null);
+      if (completesOpening) setOpeningNarrativeReady(true);
+    }, OPENING_REALM_HOLD_MS);
+  }, []);
+
+  useEffect(() => {
+    if (!openingMatchupComplete || visibleRealmAnnouncement) return;
+
+    // One route owns both the opening decision and later realm shifts. The
+    // explicit `completesOpening` snapshot prevents a second effect from
+    // seeing stale queued state and cancelling the opening timer.
+    const candidateRealm = queuedRealmAnnouncement
+      ?? (realmAnnouncement && realmAnnouncement !== lastPresentedRealmAnnouncementRef.current
+        ? realmAnnouncement
+        : null);
+    if (!candidateRealm) {
+      if (!openingRealmHandledRef.current) {
+        openingRealmHandledRef.current = true;
+        setOpeningNarrativeReady(true);
+      }
+      return;
+    }
+
+    const completesOpening = !openingRealmHandledRef.current;
+    openingRealmHandledRef.current = true;
+    lastPresentedRealmAnnouncementRef.current = candidateRealm;
+    setQueuedRealmAnnouncement(null);
+    presentRealmAnnouncement(candidateRealm, completesOpening);
+  }, [openingMatchupComplete, presentRealmAnnouncement, queuedRealmAnnouncement, realmAnnouncement, visibleRealmAnnouncement]);
+
+  useEffect(() => () => {
+    if (realmAnnouncementTimerRef.current) clearTimeout(realmAnnouncementTimerRef.current);
+  }, []);
 
   // Prophecy tracker
   const prophecies = useGameStore(state => state.gameState?.prophecies);
@@ -1131,9 +1222,11 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
       maxScale={POKER_VIEWPORT_SAFE_AREA.maxScale}
     >
       <div
+        ref={setArenaRoot}
         className={`ragnarok-combat-arena arena-scaled viewport-mode bg-transparent ${isPlayerTurn ? 'player-turn' : 'opponent-turn'}`}
         style={POKER_VIEWPORT_LAYOUT_STYLE}
       >
+        <ArenaVfxRootContext.Provider value={arenaRoot}>
         {/* ═════════════════════════════════════════════════════════════
             LAYERED ARCHITECTURE — see docs/POKER_ARENA_UI.md §Layers
             5 stacked layers, each absolute inset-0, never escape canvas:
@@ -1146,6 +1239,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
             ═════════════════════════════════════════════════════════════ */}
         <div className="layer-background" />
         <div id="arena-layer-vfx" className="layer-vfx" {...arenaVfxLayerProps(ARENA_VFX_LAYERS.vfx)} />
+        <div className="arena-notice-layer" />
         <div id="arena-layer-modal" className="layer-modal" {...arenaVfxLayerProps(ARENA_VFX_LAYERS.modal)} />
 
         {/* Hourglass Timer at Top Center */}
@@ -1405,7 +1499,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
 
         {/* Realm shift announcement banner */}
         <AnimatePresence>
-          {realmAnnouncement && (
+          {visibleRealmAnnouncement && (
             <motion.div
               className="realm-announcement"
               initial={{ opacity: 0, scale: 1.5 }}
@@ -1413,7 +1507,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
               exit={{ opacity: 0, scale: 0.8 }}
               transition={{ duration: 0.5, ease: 'easeOut' }}
             >
-              <div className="realm-announcement-name">{realmAnnouncement}</div>
+              <div className="realm-announcement-name">{visibleRealmAnnouncement}</div>
               <div className="realm-announcement-desc">Realm Shift</div>
             </motion.div>
           )}
@@ -1450,7 +1544,6 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
             handCards={playerHand}
             handCurrentMana={playerMana}
             handIsPlayerTurn={isPlayerTurn}
-	            onCardPlay={sharedHandleCardPlay}
             registerCardPosition={sharedRegisterCardPosition}
             battlefieldRef={sharedBattlefieldRef}
             bossQuipText={quipText}
@@ -1505,6 +1598,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
           attackBonus={elementalBuff.playerBuff?.attackBonus ?? elementalBuff.opponentBuff?.attackBonus ?? 2}
           healthBonus={elementalBuff.playerBuff?.healthBonus ?? elementalBuff.opponentBuff?.healthBonus ?? 2}
           armorBonus={elementalBuff.playerBuff?.armorBonus ?? elementalBuff.opponentBuff?.armorBonus ?? 20}
+          onComplete={handleMatchupComplete}
         />
       )}
 
@@ -1596,6 +1690,8 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
       />
 
       <GameLog />
+
+        </ArenaVfxRootContext.Provider>
 
     </div>
     </GameViewport>

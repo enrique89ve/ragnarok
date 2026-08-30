@@ -272,6 +272,20 @@ Pawns cannot capture forward; a pawn on the file ahead only blocks.
 - **Stalemate draw**: If no material terminal has already applied and the side to move has no legal moves while not in check, the game is a draw
 - Kings do not capture. Touching the king (legal capture) wins the match immediately. Check still warns; capturing the commander is the finish.
 
+### Proposed Quick Match Chess Clock — Not Implemented
+
+Ragnarok Chess does not inherit a standard chess clock unchanged. The proposed
+P2P policy gives each player a six-minute Chess decision bank, adds no
+increment, and caps one actionable Chess turn at 90 seconds. The clock includes
+optional King mine placement, stops when a legal Chess command commits, and
+pauses completely during Poker, phase checkpoints and a real reconnect.
+
+To prevent quiet movement and stamina-farming loops, a proposed no-progress
+counter ends the match in a draw after 40 plies without a pawn advance, instant
+capture, hero-vs-hero Poker entry or mine trigger. This policy is documentation
+only and is not active in gameplay. See
+[`ADR 0013`](adr/0013-ragnarok-chess-clock-and-no-progress.md).
+
 ### King Divine Command System
 
 Each of the 9 Primordial Norse Kings possesses a unique **Divine Command** ability - the power to place hidden landmine traps on the battlefield that drain enemy Stamina when triggered.

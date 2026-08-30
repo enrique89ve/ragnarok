@@ -595,10 +595,24 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
 
   const { lastMineTriggered } = useKingChessAbility(myCanonicalSide);
 
+  const delayedCombatTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (delayedCombatTimerRef.current) clearTimeout(delayedCombatTimerRef.current);
+      delayedCombatTimerRef.current = null;
+    };
+  }, [ctx?.matchId, flowState?.tag]);
+
   const handleCombatTriggered = useCallback((attackerId: string, defenderId: string) => {
 
     if (lastMineTriggered) {
-      setTimeout(() => {
+      if (delayedCombatTimerRef.current) clearTimeout(delayedCombatTimerRef.current);
+      const expectedMatchId = ctx?.matchId ?? null;
+      delayedCombatTimerRef.current = setTimeout(() => {
+        delayedCombatTimerRef.current = null;
+        const currentFlow = useGameFlowStore.getState().current;
+        const currentMatchId = useMatchStore.getState().activeMatch?.matchId ?? null;
+        if (currentFlow?.tag !== 'chess' || currentFlow.tag !== flowState?.tag || currentMatchId !== expectedMatchId) return;
         const freshPieces = useUnifiedCombatStore.getState().boardState.pieces;
         const freshAttacker = freshPieces.find(p => p.id === attackerId);
         const freshDefender = freshPieces.find(p => p.id === defenderId);
@@ -613,7 +627,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       dispatchFlow({ type: 'COMBAT_TRIGGERED', pieces: { attacker, defender } });
       playSoundEffect('card_draw');
     }
-  }, [boardState.pieces, playSoundEffect, lastMineTriggered, dispatchFlow]);
+  }, [boardState.pieces, playSoundEffect, lastMineTriggered, dispatchFlow, ctx?.matchId, flowState?.tag]);
 
   const handleVsScreenComplete = useCallback(() => {
     // VS pieces now live in flowState.pieces (FSM owns vs_screen). Bail

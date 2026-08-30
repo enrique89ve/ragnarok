@@ -2,10 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { CombatPhase } from '../../types/PokerCombatTypes';
 import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../arenaVfxTargets';
+import { useArenaVfxRoot } from '../arenaVfxContext';
 import { useCombatFeedbackStore } from '../feedback/combatFeedbackStore';
 import '../styles/poker-drama.css';
 
 const PHASE_CINEMA_HOLDER = 'phase-banner';
+export const PHASE_BANNER_VISIBLE_MS = 2_600;
 
 interface PhaseBannerProps {
 	phase: CombatPhase;
@@ -20,6 +22,7 @@ const PHASE_CONFIG: Partial<Record<CombatPhase, { title: string; subtitle: strin
 };
 
 export const PhaseBanner: React.FC<PhaseBannerProps> = ({ phase, forceHide = false }) => {
+	const arenaRoot = useArenaVfxRoot();
 	const [showBanner, setShowBanner] = useState(false);
 	const [isVisible, setIsVisible] = useState(false);
 	const [bannerData, setBannerData] = useState<{ title: string; subtitle: string; key: string } | null>(null);
@@ -53,7 +56,7 @@ export const PhaseBanner: React.FC<PhaseBannerProps> = ({ phase, forceHide = fal
 				useCombatFeedbackStore.getState().releaseCinema(PHASE_CINEMA_HOLDER);
 			}, 160);
 			timersRef.current.push(removeTimer);
-		}, 1700);
+		}, PHASE_BANNER_VISIBLE_MS);
 		timersRef.current.push(hideTimer);
 	}, [phase]);
 
@@ -90,13 +93,16 @@ export const PhaseBanner: React.FC<PhaseBannerProps> = ({ phase, forceHide = fal
 	 * depend on this banner existing.
 	 */
 	const portalTarget =
-		(typeof document !== 'undefined' && getArenaVfxLayer(ARENA_VFX_LAYERS.vfx)) ||
+		getArenaVfxLayer(ARENA_VFX_LAYERS.vfx, arenaRoot) ||
 		null;
 
 	const banner = (
 		<div
 			className={`phase-banner ${isVisible ? 'phase-banner-enter' : 'phase-banner-exit'}`}
 			data-phase={bannerData.key}
+			role="status"
+			aria-live="polite"
+			aria-label={`${bannerData.title}. ${bannerData.subtitle}`}
 		>
 			<div className="phase-banner-content">
 				<div className="phase-banner-line" />

@@ -18,7 +18,13 @@ import type { PhaseCheckpointPhase } from '@shared/p2p-wire/phaseCheckpoint';
 import type { PhaseCheckpointRequestResult } from '../p2p/phaseCheckpointClient';
 
 export interface P2PActions {
-	playCard: (cardId: string, targetId?: string, targetType?: 'minion' | 'hero', insertionIndex?: number) => void;
+	playCard: (
+		cardId: string,
+		targetId?: string,
+		targetType?: 'minion' | 'hero',
+		insertionIndex?: number,
+		payWithBlood?: boolean,
+	) => void;
 	attackWithCard: (attackerId: string, defenderId?: string) => void;
 	endTurn: () => void;
 	performHeroPower: (targetId?: string) => void;

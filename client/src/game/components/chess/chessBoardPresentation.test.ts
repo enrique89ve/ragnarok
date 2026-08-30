@@ -40,9 +40,9 @@ function makePiece(input: Partial<ChessPiece> & Pick<ChessPiece, 'id' | 'type' |
 describe('chessBoardPresentation', () => {
   it('adapts turn notices to the local viewer side', () => {
     expect(getTurnNoticePresentation({ currentTurn: 'player', viewerSide: 'player' }))
-      .toEqual({ state: 'self', label: 'ᚱ YOUR COMMAND ᚱ' });
+      .toEqual({ state: 'self', label: 'ᚱ YOUR TURN ᚱ' });
     expect(getTurnNoticePresentation({ currentTurn: 'player', viewerSide: 'opponent' }))
-      .toEqual({ state: 'opponent', label: 'ᚱ FOE STIRS ᚱ' });
+      .toEqual({ state: 'opponent', label: 'ᚱ ENEMY TURN ᚱ' });
   });
 
   it('distinguishes own-king danger from an enemy king in check', () => {

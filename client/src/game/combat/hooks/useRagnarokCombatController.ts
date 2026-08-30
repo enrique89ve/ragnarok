@@ -120,7 +120,6 @@ export interface UseRagnarokCombatControllerReturn {
   isPlayerTargetable: boolean;
   
   sharedRegisterCardPosition: (card: any, position: { x: number; y: number }) => void;
-  sharedHandleCardPlay: (card: any, position?: { row?: number; col?: number }) => void;
   handleOpponentHeroClick: () => void;
   handlePlayerHeroClick: () => void;
   executeHeroPowerEffect: (norseHero: any, heroPower: any, target: any) => void;
@@ -330,17 +329,6 @@ export function useRagnarokCombatController(
   const endTurn = useCallback(() => {
     p2pActions.dispatchGameCommand({ type: GAME_COMMAND_TYPES.endTurn });
   }, [p2pActions]);
-  
-  const sharedHandleCardPlay = useCallback((card: any, position?: { row?: number; col?: number; insertionIndex?: number }) => {
-    if (!isPlayerTurn) {
-      return;
-    }
-    const cardId = card?.instanceId || card?.id || card?.card?.id;
-    if (!cardId) {
-      return;
-    }
-    dispatchPlayCardCommand(cardId, undefined, undefined, position?.insertionIndex);
-  }, [isPlayerTurn, dispatchPlayCardCommand]);
   
   const [heroPowerUsedThisTurn, setHeroPowerUsedThisTurn] = useState(false);
   
@@ -1007,7 +995,6 @@ export function useRagnarokCombatController(
     isPlayerTargetable,
     
     sharedRegisterCardPosition,
-    sharedHandleCardPlay,
     handleOpponentHeroClick,
     handlePlayerHeroClick,
     executeHeroPowerEffect,

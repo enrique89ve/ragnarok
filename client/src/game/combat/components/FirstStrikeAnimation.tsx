@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { debug } from '../../config/debugConfig';
 import { GameIcon } from '../../utils/ui/GameIcon';
 import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../arenaVfxTargets';
+import { useArenaVfxRoot } from '../arenaVfxContext';
 
 export type FirstStrikeAnimationProps = {
   readonly target: 'player' | 'opponent';
@@ -27,14 +28,15 @@ export const FirstStrikeAnimation: React.FC<FirstStrikeAnimationProps> = ({
   const [phase, setPhase] = useState<'charge' | 'strike' | 'damage' | 'done'>('charge');
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const onCompleteRef = useRef(onComplete);
+  const arenaRoot = useArenaVfxRoot();
 
   useEffect(() => {
     onCompleteRef.current = onComplete;
   }, [onComplete]);
 
   useEffect(() => {
-    setPortalTarget(getArenaVfxLayer(ARENA_VFX_LAYERS.vfx));
-  }, []);
+    setPortalTarget(arenaRoot ? getArenaVfxLayer(ARENA_VFX_LAYERS.vfx, arenaRoot) : null);
+  }, [arenaRoot]);
 
   useEffect(() => {
     if (!portalTarget) return undefined;
