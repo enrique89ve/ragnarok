@@ -264,7 +264,8 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
 		if (result?.kind !== 'technical_abandonment' || !s.myPeerId) return null;
 		return result.winnerId === s.myPeerId ? 'victory' : 'defeat';
 	});
-  const p2pTechnicalAbandonment = p2pTechnicalResult !== null;
+  const hasP2PTechnicalResult = p2pTechnicalResult !== null;
+  const isLocalP2PAbandonment = p2pTechnicalResult === 'defeat';
   const effectiveInitialArmy: ArmySelectionType | null = initialArmy ?? warbandArmy;
   /*
     Round-level FSM (G4). The single source of truth for which phase
@@ -1234,10 +1235,10 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
               } : null}
               onCinematicEnd={() => dispatchFlow({ type: 'GAME_OVER_ADVANCE', nextSub: 'result' })}
               onBridgeEnd={() => { clearCurrent(); navigate(routes.campaign); }}
-              onPrimaryAction={matchAbandoned || p2pTechnicalAbandonment ? handleReturnHome : isCampaign ? handleBackToCampaign : handleRestart}
+              onPrimaryAction={matchAbandoned || hasP2PTechnicalResult ? handleReturnHome : isCampaign ? handleBackToCampaign : handleRestart}
               onHome={handleReturnHome}
               onRetry={handleRetryMission}
-              abandonment={matchAbandoned || p2pTechnicalAbandonment ? { autoHomeSeconds: MATCH_EXIT_AUTO_HOME_SECONDS } : null}
+              abandonment={matchAbandoned || isLocalP2PAbandonment ? { autoHomeSeconds: MATCH_EXIT_AUTO_HOME_SECONDS } : null}
             />
           )}
         </AnimatePresence>

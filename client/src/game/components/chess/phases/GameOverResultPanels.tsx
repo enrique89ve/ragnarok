@@ -11,7 +11,10 @@ import {
 	useMatchStore,
 	type P2PQaLocalRewardPreview,
 } from '../../../match';
-import { getRagnarokNetworkConfig } from '../../../config/networkConfig';
+import {
+	getRagnarokNetworkConfig,
+	type RagnarokNetworkConfig,
+} from '../../../config/networkConfig';
 
 type GameOverResult = 'victory' | 'defeat' | 'draw';
 
@@ -318,10 +321,11 @@ export function CasualResultPanel({
 	const account = useNFTUsername();
 	const activeMatch = useMatchStore(state => state.activeMatch);
 	const isPeerMatch = activeMatch?.opponent.kind === 'peer';
+	const runtime = getRagnarokNetworkConfig();
 	const p2pQaRewardPreview = createP2PQaLocalRewardPreview({
 		match: activeMatch,
 		result,
-		runtime: getRagnarokNetworkConfig(),
+		runtime,
 		account,
 	});
 
@@ -340,7 +344,7 @@ export function CasualResultPanel({
 
 	return (
 		<>
-			<p className="cgo-subtitle">{getCasualResultSubtitle(result, isPeerMatch)}</p>
+			<p className="cgo-subtitle">{getCasualResultSubtitle(result, isPeerMatch, runtime.stage)}</p>
 			{isPeerMatch && (
 				<P2PResultNotice
 					preview={p2pQaRewardPreview}
@@ -385,8 +389,22 @@ function AbandonedMatchActions({
 	);
 }
 
-function getCasualResultSubtitle(result: GameOverResult, isPeerMatch: boolean): string {
+function getCasualResultSubtitle(
+	result: GameOverResult,
+	isPeerMatch: boolean,
+	stage: RagnarokNetworkConfig['stage'],
+): string {
 	if (isPeerMatch) {
+		if (stage === 'local') {
+			if (result === 'draw') return 'Local relay QA draw. No Hive result was written.';
+			if (result === 'victory') return 'You won this local relay QA match. No Hive XP or RUNE was written.';
+			return 'You lost this local relay QA match. No Hive XP or RUNE was written.';
+		}
+		if (stage === 'mainnet') {
+			if (result === 'draw') return 'The peer match ended in a draw.';
+			if (result === 'victory') return 'You won this peer match.';
+			return 'You lost this peer match.';
+		}
 		if (result === 'draw') return 'Local testnet draw. Neither king was forced; this is not a ranked Hive result.';
 		if (result === 'victory') return 'You won. The amounts below are the testnet calculation, not a Hive credit.';
 		return 'You lost this local testnet match. No Hive XP or RUNE was written.';
