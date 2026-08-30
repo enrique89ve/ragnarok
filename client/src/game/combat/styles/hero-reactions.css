@@ -1,4 +1,41 @@
 /* Low HP changes the state edge, never the readability of portrait/text. */
+.hero-card-wrapper {
+	--bf-reaction-impulse-x: 0px;
+	--bf-reaction-impulse-y: 0px;
+	--bf-reaction-rebound-x: 0px;
+	--bf-reaction-rebound-y: 0px;
+	--bf-reaction-tail-x: 0px;
+	--bf-reaction-tail-y: 0px;
+	--bf-reaction-rotate-peak: 0deg;
+	--bf-reaction-rebound-rotate: 0deg;
+	--bf-reaction-tail-rotate: 0deg;
+	--bf-reaction-duration: 160ms;
+}
+
+/* Canonical combat recoil starts at target contact. Keeping it on the hero
+   wrapper preserves the same directional language as battlefield cards. */
+.hero-card-wrapper.combat-reaction-recoil {
+	animation: hero-combat-reaction-recoil var(--bf-reaction-duration) cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes hero-combat-reaction-recoil {
+	0%, 10% {
+		transform: translate3d(0, 0, 0) rotate(0deg);
+	}
+	24% {
+		transform: translate3d(var(--bf-reaction-impulse-x), var(--bf-reaction-impulse-y), 0) rotate(var(--bf-reaction-rotate-peak));
+	}
+	48% {
+		transform: translate3d(var(--bf-reaction-rebound-x), var(--bf-reaction-rebound-y), 0) rotate(var(--bf-reaction-rebound-rotate));
+	}
+	72% {
+		transform: translate3d(var(--bf-reaction-tail-x), var(--bf-reaction-tail-y), 0) rotate(var(--bf-reaction-tail-rotate));
+	}
+	100% {
+		transform: translate3d(0, 0, 0) rotate(0deg);
+	}
+}
+
 .battlefield-hero-square .hero-card-wrapper.hero-low-hp .hero-card-frame {
 	box-shadow:
 		0 10px 24px rgba(0, 0, 0, 0.72),
@@ -56,6 +93,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+	.hero-card-wrapper.combat-reaction-recoil {
+		animation-duration: 1ms;
+		animation-iteration-count: 1;
+	}
+
 	.battlefield-hero-square .hero-card-wrapper.hero-damaged .hero-card-frame,
 	.hero-portrait.power-activating::before,
 	.hero-armor-badge.armor-gained {

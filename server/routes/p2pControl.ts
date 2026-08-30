@@ -44,6 +44,8 @@ type ControlMember = {
 	readonly connectionId: string;
 	readonly peerId: string;
 	readonly role: P2PTransportRole;
+	readonly ticketNonce: string;
+	readonly account?: string;
 	readonly ws: WebSocket;
 	hello: boolean;
 	transportReady: boolean;
@@ -151,6 +153,13 @@ function notifyRoomOpen(roomId: string, room: ControlRoom): void {
 	});
 }
 
+function isSameAuthenticatedSession(member: ControlMember, ticket: P2PMatchTicketPayload): boolean {
+	return member.peerId === ticket.peerId
+		&& member.role === ticket.role
+		&& member.ticketNonce === ticket.nonce
+		&& member.account === ticket.account;
+}
+
 function validateUpgrade(req: IncomingMessage, roomId: string, peerId: string): UpgradeAccess {
 	if (!hasP2PControlProtocol(req.headers['sec-websocket-protocol'])) {
 		return { ok: false, status: 400, reason: 'Missing control protocol' };
@@ -175,7 +184,11 @@ function validateUpgrade(req: IncomingMessage, roomId: string, peerId: string): 
 	if (shouldRequireControlSession() && !sessionUsername) {
 		return { ok: false, status: 401, reason: 'Hive session required' };
 	}
-	if (ticket.payload.account && sessionUsername !== ticket.payload.account) {
+	// Local matchmaking intentionally allows unsigned/local identities without
+	// creating the reusable Hive HTTP session used by shared-network stages.
+	// Only bind the ticket account to that cookie when the runtime actually
+	// requires the authenticated control session.
+	if (shouldRequireControlSession() && ticket.payload.account && sessionUsername !== ticket.payload.account) {
 		return { ok: false, status: 403, reason: 'Forbidden' };
 	}
 	if (shouldRequireControlSession() && !ticket.payload.account) {
@@ -250,7 +263,27 @@ export function attachP2PControl(server: HttpServer): void {
 			rooms.set(roomId, room);
 			markP2PRefereePlaneConnected(roomId, 'control');
 		}
-		if (room.length >= ROOM_MAX_PEERS || room.some(member => member.peerId === peerId)) {
+		const existingMember = room.find(member => member.peerId === peerId);
+		if (existingMember) {
+			// A React retry, tab restore, or transport reconnect can open the same
+			// signed session before the old socket has delivered `close`. Replace
+			// only the exact authenticated ticket/account; a different credential
+			// must never evict a live peer from the room.
+			if (!isSameAuthenticatedSession(existingMember, ticket)) {
+				sendError(ws, 'protocol');
+				ws.close();
+				return;
+			}
+			const existingIndex = room.indexOf(existingMember);
+			if (existingIndex >= 0) room.splice(existingIndex, 1);
+			MESSAGE_RATE_LIMIT.delete(existingMember.connectionId);
+			sendMessage(existingMember.ws, {
+				type: 'control_peer_left_v1', protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+				matchId: roomId, opponentPeerId: peerId,
+			});
+			try { existingMember.ws.close(); } catch { /* already closed */ }
+		}
+		if (room.length >= ROOM_MAX_PEERS) {
 			sendError(ws, 'protocol');
 			ws.close();
 			return;
@@ -259,6 +292,8 @@ export function attachP2PControl(server: HttpServer): void {
 			connectionId: randomUUID(),
 			peerId,
 			role: ticket.role,
+			ticketNonce: ticket.nonce,
+			...(ticket.account ? { account: ticket.account } : {}),
 			ws,
 			hello: false,
 			transportReady: false,

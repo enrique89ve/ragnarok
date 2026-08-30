@@ -29,7 +29,7 @@
 		0 0 10px var(--element-color),
 		0 0 20px var(--element-color),
 		0 0 40px var(--element-color);
-	animation: attack-name-fade 1s ease-in-out forwards;
+	animation: attack-name-fade 1.2s ease-in-out forwards;
 }
 
 /* 3. Damage Number */
@@ -43,7 +43,7 @@
 	text-shadow:
 		0 0 8px rgba(0, 0, 0, 0.8),
 		0 0 16px rgba(0, 0, 0, 0.5);
-	animation: damage-number-fly 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+	animation: damage-number-fly 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 /* Critical damage (10+) — oversized golden text */
@@ -54,7 +54,7 @@
 		0 0 12px rgba(255, 215, 0, 0.9),
 		0 0 30px rgba(255, 215, 0, 0.5),
 		0 0 6px rgba(0, 0, 0, 0.9);
-	animation: damage-crit-fly 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+	animation: damage-crit-fly 1.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 /* Heal number — green float up */
@@ -67,7 +67,7 @@
 	text-shadow:
 		0 0 8px rgba(34, 197, 94, 0.6),
 		0 0 16px rgba(0, 0, 0, 0.5);
-	animation: heal-number-fly 0.9s ease-out forwards;
+	animation: heal-number-fly 1.4s ease-out forwards;
 }
 
 /* 4. Brace Text */
@@ -85,7 +85,7 @@
 	text-shadow:
 		0 0 10px rgba(201, 168, 76, 0.6),
 		0 0 20px rgba(201, 168, 76, 0.4);
-	animation: attack-name-fade 1s ease-in-out forwards;
+	animation: attack-name-fade 1.2s ease-in-out forwards;
 }
 
 /* 5. Combat Particles */

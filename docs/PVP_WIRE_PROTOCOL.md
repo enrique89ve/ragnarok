@@ -267,8 +267,9 @@ recreated manager from reintroducing WebRTC mid-match.
   preserved. Reconnect allows two automatic attempts inside a 60s window
 	(`2s`, then `15s` scheduling). Each recreated manager receives independent
 	bounded WebRTC and relay budgets, and a relay fallback remains sticky for
-	the match. If the window expires, the disconnected side receives a local
-  technical result.
+	the match. If the window expires, the lifecycle cancels a pre-battle session;
+	after competitive commitment, the disconnected side receives a local
+	technical result.
 - On reconnect, `useWireSync` does not run a new seed handshake. It sends
   version/engine probes and `state_sync_request` for transcript recovery.
 - P0 technical results are gameplay/UI outcomes only. They do not authorize
@@ -429,6 +430,20 @@ the moment the connection becomes ready. Every move recorded — by the local
 player at send time, or by the remote peer at receive time — appends to it
 (see §7).
 
+#### Competitive commitment and abandonment
+
+Transport readiness is not competitive commitment. The pure reducer in
+`shared/p2p-wire/p2pCompetitionLifecycle.ts` starts in `pre_battle` and enters
+`battle` only after the canonical engine accepts a valid action. Until then,
+disconnect expiry or explicit `p2p_leave` cancels the session without a winner,
+loser, or economic consequence.
+
+After commitment, explicit leave or reconnect expiry produces a technical
+result using absolute peer IDs. Disconnect is first recorded as a transient
+absence; only expiry resolves it. Normal engine results and technical results
+are terminal, idempotent, and irreversible. The reducer owns no RUNE, ELO, XP,
+or blockchain settlement policy: those remain separate post-match layers.
+
 ### Phase 4 — Local Result (current) / winner-posted result (future, ADR 0008)
 
 When `gameState.gamePhase === 'game_over'`, the current testnet displays and
@@ -436,30 +451,16 @@ exports the local result after the terminal checkpoint commits. It opens no
 Keychain prompt and emits no Hive operation.
 
 The retained future settlement implementation in `BlockchainSubscriber`
-packages the result (`BlockchainSubscriber.ts:272-294`):
+packages the result (`BlockchainSubscriber.ts:272-294`) for a later ranked
+activation:
 1. Computes the merkle root of the transcript (`buildMerkleTree()`).
 2. Pins the transcript bundle to IPFS (best-effort, non-blocking).
-3. Calls `attemptDualSig`:
-   - The winning peer computes the compact commitment hash `ch` over
-     `{m,w,l,n,h,s,v,c,tr,tc}` where `h = result.hash` and `tr` is the
-     transcript Merkle root.
-   - Current client behavior: record `result_signature_deferred` and do NOT
-     open Keychain from match end.
-   - Future behavior must route this through a visible result review/sign flow.
-4. Opponent receives `result_propose` from an older peer:
-   - Builds its local transcript Merkle root and rejects
-     `missing_transcript_root`, `local_transcript_unavailable`, or
-     `transcript_root_mismatch` before signing if the proposed `tr` cannot be
-     certified locally.
-   - Recomputes `ch` locally from `result` and rejects
-     `commitment_mismatch` before signing if it differs.
-   - Validates that the result names them as winner-or-loser by Hive
-     username (NOT by peerId — identity is anchored to Hive account).
-   - Validates that the proposal's winner agrees with the local
-     `gameState.winner` field.
-   - On agreement: sends `result_reject: signature_deferred` instead of opening
-     Keychain. Countersigning needs a visible wallet action.
-   - On disagreement: sends `result_reject` with a reason code.
+3. The winner computes the compact commitment hash `ch` over
+   `{m,w,l,n,h,s,v,c,tr,tc}` where `h = result.hash` and `tr` is the
+   transcript Merkle root, then signs it in a visible result review flow.
+4. The winner posts `match_result`; the loser does not countersign `game_over`.
+   Replay validates the winner, transcript root, and Terminal Checkpoint Receipt
+   before any ranked projection is accepted.
 5. Without a later ranked gate the result is NOT broadcast. Alfa never posts
    `match_result`. Closed Beta posts winner-only (ADR 0008).
 
@@ -469,9 +470,10 @@ packages the result (`BlockchainSubscriber.ts:272-294`):
   (`useWireSync.ts:248-250`).
 - The relay garbage-collects socket membership when both peers disconnect and
   retains only the constant-size phase checkpoint tombstone for 120s.
-- The server's active-match registry evicts the match after 300s
-  (`P2P_ACTIVE_MATCH_TTL_MS` in `p2pActiveMatchRegistry.ts`, applied uniformly
-  at both the periodic sweep and the post-pair timer).
+- The server's active-match registry retains a live match behind the
+  24-hour safety TTL. A terminal checkpoint schedules direct cleanup after the
+  10-minute audit/reconnect retention window; the periodic sweep remains a
+  defensive backstop (`p2pActiveMatchRegistry.ts`).
 
 ---
 
@@ -495,6 +497,7 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `gameState` | host → client | host recovery | `hash_mismatch` recovery snapshot only, compressed as `json+gzip+base64url@1` |
 | `chess_command` (envelope) | both | both (symmetric) | Phase 3 chess: discriminated union of `chess_move` (quiet), `chess_attack` (instant-kill capture), and `chess_combat_initiated` (non-instant capture into poker) — see §5 |
 | `transition_receipt_v1` | receiver → command sender | both (symmetric) | Post-commit chess receipt binding the command intent to the receiver's pre/post chess+cards integrity roots. A rejection or root mismatch quarantines further local chess actions. |
+| `p2p_leave` | peer → peer | leaving peer | Explicit lifecycle event; cancellation before engine commitment, technical defeat after commitment |
 | `phase_checkpoint_propose_v1` | peer → Control WS referee | both | Fixed-size proposal for a deterministic phase boundary; legacy direct rooms may submit it through the relay compatibility path. |
 | `phase_checkpoint_commit_v1` / `phase_checkpoint_dispute_v1` | Control WS referee → peers | server referee only | Commit if roots match. Mismatch retries; freeze only after 3 strikes. The referee never picks a winner. |
 | `poker_turn_started` | peer → Control WS referee | both | Timed-poker turn identity proposal; legacy direct rooms may submit it through the relay compatibility path. Client `durationMs` / `remainingMs` / `sentAtMs` are ignored. |
@@ -542,8 +545,9 @@ matches are symmetric by design**. Both peers compute and apply each phase
 identically; the wire carries intent, not delegation.
 
 Cards apply is symmetric (OPEN-8). Poker already applies `poker_action`
-symmetrically. Hashing still uses the host-as-player frame
-(`isCardsHostFrame`); forward `gameState` dumps are off.
+symmetrically. Cards hashes use the canonical player frame
+(`myCanonicalSide === 'player'`), independent of the transport host hint;
+forward `gameState` dumps are off.
 
 Cards-authority *dumps* go through `isCardsAuthorityRole` (false in the
 default symmetric mode). Do not read `peerStore.isHost` as a gameplay-authority
@@ -566,8 +570,8 @@ Implementation:
 - Local action plan: `planCardsLocalAction` in
   `client/src/game/match/modes/p2p/wireSync/cardsWirePlan.ts`.
 - Remote `game_command` applies on both peers after `p2pInitApplied`.
-  `prevStateHash` uses `isCardsHostFrame` so the guest hashes the
-  host-canonical flip.
+  `prevStateHash` uses the canonical player frame so both viewers hash the
+  same state even when transport host and canonical player are different.
 - Both peers bind `${matchSeed}:cards` at `seed_reveal` and init from the
   shared deck handshake only after the snapshot gate (`cards_deck` + bound
   `deck_verify` + verification approval in shared-network).
@@ -814,8 +818,8 @@ effect):
    `deck_verify` cross-verifies source-aware deck claims (`starter-entitlement`,
    `nft-custody`, or reset-epoch-scoped `qa_full_catalog`) against the chain
    projection and runtime entitlement rules.
-4. `result_propose.proposalId` correlates the proposal with its
-   countersignature (prevents pairing two simultaneous proposals).
+4. Future ranked terminal receipts bind the winner-posted `match_result` to
+   the committed checkpoint; there is no loser result countersignature.
 5. Ranked `match_result` is winner-posted (ADR 0008). Dual signatures belong
    to `match_anchor` and session-signed moves, not to a loser game_over
    countersign. Result-only claims without transcript replay are rejected.
@@ -902,7 +906,7 @@ custom_json with PoW (64 challenges × 6-bit). The on-chain shape lives in
   v: version,
   c?: winnerCardIdsHex,
   ch: commitmentHash,          // sha256(canonical({m,w,l,n,h,s,v,c,tr,tc}))
-  sig: { b, c },               // winner/proposer + opponent Hive sigs
+  sig: { b },                  // winner Hive signature; loser does not countersign
   tr: transcriptMerkleRoot,
   tc?: transcriptIPFSCID
 }
@@ -926,8 +930,8 @@ the `tc` CID; the chain only carries enough to verify integrity.
 | Chess transition root/rejection mismatch | `transition_receipt_v1` | Quarantine local chess actions; retain session evidence; no automatic settlement |
 | Mid-match disconnect | WS close handler | No auto-broadcast; future evidence flow required |
 | Duplicate match_result on-chain | Found via `findExistingMatchResult` | `slash_evidence_deferred` record |
-| Transcript root mismatch at result proposal | Opponent local root check | Reject `result_propose`; ranked result is not broadcast |
-| Result signature deferred | `attemptDualSig` or inbound `result_propose` | Result NOT broadcast; future result review/sign flow required |
+| Transcript root mismatch at future result replay | Opponent local root check | Reject the terminal receipt; ranked result is not broadcast |
+| Result signature deferred | Future winner review/sign flow | Result NOT broadcast; no loser countersign is requested |
 | Chess piece-not-found mid-move | Receive handler `piece_not_found_*` | `recordSessionEvent('chess_command_rejected', { cause })`; freeze (no auto-recovery — see §10 OPEN-3) |
 
 Slash evidence broadcasting is implemented by `submitSlashEvidence`
@@ -1026,22 +1030,19 @@ settlement). Cards no longer take *forward* host `gameState`; recovery-on-mismat
 
 ### OPEN-6 — `result_propose` matchType field source-of-truth
 
-**Where**: `BlockchainSubscriber.ts:298-301` gates broadcast on
-`finalResult.matchType === 'ranked'`. But `matchType` is set client-side
-when the result is packaged — the wire never tells the host whether the
-match was ranked, casual, or tournament. Today this is implicit (the
-matchmaking endpoint that originated the match knows).
-
-**Decision needed**: should `matchType` ride an early match envelope
-(seed/`cards_deck`/matchmaking context) as authoritative? Or is it OK to
-derive client-side from local context? Do not reopen host `init` for this.
+**Status**: closed as obsolete for Alfa / current testnet. The legacy
+`result_propose`/`result_countersign` path is not used for ranked settlement;
+the winner-posted `match_result` path carries the result after terminal
+checkpoint and replay validation. The legacy schemas and relay allow-list may
+remain only for compatibility with older clients.
 
 ### OPEN-8 — Audit gameState wire and migrate to recovery-on-mismatch
 
 **Status**: closed. Both peers send/apply `game_command`. `cards_deck`
 handshake feeds `initGameFromHandshake` on both sides. Forward `gameState`
 dumps are off. `hash_mismatch` still pushes a host snapshot. Default
-process flags are `symmetric`; hashing uses `isCardsHostFrame`.
+process flags are `symmetric`; hashing uses the canonical player side, not the
+transport host hint.
 
 ### OPEN-9 — Chess king ability (mine placement) sync
 
@@ -1066,13 +1067,13 @@ the design is settled.
 | **dual-sig** | Both peers sign `match_anchor` at start. Ranked `match_result` is winner-posted (ADR 0008); the loser does not countersign game_over. |
 | **envelope** | A wire frame — `chess_command`, `game_command`, `result_propose`, etc. |
 | **guest sentinel** | The `'guest:' + peerId.slice(0, 8)` playerId used when no Hive username is bound. Indicates a non-arbitrable move. |
-| **host** | The peer with the lexicographically smaller `peerId`. Stable across reconnect order. Transport role for seed parity, cards hash frame (`isCardsHostFrame`), hash beacon, and `hash_mismatch` recovery — not gameplay authority for cards apply. NOT a server. |
+| **host** | The peer with the lexicographically smaller `peerId`. Stable across reconnect order. Transport role for seed parity, hash beacon, and `hash_mismatch` recovery — not gameplay authority or the cards hash frame. NOT a server. |
 | **instant-kill** | Chess capture that resolves without entering poker. Triggered when the attacker is a pawn, the defender is a pawn, or the defender is a king. Kings do not capture. Predicate `isChessAttackInstantKill` in `shared/p2p-wire/chess.ts`. |
 | **isHost** | The transport-level hint emitted by the relay's `__sys.open`. |
 | **matchId** | `SHA256(matchSeed + sortedPeerIds)`, 16 hex chars. Binds every action to one match. |
 | **matchSeed** | `SHA256(sortedSalts)`, derived in seed_reveal. The root of all per-match randomness. |
 | **myCanonicalSide** | The local viewer's canonical side, derived from `matchSeed` parity XOR `isHost`. |
-| **prevStateHash** | Pre-apply state hash carried in the cards envelope; hashed in the host-as-player frame (`isCardsHostFrame`). Protects against fast-double-click race and cross-peer divergence. |
+| **prevStateHash** | Pre-apply state hash carried in the cards envelope; hashed in the canonical player frame (`myCanonicalSide === 'player'`). Protects against fast-double-click race and cross-peer divergence. |
 | **cards_deck** | Deck half of the Phase-2 immutable deck+claims snapshot. In shared-network it feeds `initGameFromHandshake` only after identity, binding, IndexedDB, and server approval. |
-| **proposalId** | UUID correlating a `result_propose` with its `result_countersign`. |
+| **proposalId** | Historical identifier for the obsolete `result_propose`/`result_countersign` handshake; not part of the current winner-posted result path. |
 | **transcript** | The ordered list of `GameMove` records hashed at match end into a Merkle tree. |

@@ -126,7 +126,11 @@ export const DeckCardClaimSchema = z.union([
 	QaFullCatalogDeckCardClaimSchema,
 ]);
 
-export const DeckCardClaimsSchema = z.array(DeckCardClaimSchema).min(1).max(100);
+// A Warband announces the four piece loadouts as one wire payload. Each piece
+// has a 30-card deck, so the protocol must accept the aggregate rather than
+// applying the single-piece limit at the transport boundary.
+export const MAX_WARBAND_DECK_CARDS = 120 as const;
+export const DeckCardClaimsSchema = z.array(DeckCardClaimSchema).min(1).max(MAX_WARBAND_DECK_CARDS);
 
 export const StarterVerifiedDeckCardSchema = z.object({
 	slotIndex: DeckSlotIndexSchema,
@@ -426,11 +430,11 @@ export function parseDeckCardClaims(value: unknown): DeckClaimParseResult {
 		}));
 	}
 
-	if (rawClaims.length === 0 || rawClaims.length > 100) {
+	if (rawClaims.length === 0 || rawClaims.length > MAX_WARBAND_DECK_CARDS) {
 		rejections.push(rejection({
 			slotIndex: deckSlotIndex(0),
 			code: 'invalid-claim',
-			detail: 'deck claims length must be between 1 and 100',
+			detail: `deck claims length must be between 1 and ${MAX_WARBAND_DECK_CARDS}`,
 		}));
 	}
 

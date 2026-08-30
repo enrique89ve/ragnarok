@@ -53,6 +53,7 @@ describe('combat bus visual adapter', () => {
 				target: {
 					target: { type: 'card', instanceId: 'target-1' },
 					amount: 1,
+					healthDamage: 1,
 					level: 'light',
 					outcome: 'damage',
 					lethal: null,
@@ -61,6 +62,7 @@ describe('combat bus visual adapter', () => {
 					source: { type: 'card', instanceId: 'target-1' },
 					target: { type: 'card', instanceId: 'attacker-1' },
 					amount: 1,
+					healthDamage: 1,
 					level: 'light',
 					outcome: 'damage',
 					lethal: null,
@@ -70,8 +72,8 @@ describe('combat bus visual adapter', () => {
 
 		expect(seen[0]).toMatchObject({
 			presentation: {
-				target: { amount: 7, level: 'normal' },
-				counter: { amount: 2, level: 'light' },
+				target: { amount: 7, healthDamage: 7, level: 'normal' },
+				counter: { amount: 2, healthDamage: 2, level: 'light' },
 			},
 		});
 

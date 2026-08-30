@@ -31,7 +31,7 @@ const MOTION_PROFILES: Record<CombatImpactMass, CombatImpactMotionProfile> = {
 		rotationDeg: 0.4,
 		hitStopMs: 22,
 		recoveryMs: 115,
-		travelMs: 280,
+		travelMs: 360,
 		flashMs: 135,
 	},
 	normal: {
@@ -41,7 +41,7 @@ const MOTION_PROFILES: Record<CombatImpactMass, CombatImpactMotionProfile> = {
 		rotationDeg: 0.8,
 		hitStopMs: 38,
 		recoveryMs: 160,
-		travelMs: 300,
+		travelMs: 420,
 		flashMs: 170,
 	},
 	heavy: {
@@ -51,7 +51,7 @@ const MOTION_PROFILES: Record<CombatImpactMass, CombatImpactMotionProfile> = {
 		rotationDeg: 1.4,
 		hitStopMs: 58,
 		recoveryMs: 205,
-		travelMs: 315,
+		travelMs: 460,
 		flashMs: 210,
 	},
 	lethal: {
@@ -61,7 +61,7 @@ const MOTION_PROFILES: Record<CombatImpactMass, CombatImpactMotionProfile> = {
 		rotationDeg: 1.7,
 		hitStopMs: 78,
 		recoveryMs: 250,
-		travelMs: 320,
+		travelMs: 500,
 		flashMs: 230,
 	},
 };
@@ -97,4 +97,3 @@ export function motionVector(
 		y: direction.y * distance,
 	};
 }
-

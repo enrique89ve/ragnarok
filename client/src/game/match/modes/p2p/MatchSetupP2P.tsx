@@ -58,12 +58,15 @@ export function MatchSetupP2P({ children, fallback = null }: MatchSetupP2PProps)
 	const localBattleReady = usePeerStore((s) => s.p2pBattleReadyLocal);
 	const remoteBattleReady = usePeerStore((s) => s.p2pBattleReadyRemote);
 	const expectedRemoteLoadoutHash = usePeerStore((s) => s.p2pBattleReadyExpectedRemoteLoadoutHash);
+	const terminalLifecycle = usePeerStore((s) => s.battleLifecycle?.phase === 'resolved');
 
 	const handshakeReady =
-		connectionState === 'connected' &&
-		p2pInitApplied &&
-		matchSeed !== null &&
-		matchId !== null;
+		terminalLifecycle
+			? matchSeed !== null && matchId !== null && remotePeerId !== null
+			: connectionState === 'connected' &&
+				p2pInitApplied &&
+				matchSeed !== null &&
+				matchId !== null;
 	const battleReadiness = computeP2PBattleReadiness({
 		activeMatchKind: 'peer',
 		serverMatchCommitted,
@@ -82,7 +85,7 @@ export function MatchSetupP2P({ children, fallback = null }: MatchSetupP2PProps)
 		localBattleReady,
 		remoteBattleReady,
 	});
-	const ready = handshakeReady && battleReadiness.ready;
+	const ready = terminalLifecycle ? handshakeReady : handshakeReady && battleReadiness.ready;
 
 	useEffect(() => {
 		if (!ready) return;

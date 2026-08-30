@@ -593,9 +593,13 @@ export const createChessCombatSlice: StateCreator<
           }
         });
 
-        state.beginChessAttack(selectedPiece, defender, isInstantKill);
+			const mutationResult = state.beginChessAttack(selectedPiece, defender, isInstantKill);
+			if (mutationResult.status === 'rejected') {
+				debug.chess(`[Chess] Attack rejected by reducer: ${mutationResult.reason}`);
+				return null;
+			}
 
-        return collision;
+			return collision;
       }
     }
 

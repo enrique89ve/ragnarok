@@ -14,6 +14,8 @@ interface ElementMatchupBannerProps {
 	armorBonus: number;
 }
 
+const ELEMENT_MATCHUP_VISIBLE_MS = 4_200;
+
 export const ElementMatchupBanner: React.FC<ElementMatchupBannerProps> = ({
 	playerElement,
 	opponentElement,
@@ -27,7 +29,7 @@ export const ElementMatchupBanner: React.FC<ElementMatchupBannerProps> = ({
 	const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	useEffect(() => {
-		timeoutRef.current = setTimeout(() => setVisible(false), 3000);
+		timeoutRef.current = setTimeout(() => setVisible(false), ELEMENT_MATCHUP_VISIBLE_MS);
 		return () => {
 			if (timeoutRef.current) clearTimeout(timeoutRef.current);
 		};

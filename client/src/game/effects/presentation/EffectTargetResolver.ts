@@ -12,6 +12,13 @@ function entityIdForTarget(target: PresentationTarget): string {
 	return `${target.side}-${target.type === 'hero' ? 'hero' : 'field'}`;
 }
 
+/** Maps a gameplay entity id to the semantic presentation receiver for it. */
+export function presentationTargetForEntityId(entityId: string): PresentationTarget {
+	if (entityId === 'player-hero') return { type: 'hero', side: 'player' };
+	if (entityId === 'opponent-hero') return { type: 'hero', side: 'opponent' };
+	return { type: 'card', instanceId: entityId };
+}
+
 function resolveTargetElement(target: PresentationTarget, root?: QueryRoot | null): HTMLElement | null {
 	switch (target.type) {
 		case 'card':

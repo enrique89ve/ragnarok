@@ -35,7 +35,10 @@ import {
 	PokerTurnNotaryCommitSchema,
 	PokerTurnNotaryDisputeSchema,
 } from '@shared/p2p-wire/pokerTimeNotary';
-import { DeckCardClaimsSchema } from '@shared/protocol-core/deckVerification';
+import {
+	DeckCardClaimsSchema,
+	MAX_WARBAND_DECK_CARDS,
+} from '@shared/protocol-core/deckVerification';
 import { CHALLENGE_SIGNATURE_ALGORITHM } from '@shared/p2pAvailability';
 
 import type { P2PMessage } from './messages';
@@ -47,6 +50,9 @@ import {
 // ── Primitives ─────────────────────────────────────────────────────────────
 
 const NonEmptyString = (max: number) => z.string().min(1).max(max);
+// Quick Match room ids are the two 36-character peer ids joined by a hyphen.
+// Keep one boundary for every game-wire envelope that carries that identity.
+const MatchIdString = NonEmptyString(128);
 const HashString = z.string().min(1).max(256);
 const NonNegativeInt = z.number().int().nonnegative();
 const PokerHpCommitment = z.number().int().min(0).max(500);
@@ -136,7 +142,7 @@ const WireGameCommandSchema = z.discriminatedUnion('type', [
 
 const GameCommandEnvelopeSchema = z.object({
 	type: z.literal('game_command'),
-	matchId: NonEmptyString(64),
+	matchId: MatchIdString,
 	seq: NonNegativeInt,
 	commandId: NonEmptyString(128),
 	prevStateHash: HashString,
@@ -150,14 +156,14 @@ const InitSchema = z.union([
 		type: z.literal('init'),
 		gameState: OpaqueObject,
 		isHost: z.boolean(),
-		matchId: z.string().max(64).optional(),
+		matchId: z.string().max(128).optional(),
 	}).strict(),
 	z.object({
 		type: z.literal('init'),
 		stateCodec: z.literal(GAME_STATE_WIRE_CODEC),
 		compressedGameState: Base64UrlPayload,
 		isHost: z.boolean(),
-		matchId: z.string().max(64).optional(),
+		matchId: z.string().max(128).optional(),
 	}).strict(),
 ]);
 
@@ -175,6 +181,13 @@ const GameStateSchema = z.union([
 
 const OpponentDisconnectedSchema = z.object({
 	type: z.literal('opponentDisconnected'),
+}).strict();
+
+const P2PLeaveSchema = z.object({
+	type: z.literal('p2p_leave'),
+	matchId: MatchIdString,
+	participantId: NonEmptyString(128),
+	eventId: NonEmptyString(128),
 }).strict();
 
 const PingSchema = z.object({ type: z.literal('ping') }).strict();
@@ -209,11 +222,11 @@ const CardsDeckSchema = z.object({
 	type: z.literal('cards_deck'),
 	heroClass: NonEmptyString(32),
 	heroId: z.string().max(64).optional(),
-	cardIds: z.array(z.number().int().nonnegative()).max(40),
+	cardIds: z.array(z.number().int().nonnegative()).max(MAX_WARBAND_DECK_CARDS),
 	nftLevels: z.array(z.object({
 		cardId: z.number().int().nonnegative(),
 		level: z.number().int().min(1).max(100),
-	}).strict()).max(40),
+	}).strict()).max(MAX_WARBAND_DECK_CARDS),
 }).strict();
 
 // ── Result settlement (post-game broadcast) ────────────────────────────────
@@ -338,7 +351,7 @@ const HiveSigString = NonEmptyString(512);
 const MatchAcceptanceProofSchema = z.object({
 	protocol: z.literal('ragnarok-match-accept-v1'),
 	offerId: NonEmptyString(128),
-	matchId: NonEmptyString(128),
+	matchId: MatchIdString,
 	account: NonEmptyString(32).optional(),
 	peerId: NonEmptyString(64),
 	opponentAccount: NonEmptyString(32).optional(),
@@ -353,7 +366,10 @@ const MatchAcceptanceProofSchema = z.object({
 
 const SessionAuthorizeSchema = z.object({
 	type: z.literal('session_authorize'),
-	matchId: NonEmptyString(64),
+	// Quick Match room ids are composed from both 36-character peer ids.
+	// Keep this aligned with the acceptance and battle-ready envelopes so a
+	// valid authorization is not silently dropped at the receiving boundary.
+	matchId: MatchIdString,
 	ephemeralPubkey: PubkeyString,
 	hiveSig: HiveSigString.optional(),
 	acceptance: MatchAcceptanceProofSchema.optional(),
@@ -371,7 +387,7 @@ const SessionAuthorizeSchema = z.object({
 
 const BattleReadySchema = z.object({
 	type: z.literal('battle_ready_v1'),
-	matchId: NonEmptyString(128),
+	matchId: MatchIdString,
 	engineHash: NonEmptyString(256),
 	rulesetHash: NonEmptyString(256),
 	loadoutHash: NonEmptyString(256),
@@ -380,20 +396,20 @@ const BattleReadySchema = z.object({
 
 const SessionRenewalSchema = z.object({
 	type: z.literal('session_renewal'),
-	matchId: NonEmptyString(64),
+	matchId: MatchIdString,
 	newPubkey: PubkeyString,
 	hiveSig: HiveSigString,
 }).strict();
 
 const SessionResumedSchema = z.object({
 	type: z.literal('session_resumed'),
-	matchId: NonEmptyString(64),
+	matchId: MatchIdString,
 	lastSeenStateHash: HashString,
 }).strict();
 
 const StateSyncRequestSchema = z.object({
 	type: z.literal('state_sync_request'),
-	matchId: NonEmptyString(64),
+	matchId: MatchIdString,
 	fromTurn: NonNegativeInt,
 }).strict();
 
@@ -402,7 +418,7 @@ const StateSyncRequestSchema = z.object({
 // rejects `undefined` so the field cannot be silently dropped over the wire.
 const ActionEnvelopeSchema = z.object({
 	type: z.literal('action_envelope'),
-	matchId: NonEmptyString(64),
+	matchId: MatchIdString,
 	seq: NonNegativeInt,
 	prevHash: HashString,
 	action: z.unknown().refine((v) => v !== undefined, {
@@ -423,6 +439,7 @@ const SCHEMA_BY_TYPE = {
 	init: InitSchema,
 	gameState: GameStateSchema,
 	opponentDisconnected: OpponentDisconnectedSchema,
+	p2p_leave: P2PLeaveSchema,
 	ping: PingSchema,
 	pong: PongSchema,
 	deck_verify: DeckVerifySchema,

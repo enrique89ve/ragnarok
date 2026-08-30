@@ -93,6 +93,7 @@ const RELAY_ALLOWED_MESSAGE_TYPES: ReadonlySet<string> = new Set([
 	'game_command',
 	'chess_command',
 	'transition_receipt_v1',
+	'p2p_leave',
 	'gameState',
 	'ping',
 	'pong',

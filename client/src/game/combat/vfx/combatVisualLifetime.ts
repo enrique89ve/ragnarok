@@ -8,9 +8,11 @@
  */
 
 export const COMBAT_LETHAL_TIMELINE_MS = {
-	travel: 320,
-	impact: 140,
-	counterImpact: 140,
+	// Covers the slowest lethal travel profile plus a small scheduling margin.
+	travel: 520,
+	// Keep a readable beat between the target impact and a possible counter.
+	impact: 320,
+	counterImpact: 320,
 	lethalEmphasis: 100,
 	death: 320,
 	postDeathGap: 40,

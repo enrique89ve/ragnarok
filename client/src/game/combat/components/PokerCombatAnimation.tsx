@@ -19,6 +19,15 @@ interface PokerCombatAnimationProps {
 
 type AnimationPhase = 'idle' | 'windup' | 'attack' | 'impact' | 'particles' | 'complete';
 
+const ATTACK_NAME_HOLD_MS = 1_200;
+const DAMAGE_MESSAGE_HOLD_MS = 1_400;
+const CRITICAL_DAMAGE_MESSAGE_HOLD_MS = 1_600;
+const PARTICLE_HOLD_MS = {
+	light: 1_200,
+	medium: 1_700,
+	heavy: 2_200,
+} as const;
+
 interface ParticleData {
 	id: number;
 	iconName: IconName;
@@ -131,7 +140,7 @@ export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 		}, 100);
 		elapsed = 100;
 
-		const windupEnd = elapsed + 400;
+		const windupEnd = elapsed + ATTACK_NAME_HOLD_MS;
 		addTimer(() => {
 			setPhase('attack');
 			proceduralAudio.playCombatSound(
@@ -152,7 +161,7 @@ export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 		}, attackEnd);
 		elapsed = attackEnd;
 
-		const impactEnd = elapsed + 200;
+		const impactEnd = elapsed + (damage >= 10 ? CRITICAL_DAMAGE_MESSAGE_HOLD_MS : DAMAGE_MESSAGE_HOLD_MS);
 		addTimer(() => {
 			setPhase('particles');
 			spawnParticles(
@@ -163,7 +172,7 @@ export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 		}, impactEnd);
 		elapsed = impactEnd;
 
-		const particleDuration = tier.tier === 'heavy' ? 1500 : tier.tier === 'medium' ? 1000 : 500;
+		const particleDuration = PARTICLE_HOLD_MS[tier.tier === 'none' ? 'light' : tier.tier];
 		const particlesEnd = elapsed + particleDuration;
 		addTimer(() => {
 			setPhase('complete');
@@ -317,17 +326,6 @@ export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 
 			{phase === 'particles' && damage > 0 && (
 				<>
-					<div
-						className="combat-damage-number"
-						style={{
-							left: '50%',
-							top: winner === 'player' ? '25%' : '60%',
-							transform: 'translateX(-50%)',
-							opacity: 0.6,
-						}}
-					>
-						-{damage}
-					</div>
 					{particles.map(p => (
 						<div
 							key={p.id}

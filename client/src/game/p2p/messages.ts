@@ -37,6 +37,7 @@ export type WireMessage =
 	| GameCommandEnvelope
 	| ({ type: 'gameState' } & GameStateWirePayload)
 	| { type: 'opponentDisconnected' }
+	| { type: 'p2p_leave'; matchId: string; participantId: string; eventId: string }
 	| { type: 'ping' }
 	| { type: 'pong' }
 	| {

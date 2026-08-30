@@ -34,6 +34,8 @@ export interface P2PRenderGuardInput {
 	readonly reconnectCountdown: number;
 	readonly reconnectAttemptCount: number;
 	readonly hardReloadResume?: boolean;
+	/** A resolved lifecycle may render its result after the socket is closed. */
+	readonly terminalLifecycle?: boolean;
 }
 
 export type P2PRenderGuardDecision =
@@ -41,6 +43,7 @@ export type P2PRenderGuardDecision =
 	| { readonly kind: 'render' };
 
 export function computeP2PRenderGuard(input: P2PRenderGuardInput): P2PRenderGuardDecision {
+	if (input.terminalLifecycle) return { kind: 'render' };
 	if (input.connectionState === 'connecting' || input.connectionState === 'waiting') {
 		return { kind: 'wait', reason: 'Connecting with opponent…' };
 	}

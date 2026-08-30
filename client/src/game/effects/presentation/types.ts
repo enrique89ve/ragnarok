@@ -39,7 +39,10 @@ export type VisualSnapshot = {
 
 export type PresentationImpact = {
 	readonly target: PresentationTarget;
+	/** Resolved combat impact used to choose FX intensity and motion. */
 	readonly amount: number;
+	/** Actual HP lost after shields/mitigation; this is the number shown to the player. */
+	readonly healthDamage: number;
 	readonly level: ImpactLevel;
 	readonly outcome: 'damage' | 'shield';
 	/** Null means gameplay has not supplied a lethal outcome yet. */

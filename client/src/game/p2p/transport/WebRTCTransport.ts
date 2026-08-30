@@ -13,6 +13,7 @@ import type { P2PMatchTicket } from '@shared/p2pAvailability';
 import type {
 	GameTransport,
 	TransportMessageListener,
+	TransportStatsSnapshot,
 	TransportState,
 	TransportStateListener,
 } from './transportTypes';
@@ -54,11 +55,26 @@ function safeConnectTimeout(value: number | undefined): number {
 	return Math.min(30_000, Math.max(1_000, Math.floor(value ?? 10_000)));
 }
 
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function readString(record: Readonly<Record<string, unknown>>, key: string): string | null {
+	const value = record[key];
+	return typeof value === 'string' && value.length > 0 ? value.toLowerCase() : null;
+}
+
+function readFiniteNumber(record: Readonly<Record<string, unknown>>, key: string): number | null {
+	const value = record[key];
+	return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
 export function createWebRTCTransport(options: WebRTCTransportOptions): GameTransport & {
 	readonly peer: string;
 	readonly controlState: WebRTCControlState;
 	readonly sendControlMessage: (message: P2PControlClientMessage) => void;
 	readonly onControlMessage: (listener: (message: P2PControlServerMessage) => void) => () => void;
+	readonly getStats: () => Promise<TransportStatsSnapshot | null>;
 } {
 	const messageListeners = new Set<TransportMessageListener>();
 	const controlMessageListeners = new Set<(message: P2PControlServerMessage) => void>();
@@ -76,6 +92,8 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 	let remoteDescriptionSet = false;
 	let controlState: WebRTCControlState = 'idle';
 	let fallbackSent = false;
+	let connectStartedAtMs: number | null = null;
+	let connectedAtMs: number | null = null;
 	const pendingIceCandidates: WebRTCIceCandidateInit[] = [];
 
 	const setState = (next: TransportState): void => {
@@ -167,6 +185,28 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 		}
 	};
 
+	const sendTransportReady = (): void => {
+		if (socket?.readyState !== WebSocket.OPEN) {
+			const error = createTransportFailure('Control WebSocket is not open', 'ice_failed');
+			failControl(error.message, 'ice_failed');
+			throw error;
+		}
+		try {
+			socket.send(JSON.stringify({
+				type: 'transport_ready_v1',
+				protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+				matchId: options.roomId,
+				kind: 'webrtc',
+			}));
+		} catch (error) {
+			const failure = error instanceof Error
+				? error
+				: createTransportFailure('Control WebSocket send failed', 'ice_failed');
+			failControl(failure.message, 'ice_failed');
+			throw failure;
+		}
+	};
+
 	const emitMessage = (message: P2PMessage): void => {
 		for (const listener of messageListeners) {
 			try { listener(message); } catch (error) { debug.error('[WebRTCTransport] message listener failed:', error); }
@@ -181,14 +221,81 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 
 	const maybeResolveDataChannel = (): void => {
 		if (!isOpenDataChannel(dataChannel) || state === 'connected') return;
+		try {
+			// The transport is not connected until the authenticated control
+			// plane has accepted this readiness announcement. This keeps the
+			// manager from exposing a gameplay-open state with no referee signal.
+			sendTransportReady();
+		} catch {
+			return;
+		}
+		connectedAtMs = Date.now();
 		setState('connected');
 		resolvePending();
-		sendControl({
-			type: 'transport_ready_v1',
-			protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
-			matchId: options.roomId,
-			kind: 'webrtc',
-		});
+	};
+
+	const getStats = async (): Promise<TransportStatsSnapshot | null> => {
+		const connection = peerConnection;
+		if (!connection) return null;
+		const collectedAtMs = Date.now();
+		const base: TransportStatsSnapshot = {
+			collectedAtMs,
+			connectDurationMs: connectStartedAtMs === null
+				? null
+				: (connectedAtMs ?? collectedAtMs) - connectStartedAtMs,
+			connectionState: connection.connectionState || null,
+			iceConnectionState: connection.iceConnectionState || null,
+			iceGatheringState: connection.iceGatheringState || null,
+			signalingState: connection.signalingState || null,
+			candidatePair: null,
+		};
+		if (typeof connection.getStats !== 'function') return base;
+
+		try {
+			const report = await connection.getStats();
+			const records: Readonly<Record<string, unknown>>[] = [];
+			report.forEach(value => {
+				if (isRecord(value)) records.push(value);
+			});
+			const localCandidates = new Map<string, Readonly<Record<string, unknown>>>();
+			const remoteCandidates = new Map<string, Readonly<Record<string, unknown>>>();
+			let selectedPair: Readonly<Record<string, unknown>> | null = null;
+			let succeededPair: Readonly<Record<string, unknown>> | null = null;
+			for (const record of records) {
+				const type = readString(record, 'type');
+				const id = record.id;
+				if (typeof id === 'string') {
+					if (type === 'local-candidate') localCandidates.set(id, record);
+					if (type === 'remote-candidate') remoteCandidates.set(id, record);
+				}
+				if (type !== 'candidate-pair' || readString(record, 'state') !== 'succeeded') continue;
+				if (!succeededPair) succeededPair = record;
+				if (record.selected === true || record.nominated === true) selectedPair = record;
+			}
+			const pair = selectedPair ?? succeededPair;
+			if (!pair) return base;
+			const localId = pair.localCandidateId;
+			const remoteId = pair.remoteCandidateId;
+			const local = typeof localId === 'string' ? localCandidates.get(localId) : undefined;
+			const remote = typeof remoteId === 'string' ? remoteCandidates.get(remoteId) : undefined;
+			return {
+				...base,
+				candidatePair: {
+					localCandidateType: local ? readString(local, 'candidateType') : null,
+					remoteCandidateType: remote ? readString(remote, 'candidateType') : null,
+					protocol: readString(pair, 'protocol') ?? (local ? readString(local, 'protocol') : null),
+					currentRoundTripTimeMs: (() => {
+						const seconds = readFiniteNumber(pair, 'currentRoundTripTime');
+						return seconds === null ? null : seconds * 1000;
+					})(),
+					bytesSent: readFiniteNumber(pair, 'bytesSent'),
+					bytesReceived: readFiniteNumber(pair, 'bytesReceived'),
+				},
+			};
+		} catch (error) {
+			debug.warn('[WebRTCTransport] getStats failed:', error);
+			return base;
+		}
 	};
 
 	const attachDataChannel = (channel: RTCDataChannel): void => {
@@ -329,6 +436,8 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 		if (typeof WebSocket === 'undefined') return Promise.reject(new Error('WebSocket is unavailable in this browser'));
 		setState('connecting');
 		controlState = 'connecting';
+		connectStartedAtMs = Date.now();
+		connectedAtMs = null;
 		connectPromise = new Promise<void>((resolve, reject) => {
 			resolveConnect = resolve;
 			rejectConnect = reject;
@@ -397,6 +506,7 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 			controlMessageListeners.add(listener);
 			return () => controlMessageListeners.delete(listener);
 		},
+		getStats,
 		get peer(): string { return remotePeer; },
 	};
 }

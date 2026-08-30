@@ -191,6 +191,15 @@ function readChessMoveCount(boardState: unknown): number {
 		: 0;
 }
 
+function resumeContainsBattleCommitment(record: P2PMatchResumeRecord): boolean {
+	if (record.chessMoveCount > 0) return true;
+	if (record.combat.pendingCombat !== null || record.combat.pokerIsActive) return true;
+	if (record.flow?.tag === 'poker_combat') return true;
+	return typeof record.combat.boardState === 'object'
+		&& record.combat.boardState !== null
+		&& (record.combat.boardState as { gameStatus?: unknown }).gameStatus === 'combat';
+}
+
 function isBoardState(value: unknown): value is ChessBoardState {
 	return typeof value === 'object' && value !== null && Array.isArray((value as ChessBoardState).pieces);
 }
@@ -275,6 +284,16 @@ export function applyP2PMatchResume(record: P2PMatchResumeRecord): boolean {
 		disconnectSide: 'local',
 		error: null,
 	});
+	if (parsed.remotePeerId) {
+		usePeerStore.getState().initializeBattleLifecycle({
+			matchId: parsed.matchId,
+			playerA: parsed.myPeerId,
+			playerB: parsed.remotePeerId,
+		});
+		if (resumeContainsBattleCommitment(parsed)) {
+			usePeerStore.getState().restoreBattleCommitment(Math.max(1, parsed.chessMoveCount));
+		}
+	}
 
 	useGameStore.setState({
 		gameState: parsed.gameState,

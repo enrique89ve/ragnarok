@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
 	clearP2PActiveMatches,
@@ -24,7 +24,10 @@ const match: P2PActiveMatch = {
 	player2QueueTokenHash: 'hash-b',
 };
 
-afterEach(() => clearP2PActiveMatches());
+afterEach(() => {
+	clearP2PActiveMatches();
+	vi.useRealTimers();
+});
 
 describe('p2p active match registry', () => {
 	it('accepts only the ticket issued for the active peer and room', () => {
@@ -90,6 +93,22 @@ describe('p2p active match registry', () => {
 		expect(verifyP2PActiveMatchTicket({ roomId: 'match-1', peerId: 'peer-a', token: 'ticket-a', now: 2_000 })).toMatchObject({ ok: true });
 
 		sweepP2PActiveMatches(2_000 + 10 * 60 * 1000);
+		expect(verifyP2PActiveMatchTicket({ roomId: 'match-1', peerId: 'peer-a', token: 'ticket-a', now: 2_000 })).toEqual({
+			ok: false,
+			reason: 'not_found',
+		});
+	});
+
+	it('removes terminal bindings on their retention timer without a sweep', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(2_000);
+		registerP2PActiveMatch('match-1', match);
+		expect(markP2PActiveMatchTerminal('match-1')).toBe(true);
+
+		await vi.advanceTimersByTimeAsync(10 * 60 * 1000 - 1);
+		expect(verifyP2PActiveMatchTicket({ roomId: 'match-1', peerId: 'peer-a', token: 'ticket-a', now: 2_000 })).toMatchObject({ ok: true });
+
+		await vi.advanceTimersByTimeAsync(1);
 		expect(verifyP2PActiveMatchTicket({ roomId: 'match-1', peerId: 'peer-a', token: 'ticket-a', now: 2_000 })).toEqual({
 			ok: false,
 			reason: 'not_found',

@@ -6,6 +6,9 @@ import {
 
 export type TransportKind = 'webrtc' | 'websocket-relay';
 
+/** Absolute source of a close signal, when the adapter can attribute it. */
+export type TransportCloseReason = 'local' | 'opponent' | 'unknown';
+
 export type TransportState =
 	| 'idle'
 	| 'connecting'
@@ -17,6 +20,23 @@ export type TransportState =
 
 export type TransportMessageListener = (message: P2PMessage) => void;
 export type TransportStateListener = (state: TransportState) => void;
+
+export type TransportStatsSnapshot = Readonly<{
+	readonly collectedAtMs: number;
+	readonly connectDurationMs: number | null;
+	readonly connectionState: string | null;
+	readonly iceConnectionState: string | null;
+	readonly iceGatheringState: string | null;
+	readonly signalingState: string | null;
+	readonly candidatePair: Readonly<{
+		readonly localCandidateType: string | null;
+		readonly remoteCandidateType: string | null;
+		readonly protocol: string | null;
+		readonly currentRoundTripTimeMs: number | null;
+		readonly bytesSent: number | null;
+		readonly bytesReceived: number | null;
+	}> | null;
+}>;
 
 export type TransportFailure = Error & {
 	readonly transportReason?: P2PTransportFallbackReason;
@@ -52,6 +72,7 @@ export function getTransportFailureReason(value: unknown): P2PTransportFallbackR
 export type GameTransport = {
 	readonly kind: TransportKind;
 	readonly state: TransportState;
+	readonly closeReason?: TransportCloseReason;
 	connect: () => Promise<void>;
 	send: (message: P2PMessage) => void;
 	onMessage: (callback: TransportMessageListener) => () => void;

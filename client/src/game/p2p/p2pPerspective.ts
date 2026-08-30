@@ -108,12 +108,13 @@ export function mapCanonicalValuesToViewer<T>(input: {
 }
 
 /**
- * Host-as-player is the cards hash frame while both peers store ego-centric
- * state. Do not use `isCardsAuthorityRole` for hashing — that helper now
- * tracks forward `gameState` dumps (off in symmetric mode).
+ * The cards hash frame is the canonical player side. It is independent from
+ * the transport host hint because seed parity may assign first mover to either
+ * browser. Do not use `isCardsAuthorityRole` for hashing — that helper tracks
+ * forward `gameState` dumps (off in symmetric mode).
  */
-export function isCardsHostFrame(isHost: boolean): boolean {
-	return isHost;
+export function isCardsCanonicalPlayerFrame(side: CanonicalChessSide | null): boolean {
+	return side === 'player';
 }
 
 export function isCardsAuthorityRole(

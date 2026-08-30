@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 import { encodePokerAction } from '@shared/p2p-wire/combat';
 import { CHALLENGE_SIGNATURE_ALGORITHM } from '@shared/p2pAvailability';
+import { MAX_WARBAND_DECK_CARDS } from '@shared/protocol-core/deckVerification';
 import {
 	CHESS_INTEGRITY_PROTOCOL_VERSION,
 	CHESS_INTEGRITY_SCOPE,
@@ -64,6 +65,24 @@ describe('parseWireMessage — non-message inputs', () => {
 	});
 });
 
+describe('parseWireMessage — competitive leave event', () => {
+	const validLeave = {
+		type: 'p2p_leave' as const,
+		matchId: 'match-1',
+		participantId: 'peer-a',
+		eventId: 'leave:match-1:peer-a',
+	};
+
+	it('accepts a well-formed leave event', () => {
+		expect(parseWireMessage(validLeave)).toEqual(validLeave);
+	});
+
+	it('rejects a leave event with an empty identity field', () => {
+		expect(parseWireMessage({ ...validLeave, participantId: '' })).toBeNull();
+		expect(parseWireMessage({ ...validLeave, eventId: '' })).toBeNull();
+	});
+});
+
 describe('parseWireMessage — game_command envelope (cards integrity)', () => {
 	const validEnvelope = {
 		type: 'game_command' as const,
@@ -78,6 +97,11 @@ describe('parseWireMessage — game_command envelope (cards integrity)', () => {
 		const result = parseWireMessage(validEnvelope);
 		expect(result).not.toBeNull();
 		expect(result?.type).toBe('game_command');
+	});
+
+	it('accepts a Quick Match room id in a game command envelope', () => {
+		const matchId = `${'a'.repeat(36)}-${'b'.repeat(36)}`;
+		expect(parseWireMessage({ ...validEnvelope, matchId })).not.toBeNull();
 	});
 
 	it('accepts attack/end_turn/use_hero_power inner commands', () => {
@@ -253,6 +277,17 @@ describe('parseWireMessage — cards_deck handshake', () => {
 		expect(result?.type).toBe('cards_deck');
 	});
 
+	it('accepts the aggregated four-piece Warband deck', () => {
+		const result = parseWireMessage({
+			type: 'cards_deck',
+			heroClass: 'neutral',
+			cardIds: Array.from({ length: MAX_WARBAND_DECK_CARDS }, (_value, index) => index + 100),
+			nftLevels: [],
+		});
+
+		expect(result?.type).toBe('cards_deck');
+	});
+
 	it('rejects smuggled fields on cards_deck', () => {
 		expect(parseWireMessage({
 			type: 'cards_deck',
@@ -277,6 +312,20 @@ describe('parseWireMessage — deck verification variants', () => {
 		});
 
 		expect(result).not.toBeNull();
+		expect(result?.type).toBe('deck_verify');
+	});
+
+	it('accepts the maximum aggregated Warband claims payload', () => {
+		const result = parseWireMessage({
+			type: 'deck_verify',
+			hiveAccount: 'alice',
+			protocolVersion: 2,
+			claims: Array.from({ length: MAX_WARBAND_DECK_CARDS }, (_value, index) => ({
+				authority: 'qa_full_catalog',
+				cardId: 20_001 + index,
+			})),
+		});
+
 		expect(result?.type).toBe('deck_verify');
 	});
 
@@ -577,6 +626,27 @@ describe('parseWireMessage — session_authorize challenge boundary', () => {
 			ephemeralPubkey: 'b'.repeat(64),
 			hiveSig: 'c'.repeat(64),
 			matchChallenge,
+		})).not.toBeNull();
+	});
+
+	it('accepts a Quick Match room id in the session authorization envelope', () => {
+		const matchId = `${'a'.repeat(36)}-${'b'.repeat(36)}`;
+		expect(parseWireMessage({
+			type: 'session_authorize',
+			matchId,
+			ephemeralPubkey: 'b'.repeat(64),
+			acceptance: {
+				protocol: 'ragnarok-match-accept-v1',
+				offerId: 'offer-1',
+				matchId,
+				peerId: 'peer-1',
+				opponentPeerId: 'peer-2',
+				ephemeralPubkey: 'c'.repeat(64),
+				rulesetHash: 'ruleset',
+				engineHash: 'engine',
+				serverNonce: 'nonce_1234567890ab',
+				expiresAt: 100_000,
+			},
 		})).not.toBeNull();
 	});
 

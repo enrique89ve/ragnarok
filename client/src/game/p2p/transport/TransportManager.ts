@@ -14,8 +14,10 @@ import {
 import type {
 	GameTransport,
 	TransportMessageListener,
+	TransportStatsSnapshot,
 	TransportState,
 	TransportStateListener,
+	TransportCloseReason,
 } from './transportTypes';
 import { createTransportFailure, getTransportFailureReason } from './transportTypes';
 import type { TransportPlan } from './transportPolicy';
@@ -47,6 +49,8 @@ export type ManagedTransport = GameTransport & {
 	off: (event: TransportEvent, listener: TransportListener) => void;
 	/** Optional authenticated control-plane referee channel. */
 	readonly controlAvailable?: boolean;
+	/** Optional transport diagnostics, available for native WebRTC sessions. */
+	readonly getStats?: () => Promise<TransportStatsSnapshot | null>;
 	sendControlMessage?: (message: P2PControlClientMessage) => void;
 	onControlMessage?: (listener: (message: P2PControlServerMessage) => void) => () => void;
 };
@@ -179,7 +183,7 @@ export function createTransportManager(
 				return;
 			}
 			if (next === 'failed' || next === 'closed') {
-				if (open) emit('close', 'unknown');
+				if (open) emit('close', (transport.closeReason ?? 'unknown') satisfies TransportCloseReason);
 				open = false;
 				setState(next);
 			}
@@ -209,15 +213,23 @@ export function createTransportManager(
 			throw new Error('Transport connection attempt became stale');
 		}
 		if (!open) {
-			if (transport.state !== 'connected') {
-				throw new Error(`${transport.kind} transport did not confirm an open state`);
+			try {
+				if (transport.state !== 'connected') {
+					throw new Error(`${transport.kind} transport did not confirm an open state`);
+				}
+				if (!options.session.selectTransport(attemptId, transport.kind)) throw new Error('Transport connection attempt became stale');
+				open = true;
+				remotePeer = 'peer' in transport && typeof transport.peer === 'string' ? transport.peer : '';
+				hostHint = options.isHostHint;
+				setState('connected');
+				emit('open', { isHost: hostHint, remotePeerId: remotePeer });
+			} catch (error) {
+				// An adapter may resolve connect() without publishing a connected
+				// state. Close it before fallback so it cannot leak sockets or emit a
+				// late open event.
+				try { transport.close(); } catch { /* adapter may already be closed */ }
+				throw error;
 			}
-			if (!options.session.selectTransport(attemptId, transport.kind)) throw new Error('Transport connection attempt became stale');
-			open = true;
-			remotePeer = 'peer' in transport && typeof transport.peer === 'string' ? transport.peer : '';
-			hostHint = options.isHostHint;
-			setState('connected');
-			emit('open', { isHost: hostHint, remotePeerId: remotePeer });
 		}
 	};
 
@@ -338,6 +350,11 @@ export function createTransportManager(
 		get open(): boolean { return open; },
 		get isHostHint(): boolean { return hostHint; },
 		get controlAvailable(): boolean { return Boolean(selected && hasControlChannel(selected)); },
+		getStats: async (): Promise<TransportStatsSnapshot | null> => {
+			const transport = selected;
+			if (!transport || !('getStats' in transport) || typeof transport.getStats !== 'function') return null;
+			return transport.getStats();
+		},
 		sendControlMessage: message => {
 			if (!selected || !hasControlChannel(selected)) {
 				throw new Error('P2P control plane is not available');

@@ -34,11 +34,13 @@ function createImpact(
 	amount: number,
 	shielded: boolean,
 	lethal: boolean | null,
+	healthDamage = shielded ? 0 : amount,
 ): PresentationImpact {
 	const safeAmount = Math.max(0, amount);
 	return {
 		target,
 		amount: safeAmount,
+		healthDamage: Math.max(0, healthDamage),
 		level: impactLevelFor(safeAmount),
 		outcome: shielded ? 'shield' : 'damage',
 		lethal,
@@ -108,6 +110,7 @@ export function buildCombatPresentationFromResolvedAttack(
 		resolved.damageToTarget,
 		resolved.targetShieldConsumed,
 		resolved.targetLethal,
+		resolved.healthDamageToTarget,
 	);
 	const counter = resolved.counterAttackOccurred && resolved.targetType === 'minion'
 		&& resolved.targetId
@@ -119,6 +122,7 @@ export function buildCombatPresentationFromResolvedAttack(
 				resolved.damageToAttacker,
 				resolved.attackerShieldConsumed,
 				resolved.attackerLethal,
+				resolved.healthDamageToAttacker,
 			),
 		}
 		: undefined;

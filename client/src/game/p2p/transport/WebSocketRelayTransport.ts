@@ -12,6 +12,7 @@ import type {
 	TransportMessageListener,
 	TransportState,
 	TransportStateListener,
+	TransportCloseReason,
 } from './transportTypes';
 import { createP2PControlChannel, type P2PControlChannel } from './P2PControlChannel';
 import {
@@ -111,9 +112,18 @@ export function createWebSocketRelayTransport(
 	control?.onMessage(emitControlMessage);
 	control?.onStateChange(next => {
 		controlReady = next === 'connected';
-		if (next === 'degraded' && state === 'connected') {
-			setState('failed');
-			relay.close();
+		if (next === 'degraded') {
+			if (state === 'connecting' || state === 'connected') {
+				setState('failed');
+				// A degraded control plane invalidates the authenticated relay
+				// session too. Abort both pending connects so neither side can
+				// publish a late `connected` event after the control failure.
+				cancelRelayConnect?.();
+				cancelRelayConnect = null;
+				control.close();
+				relay.close();
+			}
+			return;
 		}
 		maybeSetConnected();
 	});
@@ -193,6 +203,7 @@ export function createWebSocketRelayTransport(
 	const baseTransport: WebSocketRelayTransport = {
 		kind: 'websocket-relay' as const,
 		get state(): TransportState { return state; },
+		get closeReason(): TransportCloseReason { return relay.closeReason; },
 		connect,
 		send: (message: P2PMessage): void => {
 			if (state !== 'connected' || !relay.open) throw new Error('WebSocket relay is not open');
@@ -218,6 +229,7 @@ export function createWebSocketRelayTransport(
 	return {
 		...baseTransport,
 		get state(): TransportState { return state; },
+		get closeReason(): TransportCloseReason { return relay.closeReason; },
 		get peer(): string { return relay.peer; },
 		get open(): boolean { return relay.open; },
 		get isHostHint(): boolean { return relay.isHostHint; },

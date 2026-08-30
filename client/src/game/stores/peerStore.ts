@@ -42,6 +42,13 @@ import type { ArmySelection } from '../types/ChessTypes';
 import type { WireMessage } from '../p2p/messages';
 import type { P2PBattleReadyProof } from '../p2p/battleReady';
 import type { P2PConnectionAvailabilityState, P2PMatchTicket, ServerSignedChallenge } from '@shared/p2pAvailability';
+import {
+	bindP2PCompetitionMatchId,
+	createP2PCompetitionState,
+	reduceP2PCompetitionLifecycle,
+	type P2PCompetitionEvent,
+	type P2PCompetitionState,
+} from '@shared/p2p-wire/p2pCompetitionLifecycle';
 import { useMatchmakingStore, type MatchmakingStatus } from './matchmakingStore';
 export { isP2PConnectionStateBusy } from '@shared/p2pAvailability';
 
@@ -111,6 +118,7 @@ export type PeerStore = {
 	reconnectAttemptCount: number;
 	disconnectSide: P2PDisconnectSide | null;
 	forfeitSide: P2PDisconnectSide | null;
+	battleLifecycle: P2PCompetitionState | null;
 	bufferedMessageCount: number;
 	opponentArmy: ArmySelection | null;
 	p2pSessionLocalAuthorized: boolean;
@@ -163,6 +171,26 @@ export type PeerStore = {
 	clearMatchChallenges: () => void;
 	setP2pInitApplied: (applied: boolean) => void;
 	setHardReloadResume: (value: boolean) => void;
+	initializeBattleLifecycle: (input: {
+		readonly matchId: string;
+		readonly playerA: string;
+		readonly playerB: string;
+	}) => void;
+	setBattleLifecycleMatchId: (matchId: string) => void;
+	recordCanonicalAction: (input: {
+		readonly actionId: string;
+		readonly actorId: string;
+		readonly canonicalOrder: number;
+	}) => P2PCompetitionState | null;
+	restoreBattleCommitment: (canonicalOrder: number) => P2PCompetitionState | null;
+	recordNormalResult: (input: {
+		readonly winnerId: string | null;
+		readonly loserId: string | null;
+		readonly eventId: string;
+		readonly canonicalOrder: number;
+	}) => P2PCompetitionState | null;
+	requestP2PLeave: (actorId: string, eventId?: string) => P2PCompetitionState | null;
+	recordRemoteP2PLeave: (participantId: string, eventId: string) => P2PCompetitionState | null;
 	/** Rejoin a persisted room with the existing 2-attempt / 60s window. */
 	rejoinPersistedRoom: (roomId: string) => void;
 
@@ -199,6 +227,7 @@ type PeerRuntimeState = Pick<
 	| 'p2pBattleReadyExpectedRemoteLoadoutHash'
 	| 'p2pBattleReadyError'
 	| 'p2pInitApplied'
+	| 'battleLifecycle'
 >;
 
 type MatchmakingRuntimeState = {
@@ -232,6 +261,7 @@ export function hasVolatileP2PRuntimeState(state: HiveSessionChangeRuntimeState)
 		state.peer.p2pBattleReadyExpectedRemoteLoadoutHash,
 		state.peer.p2pBattleReadyError,
 		state.peer.p2pInitApplied,
+		state.peer.battleLifecycle,
 		state.matchmaking.status !== 'idle',
 		state.matchmaking.queueToken,
 		state.matchmaking.roomId,
@@ -307,6 +337,31 @@ function getForfeitMessage(side: P2PDisconnectSide): string {
 	return 'Connection lost for 60 seconds. Technical defeat.';
 }
 
+function sortParticipantIds(first: string, second: string): readonly [string, string] {
+	return first < second ? [first, second] : [second, first];
+}
+
+function participantIdForDisconnect(
+	state: PeerStore,
+	side: P2PDisconnectSide,
+): string | null {
+	if (side === 'local') return state.myPeerId;
+	if (side === 'opponent') return state.remotePeerId;
+	return null;
+}
+
+function applyBattleLifecycleEvent(
+	get: () => PeerStore,
+	set: (state: Partial<PeerStore>) => void,
+	event: P2PCompetitionEvent,
+): P2PCompetitionState | null {
+	const current = get().battleLifecycle;
+	if (!current) return null;
+	const next = reduceP2PCompetitionLifecycle(current, event);
+	if (next !== current) set({ battleLifecycle: next });
+	return next;
+}
+
 function getTransportSession(roomId: string, preserveSession: boolean): TransportSession {
 	const currentSession = activeTransportSession?.getSnapshot();
 	if (!preserveSession || !currentSession || currentSession.matchId !== roomId) {
@@ -319,19 +374,36 @@ function getTransportSession(roomId: string, preserveSession: boolean): Transpor
 function resolveReconnectForfeit(get: () => PeerStore, set: (state: Partial<PeerStore>) => void): void {
 	const side = get().disconnectSide ?? 'unknown';
 	const attemptsUsed = reconnectAttempt;
+	const participantId = participantIdForDisconnect(get(), side);
+	const lifecycleBeforeExpiry = get().battleLifecycle;
+	const eventId = participantId && lifecycleBeforeExpiry
+		? `reconnect-expired:${lifecycleBeforeExpiry.matchId}:${participantId}`
+		: null;
+	const lifecycle = participantId && eventId
+		? applyBattleLifecycleEvent(get, set, {
+			type: 'reconnect_expired',
+			participantId,
+			eventId,
+		})
+		: get().battleLifecycle;
 	if (activeTransport) {
 		try { activeTransport.close(); } catch { /* already closed */ }
 		activeTransport = null;
 	}
-	clearReconnectWindow();
-	debug.warn(`[PeerStore] Reconnect window expired — technical result side=${side}`);
+	clearAllTimers();
+	const result = lifecycle?.result;
+	debug.warn(`[PeerStore] Reconnect window expired — competitive phase=${lifecycle?.phase ?? 'unbound'} side=${side}`);
 	set({
 		connection: null,
 		connectionState: 'disconnected',
 		reconnectCountdown: 0,
 		reconnectAttemptCount: attemptsUsed,
-		error: getForfeitMessage(side),
-		forfeitSide: side,
+		error: result?.kind === 'technical_abandonment'
+			? getForfeitMessage(side)
+			: lifecycle?.phase === 'cancelled'
+				? 'Match canceled before the first valid move.'
+				: 'Connection expired without an attributable participant. Match remains unresolved.',
+		forfeitSide: result?.kind === 'technical_abandonment' ? side : null,
 	});
 }
 
@@ -367,7 +439,7 @@ function startHeartbeat(get: () => PeerStore, set: (state: Partial<PeerStore>) =
 		try { connection.send({ type: 'heartbeat', t: Date.now() }); }
 		catch { /* socket closed mid-send — let reconnect handle it */ }
 
-		const silenceMs = Date.now() - lastHeartbeatReceived;
+			const silenceMs = Date.now() - lastHeartbeatReceived;
 		if (silenceMs > HEARTBEAT_TIMEOUT_MS) {
 			debug.warn(`[PeerStore] No heartbeat for ${(silenceMs / 1000).toFixed(1)}s — connection may be dead`);
 			try { activeTransport?.close(); } catch { /* already closed */ }
@@ -391,6 +463,13 @@ function startGracePeriod(side: P2PDisconnectSide, get: () => PeerStore, set: (s
 	}
 
 	const mergedSide = mergeDisconnectSide(get().disconnectSide, side);
+	const participantId = participantIdForDisconnect(get(), mergedSide);
+	if (participantId) {
+		applyBattleLifecycleEvent(get, set, {
+			type: 'disconnect_detected',
+			participantId,
+		});
+	}
 	set({
 		disconnectSide: mergedSide,
 		forfeitSide: null,
@@ -562,12 +641,45 @@ async function openTransport(
 				return;
 			}
 			const payload = readOpenPayload(args[0]);
+			const previousDisconnectSide = get().disconnectSide;
+			const existingLifecycle = get().battleLifecycle;
+			const [playerA, playerB] = payload.remotePeerId
+				? sortParticipantIds(peerId, payload.remotePeerId)
+				: [peerId, peerId];
+			const preservesLifecycle = Boolean(
+				payload.remotePeerId
+				&& existingLifecycle
+				&& existingLifecycle.playerA === playerA
+				&& existingLifecycle.playerB === playerB,
+			);
+			const lifecycle = payload.remotePeerId
+				? preservesLifecycle
+					? existingLifecycle
+					: createP2PCompetitionState({
+						matchId: roomId,
+						playerA,
+						playerB,
+					})
+				: existingLifecycle;
+			if (lifecycle && previousDisconnectSide) {
+				const restoredParticipantId = participantIdForDisconnect(get(), previousDisconnectSide);
+				if (restoredParticipantId) {
+					const restored = reduceP2PCompetitionLifecycle(lifecycle, {
+						type: 'reconnect_restored',
+						participantId: restoredParticipantId,
+					});
+					set({ battleLifecycle: restored });
+				}
+			} else if (lifecycle) {
+				set({ battleLifecycle: lifecycle });
+			}
 			clearReconnectWindow();
 			set({
 				connection: transport,
 				connectionState: 'connected',
 				isHost: payload.isHost,
 				remotePeerId: payload.remotePeerId,
+				battleLifecycle: lifecycle,
 				reconnectCountdown: 0,
 				reconnectAttemptCount: 0,
 				disconnectSide: null,
@@ -585,6 +697,18 @@ async function openTransport(
 			if (!isActiveAttempt()) return;
 			const side = parseDisconnectSide(args[0]);
 			const { connectionState } = get();
+			if (get().battleLifecycle?.phase === 'resolved' || get().battleLifecycle?.phase === 'cancelled') {
+				clearAllTimers();
+				set({
+					connection: null,
+					connectionState: 'disconnected',
+					reconnectCountdown: 0,
+					reconnectAttemptCount: 0,
+					disconnectSide: null,
+					forfeitSide: null,
+				});
+				return;
+			}
 			if (connectionState === 'connected') {
 				debug.warn(`[PeerStore] transport closed — entering grace period side=${side}`);
 				startGracePeriod(side, get, set);
@@ -685,6 +809,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	reconnectAttemptCount: 0,
 	disconnectSide: null,
 	forfeitSide: null,
+	battleLifecycle: null,
 	bufferedMessageCount: 0,
 	opponentArmy: null,
 	p2pSessionLocalAuthorized: false,
@@ -733,6 +858,88 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	}),
 	setP2pInitApplied: (applied) => set({ p2pInitApplied: applied }),
 	setHardReloadResume: (value) => set({ hardReloadResume: value }),
+	initializeBattleLifecycle: (input) => {
+		const [playerA, playerB] = sortParticipantIds(input.playerA, input.playerB);
+		const current = get().battleLifecycle;
+		if (current && current.matchId === input.matchId && current.playerA === playerA && current.playerB === playerB) {
+			set({ battleLifecycle: bindP2PCompetitionMatchId(current, input.matchId) });
+			return;
+		}
+		set({ battleLifecycle: createP2PCompetitionState({
+			matchId: input.matchId,
+			playerA,
+			playerB,
+		}) });
+	},
+	setBattleLifecycleMatchId: (matchId) => {
+		const current = get().battleLifecycle;
+		if (current) set({ battleLifecycle: bindP2PCompetitionMatchId(current, matchId) });
+	},
+	recordCanonicalAction: (input) => applyBattleLifecycleEvent(get, set, {
+		type: 'action_accepted',
+		actionId: input.actionId,
+		actorId: input.actorId,
+		canonicalOrder: input.canonicalOrder,
+	}),
+	restoreBattleCommitment: (canonicalOrder) => applyBattleLifecycleEvent(get, set, {
+		type: 'commitment_restored',
+		canonicalOrder,
+	}),
+	recordNormalResult: (input) => applyBattleLifecycleEvent(get, set, {
+		type: 'normal_result',
+		winnerId: input.winnerId,
+		loserId: input.loserId,
+		eventId: input.eventId,
+		canonicalOrder: input.canonicalOrder,
+	}),
+	requestP2PLeave: (actorId, eventId) => {
+		const matchId = get().battleLifecycle?.matchId ?? 'unbound';
+		const resolvedEventId = eventId ?? `leave:${matchId}:${actorId}`;
+		const previous = get().battleLifecycle;
+		const next = applyBattleLifecycleEvent(get, set, {
+			type: 'leave_requested',
+			participantId: actorId,
+			eventId: resolvedEventId,
+		});
+		if (
+			previous
+			&& previous.phase !== 'resolved'
+			&& previous.phase !== 'cancelled'
+			&& next?.terminalEventId === resolvedEventId
+			&& actorId === get().myPeerId
+			&& get().connectionState === 'connected'
+		) {
+			get().send({
+				type: 'p2p_leave',
+				matchId: previous.matchId,
+				participantId: actorId,
+				eventId: resolvedEventId,
+			});
+		}
+		return next;
+	},
+	recordRemoteP2PLeave: (participantId, eventId) => {
+		const next = applyBattleLifecycleEvent(get, set, {
+			type: 'leave_requested',
+			participantId,
+			eventId,
+		});
+		if (next?.phase === 'resolved' || next?.phase === 'cancelled') {
+			clearAllTimers();
+			set({
+				connection: null,
+				connectionState: 'disconnected',
+				reconnectCountdown: 0,
+				reconnectAttemptCount: 0,
+				disconnectSide: null,
+				forfeitSide: null,
+			});
+			const terminalTransport = activeTransport;
+			activeTransport = null;
+			try { terminalTransport?.close(); } catch { /* already closed */ }
+		}
+		return next;
+	},
 
 	rejoinPersistedRoom: (roomId) => {
 		lastRoomId = roomId;
@@ -744,8 +951,8 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			forfeitSide: null,
 			connectionState: 'reconnecting',
 			reconnectCountdown: getReconnectCountdownSeconds(),
-			reconnectAttemptCount: 0,
-			error: null,
+		reconnectAttemptCount: 0,
+		error: null,
 		});
 		startGracePeriod('local', get, set);
 		attemptReconnect(roomId, get, set);
@@ -755,6 +962,13 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		lastHeartbeatReceived = Date.now();
 		const { connectionState } = get();
 		if (connectionState === 'grace_period') {
+			const restoredParticipantId = participantIdForDisconnect(get(), get().disconnectSide ?? 'unknown');
+			if (restoredParticipantId) {
+				applyBattleLifecycleEvent(get, set, {
+					type: 'reconnect_restored',
+					participantId: restoredParticipantId,
+				});
+			}
 			clearReconnectWindow();
 			set({
 				connectionState: 'connected',
@@ -799,6 +1013,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			reconnectAttemptCount: 0,
 			disconnectSide: null,
 			forfeitSide: null,
+			battleLifecycle: null,
 			opponentArmy: null,
 			p2pSessionLocalAuthorized: false,
 			p2pSessionRemoteAuthorized: false,
@@ -839,6 +1054,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			reconnectAttemptCount: isReconnect ? reconnectAttempt : 0,
 			disconnectSide: isReconnect ? get().disconnectSide : null,
 			forfeitSide: null,
+			battleLifecycle: isReconnect ? get().battleLifecycle : null,
 			opponentArmy: null,
 			p2pSessionLocalAuthorized: isReconnect ? get().p2pSessionLocalAuthorized : false,
 			p2pSessionRemoteAuthorized: isReconnect ? get().p2pSessionRemoteAuthorized : false,
@@ -868,6 +1084,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		const matchmakingHost = useMatchmakingStore.getState().isHost;
 		set({
 			myPeerId: peerId,
+			remotePeerId: isReconnect ? get().remotePeerId : null,
 			connectionState: isReconnect ? 'reconnecting' : 'connecting',
 			matchChallenge,
 			opponentMatchChallenge,
@@ -877,6 +1094,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			reconnectAttemptCount: isReconnect ? reconnectAttempt : 0,
 			disconnectSide: isReconnect ? get().disconnectSide : null,
 			forfeitSide: null,
+			battleLifecycle: isReconnect ? get().battleLifecycle : null,
 			opponentArmy: isReconnect ? get().opponentArmy : null,
 			p2pSessionLocalAuthorized: isReconnect ? get().p2pSessionLocalAuthorized : false,
 			p2pSessionRemoteAuthorized: isReconnect ? get().p2pSessionRemoteAuthorized : false,
@@ -913,6 +1131,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			reconnectAttemptCount: 0,
 			disconnectSide: null,
 			forfeitSide: null,
+			battleLifecycle: null,
 			bufferedMessageCount: 0,
 			matchChallenge: null,
 			opponentMatchChallenge: null,

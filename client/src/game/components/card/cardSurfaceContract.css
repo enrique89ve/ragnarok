@@ -228,9 +228,10 @@
   min-height: var(--norse-card-name-height);
   max-height: var(--norse-card-name-height);
   overflow: hidden;
-  overflow-wrap: normal;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  text-wrap: balance;
+  white-space: normal;
 }
 
 .collection-card-frame.norse-card-frame--surface-mulligan

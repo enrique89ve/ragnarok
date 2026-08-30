@@ -5,6 +5,7 @@ import {
 	impactLevelFor,
 } from './CombatPresentation';
 import { CRITICAL_HIT_RECIPE, recipeForCombatPresentation } from './EffectRecipes';
+import { presentationTargetForEntityId } from './EffectTargetResolver';
 import type { CombatStep } from '@/game/services/AttackResolutionService';
 
 function makeStep(overrides: Partial<CombatStep> = {}): CombatStep {
@@ -38,6 +39,7 @@ describe('combat presentation contract', () => {
 			target: {
 				target: { type: 'card', instanceId: 'target-1' },
 				amount: 8,
+				healthDamage: 8,
 				level: 'heavy',
 				outcome: 'damage',
 				lethal: null,
@@ -46,6 +48,7 @@ describe('combat presentation contract', () => {
 				source: { type: 'card', instanceId: 'target-1' },
 				target: { type: 'card', instanceId: 'attacker-1' },
 				amount: 3,
+				healthDamage: 3,
 			},
 		});
 	});
@@ -118,7 +121,46 @@ describe('combat presentation contract', () => {
 		});
 
 		expect(presentation.target).toMatchObject({ outcome: 'shield', amount: 8, lethal: false });
-		expect(presentation.counter).toMatchObject({ amount: 3, lethal: false });
+		expect(presentation.target.healthDamage).toBe(0);
+		expect(presentation.counter).toMatchObject({ amount: 3, healthDamage: 3, lethal: false });
+	});
+
+	it('keeps impact magnitude separate from actual HP loss', () => {
+		const presentation = buildCombatPresentationFromResolvedAttack({
+			id: 'resolved-overkill',
+			attackerId: 'attacker-1',
+			targetId: 'target-1',
+			targetType: 'minion',
+			attackerSide: 'player',
+			damageToTarget: 20,
+			damageToAttacker: 0,
+			healthDamageToTarget: 10,
+			healthDamageToAttacker: 0,
+			targetHealthBefore: 10,
+			targetHealthAfter: 0,
+			attackerHealthBefore: 10,
+			attackerHealthAfter: 10,
+			targetShieldConsumed: false,
+			attackerShieldConsumed: false,
+			targetLethal: true,
+			attackerLethal: false,
+			counterAttackOccurred: false,
+			triggeredEffects: [],
+			statChanges: [],
+			zoneChanges: [],
+		});
+
+		expect(presentation.target).toMatchObject({
+			amount: 20,
+			healthDamage: 10,
+			level: 'heavy',
+		});
+	});
+
+	it('maps health-change targets to the real hero or card receiver', () => {
+		expect(presentationTargetForEntityId('player-hero')).toEqual({ type: 'hero', side: 'player' });
+		expect(presentationTargetForEntityId('opponent-hero')).toEqual({ type: 'hero', side: 'opponent' });
+		expect(presentationTargetForEntityId('minion-7')).toEqual({ type: 'card', instanceId: 'minion-7' });
 	});
 
 	it('keeps a Divine Shield counter impact in the presentation sequence', () => {

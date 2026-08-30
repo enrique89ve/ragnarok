@@ -7,6 +7,10 @@
 
 import React, { useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import {
+	DAMAGE_CRITICAL_EFFECT_DURATION_MS,
+	DAMAGE_EFFECT_DURATION_MS,
+} from '../../animations/UnifiedAnimationOrchestrator';
 import { gameEffectCoordinator } from '@/game/effects/core/gameEffectCoordinator';
 import {
 	ARENA_VFX_LAYERS,
@@ -51,7 +55,7 @@ export const DamageIndicator: React.FC<DamageIndicatorProps> = ({
 			lane: 'damage-indicator',
 			key: id,
 			priority: isCritical ? 'high' : 'normal',
-			delayMs: 800,
+			delayMs: isCritical ? DAMAGE_CRITICAL_EFFECT_DURATION_MS : DAMAGE_EFFECT_DURATION_MS,
 			run: onComplete,
 		});
 		return () => handle.cancel();

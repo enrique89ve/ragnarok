@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useSyncExternalStore } from 'react';
+import React, { useState, useEffect, useRef, useSyncExternalStore } from 'react';
+import { GameEventBus } from '../../../core/events/GameEventBus';
 import { debug } from '../../config/debugConfig';
 import { usePeerStore } from '../../stores/peerStore';
 import { MultiplayerLobby } from './MultiplayerLobby';
@@ -139,6 +140,7 @@ function P2PHiveSessionRequired({ onBack }: { readonly onBack: () => void }) {
 export const MultiplayerGame: React.FC = () => {
 	const [gameStarted, setGameStarted] = useState(false);
 	const [showVS, setShowVS] = useState(false);
+	const connectAttemptRoomRef = useRef<string | null>(null);
 	const persistedArmy = useWarbandStore(selectArmy);
 	const navigate = useNavigate();
 	const { status: matchmakingStatus, roomId, joinQueue, leaveQueue } = useMatchmaking();
@@ -150,7 +152,8 @@ export const MultiplayerGame: React.FC = () => {
 	const connectionState = usePeerStore(s => s.connectionState);
 	const reconnectCountdown = usePeerStore(s => s.reconnectCountdown);
 	const reconnectAttemptCount = usePeerStore(s => s.reconnectAttemptCount);
-	const forfeitSide = usePeerStore(s => s.forfeitSide);
+	const battleLifecycle = usePeerStore(s => s.battleLifecycle);
+	const myPeerId = usePeerStore(s => s.myPeerId);
 	const hiveUsername = useNFTUsername();
 	const authenticatedHiveUsername = useAuthenticatedHiveUsername();
 	const requiresHiveSession = isSharedNetworkEnvironment();
@@ -187,12 +190,22 @@ export const MultiplayerGame: React.FC = () => {
 	// host vs client by order of arrival in the room, so we no longer branch on
 	// the matchmaking-emitted isHost (which was advisory under WebRTC anyway).
 	useEffect(() => {
-		if ((matchmakingStatus === 'ready' || matchmakingStatus === 'connecting') && roomId && persistedArmy && !gameStarted) {
-			useMatchmakingStore.getState().setStatus('connecting');
-			usePeerStore.getState().connectToRoom(roomId).catch(err => {
-				debug.error('[MultiplayerGame] connectToRoom failed:', err);
-			});
+		if (!roomId || !persistedArmy || gameStarted) {
+			if (!roomId || gameStarted) connectAttemptRoomRef.current = null;
+			return;
 		}
+		if (matchmakingStatus !== 'ready' && matchmakingStatus !== 'connecting') return;
+		if (connectAttemptRoomRef.current === roomId) return;
+
+		// Mark the room before opening any transport. `setStatus('connecting')`
+		// changes this effect's dependency, and StrictMode can replay the effect
+		// before the async call settles. A room gets a new attempt only after
+		// matchmaking assigns a new room or this screen is reset.
+		connectAttemptRoomRef.current = roomId;
+		useMatchmakingStore.getState().setStatus('connecting');
+		usePeerStore.getState().connectToRoom(roomId).catch(err => {
+			debug.error('[MultiplayerGame] connectToRoom failed:', err);
+		});
 	}, [matchmakingStatus, roomId, persistedArmy, gameStarted]);
 
 	useEffect(() => {
@@ -211,41 +224,81 @@ export const MultiplayerGame: React.FC = () => {
 		leaveQueue().catch(() => { /* best effort while rendering auth gate */ });
 	}, [hasHiveSession, leaveQueue]);
 
+	const handledLifecycleEventRef = useRef<string | null>(null);
 	useEffect(() => {
-		if (!gameStarted || !forfeitSide) return;
-		const { gameState } = useGameStore.getState();
-		if (!gameState || gameState.gamePhase === 'game_over') return;
+		const result = battleLifecycle?.result;
+		if (!result || result.kind !== 'technical_abandonment' || !myPeerId) return;
+		if (handledLifecycleEventRef.current === result.eventId) return;
+		handledLifecycleEventRef.current = result.eventId;
 
-		const localLost = forfeitSide !== 'opponent';
+		const localWon = result.winnerId === myPeerId;
 		const now = Date.now();
 		void clearP2PMatchResume();
 		recordSessionEvent('p2p_technical_result', {
-			forfeitSide,
-			localOutcome: localLost ? 'defeat' : 'victory',
-			reason: 'reconnect_window_expired',
+			eventId: result.eventId,
+			winnerId: result.winnerId,
+			loserId: result.loserId,
+			localOutcome: localWon ? 'victory' : 'defeat',
+			reason: result.reason,
 			runeSettlement: 'not_credited_from_result_only',
 		});
+		GameEventBus.emitNotification({
+			level: localWon ? 'success' : 'error',
+			message: localWon
+				? 'Technical victory: opponent did not return before the reconnect window expired.'
+				: result.reason === 'explicit_leave'
+					? 'Technical defeat: leaving a committed PvP battle ends the match.'
+					: 'Technical defeat: the reconnect window expired.',
+			duration: 6_000,
+		});
+		const flow = useGameFlowStore.getState().current;
+		if (flow?.tag === 'chess' || flow?.tag === 'vs_screen' || flow?.tag === 'poker_combat') {
+			useGameFlowStore.getState().dispatch({ type: 'GAME_ENDED', initialSub: 'result' });
+		}
+
+		const { gameState } = useGameStore.getState();
+		if (!gameState || gameState.gamePhase === 'game_over') return;
 		useGameStore.setState({
 			gameState: {
 				...gameState,
 				gamePhase: 'game_over',
-				winner: localLost ? 'opponent' : 'player',
+				winner: localWon ? 'player' : 'opponent',
 				gameLog: [
 					...gameState.gameLog,
 					{
-						id: `p2p_forfeit_${now}`,
+						id: `p2p_forfeit_${result.eventId}`,
 						type: 'effect',
-						player: localLost ? 'player' : 'opponent',
-						text: localLost
-							? 'Technical defeat: connection was not restored within 60 seconds.'
-							: 'Technical victory: opponent did not reconnect within 60 seconds.',
+						player: localWon ? 'opponent' : 'player',
+						text: localWon
+							? 'Technical victory: opponent did not reconnect in time.'
+							: result.reason === 'explicit_leave'
+								? 'Technical defeat: you left the committed PvP battle.'
+								: 'Technical defeat: connection was not restored in time.',
 						timestamp: now,
 						turn: gameState.turnNumber,
 					},
 				],
 			},
 		});
-	}, [gameStarted, forfeitSide]);
+	}, [battleLifecycle, myPeerId]);
+
+	useEffect(() => {
+		const eventId = battleLifecycle?.terminalEventId;
+		if (battleLifecycle?.phase !== 'cancelled' || !eventId) return;
+		if (handledLifecycleEventRef.current === eventId) return;
+		handledLifecycleEventRef.current = eventId;
+		void clearP2PMatchResume();
+		GameEventBus.emitNotification({
+			level: 'info',
+			message: 'Match canceled before the first valid move. No competitive result was recorded.',
+			duration: 5_000,
+		});
+		setShowVS(false);
+		setGameStarted(false);
+		useGameStore.getState().resetGameState();
+		usePeerStore.getState().disconnect();
+		leaveQueue().catch(() => { /* best effort after a pre-battle cancel */ });
+	}, [battleLifecycle, leaveQueue]);
 
 	// Clean up peer + matchmaking queue when leaving the multiplayer screen.
 	// Without this, a peerId reserved for Quick Match (or a stale connection
@@ -255,7 +308,21 @@ export const MultiplayerGame: React.FC = () => {
 	useEffect(() => {
 		return () => {
 			leaveQueue().catch(() => { /* best effort — leaving page anyway */ });
-			usePeerStore.getState().disconnect();
+			const peer = usePeerStore.getState();
+			if (peer.myPeerId && peer.battleLifecycle?.phase === 'battle') {
+				const result = peer.requestP2PLeave(peer.myPeerId);
+				if (result?.result?.kind === 'technical_abandonment') {
+					recordSessionEvent('p2p_technical_result', {
+						eventId: result.result.eventId,
+						winnerId: result.result.winnerId,
+						loserId: result.result.loserId,
+						reason: result.result.reason,
+						localOutcome: result.result.loserId === peer.myPeerId ? 'defeat' : 'victory',
+						trigger: 'multiplayer_route_unmount',
+					});
+				}
+			}
+			peer.disconnect();
 		};
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
@@ -329,6 +396,7 @@ export const MultiplayerGame: React.FC = () => {
 			reconnectCountdown,
 			reconnectAttemptCount,
 			hardReloadResume: resumeBoot === 'applied',
+			terminalLifecycle: battleLifecycle?.phase === 'resolved',
 		});
 		const spinner = (
 			<div className="flex items-center justify-center min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900 p-4">

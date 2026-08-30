@@ -1,4 +1,5 @@
 import {
+	DAMAGE_EFFECT_DURATION_MS,
 	scheduleDamageEffect,
 	useAnimationOrchestrator,
 } from '../../../animations/UnifiedAnimationOrchestrator';
@@ -61,7 +62,8 @@ import type { CombatImpactEvent } from '../events';
 
 type Point = { readonly x: number; readonly y: number };
 
-const DEFAULT_TRAVEL_MS = 300;
+const DEFAULT_TRAVEL_MS = 420;
+const IMPACT_REACTION_DELAY_MS = 40;
 const IMPACT_CHOREOGRAPHY_GATE_MS = COMBAT_LETHAL_TIMELINE_MS.impact;
 
 function localPrimitive(value: EffectRecipeStep['primitive']): LocalFxPrimitive | null {
@@ -178,7 +180,7 @@ function holdLethalCardVisuals(presentation: CombatPresentation): void {
 
 function travelDuration(event: CombatImpactEvent, profile: CombatImpactMotionProfile): number {
 	const duration = event.intent?.motion.durationMs ?? profile.travelMs;
-	return Math.min(320, Math.max(260, duration));
+	return Math.min(520, Math.max(340, duration));
 }
 
 function priorityFor(event: CombatImpactEvent): GameEffectPriority {
@@ -238,6 +240,7 @@ function motionHost(target: PresentationTarget): HTMLElement | null {
 	const element = resolvePresentationTargetElement(target);
 	if (!element) return null;
 	return element.closest<HTMLElement>('.bf-card-wrapper')
+		?? element.closest<HTMLElement>('.hero-card-wrapper')
 		?? (element.matches('.bf-card-wrapper') ? element : element);
 }
 
@@ -469,7 +472,7 @@ function scheduleDamageNumber(
 	priority: GameEffectPriority,
 	seed: string,
 ): GameEffectHandle | null {
-	if (phase.impact.outcome !== 'damage' || phase.impact.amount <= 0) return null;
+	if (phase.impact.outcome !== 'damage' || phase.impact.healthDamage <= 0) return null;
 
 	return scheduleDelayedChild(
 		`${seed}:${phase.id}:damage-number`,
@@ -478,14 +481,14 @@ function scheduleDamageNumber(
 		() => {
 			const effectId = scheduleDamageEffect(
 				targetPoint,
-				phase.impact.amount,
+				phase.impact.healthDamage,
 				event.kind === 'counter' || phase.id === 'counter'
 					? 'combat-counter'
 					: 'combat-damage',
 			);
-				const duration = scheduleVisualWindow(
-					`${seed}:${phase.id}:damage-number:duration`,
-					800,
+			const duration = scheduleVisualWindow(
+				`${seed}:${phase.id}:damage-number:duration`,
+				DAMAGE_EFFECT_DURATION_MS,
 				priority,
 			);
 			return {
@@ -584,7 +587,7 @@ function scheduleImpactPhaseWithGate(
 	);
 	const reaction = scheduleDelayedChild(
 		`${seed}:${phase.id}:target-reaction`,
-		IMPACT_CHOREOGRAPHY_GATE_MS,
+		IMPACT_REACTION_DELAY_MS,
 		priority,
 		() => scheduleTargetReaction(
 			phase.impact.target,

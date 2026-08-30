@@ -58,7 +58,6 @@ import {
 	captureChessIntegrityCheckpoint,
 } from './chessIntegrityCheckpoint';
 import { chessIntegrityMonitor } from './chessIntegrityMonitor';
-import { isCardsHostFrame } from './p2pPerspective';
 
 let outgoingChessSeq = 0;
 let pendingChessEnvelope: ChessCommandEnvelope | null = null;
@@ -105,11 +104,11 @@ export interface ChessPrevHashes {
  * Returns a branded value so the consumers (`sendChessMove`,
  * `sendChessAttack`) cannot accept literally-constructed hashes.
  *
- * Cards hash perspective uses `isCardsHostFrame` (host-as-player) so both
- * ego-centric stores serialize the same bytes after the guest flips.
+ * Cards hash perspective uses the canonical player side, not the transport
+ * host hint. Seed parity may assign the first-mover side to either browser.
  */
 export function captureChessPrevHashes(): ChessPrevHashes {
-	const isCardsAuthority = isCardsHostFrame(usePeerStore.getState().isHost);
+	const isCardsAuthority = useGameStore.getState().myCanonicalSide === 'player';
 	const cards = computeCardsPrevStateHash(
 		useGameStore.getState().gameState,
 		isCardsAuthority,
@@ -145,6 +144,8 @@ export interface ChessMoveEmit {
 	readonly pieceId: string;
 	readonly from: ChessBoardPosition;
 	readonly to: ChessBoardPosition;
+	/** Canonical move order captured before the local reducer mutates state. */
+	readonly canonicalOrder: number;
 }
 
 export interface ChessAttackEmit {
@@ -152,6 +153,8 @@ export interface ChessAttackEmit {
 	readonly from: ChessBoardPosition;
 	readonly to: ChessBoardPosition;
 	readonly defenderId: string;
+	/** Canonical action order captured before the local reducer mutates state. */
+	readonly canonicalOrder: number;
 }
 
 export type ChessCombatInitiatedEmit = ChessAttackEmit;
@@ -172,6 +175,7 @@ function dispatchChessCommand(
 	command: ChessCommand,
 	prev: ChessPrevHashes,
 	transcriptExtra: Record<string, unknown>,
+	canonicalOrder: number,
 ): boolean {
 	const { matchId, myCanonicalSide } = useGameStore.getState();
 	if (!matchId) {
@@ -207,7 +211,7 @@ function dispatchChessCommand(
 	});
 	const postCheckpoint = captureChessIntegrityCheckpoint({
 		matchId,
-		isCardsAuthority: isCardsHostFrame(peerState.isHost),
+		isCardsAuthority: myCanonicalSide === 'player',
 	});
 	if (preCheckpoint === null || postCheckpoint === null) {
 		chessIntegrityMonitor.quarantine({
@@ -257,6 +261,14 @@ function dispatchChessCommand(
 		prevCardsHash: prev.cards ? prev.cards.slice(0, 12) : '(empty)',
 	});
 	send(envelope);
+	const actorId = usePeerStore.getState().myPeerId;
+	if (actorId) {
+		usePeerStore.getState().recordCanonicalAction({
+			actionId: envelope.commandId,
+			actorId,
+			canonicalOrder,
+		});
+	}
 
 	// Transcript: delegated to the bridge-registered observer (C3). Pre-C3
 	// this module called `recordMove` inline; centralising in the bridge
@@ -310,7 +322,7 @@ export function sendChessMove(move: ChessMoveEmit, prev: ChessPrevHashes): boole
 		from: move.from,
 		to: move.to,
 	};
-	return dispatchChessCommand(command, prev, {});
+	return dispatchChessCommand(command, prev, {}, move.canonicalOrder);
 }
 
 /**
@@ -333,7 +345,7 @@ export function sendChessAttack(attack: ChessAttackEmit, prev: ChessPrevHashes):
 	return dispatchChessCommand(command, prev, {
 		defenderId: attack.defenderId,
 		isInstantKill: true,
-	});
+	}, attack.canonicalOrder);
 }
 
 /**
@@ -353,7 +365,7 @@ export function sendChessCombatInitiated(attack: ChessCombatInitiatedEmit, prev:
 	return dispatchChessCommand(command, prev, {
 		defenderId: attack.defenderId,
 		isInstantKill: false,
-	});
+	}, attack.canonicalOrder);
 }
 
 /**

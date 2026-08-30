@@ -34,7 +34,7 @@ import {
 	retryPendingChessTransition,
 	setChessSendObserver,
 } from '../../../../p2p/chessWireSender';
-import { getP2PProcessFlags, getP2PTransportRole, isCardsHostFrame, createP2PViewerPerspective, mapViewerValuesToCanonical } from '../../../../p2p/p2pPerspective';
+import { getP2PProcessFlags, getP2PTransportRole, createP2PViewerPerspective, mapViewerValuesToCanonical } from '../../../../p2p/p2pPerspective';
 import {
 	snapshotLocalCardsDeck,
 	savedDecksStorageKey,
@@ -238,17 +238,32 @@ export function useWireSync() {
 	//     current authority mode. UI code should consume viewer/canonical
 	//     perspective instead of branching on these flags.
 	const isWsHost = usePeerStore(state => state.isHost);
+	const myCanonicalSide = useGameStore(state => state.myCanonicalSide);
 	const transportRole = getP2PTransportRole(isWsHost);
 	const processFlags = getP2PProcessFlags({ transportRole });
-	const isHostFrame = isCardsHostFrame(isWsHost);
+	const isCardsCanonicalPlayerFrame = myCanonicalSide === 'player';
 	const shouldSendGuestKeepAlive = processFlags.sendsGuestKeepAlive;
 	const broadcastsCardsState = processFlags.broadcastsCardsState;
 	const sendsHashBeacon = processFlags.sendsHashBeacon;
 	const sendsCardsRecoverySnapshot = processFlags.sendsCardsRecoverySnapshot;
 	const sendsCardsInit = processFlags.sendsCardsInit;
 	const adoptsRemoteCardsInit = processFlags.adoptsRemoteCardsInit;
-	// `isFirstMover` is the canonical symmetric-protocol concept. Cards hashing
-	// still uses the host-as-player frame (`isHostFrame`), not first-mover.
+	// The data listener is connection-scoped. Keep handshake/perspective inputs
+	// in refs so seed resolution does not tear down the listener while queued
+	// `cards_deck` / `session_authorize` messages are still being processed.
+	const isWsHostRef = useRef(isWsHost);
+	const isCardsCanonicalPlayerFrameRef = useRef(isCardsCanonicalPlayerFrame);
+	const sendsCardsRecoverySnapshotRef = useRef(sendsCardsRecoverySnapshot);
+	const sendsCardsInitRef = useRef(sendsCardsInit);
+	const adoptsRemoteCardsInitRef = useRef(adoptsRemoteCardsInit);
+	isWsHostRef.current = isWsHost;
+	isCardsCanonicalPlayerFrameRef.current = isCardsCanonicalPlayerFrame;
+	sendsCardsRecoverySnapshotRef.current = sendsCardsRecoverySnapshot;
+	sendsCardsInitRef.current = sendsCardsInit;
+	adoptsRemoteCardsInitRef.current = adoptsRemoteCardsInit;
+	// `isFirstMover` is the canonical symmetric-protocol concept. Cards hashes
+	// use the canonical player frame, not the transport host hint: the seed
+	// deliberately allows either browser to own the first-mover side.
 	const activeMatchForAuthority = useMatchStore(state => state.activeMatch);
 	const _authority = activeMatchForAuthority ? deriveAuthority(activeMatchForAuthority) : null;
 	const isFirstMover = _authority?.kind === 'p2p-symmetric' && _authority.myRole === 'first-mover';
@@ -259,7 +274,6 @@ export function useWireSync() {
 	const p2pSessionLocalAuthorized = usePeerStore(state => state.p2pSessionLocalAuthorized);
 	const p2pSessionRemoteAuthorized = usePeerStore(state => state.p2pSessionRemoteAuthorized);
 	const matchSeed = useGameStore(state => state.matchSeed);
-	const myCanonicalSide = useGameStore(state => state.myCanonicalSide);
 	const initialCombatPieceCount = useUnifiedCombatStore(state => state.boardState.pieces.length);
 
 	/**
@@ -467,136 +481,167 @@ export function useWireSync() {
 
 		const resumePeer = usePeerStore.getState();
 		const resumeGame = useGameStore.getState();
-		if (
+		const isHardReloadResume =
 			resumePeer.hardReloadResume
 			&& resumeGame.matchSeed
 			&& resumeGame.matchId
-			&& !seedResolvedRef.current
-		) {
+			&& !seedResolvedRef.current;
+		// A new matchmaking connection must not inherit the previous match's
+		// seed/perspective while the fresh commit-reveal is still in flight. The
+		// deck handshake can arrive first; stale identity here would let it build
+		// a valid-looking state for the wrong match. Normal reconnects retain the
+		// resolved seed, and hard-reload resume explicitly retains the sealed one.
+		if (!seedResolvedRef.current && !isHardReloadResume) {
+			useGameStore.getState().resetGameState();
+		}
+		if (isHardReloadResume) {
 			seedResolvedRef.current = true;
 			matchIdRef.current = resumeGame.matchId;
 		}
+		let cancelled = false;
+		const isActiveConnection = (): boolean => (
+			!cancelled
+			&& usePeerStore.getState().connection === connection
+			&& usePeerStore.getState().connectionState === 'connected'
+		);
 
 		if (seedResolvedRef.current && matchIdRef.current) {
 			const resumedMatchId = matchIdRef.current;
-			loadWasmEngine().then(() => {
-				const wasmHash = getWasmHash();
-				send({ type: 'wasm_hash_check', wasmHash });
-			}).catch(err => {
-				GameEventBus.emitNotification({
-					level: 'error',
-					message: p2pEngineLoadNotice(err),
-					duration: 15000,
+			const timer = setTimeout(() => {
+				if (!isActiveConnection()) return;
+				void loadWasmEngine().then(() => {
+					if (!isActiveConnection()) return;
+					const wasmHash = getWasmHash();
+					send({ type: 'wasm_hash_check', wasmHash });
+				}).catch(err => {
+					if (!cancelled) {
+						GameEventBus.emitNotification({
+							level: 'error',
+							message: p2pEngineLoadNotice(err),
+							duration: 15000,
+						});
+					}
 				});
-			});
-			const hash = typeof __BUILD_HASH__ !== 'undefined' ? __BUILD_HASH__ : 'dev';
-			send({ type: 'version_check', buildHash: hash });
-			send({
-				type: 'state_sync_request',
-				matchId: resumedMatchId,
-				fromTurn: signedTranscriptRef.current?.leaves.length ?? 0,
-			});
-			debug.log('[wireSync] Reconnected existing P2P session without reseeding', {
-				matchId: resumedMatchId,
-				localLeaves: signedTranscriptRef.current?.leaves.length ?? 0,
-			});
+				const hash = typeof __BUILD_HASH__ !== 'undefined' ? __BUILD_HASH__ : 'dev';
+				send({ type: 'version_check', buildHash: hash });
+				send({
+					type: 'state_sync_request',
+					matchId: resumedMatchId,
+					fromTurn: signedTranscriptRef.current?.leaves.length ?? 0,
+				});
+				debug.log('[wireSync] Reconnected existing P2P session without reseeding', {
+					matchId: resumedMatchId,
+					localLeaves: signedTranscriptRef.current?.leaves.length ?? 0,
+				});
 				retryPendingChessTransition();
 				phaseCheckpointClient.retryPending(send);
-				return undefined;
-		}
-
-		loadWasmEngine().then(() => {
-			const wasmHash = getWasmHash();
-			send({ type: 'wasm_hash_check', wasmHash });
-		}).catch(err => {
-			GameEventBus.emitNotification({
-				level: 'error',
-				message: p2pEngineLoadNotice(err),
-				duration: 15000,
-			});
-		});
-
-		const salt = generateSalt();
-		mySaltRef.current = salt;
-
-		sha256Hash(salt).then(commitment => {
-			send({ type: 'seed_commit', commitment });
-		});
-
-		const hash = typeof __BUILD_HASH__ !== 'undefined' ? __BUILD_HASH__ : 'dev';
-		send({ type: 'version_check', buildHash: hash });
-
-		// Announce our selected army so the opponent can render hero portraits
-		// and both peers can seed chess piece ids. Without this both sides
-		// fall back to `getDefaultArmySelection()`.
-		try {
-			const ourArmy = selectArmy(useWarbandStore.getState());
-			if (ourArmy) {
-				send({ type: 'army_announcement', army: ourArmy });
-				debug.log('[wireSync] Sent army_announcement:', { king: ourArmy.king?.name });
-			} else {
-				debug.warn('[wireSync] No local army to announce — opponent will see default fallback');
-			}
-		} catch (err) {
-			debug.warn('[wireSync] Failed to send army_announcement:', err);
-		}
-
-		try {
-			const { selectedDeck, selectedHero, selectedHeroId } = useGame.getState();
-			let savedDecksJson = '[]';
-			try {
-				savedDecksJson = localStorage.getItem(savedDecksStorageKey()) || '[]';
-			} catch {
-				savedDecksJson = '[]';
-			}
-			const localDeck = snapshotLocalCardsDeck({
-				selectedDeckId: selectedDeck,
-				selectedHeroClass: selectedHero,
-				selectedHeroId,
-				savedDecksJson,
-				warbandCardIds: selectDeckCardIds(useWarbandStore.getState()),
-				hiveCollection: readHiveCollectionForHandshake(),
-			});
-			let localClaims: readonly DeckCardClaim[] = [];
-			if (isSharedNetworkEnvironment()) {
-				const bridge = getNFTBridge();
-				const username = bridge.getUsername();
-				if (!username) throw new Error('Shared-network deck verification requires a Hive account.');
-				const parsed = buildClientDeckClaimsFromCardIds(localDeck.cardIds, bridge);
-				if (parsed.status !== 'parsed') {
-					throw new Error(`Could not derive deck ownership claims: ${parsed.rejections[0]?.detail ?? 'invalid claims'}`);
-				}
-				localClaims = parsed.claims;
-			}
-			const localSnapshot = createDeckHandshakeSnapshot(localDeck, localClaims);
-			localCardsDeckRef.current = localSnapshot;
-			send({
-				type: 'cards_deck',
-				heroClass: localDeck.heroClass,
-				...(localDeck.heroId ? { heroId: localDeck.heroId } : {}),
-				cardIds: [...localDeck.cardIds],
-				nftLevels: [...localDeck.nftLevels],
-			});
-			debug.log('[wireSync] Sent cards_deck', {
-				heroClass: localDeck.heroClass,
-				cardCount: localDeck.cardIds.length,
-			});
-			if (isSharedNetworkEnvironment()) {
-				const username = getNFTBridge().getUsername();
-				if (!username) throw new Error('Shared-network deck verification requires a Hive account.');
-				send({ type: 'deck_verify', hiveAccount: username, protocolVersion: 2, claims: [...localClaims] });
-				debug.combat(`[wireSync] Sent deck_verify: ${localClaims.length} source-aware claim(s) for @${username}`);
-			}
-		} catch (err) {
-			debug.warn('[wireSync] Failed to send cards_deck:', err);
-			if (isSharedNetworkEnvironment()) {
-				GameEventBus.emitNotification({ level: 'error', message: 'Deck verification could not start. Shared-network match cannot continue.', duration: 6000 });
-				usePeerStore.getState().disconnect();
-			}
+			}, 0);
+			return () => {
+				cancelled = true;
+				clearTimeout(timer);
+			};
 		}
 
 		startNewTranscript();
-		return undefined;
+		const timer = setTimeout(() => {
+			if (!isActiveConnection()) return;
+
+			void loadWasmEngine().then(() => {
+				if (!isActiveConnection()) return;
+				const wasmHash = getWasmHash();
+				send({ type: 'wasm_hash_check', wasmHash });
+			}).catch(err => {
+				if (!cancelled) {
+					GameEventBus.emitNotification({
+						level: 'error',
+						message: p2pEngineLoadNotice(err),
+						duration: 15000,
+					});
+				}
+			});
+
+			const salt = generateSalt();
+			mySaltRef.current = salt;
+			void sha256Hash(salt).then(commitment => {
+				if (isActiveConnection()) send({ type: 'seed_commit', commitment });
+			});
+
+			const hash = typeof __BUILD_HASH__ !== 'undefined' ? __BUILD_HASH__ : 'dev';
+			send({ type: 'version_check', buildHash: hash });
+
+			// Announce our selected army so the opponent can render hero portraits
+			// and both peers can seed chess piece ids. Without this both sides
+			// fall back to `getDefaultArmySelection()`.
+			try {
+				const ourArmy = selectArmy(useWarbandStore.getState());
+				if (ourArmy) {
+					send({ type: 'army_announcement', army: ourArmy });
+					debug.log('[wireSync] Sent army_announcement:', { king: ourArmy.king?.name });
+				} else {
+					debug.warn('[wireSync] No local army to announce — opponent will see default fallback');
+				}
+			} catch (err) {
+				debug.warn('[wireSync] Failed to send army_announcement:', err);
+			}
+
+			try {
+				const { selectedDeck, selectedHero, selectedHeroId } = useGame.getState();
+				let savedDecksJson = '[]';
+				try {
+					savedDecksJson = localStorage.getItem(savedDecksStorageKey()) || '[]';
+				} catch {
+					savedDecksJson = '[]';
+				}
+				const localDeck = snapshotLocalCardsDeck({
+					selectedDeckId: selectedDeck,
+					selectedHeroClass: selectedHero,
+					selectedHeroId,
+					savedDecksJson,
+					warbandCardIds: selectDeckCardIds(useWarbandStore.getState()),
+					hiveCollection: readHiveCollectionForHandshake(),
+				});
+				let localClaims: readonly DeckCardClaim[] = [];
+				if (isSharedNetworkEnvironment()) {
+					const bridge = getNFTBridge();
+					const username = bridge.getUsername();
+					if (!username) throw new Error('Shared-network deck verification requires a Hive account.');
+					const parsed = buildClientDeckClaimsFromCardIds(localDeck.cardIds, bridge);
+					if (parsed.status !== 'parsed') {
+						throw new Error(`Could not derive deck ownership claims: ${parsed.rejections[0]?.detail ?? 'invalid claims'}`);
+					}
+					localClaims = parsed.claims;
+				}
+				const localSnapshot = createDeckHandshakeSnapshot(localDeck, localClaims);
+				localCardsDeckRef.current = localSnapshot;
+				send({
+					type: 'cards_deck',
+					heroClass: localDeck.heroClass,
+					...(localDeck.heroId ? { heroId: localDeck.heroId } : {}),
+					cardIds: [...localDeck.cardIds],
+					nftLevels: [...localDeck.nftLevels],
+				});
+				debug.log('[wireSync] Sent cards_deck', {
+					heroClass: localDeck.heroClass,
+					cardCount: localDeck.cardIds.length,
+				});
+				if (isSharedNetworkEnvironment()) {
+					const username = getNFTBridge().getUsername();
+					if (!username) throw new Error('Shared-network deck verification requires a Hive account.');
+					send({ type: 'deck_verify', hiveAccount: username, protocolVersion: 2, claims: [...localClaims] });
+					debug.combat(`[wireSync] Sent deck_verify: ${localClaims.length} source-aware claim(s) for @${username}`);
+				}
+			} catch (err) {
+				debug.warn('[wireSync] Failed to send cards_deck:', err);
+				if (isSharedNetworkEnvironment()) {
+					GameEventBus.emitNotification({ level: 'error', message: 'Deck verification could not start. Shared-network match cannot continue.', duration: 6000 });
+					usePeerStore.getState().disconnect();
+				}
+			}
+		}, 0);
+		return () => {
+			cancelled = true;
+			clearTimeout(timer);
+		};
 	}, [connection, connectionState, send]);
 
 	useEffect(() => () => {
@@ -696,7 +741,7 @@ export function useWireSync() {
 				})));
 				const gameState = useGameStore.getState().gameState;
 				if (!gameState) throw new Error('Initial game state is not available for battle readiness');
-				const cardsHash = parseHash256(computeCardsPrevStateHash(gameState, isHostFrame));
+				const cardsHash = parseHash256(computeCardsPrevStateHash(gameState, isCardsCanonicalPlayerFrame));
 				if (!cardsHash) throw new Error('Initial cards state root is empty');
 				const initialStateRoot = computeInitialMatchRoot({
 					matchId,
@@ -742,7 +787,7 @@ export function useWireSync() {
 		return () => {
 			cancelled = true;
 		};
-	}, [connection, connectionState, hasInitialGameState, initialCombatPieceCount, isCurrentConnectedMatch, isHostFrame, p2pInitApplied, p2pSessionLocalAuthorized, p2pSessionRemoteAuthorized, send]);
+	}, [connection, connectionState, hasInitialGameState, initialCombatPieceCount, isCardsCanonicalPlayerFrame, isCurrentConnectedMatch, p2pInitApplied, p2pSessionLocalAuthorized, p2pSessionRemoteAuthorized, send]);
 
 	// Detect when connection closes and notify the player
 	useEffect(() => {
@@ -869,6 +914,15 @@ export function useWireSync() {
 					debug.log('[wireSync] Heartbeats flowing (alive, last 30s)');
 					heartbeatLogState.lastLoggedAt = now;
 				}
+				return;
+			}
+
+			const lifecycle = usePeerStore.getState().battleLifecycle;
+			if (lifecycle?.phase === 'resolved' || lifecycle?.phase === 'cancelled') {
+				debug.warn('[wireSync] Dropped late message after terminal competitive result', {
+					type: data.type,
+					terminalEventId: lifecycle.terminalEventId,
+				});
 				return;
 			}
 
@@ -1034,7 +1088,7 @@ export function useWireSync() {
 					// the client stores `players.player = client` (post-flip in the init/
 					// gameState handlers). Without this flip the WASM hash always mismatches
 					// because the byte order of `players.player` vs `players.opponent` differs.
-					const canonicalState = isHostFrame ? gs : flipGameState(gs);
+					const canonicalState = isCardsCanonicalPlayerFrameRef.current ? gs : flipGameState(gs);
 					const myHash = await computeStateHash(canonicalState);
 					if (myHash !== data.stateHash) {
 						debug.error(`[wireSync] Cards state hash mismatch at turn ${data.turnNumber}: local=${myHash.slice(0, 16)}, remote=${data.stateHash.slice(0, 16)}`);
@@ -1141,7 +1195,7 @@ export function useWireSync() {
 						message: 'State verification failed — opponent detected state divergence. Game integrity compromised.',
 						duration: 8000,
 					});
-					if (planCardsMismatchRecovery({ sendsCardsRecoverySnapshot }).sendSnapshot) {
+					if (planCardsMismatchRecovery({ sendsCardsRecoverySnapshot: sendsCardsRecoverySnapshotRef.current }).sendSnapshot) {
 						const recoveryState = useGameStore.getState().gameState;
 						if (recoveryState) {
 							send({ type: 'gameState', ...encodeGameStateForWire(recoveryState) });
@@ -1203,7 +1257,7 @@ export function useWireSync() {
 					// Both peers compute this BEFORE any chess state initializes so
 					// `myCanonicalSide` is available to UI components on first render.
 					// `isWsHost` is the WS-resolved hint (see wsTransport handshake).
-					const myCanonicalSide = deriveCanonicalSide(matchSeed, isWsHost);
+					const myCanonicalSide = deriveCanonicalSide(matchSeed, isWsHostRef.current);
 					useGameStore.setState({ matchSeed, myCanonicalSide });
 
 					// Symmetric seeding for the chess phase: both peers mint the
@@ -1225,14 +1279,24 @@ export function useWireSync() {
 						: [remotePeerId, myPeerId];
 					const derivedMatchId = (await sha256Hash(matchSeed + matchIdFirst + matchIdSecond)).slice(0, 16);
 					const cachedAcceptance = getCachedMatchAcceptance();
-					const canonicalMatchId = cachedAcceptance?.offer.matchId ?? derivedMatchId;
-					matchIdRef.current = canonicalMatchId;
-					useGameStore.setState({ matchId: canonicalMatchId });
+						const canonicalMatchId = cachedAcceptance?.offer.matchId ?? derivedMatchId;
+						matchIdRef.current = canonicalMatchId;
+						useGameStore.setState({ matchId: canonicalMatchId });
+						const peerStore = usePeerStore.getState();
+						if (!peerStore.battleLifecycle) {
+							peerStore.initializeBattleLifecycle({
+								matchId: canonicalMatchId,
+								playerA: myPeerId,
+								playerB: remotePeerId,
+							});
+						} else {
+							peerStore.setBattleLifecycleMatchId(canonicalMatchId);
+						}
 					debug.log('[wireSync] seed_reveal RESOLVED', {
 						matchSeed: matchSeed.slice(0, 12),
 						matchId: canonicalMatchId,
 						myCanonicalSide,
-					isWsHost,
+						isWsHost: isWsHostRef.current,
 					});
 
 					// ADR 0004 §Decision.4 (issue 03) — initialise the signed
@@ -1242,7 +1306,7 @@ export function useWireSync() {
 					// the only place we mint the label; downstream code reads
 					// `myBroadcasterRef.current`.
 					signedTranscriptRef.current = emptyTranscript(canonicalMatchId);
-					myBroadcasterRef.current = isWsHost ? 'A' : 'B';
+					myBroadcasterRef.current = isWsHostRef.current ? 'A' : 'B';
 
 					// Identity binding: capture opponent's Hive username
 					if (data.hiveUsername) {
@@ -1279,6 +1343,11 @@ export function useWireSync() {
 									...(localProof.hiveSig ? { hiveSig: localProof.hiveSig } : {}),
 									acceptance: localProof,
 								});
+								debug.log('[wireSync] Sent session_authorize', {
+									matchId: localMatchId,
+									mode: 'quick-match-acceptance',
+									proofHasHiveSignature: Boolean(localProof.hiveSig),
+								});
 								usePeerStore.getState().setP2pSessionAuthorization({ localAuthorized: true, error: null });
 								if (localProof.hiveSig) {
 									try {
@@ -1292,6 +1361,10 @@ export function useWireSync() {
 										debug.warn('[wireSync] Action log unavailable — running without reload safety', logErr);
 									}
 								}
+							} else {
+								debug.warn('[wireSync] session_authorize skipped — quick match is no longer connected', {
+									matchId: localMatchId,
+								});
 							}
 						} else if (quickMatchCommitted) {
 							debug.warn('[wireSync] Quick Match acceptance proof is unavailable — refusing legacy authorization fallback');
@@ -1386,7 +1459,7 @@ export function useWireSync() {
 					}
 
 					applyCardsDeckHandshakeIfReady();
-					if (sendsCardsInit) {
+					if (sendsCardsInitRef.current) {
 						initSentRef.current = true;
 						const updatedState = useGameStore.getState().gameState;
 						if (updatedState && usePeerStore.getState().p2pInitApplied) {
@@ -1414,7 +1487,7 @@ export function useWireSync() {
 				}
 
 				case 'init':
-					if (adoptsRemoteCardsInit) {
+					if (adoptsRemoteCardsInitRef.current) {
 						if (usePeerStore.getState().p2pInitApplied) {
 							debug.warn('[wireSync] Dropped extra init — match already live');
 							break;
@@ -1491,7 +1564,7 @@ export function useWireSync() {
 						}
 						const localPrevHash = computeCardsPrevStateHash(
 							useGameStore.getState().gameState,
-							isHostFrame,
+										isCardsCanonicalPlayerFrameRef.current,
 						);
 						if (localPrevHash.length === 0) {
 							// Receiver-side WASM eager-load race or null gameState. The
@@ -1768,7 +1841,7 @@ export function useWireSync() {
 							debug.log('[wireSync] RECV chess_command', {
 								seq: data.seq,
 								commandId: data.commandId.slice(0, 8),
-							isWsHost,
+								isWsHost: isWsHostRef.current,
 							});
 							const reject = (cause: string): void => {
 								debug.warn(`[wireSync] chess_command REJECTED: ${cause}`, {
@@ -1798,8 +1871,8 @@ export function useWireSync() {
 						break;
 					}
 					const cachedReceipt = chessReceiptByCommandIdRef.current.get(envelope.commandId);
-					if (cachedReceipt) {
-						send(cachedReceipt);
+						if (cachedReceipt) {
+							send(cachedReceipt);
 						debug.log('[wireSync] replayed cached transition receipt', {
 							commandId: envelope.commandId.slice(0, 8),
 						});
@@ -1845,11 +1918,16 @@ export function useWireSync() {
 							reject('missing_prev_state_hash');
 							break;
 						}
+						const lifecycle = usePeerStore.getState().battleLifecycle;
+						if (lifecycle?.phase === 'resolved' || lifecycle?.phase === 'cancelled') {
+							reject('match_terminal');
+							break;
+						}
 						const localChessSnapshot = useUnifiedCombatStore.getState().boardState ?? null;
 						const localChessHash = computeChessPrevStateHash(localChessSnapshot);
 						const localCardsHash = computeCardsPrevStateHash(
 							useGameStore.getState().gameState,
-							isHostFrame,
+								isCardsCanonicalPlayerFrameRef.current,
 						);
 						if (localChessHash.length === 0 || localCardsHash.length === 0) {
 							// Receiver-side race; ask sender to retry by bouncing the
@@ -1880,6 +1958,7 @@ export function useWireSync() {
 					}
 
 						const cs = useUnifiedCombatStore.getState();
+						const canonicalOrder = (cs.boardState?.moveCount ?? 0) + 1;
 						const pieces = cs.boardState?.pieces ?? [];
 
 					// Capture command in a const so TS preserves discriminated-union
@@ -2018,7 +2097,7 @@ export function useWireSync() {
 
 					const postCheckpoint = captureChessIntegrityCheckpoint({
 						matchId: envelope.matchId,
-						isCardsAuthority: isHostFrame,
+								isCardsAuthority: isCardsCanonicalPlayerFrameRef.current,
 					});
 					if (postCheckpoint === null) {
 						chessIntegrityMonitor.quarantine({
@@ -2061,12 +2140,20 @@ export function useWireSync() {
 					lastIncomingChessSeqRef.current = envelope.seq;
 					seenChessCommandIdsRef.current.add(envelope.commandId);
 					seenChessCommandIdsOrderRef.current.push(envelope.commandId);
-					while (seenChessCommandIdsOrderRef.current.length > SEEN_COMMAND_IDS_MAX) {
+						while (seenChessCommandIdsOrderRef.current.length > SEEN_COMMAND_IDS_MAX) {
 						const evicted = seenChessCommandIdsOrderRef.current.shift();
 						if (evicted !== undefined) seenChessCommandIdsRef.current.delete(evicted);
-					}
+						}
+						const actorId = usePeerStore.getState().remotePeerId;
+						if (actorId) {
+							usePeerStore.getState().recordCanonicalAction({
+								actionId: envelope.commandId,
+								actorId,
+								canonicalOrder,
+							});
+						}
 
-					// Transcript: record under the remote peer's Hive identity so
+						// Transcript: record under the remote peer's Hive identity so
 					// the host's merkle root (which goes on-chain via
 					// BlockchainSubscriber.ts:279) attributes the action correctly.
 					recordMove(transcriptAction, {
@@ -2172,7 +2259,7 @@ export function useWireSync() {
 					}
 
 				case 'gameState':
-					if (!isHostFrame) {
+					if (!isWsHostRef.current) {
 						const receivedState = decodeWireGameState(data);
 						if (!receivedState) {
 							debug.warn('[wireSync] Dropped gameState with invalid compressed payload');
@@ -2203,11 +2290,30 @@ export function useWireSync() {
 					}
 					break;
 
-				case 'opponentDisconnected':
-					debug.warn('[wireSync] Dropped peer-authored opponentDisconnected — transport close is the only disconnect signal');
-					break;
+					case 'opponentDisconnected':
+						debug.warn('[wireSync] Dropped peer-authored opponentDisconnected — transport close is the only disconnect signal');
+						break;
 
-				case 'ping':
+					case 'p2p_leave': {
+						const peer = usePeerStore.getState();
+						const activeMatchId = matchIdRef.current ?? peer.battleLifecycle?.matchId;
+						if (!activeMatchId || data.matchId !== activeMatchId) {
+							debug.warn('[wireSync] p2p_leave rejected — match identity mismatch');
+							break;
+						}
+						if (!peer.remotePeerId || data.participantId !== peer.remotePeerId) {
+							debug.warn('[wireSync] p2p_leave rejected — participant is not the remote peer');
+							break;
+						}
+						const lifecycle = peer.recordRemoteP2PLeave(data.participantId, data.eventId);
+						debug.log('[wireSync] remote p2p_leave applied', {
+							eventId: data.eventId,
+							phase: lifecycle?.phase,
+						});
+						break;
+					}
+
+					case 'ping':
 					send({ type: 'pong' });
 					break;
 
@@ -2793,7 +2899,7 @@ export function useWireSync() {
 				pendingSyncRef.current = null;
 			}
 		};
-	}, [connection, connectionState, isHostFrame, isWsHost, sendsCardsInit, adoptsRemoteCardsInit, sendsCardsRecoverySnapshot, send, sendPhaseCheckpointProposal, sendPokerTurnProposal, playCard, attackWithCard, endTurn, performHeroPower, toggleMulliganCard, confirmMulligan, skipMulligan, applyOpponentCommandToStore, isCurrentConnectedMatch]);
+	}, [connection, connectionState, send, sendPhaseCheckpointProposal, sendPokerTurnProposal, playCard, attackWithCard, endTurn, performHeroPower, toggleMulliganCard, confirmMulligan, skipMulligan, applyOpponentCommandToStore, isCurrentConnectedMatch]);
 
 	const syncGameState = useCallback(() => {
 		if (connectionState !== 'connected' || !sendsCardsRecoverySnapshot) return;
@@ -2843,7 +2949,7 @@ export function useWireSync() {
 		lastEnvelopeSentAtRef.current = nowSend;
 
 		const localState = useGameStore.getState().gameState;
-		const prevStateHash = computeCardsPrevStateHash(localState, isHostFrame);
+		const prevStateHash = computeCardsPrevStateHash(localState, isCardsCanonicalPlayerFrame);
 		const envelope: GameCommandEnvelope = {
 			type: 'game_command',
 			matchId,
@@ -2853,7 +2959,7 @@ export function useWireSync() {
 			command,
 		};
 		send(envelope);
-	}, [send, isHostFrame]);
+	}, [send, isCardsCanonicalPlayerFrame]);
 
 	const runCardsLocalAction = useCallback((
 		command: WireGameCommand,
@@ -3086,7 +3192,11 @@ export function useWireSync() {
 				if (cancelled) return;
 				const gs = useGameStore.getState().gameState;
 				if (gs && gs.gamePhase !== 'game_over') {
-					const stateHash = await computeStateHash(gs);
+					// The beacon must use the same canonical player frame as the
+					// receiver. The transport host is not necessarily the canonical
+					// cards player after commit-reveal side derivation.
+					const canonicalState = isCardsCanonicalPlayerFrameRef.current ? gs : flipGameState(gs);
+					const stateHash = await computeStateHash(canonicalState);
 					// Beacon-covered chess hash (TD-27c-chess F3). Closes the
 					// cross-peer divergence-detection gap between chess moves: per-
 					// envelope validation catches mid-move drift, but two peers can

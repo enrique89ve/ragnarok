@@ -270,16 +270,21 @@ export function scheduleAttackEffect(
   });
 }
 
+// Damage must remain readable after the impact/counter choreography has landed.
+export const DAMAGE_EFFECT_DURATION_MS = 1_400;
+export const DAMAGE_CRITICAL_EFFECT_DURATION_MS = 1_600;
+export const HEAL_EFFECT_DURATION_MS = 1_400;
+
 export function scheduleDamageEffect(
-  position: Position,
-  damage: number,
-  phase?: string
+	position: Position,
+	damage: number,
+	phase?: string
 ): string {
   return useAnimationOrchestrator.getState().scheduleEffect({
     category: 'damage',
     priority: 'normal',
     position,
-    duration: 1000,
+		duration: DAMAGE_EFFECT_DURATION_MS,
     phase,
     data: { damage },
   });
@@ -294,7 +299,7 @@ export function scheduleHealEffect(
     category: 'heal',
     priority: 'normal',
     position,
-    duration: 1000,
+		duration: HEAL_EFFECT_DURATION_MS,
     phase,
     data: { amount },
   });

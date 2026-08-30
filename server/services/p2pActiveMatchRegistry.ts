@@ -16,6 +16,7 @@ type ActiveMatchTicketAccess =
 const activeMatches = new Map<string, P2PActiveMatch>();
 const activeMatchIdsByPeerId = new Map<string, string>();
 const activeMatchExpiryTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const terminalCleanupTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const releasedPeersByMatchId = new Map<string, Set<string>>();
 const terminalAtByMatchId = new Map<string, number>();
 
@@ -31,12 +32,36 @@ export const P2P_ACTIVE_MATCH_TERMINAL_RETENTION_MS = 10 * 60 * 1000;
 // New code should use P2P_ACTIVE_MATCH_SAFETY_TTL_MS explicitly.
 export const P2P_ACTIVE_MATCH_TTL_MS = P2P_ACTIVE_MATCH_SAFETY_TTL_MS;
 
+function clearTerminalCleanupTimer(matchId: string): void {
+	const timer = terminalCleanupTimers.get(matchId);
+	if (!timer) return;
+	clearTimeout(timer);
+	terminalCleanupTimers.delete(matchId);
+}
+
+function scheduleTerminalCleanup(matchId: string, terminalAt: number): void {
+	clearTerminalCleanupTimer(matchId);
+	const delayMs = Math.max(0, terminalAt + P2P_ACTIVE_MATCH_TERMINAL_RETENTION_MS - Date.now());
+	const timer = setTimeout(() => {
+		terminalCleanupTimers.delete(matchId);
+		if (terminalAtByMatchId.get(matchId) !== terminalAt) return;
+		if (Date.now() < terminalAt + P2P_ACTIVE_MATCH_TERMINAL_RETENTION_MS) {
+			scheduleTerminalCleanup(matchId, terminalAt);
+			return;
+		}
+		removeP2PActiveMatch(matchId);
+	}, delayMs);
+	timer.unref?.();
+	terminalCleanupTimers.set(matchId, timer);
+}
+
 export function registerP2PActiveMatch(matchId: string, match: P2PActiveMatch): void {
 	activeMatches.set(matchId, match);
 	activeMatchIdsByPeerId.set(match.player1, matchId);
 	activeMatchIdsByPeerId.set(match.player2, matchId);
 	releasedPeersByMatchId.delete(matchId);
 	terminalAtByMatchId.delete(matchId);
+	clearTerminalCleanupTimer(matchId);
 	const existingTimer = activeMatchExpiryTimers.get(matchId);
 	if (existingTimer) clearTimeout(existingTimer);
 	const expiryTimer = setTimeout(() => removeP2PActiveMatch(matchId), P2P_ACTIVE_MATCH_SAFETY_TTL_MS);
@@ -53,6 +78,7 @@ export function removeP2PActiveMatch(matchId: string): void {
 	activeMatches.delete(matchId);
 	releasedPeersByMatchId.delete(matchId);
 	terminalAtByMatchId.delete(matchId);
+	clearTerminalCleanupTimer(matchId);
 	const expiryTimer = activeMatchExpiryTimers.get(matchId);
 	if (expiryTimer) clearTimeout(expiryTimer);
 	activeMatchExpiryTimers.delete(matchId);
@@ -71,6 +97,7 @@ export function releaseP2PActiveMatchPeer(peerId: string): void {
 export function markP2PActiveMatchTerminal(matchId: string, terminalAt = Date.now()): boolean {
 	if (!activeMatches.has(matchId)) return false;
 	terminalAtByMatchId.set(matchId, terminalAt);
+	scheduleTerminalCleanup(matchId, terminalAt);
 	return true;
 }
 
@@ -92,7 +119,9 @@ export function getP2PActiveMatchCount(): number {
 
 export function clearP2PActiveMatches(): void {
 	for (const timer of activeMatchExpiryTimers.values()) clearTimeout(timer);
+	for (const timer of terminalCleanupTimers.values()) clearTimeout(timer);
 	activeMatchExpiryTimers.clear();
+	terminalCleanupTimers.clear();
 	activeMatches.clear();
 	activeMatchIdsByPeerId.clear();
 	releasedPeersByMatchId.clear();

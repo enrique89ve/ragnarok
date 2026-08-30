@@ -4,7 +4,7 @@
  * Both the cards send-path (`useWireSync.wrappedDispatchGameCommand`) and the
  * chess send-path (`chessWireSender`) need the same hash discipline:
  *
- *   1. Canonicalize the local state into the host's perspective (so both
+	*   1. Canonicalize the local state into the canonical player's perspective (so both
  *      peers serialize the SAME bytes regardless of who's sending).
  *   2. Run the WASM-canonical SHA-256 over the canonical serialization.
  *   3. Apply the documented failure-mode policy on edge cases (pre-init,
@@ -21,13 +21,14 @@ import { debug } from '../config/debugConfig';
 import type { GameState } from '../types';
 
 /**
- * Flip the game state so the client sees themselves as 'player' and the host
- * as 'opponent'. The host always stores state from its own perspective
- * (host=player, client=opponent). Without this flip the client would see its
- * own cards at the top under "opponent".
+ * Flip an ego-centric game state into the opposite role perspective. The
+ * canonical wire frame names the first side `player`, independent of which
+ * browser is the transport host. Role ids are normalized after the swap;
+ * otherwise an equivalent state would hash differently just because its
+ * player objects were exchanged.
  *
  * Used both for UI rendering on the joiner side and for canonicalizing state
- * before hashing (the joiner flips into host perspective so the bytes match).
+ * before hashing so the canonical bytes match.
  */
 export function flipGameState(state: GameState): GameState {
 	const flippedMulligan = state.mulligan
@@ -42,8 +43,8 @@ export function flipGameState(state: GameState): GameState {
 	return {
 		...state,
 		players: {
-			player: state.players.opponent,
-			opponent: state.players.player,
+			player: { ...state.players.opponent, id: 'player' },
+			opponent: { ...state.players.player, id: 'opponent' },
 		},
 		currentTurn: state.currentTurn === 'player' ? 'opponent' : 'player',
 		winner: state.winner === 'player' ? 'opponent' : state.winner === 'opponent' ? 'player' : state.winner,
@@ -65,10 +66,9 @@ export function flipGameState(state: GameState): GameState {
  *   thrown otherwise   → unexpected. Logged at warn so telemetry surfaces
  *                        the bug, return '' to fail-safe rather than crash.
  *
- * Perspective: the joiner (sender, !isCardsAuthority) flips its state to
- * host perspective before hashing so the host-side validator (which calls
- * with isCardsAuthority=true and skips the flip) computes the same byte
- * layout. Mirrors the canonicalization done by the periodic hash_check.
+ * Perspective: the peer whose local state is not the canonical player frame
+ * (!isCardsAuthority) flips before hashing so both peers compute the same
+ * canonical bytes. Mirrors the canonicalization done by periodic hash checks.
  */
 export function computeCardsPrevStateHash(state: GameState | null, isCardsAuthority: boolean): string {
 	if (!state) return '';

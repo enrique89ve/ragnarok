@@ -43,6 +43,9 @@ type FakeControlSocket = {
 
 type FakePeerConnection = {
 	connectionState: string;
+	iceConnectionState: string;
+	iceGatheringState: string;
+	signalingState: string;
 	onicecandidate: ((event: RTCPeerConnectionIceEvent) => void) | null;
 	ondatachannel: ((event: RTCDataChannelEvent) => void) | null;
 	onconnectionstatechange: (() => void) | null;
@@ -54,6 +57,7 @@ type FakePeerConnection = {
 	setRemoteDescription: ReturnType<typeof vi.fn>;
 	createAnswer: ReturnType<typeof vi.fn>;
 	addIceCandidate: ReturnType<typeof vi.fn>;
+	getStats: ReturnType<typeof vi.fn>;
 	close: ReturnType<typeof vi.fn>;
 };
 
@@ -82,6 +86,9 @@ function createFakeDataChannel(): FakeDataChannel {
 function createFakePeerConnection(): FakePeerConnection {
 	const connection: FakePeerConnection = {
 		connectionState: 'new',
+		iceConnectionState: 'new',
+		iceGatheringState: 'complete',
+		signalingState: 'stable',
 		onicecandidate: null,
 		ondatachannel: null,
 		onconnectionstatechange: null,
@@ -98,6 +105,7 @@ function createFakePeerConnection(): FakePeerConnection {
 		setRemoteDescription: vi.fn(async () => undefined),
 		createAnswer: vi.fn(async () => ({ type: 'answer', sdp: 'fake-answer' })),
 		addIceCandidate: vi.fn(async () => undefined),
+		getStats: vi.fn(async () => new Map()),
 		close: vi.fn(),
 	};
 	return connection;
@@ -188,11 +196,72 @@ describe('WebRTC transport boundary', () => {
 		connection.dataChannel?.open();
 		await pending;
 		await vi.advanceTimersByTimeAsync(2_000);
+		connection.getStats.mockResolvedValue(new Map([
+			['pair-1', {
+				type: 'candidate-pair',
+				id: 'pair-1',
+				state: 'succeeded',
+				selected: true,
+				localCandidateId: 'local-1',
+				remoteCandidateId: 'remote-1',
+				protocol: 'udp',
+				currentRoundTripTime: 0.042,
+				bytesSent: 1024,
+				bytesReceived: 2048,
+			}],
+			['local-1', { type: 'local-candidate', id: 'local-1', candidateType: 'relay', protocol: 'udp' }],
+			['remote-1', { type: 'remote-candidate', id: 'remote-1', candidateType: 'srflx' }],
+		]));
 
 		expect(transport.state).toBe('connected');
 		expect(receivedIceServers).toEqual([{ urls: 'stun:testnetdev.ragnaroknft.quest:3478' }]);
 		expect(connection.dataChannel).toEqual(expect.any(Object));
 		expect(connection.dataChannel?.readyState).toBe('open');
+		await expect(transport.getStats()).resolves.toMatchObject({
+			connectionState: 'new',
+			iceConnectionState: 'new',
+			candidatePair: {
+				localCandidateType: 'relay',
+				remoteCandidateType: 'srflx',
+				protocol: 'udp',
+				currentRoundTripTimeMs: 42,
+				bytesSent: 1024,
+				bytesReceived: 2048,
+			},
+		});
+	});
+
+	it('announces transport readiness before publishing connected state', async () => {
+		const socket = createFakeControlSocket();
+		const connection = createFakePeerConnection();
+		const WebSocketConstructor = vi.fn(function WebSocketMock() { return socket; });
+		Object.assign(WebSocketConstructor, { OPEN: 1 });
+		vi.stubGlobal('WebSocket', WebSocketConstructor);
+		vi.stubGlobal('RTCPeerConnection', vi.fn(function RTCPeerConnectionMock() { return connection; }));
+		const transport = createWebRTCTransport({
+			controlUrl: 'wss://game.example/ws/control',
+			roomId: ticket.roomId,
+			peerId: ticket.peerId,
+			matchTicket: ticket,
+		});
+		const observedStates: string[] = [];
+		transport.onStateChange(next => observedStates.push(next));
+		const pending = transport.connect();
+		socket.triggerOpen();
+		socket.triggerMessage({
+			type: 'control_open_v1',
+			protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+			matchId: ticket.roomId,
+			peerId: ticket.peerId,
+			opponentPeerId: 'peer-b',
+			role: 'offerer',
+		});
+		await settleMicrotasks();
+		connection.dataChannel?.open();
+		await pending;
+
+		expect(socket.sent.map(payload => JSON.parse(payload))).toContainEqual(expect.objectContaining({ type: 'transport_ready_v1' }));
+		expect(observedStates).toEqual(['connecting', 'connected']);
 	});
 
 	it('notifies the opponent before failing a pre-connect timeout', async () => {

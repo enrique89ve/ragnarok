@@ -7,7 +7,7 @@ import {
 	getP2PProcessFlags,
 	getP2PTransportRole,
 	isCardsAuthorityRole,
-	isCardsHostFrame,
+	isCardsCanonicalPlayerFrame,
 	mapCanonicalValuesToViewer,
 	mapViewerValuesToCanonical,
 	viewerActorToCanonicalOwner,
@@ -103,8 +103,9 @@ describe('p2pPerspective', () => {
 		expect(isCardsAuthorityRole(false, 'symmetric')).toBe(false);
 	});
 
-	it('keeps host-as-player as the cards hash frame', () => {
-		expect(isCardsHostFrame(true)).toBe(true);
-		expect(isCardsHostFrame(false)).toBe(false);
+	it('uses the canonical player side as the cards hash frame', () => {
+		expect(isCardsCanonicalPlayerFrame('player')).toBe(true);
+		expect(isCardsCanonicalPlayerFrame('opponent')).toBe(false);
+		expect(isCardsCanonicalPlayerFrame(null)).toBe(false);
 	});
 });

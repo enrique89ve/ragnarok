@@ -8,7 +8,11 @@ import { canonicalStringify } from './protocol-core/hash';
 
 export const MATCH_OFFER_PROTOCOL = 'ragnarok-match-offer-v1' as const;
 export const MATCH_ACCEPTANCE_PROTOCOL = 'ragnarok-match-accept-v1' as const;
-export const MATCH_OFFER_TTL_MS = 15_000;
+// Acceptance includes deterministic WASM/card-registry preparation and, on
+// shared-network, one visible wallet signature. Keep the offer alive long
+// enough for those user-controlled steps while still bounding stale queue
+// state on the server.
+export const MATCH_OFFER_TTL_MS = 60_000;
 
 export type MatchOfferPlayer = {
 	readonly peerId: string;

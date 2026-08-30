@@ -74,6 +74,7 @@ import { BoardZone } from './zones/BoardZone';
 import { PlayerZone } from './zones/PlayerZone';
 import { MinionField } from './zones/MinionField';
 import { ARENA_VFX_LAYERS, arenaVfxLayerProps } from './arenaVfxTargets';
+import { captureVisualSnapshot, presentationTargetForEntityId } from '../effects/presentation/EffectTargetResolver';
 import { POKER_VIEWPORT_LAYOUT_STYLE, POKER_VIEWPORT_SAFE_AREA } from '../poker';
 import { useCampaignStore, getMission } from '../campaign';
 import { isBettingPhase } from './modules/PhaseManager';
@@ -284,6 +285,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
     shakingTargets,
     prevHealthRef,
     triggerDamageAnimation,
+    consumeCanonicalDamageClaim,
     removeDamageAnimation,
     addShakingTarget,
   } = useDamageAnimations();
@@ -387,73 +389,48 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
 
     const prev = prevHealthRef.current;
     if (prev) {
-      const getHeroPos = (selector: string) => {
-        const isPlayer = selector.includes('player');
-        const selectors = isPlayer
-          ? ['[data-hero-role="player"] .battlefield-hero-square', '[data-hero-role="player"]', '.poker-hero-container']
-          : ['[data-hero-role="opponent"] .battlefield-hero-square', '[data-hero-role="opponent"]', '.opponent-hero-container'];
-        for (const sel of selectors) {
-          const el = document.querySelector(sel);
-          if (el) {
-            const rect = el.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0) {
-              return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 3 };
-            }
-          }
-        }
-        return isPlayer
-          ? { x: 120, y: window.innerHeight * 0.75 }
-          : { x: 120, y: window.innerHeight * 0.15 };
+      const getDamagePos = (targetId: string) =>
+        captureVisualSnapshot(presentationTargetForEntityId(targetId))?.center ?? null;
+      const triggerHealthDamage = (targetId: string, damage: number) => {
+        const showNumber = !consumeCanonicalDamageClaim(targetId, damage);
+        const pos = getDamagePos(targetId);
+        if (pos) triggerDamageAnimation(targetId, damage, pos.x, pos.y, false, showNumber);
       };
-
-      const getMinionPos = (id: string) => {
-        const el = document.querySelector(`[data-instance-id="${id}"]`) ||
-                   document.querySelector(`[data-card-id="${id}"]`);
-        if (el) {
-          const rect = el.getBoundingClientRect();
-          if (rect.width > 0 && rect.height > 0) {
-            return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 3 };
-          }
-        }
-        return null;
+      const triggerHeal = (targetId: string, amount: number) => {
+        const pos = getDamagePos(targetId);
+        if (pos) triggerDamageAnimation(targetId, amount, pos.x, pos.y, true);
       };
 
       const playerDiff = prev.playerHeroHealth - currentSnapshot.playerHeroHealth;
       if (playerDiff > 0) {
-        const pos = getHeroPos('.player-hero');
-        triggerDamageAnimation('player-hero', playerDiff, pos.x, pos.y);
+        triggerHealthDamage('player-hero', playerDiff);
       } else if (playerDiff < 0) {
-        const pos = getHeroPos('.player-hero');
-        triggerDamageAnimation('player-hero', Math.abs(playerDiff), pos.x, pos.y, true);
+        triggerHeal('player-hero', Math.abs(playerDiff));
       }
 
       const opponentDiff = prev.opponentHeroHealth - currentSnapshot.opponentHeroHealth;
       if (opponentDiff > 0) {
-        const pos = getHeroPos('.opponent-hero');
-        triggerDamageAnimation('opponent-hero', opponentDiff, pos.x, pos.y);
+        triggerHealthDamage('opponent-hero', opponentDiff);
       } else if (opponentDiff < 0) {
-        const pos = getHeroPos('.opponent-hero');
-        triggerDamageAnimation('opponent-hero', Math.abs(opponentDiff), pos.x, pos.y, true);
+        triggerHeal('opponent-hero', Math.abs(opponentDiff));
       }
 
       for (const [id, prevHp] of prev.playerMinions) {
         const currHp = currentSnapshot.playerMinions.get(id);
         if (currHp !== undefined && prevHp > currHp) {
-          const pos = getMinionPos(id);
-          if (pos) triggerDamageAnimation(id, prevHp - currHp, pos.x, pos.y);
+          triggerHealthDamage(id, prevHp - currHp);
         }
       }
       for (const [id, prevHp] of prev.opponentMinions) {
         const currHp = currentSnapshot.opponentMinions.get(id);
         if (currHp !== undefined && prevHp > currHp) {
-          const pos = getMinionPos(id);
-          if (pos) triggerDamageAnimation(id, prevHp - currHp, pos.x, pos.y);
+          triggerHealthDamage(id, prevHp - currHp);
         }
       }
     }
 
     prevHealthRef.current = currentSnapshot;
-  }, [gameState, combatState, triggerDamageAnimation, prevHealthRef]);
+  }, [gameState, combatState, triggerDamageAnimation, consumeCanonicalDamageClaim, prevHealthRef]);
 
   // Card click handlers (extracted to hook)
   const { handlePlayerCardClick, handleOpponentCardClick, handleCardPlay } = usePokerCardClickHandlers({
@@ -986,11 +963,22 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
   const [showMatchupBanner, setShowMatchupBanner] = useState(false);
   const matchupBannerShownRef = useRef(false);
   useEffect(() => {
-    if (combatState && !matchupBannerShownRef.current) {
+    if (!combatState || matchupBannerShownRef.current) return;
+
+    // The initial notices are a readable sequence, not a simultaneous stack.
+    // Keep the elemental matchup behind First Strike until that presentation
+    // completes; gameplay has already committed independently.
+    const firstStrikeIsVisible = firstStrikePresentation !== null;
+    const firstStrikeIsPending = combatState.phase === CombatPhase.FIRST_STRIKE
+      && combatState.firstStrike
+      && !combatState.firstStrike.completed;
+    if (firstStrikeIsVisible || firstStrikeIsPending) return;
+
+    if (combatState) {
       matchupBannerShownRef.current = true;
       setShowMatchupBanner(true);
     }
-  }, [combatState]);
+  }, [combatState, firstStrikePresentation]);
 
   // Hero feud taunt — fires 2.5s after combat start in PvP if heroes
   // have a canonical rivalry. Delayed so it doesn't collide with boss quips.

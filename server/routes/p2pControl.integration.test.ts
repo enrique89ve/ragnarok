@@ -305,6 +305,66 @@ describe('P2P control websocket', () => {
 		})).resolves.toBeUndefined();
 		await closeServer(secondServer);
 	});
+
+	it('allows an account-bearing local ticket without a Hive HTTP session', async () => {
+		process.env.VITE_NETWORK_STAGE = 'local';
+		const app = express();
+		server = createServer(app);
+		attachP2PControl(server);
+		const port = await listen(server);
+		const roomId = 'control-local-account-1';
+		const ticket = buildP2PMatchTicket({ roomId, peerId: 'peer-local', role: 'offerer', account: 'alice' });
+		const socket = new WebSocket(
+			`ws://127.0.0.1:${port}/ws/control?match=${roomId}&peer=peer-local`,
+			controlProtocols(ticket.token),
+		);
+		sockets.push(socket);
+		await expect(new Promise<void>((resolve, reject) => {
+			socket.once('open', () => resolve());
+			socket.once('error', reject);
+		})).resolves.toBeUndefined();
+	});
+
+	it('replaces an in-flight duplicate connection for the same authenticated ticket', async () => {
+		const app = express();
+		app.get('/login/:username', (req, res) => {
+			issueHiveWebSession(res, req.params.username);
+			res.end('ok');
+		});
+		server = createServer(app);
+		attachP2PControl(server);
+		const port = await listen(server);
+		const baseUrl = `http://127.0.0.1:${port}`;
+		const aliceCookie = await loginCookie(baseUrl, 'alice');
+		const bobCookie = await loginCookie(baseUrl, 'bob');
+		const roomId = 'control-duplicate-1';
+		const aliceTicket = buildP2PMatchTicket({ roomId, peerId: 'peer-a', role: 'offerer', account: 'alice' });
+		const bobTicket = buildP2PMatchTicket({ roomId, peerId: 'peer-b', role: 'answerer', account: 'bob' });
+		const wsUrl = `ws://127.0.0.1:${port}/ws/control?match=${roomId}`;
+		const firstAlice = new WebSocket(`${wsUrl}&peer=peer-a`, controlProtocols(aliceTicket.token), { headers: { Cookie: aliceCookie } });
+		const firstAlicePeerLeft = waitForType(firstAlice, 'control_peer_left_v1');
+		const firstAliceOpen = new Promise<void>((resolve, reject) => { firstAlice.once('open', () => resolve()); firstAlice.once('error', reject); });
+		sockets.push(firstAlice);
+		await firstAliceOpen;
+		firstAlice.send(JSON.stringify({ type: 'control_hello_v1', protocolVersion: 1, matchId: roomId, peerId: 'peer-a' }));
+
+		const replacement = new WebSocket(`${wsUrl}&peer=peer-a`, controlProtocols(aliceTicket.token), { headers: { Cookie: aliceCookie } });
+		const replacementOpen = new Promise<void>((resolve, reject) => { replacement.once('open', () => resolve()); replacement.once('error', reject); });
+		sockets.push(replacement);
+		await replacementOpen;
+		await expect(firstAlicePeerLeft).resolves.toMatchObject({ opponentPeerId: 'peer-a' });
+		replacement.send(JSON.stringify({ type: 'control_hello_v1', protocolVersion: 1, matchId: roomId, peerId: 'peer-a' }));
+
+		const bob = new WebSocket(`${wsUrl}&peer=peer-b`, controlProtocols(bobTicket.token), { headers: { Cookie: bobCookie } });
+		const bobOpen = new Promise<void>((resolve, reject) => { bob.once('open', () => resolve()); bob.once('error', reject); });
+		sockets.push(bob);
+		await bobOpen;
+		const replacementControlOpen = waitForType(replacement, 'control_open_v1');
+		const bobControlOpen = waitForType(bob, 'control_open_v1');
+		bob.send(JSON.stringify({ type: 'control_hello_v1', protocolVersion: 1, matchId: roomId, peerId: 'peer-b' }));
+		await expect(replacementControlOpen).resolves.toMatchObject({ peerId: 'peer-a', opponentPeerId: 'peer-b' });
+		await expect(bobControlOpen).resolves.toMatchObject({ peerId: 'peer-b', opponentPeerId: 'peer-a' });
+	});
 });
 
 function timeoutReject(reject: (error: Error) => void): void {

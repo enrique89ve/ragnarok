@@ -668,7 +668,10 @@
   --collection-frame-line-inset: 4px;
   --norse-card-name-bottom: calc(4px * var(--norse-card-ui-scale));
   --norse-card-name-inline: calc(8px * var(--norse-card-ui-scale));
-  --norse-card-name-height: clamp(15px, 12cqw, 26px);
+  /* Collection and mulligan names may need a second line. Scale the slot
+   * with the frame width so two-line names stay inside the lower rail at both
+   * tile and full-size pregame dimensions. */
+  --norse-card-name-height: clamp(24px, 19cqw, 56px);
   --norse-card-name-font-size: 8cqw;
   --norse-card-rarity-mark-bottom: calc(2px * var(--norse-card-ui-scale));
 }

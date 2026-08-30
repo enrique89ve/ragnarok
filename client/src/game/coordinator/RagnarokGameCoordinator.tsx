@@ -1,6 +1,7 @@
 
 import React, { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 import { ArmySelection as ArmySelectionType } from '../types/ChessTypes';
 import { useChessCombatAdapter } from '../hooks/useChessCombatAdapter';
 import { getDefaultArmySelection } from '../data/ChessPieceConfig';
@@ -28,7 +29,6 @@ import { useGameStore } from '../stores/gameStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import {
   createP2PViewerPerspective,
-  isCardsHostFrame,
   mapViewerValuesToCanonical,
 } from '../p2p/p2pPerspective';
 import { clearP2PMatchResume } from '../p2p/p2pMatchResume';
@@ -111,6 +111,42 @@ function resolveOpponentArmy(
 		if (fromMode) return fromMode;
 	}
 	return getDefaultArmySelection();
+}
+
+type MatchContext = ReturnType<typeof useMatchStore.getState>['activeMatch'];
+
+function currentP2PCanonicalOrder(): number {
+	const lifecycle = usePeerStore.getState().battleLifecycle;
+	return Math.max(
+		1,
+		lifecycle?.lastCanonicalOrder ?? 0,
+		useUnifiedCombatStore.getState().boardState.moveCount,
+	);
+}
+
+/**
+ * The coordinator may request a normal end only after the engine has produced
+ * a terminal state. P2P still needs the absolute peer result committed first;
+ * otherwise a local UI snapshot could accidentally resolve a pre-battle or
+ * already-forfeited session.
+ */
+function recordP2PNormalResult(input: {
+	readonly ctx: MatchContext;
+	readonly winnerId: string | null;
+	readonly loserId: string | null;
+	readonly canonicalOrder: number;
+}): boolean {
+	if (input.ctx?.opponent.kind !== 'peer') return true;
+	const peer = usePeerStore.getState();
+	if (!peer.myPeerId || !peer.remotePeerId || !peer.battleLifecycle) return false;
+	const eventId = `normal:${input.ctx.matchId}:${input.canonicalOrder}:${input.winnerId ?? 'draw'}`;
+	const lifecycle = peer.recordNormalResult({
+		winnerId: input.winnerId,
+		loserId: input.loserId,
+		eventId,
+		canonicalOrder: input.canonicalOrder,
+	});
+	return lifecycle?.result?.kind === 'normal' && lifecycle.result.eventId === eventId;
 }
 
 const MATCH_EXIT_AUTO_HOME_SECONDS = 25;
@@ -223,6 +259,12 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   // Local `initializeBoard` must not race peer-synced piece ids. Gate every
   // mount-time `initializeBoard` on this flag.
   const isP2PConnected = flow?.usesPeerPhaseCheckpoint === true;
+  const p2pTechnicalResult = usePeerStore(s => {
+		const result = s.battleLifecycle?.result;
+		if (result?.kind !== 'technical_abandonment' || !s.myPeerId) return null;
+		return result.winnerId === s.myPeerId ? 'victory' : 'defeat';
+	});
+  const p2pTechnicalAbandonment = p2pTechnicalResult !== null;
   const effectiveInitialArmy: ArmySelectionType | null = initialArmy ?? warbandArmy;
   /*
     Round-level FSM (G4). The single source of truth for which phase
@@ -249,7 +291,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     const stateRoot = capturePhaseBoundaryStateRoot({
       fromPhase: input.fromPhase,
       toPhase: input.toPhase,
-      isCardsAuthority: isCardsHostFrame(p2pActions.isHost),
+      isCardsAuthority: useGameStore.getState().myCanonicalSide === 'player',
     });
     if (!stateRoot) {
       GameEventBus.emitNotification({
@@ -796,6 +838,22 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
         })
       : false;
     const isDraw = terminalResult === 'draw';
+		if (ctx?.opponent.kind === 'peer') {
+			const peer = usePeerStore.getState();
+			if (!peer.myPeerId || !peer.remotePeerId) return;
+			const winnerId = winner === null
+				? null
+				: winner === myCanonicalSide ? peer.myPeerId : peer.remotePeerId;
+			const loserId = winnerId === null
+				? null
+				: winnerId === peer.myPeerId ? peer.remotePeerId : peer.myPeerId;
+			if (!recordP2PNormalResult({
+				ctx,
+				winnerId,
+				loserId,
+				canonicalOrder: currentP2PCanonicalOrder(),
+			})) return;
+		}
     const request: MatchEndRequest = {
       ctx,
       iWon,
@@ -826,6 +884,18 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       kind: 'cards',
       viewerWinner: cardsWinner,
     });
+		if (ctx?.opponent.kind === 'peer') {
+			const peer = usePeerStore.getState();
+			if (!peer.myPeerId || !peer.remotePeerId) return;
+			const winnerId = cardsWinner === 'player' ? peer.myPeerId : peer.remotePeerId;
+			const loserId = winnerId === peer.myPeerId ? peer.remotePeerId : peer.myPeerId;
+			if (!recordP2PNormalResult({
+				ctx,
+				winnerId,
+				loserId,
+				canonicalOrder: currentP2PCanonicalOrder(),
+			})) return;
+		}
     const request: MatchEndRequest = {
       ctx,
       iWon,
@@ -951,6 +1021,28 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   }, [resetBoard, setSharedDeck, resetPlayerTurnCount, resetBossRulesApplied, clearFlow, isCampaign, clearCurrent, navigate, matchEndController]);
 
   const handleConfirmExit = useCallback(() => {
+		const peer = usePeerStore.getState();
+		if (ctx?.opponent.kind === 'peer') {
+			if (peer.battleLifecycle?.result) {
+				setExitPromptOpen(false);
+				return;
+			}
+			const lifecycle = peer.myPeerId ? peer.requestP2PLeave(peer.myPeerId) : null;
+			if (!lifecycle || lifecycle.phase === 'cancelled') {
+				void clearP2PMatchResume();
+				setExitPromptOpen(false);
+				peer.disconnect();
+				useMatchStore.getState().clearMatch();
+				useGameStore.getState().resetGameState();
+				GameEventBus.emitNotification({
+					level: 'info',
+					message: 'Match canceled before the first valid move. No result recorded.',
+					duration: 4_000,
+				});
+				handleReturnHome();
+				return;
+			}
+		}
     void clearP2PMatchResume();
     setExitPromptOpen(false);
     setMatchAbandoned(true);
@@ -977,6 +1069,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     turnCount,
     flowState?.tag,
     matchEndController,
+		handleReturnHome,
   ]);
 
   /*
@@ -1051,6 +1144,18 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   const canLeaveActiveMatch = flowState?.tag === 'chess'
     || flowState?.tag === 'vs_screen'
     || flowState?.tag === 'poker_combat';
+	const isP2PMatch = ctx?.opponent.kind === 'peer';
+	const handleRequestExit = useCallback(() => {
+		if (!isP2PMatch) {
+			setExitPromptOpen(true);
+			return;
+		}
+		toast.warning('Leave this PvP match?', {
+			description: 'Before the first valid move it cancels safely. After that it becomes a technical defeat.',
+			duration: 8_000,
+			action: { label: 'Leave match', onClick: handleConfirmExit },
+		});
+	}, [handleConfirmExit, isP2PMatch]);
 
   // Guard: arriving at a gameplay route with no warband and not in campaign -> redirect to picker
   if (!effectiveInitialArmy && !playerArmy && flow?.mode !== 'campaign') {
@@ -1059,10 +1164,10 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
 
   return (
     <div className={`ragnarok-chess-game w-full min-h-dvh h-dvh overflow-hidden ${chessRealmClass} ${finaleClass} ${chessRootMotionClass}`.trim()}>
-      <MatchExitControls
-        visible={canLeaveActiveMatch}
-        promptOpen={exitPromptOpen}
-        onRequestExit={() => setExitPromptOpen(true)}
+		<MatchExitControls
+			visible={canLeaveActiveMatch}
+			promptOpen={isP2PMatch ? false : exitPromptOpen}
+			onRequestExit={handleRequestExit}
         onCancelExit={() => setExitPromptOpen(false)}
         onConfirmExit={handleConfirmExit}
       />
@@ -1118,7 +1223,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
 
           {flowState !== null && flowState.tag === 'game_over' && (
             <GameOverPhase
-              result={viewerChessResult ?? 'defeat'}
+              result={p2pTechnicalResult ?? viewerChessResult ?? 'defeat'}
               sub={flowState.sub}
               playerTurnCount={turnCount}
               campaign={isCampaign && campaignData ? {
@@ -1129,10 +1234,10 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
               } : null}
               onCinematicEnd={() => dispatchFlow({ type: 'GAME_OVER_ADVANCE', nextSub: 'result' })}
               onBridgeEnd={() => { clearCurrent(); navigate(routes.campaign); }}
-              onPrimaryAction={matchAbandoned ? handleReturnHome : isCampaign ? handleBackToCampaign : handleRestart}
+              onPrimaryAction={matchAbandoned || p2pTechnicalAbandonment ? handleReturnHome : isCampaign ? handleBackToCampaign : handleRestart}
               onHome={handleReturnHome}
               onRetry={handleRetryMission}
-              abandonment={matchAbandoned ? { autoHomeSeconds: MATCH_EXIT_AUTO_HOME_SECONDS } : null}
+              abandonment={matchAbandoned || p2pTechnicalAbandonment ? { autoHomeSeconds: MATCH_EXIT_AUTO_HOME_SECONDS } : null}
             />
           )}
         </AnimatePresence>

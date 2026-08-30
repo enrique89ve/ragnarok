@@ -8,12 +8,12 @@
   line-height: 1;
   pointer-events: none;
   user-select: none;
-  animation: damageFloat 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: damageFloat 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   font-family: "Cinzel", "Georgia", serif;
 }
 
 .damage-indicator.damage-critical {
-  animation: damageFloatCrit 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: damageFloatCrit 1.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .damage-number-text {
@@ -80,7 +80,7 @@
   color: #fbbf24;
   text-shadow: 0 0 8px rgba(251, 191, 36, 0.8);
   margin-top: var(--space-2);
-  animation: critLabelFade 0.8s ease-out forwards;
+  animation: critLabelFade 1.6s ease-out forwards;
 }
 
 @keyframes damageFloat {

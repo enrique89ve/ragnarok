@@ -477,6 +477,10 @@ export function useMatchmaking() {
 
 		setStatus('accepting');
 		setError(null);
+		// The offer remains authoritative while the proof is being prepared.
+		// Polling it as if the client were still idle can clear the offer during
+		// WASM/hash preparation and race the Accept request with expiry cleanup.
+		clearServerStatusPoller();
 		try {
 			const cached = getCachedMatchAcceptance();
 			const cachedForOffer = cached

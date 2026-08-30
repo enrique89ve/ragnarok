@@ -13,6 +13,10 @@ export type FirstStrikeAnimationProps = {
   readonly onComplete: () => void;
 };
 
+const FIRST_STRIKE_CHARGE_MS = 1_000;
+const FIRST_STRIKE_TRAVEL_MS = 700;
+const FIRST_STRIKE_DAMAGE_MS = 1_800;
+
 export const FirstStrikeAnimation: React.FC<FirstStrikeAnimationProps> = ({
   target,
   damage,
@@ -41,16 +45,16 @@ export const FirstStrikeAnimation: React.FC<FirstStrikeAnimationProps> = ({
     const chargeTimer = setTimeout(() => {
       debug.animation('[FirstStrike] Phase: strike');
       setPhase('strike');
-    }, 600);
+    }, FIRST_STRIKE_CHARGE_MS);
     const strikeTimer = setTimeout(() => {
       debug.animation('[FirstStrike] Phase: damage');
       setPhase('damage');
-    }, 1200);
+    }, FIRST_STRIKE_CHARGE_MS + FIRST_STRIKE_TRAVEL_MS);
     const doneTimer = setTimeout(() => {
       debug.animation('[FirstStrike] Animation complete, calling onComplete');
       setPhase('done');
       onCompleteRef.current();
-    }, 2200);
+    }, FIRST_STRIKE_CHARGE_MS + FIRST_STRIKE_TRAVEL_MS + FIRST_STRIKE_DAMAGE_MS);
 
     return () => {
       clearTimeout(chargeTimer);

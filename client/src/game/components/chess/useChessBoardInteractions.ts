@@ -4,6 +4,7 @@ import { debug } from '../../config/debugConfig';
 import { useChessCombatAdapter } from '../../hooks/useChessCombatAdapter';
 import { useKingChessAbility } from '../../hooks/useKingChessAbility';
 import { useGameStore } from '../../stores/gameStore';
+import { usePeerStore } from '../../stores/peerStore';
 import { useUnifiedCombatStore } from '../../stores/unifiedCombatStore';
 import { captureChessPrevHashes, sendChessAttack, sendChessCombatInitiated, sendChessMove } from '../../p2p/chessWireSender';
 import { chessIntegrityMonitor } from '../../p2p/chessIntegrityMonitor';
@@ -295,8 +296,18 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
         }
       }
 
-      const matchId = useGameStore.getState().matchId;
-      if (matchId && !chessIntegrityMonitor.canStartTransition()) {
+		const matchId = useGameStore.getState().matchId;
+		const peerState = usePeerStore.getState();
+		if (matchId && (
+			peerState.connectionState !== 'connected'
+			|| !peerState.battleLifecycle
+			|| peerState.battleLifecycle.phase === 'resolved'
+			|| peerState.battleLifecycle.phase === 'cancelled'
+		)) {
+			debug.warn('[Chess] Move blocked until the P2P competitive session is connected and unresolved');
+			return;
+		}
+		if (matchId && !chessIntegrityMonitor.canStartTransition()) {
         debug.warn('[Chess] Move blocked while transition integrity is awaiting confirmation or quarantined');
         return;
       }
@@ -304,9 +315,10 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
       // Capture the moving piece BEFORE movePiece — it clears selectedPiece
       // as part of the move, so we can't read it post-call. Same with the
       // defender for instant-kill emit (movePiece removes it).
-      const movingPiece = selectedPiece;
-      const fromPos = movingPiece?.position;
-      const defender = isAttackMove ? getPieceAtFromStore(position) : null;
+		const movingPiece = selectedPiece;
+		const fromPos = movingPiece?.position;
+		const defender = isAttackMove ? getPieceAtFromStore(position) : null;
+		const canonicalOrder = freshSlice.boardState.moveCount + 1;
 
       // TD-27c-chess: capture prev-state hashes BEFORE movePiece mutates
       // the local store. The receiver hashes its own state pre-apply, so
@@ -322,8 +334,9 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
           const emit = {
             pieceId: movingPiece.id,
             from: fromPos,
-            to: position,
-            defenderId: defender.id,
+				to: position,
+				defenderId: defender.id,
+				canonicalOrder,
           };
           if (collision.instantKill) {
             sendChessAttack(emit, prevHashes);
@@ -350,8 +363,9 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
         sendChessMove({
           pieceId: movingPiece.id,
           from: fromPos,
-          to: position,
-        }, prevHashes);
+			to: position,
+			canonicalOrder,
+		}, prevHashes);
       }
       return;
     }

@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 
 import type { P2PConnectionState } from '../../stores/peerStore';
 import { usePeerStore } from '../../stores/peerStore';
+import { clearP2PMatchResume } from '../../p2p/p2pMatchResume';
 
 const CONNECTION_TOAST_ID = 'p2p-connection-state';
 const READINESS_TOAST_ID = 'p2p-match-readiness';
@@ -103,13 +104,30 @@ export function P2PStatusToast(): null {
 	const hardReloadResume = usePeerStore(state => state.hardReloadResume);
 	const error = usePeerStore(state => state.error);
 	const transportKind = usePeerStore(state => state.connection?.kind);
+	const battleLifecyclePhase = usePeerStore(state => state.battleLifecycle?.phase ?? null);
 	const sessionReadinessError = usePeerStore(state => state.p2pSessionAuthError);
 	const battleReadinessError = usePeerStore(state => state.p2pBattleReadyError);
 	const readinessError = battleReadinessError ?? sessionReadinessError;
 	const disconnect = usePeerStore(state => state.disconnect);
+	const requestP2PLeave = usePeerStore(state => state.requestP2PLeave);
+	const myPeerId = usePeerStore(state => state.myPeerId);
+	const leaveMatch = useCallback(() => {
+		const lifecycle = myPeerId ? requestP2PLeave(myPeerId) : null;
+		void clearP2PMatchResume();
+		if (lifecycle?.phase === 'cancelled') {
+			toast.info('Match canceled before the first valid move. No result recorded.', { duration: 5_000 });
+		}
+		disconnect();
+	}, [disconnect, myPeerId, requestP2PLeave]);
 	const previousState = useRef<P2PConnectionState | null>(null);
 
 	useEffect(() => {
+		if (battleLifecyclePhase === 'resolved' || battleLifecyclePhase === 'cancelled') {
+			toast.dismiss(CONNECTION_TOAST_ID);
+			toast.dismiss(READINESS_TOAST_ID);
+			previousState.current = connectionState;
+			return;
+		}
 		const model = getP2PConnectionToastModel({
 			connectionState,
 			reconnectCountdown,
@@ -120,10 +138,11 @@ export function P2PStatusToast(): null {
 			error,
 			transportKind,
 		});
-		if (model.kind !== 'success' || previousState.current !== null) showConnectionToast(model, disconnect);
+		if (model.kind !== 'success' || previousState.current !== null) showConnectionToast(model, leaveMatch);
 		previousState.current = connectionState;
 	}, [
 		bufferedMessageCount,
+		battleLifecyclePhase,
 		connectionState,
 		disconnectSide,
 		error,
@@ -131,10 +150,14 @@ export function P2PStatusToast(): null {
 		reconnectAttemptCount,
 		reconnectCountdown,
 		transportKind,
-		disconnect,
+		leaveMatch,
 	]);
 
 	useEffect(() => {
+		if (battleLifecyclePhase === 'resolved' || battleLifecyclePhase === 'cancelled') {
+			toast.dismiss(READINESS_TOAST_ID);
+			return;
+		}
 		if (!readinessError || connectionState !== 'connected') {
 			toast.dismiss(READINESS_TOAST_ID);
 			return;
@@ -143,9 +166,9 @@ export function P2PStatusToast(): null {
 			id: READINESS_TOAST_ID,
 			description: readinessError,
 			duration: Infinity,
-			action: { label: 'Leave match', onClick: disconnect },
+			action: { label: 'Leave match', onClick: leaveMatch },
 		});
-	}, [connectionState, disconnect, readinessError]);
+	}, [battleLifecyclePhase, connectionState, leaveMatch, readinessError]);
 
 	return null;
 }

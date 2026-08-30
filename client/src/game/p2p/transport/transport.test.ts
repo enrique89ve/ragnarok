@@ -100,7 +100,25 @@ describe('GameTransport relay adapter', () => {
 
 		transport.close();
 		expect(transport.state).toBe('closed');
+		expect(transport.closeReason).toBe('local');
 		expect(states).toEqual(['connecting', 'connected', 'closed']);
+	});
+
+	it('preserves the relay server close as an opponent disconnect', async () => {
+		vi.stubGlobal('WebSocket', FakeWebSocket);
+		const transport = createWebSocketRelayTransport({
+			url: 'ws://game.test/ws/p2p',
+			roomId: 'room-1',
+			peerId: 'peer-a',
+		});
+
+		const connected = transport.connect();
+		latestSocket().openRelay();
+		await connected;
+		latestSocket().receive({ type: '__sys', event: 'close' });
+
+		expect(transport.closeReason).toBe('opponent');
+		expect(transport.state).toBe('failed');
 	});
 
 	it('announces relay transport readiness only after relay and Control WS are both ready', async () => {
@@ -143,6 +161,43 @@ describe('GameTransport relay adapter', () => {
 		expect(sentTypes.filter(type => type === 'transport_ready_v1')).toHaveLength(1);
 		expect(transport.state).toBe('connected');
 		transport.close();
+	});
+
+	it('fails and closes the relay when Control WS degrades during connection', async () => {
+		vi.stubGlobal('WebSocket', FakeWebSocket);
+		const transport = createWebSocketRelayTransport({
+			url: 'ws://game.test/ws/p2p',
+			controlUrl: 'ws://game.test/ws/control',
+			roomId: 'room-1',
+			peerId: 'peer-a',
+			matchTicket: {
+				token: 'ticket',
+				roomId: 'room-1',
+				peerId: 'peer-a',
+				expiresAt: Date.now() + 60_000,
+				role: 'offerer',
+			},
+		});
+
+		const connected = transport.connect();
+		const relaySocket = FakeWebSocket.instances[0];
+		const controlSocket = FakeWebSocket.instances[1];
+		if (!relaySocket || !controlSocket) throw new Error('Expected relay and control sockets');
+
+		controlSocket.open();
+		controlSocket.receive({
+			type: 'control_open_v1',
+			protocolVersion: 1,
+			matchId: 'room-1',
+			peerId: 'peer-a',
+			opponentPeerId: 'peer-b',
+			role: 'offerer',
+		});
+		controlSocket.close();
+
+		await expect(connected).rejects.toThrow();
+		expect(transport.state).toBe('failed');
+		expect(relaySocket.readyState).toBe(FakeWebSocket.CLOSED);
 	});
 
 	it('rejects a pending connect when closed before relay readiness', async () => {

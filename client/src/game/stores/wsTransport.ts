@@ -30,7 +30,7 @@ import { tryParsePhaseCheckpointServerMessage } from '@shared/p2p-wire/phaseChec
 import { tryParsePokerTurnNotaryServerMessage } from '@shared/p2p-wire/pokerTimeNotary';
 
 export type TransportEvent = 'data' | 'open' | 'close' | 'error';
-type TransportCloseReason = 'local' | 'opponent';
+export type TransportCloseReason = 'local' | 'opponent' | 'unknown';
 export type TransportListener = (...args: unknown[]) => void;
 
 interface OpenPayload {
@@ -81,6 +81,7 @@ export class LocalWebSocketTransport {
 	private _remotePeer = '';
 	private _isHost = false;
 	private _closed = false;
+	private _closeReason: TransportCloseReason = 'unknown';
 
 	constructor(private readonly options: LocalWebSocketTransportOptions) {}
 
@@ -97,7 +98,10 @@ export class LocalWebSocketTransport {
 		ws.onerror = () => this.emit('error', new Error('WebSocket error'));
 		ws.onclose = (ev: CloseEvent) => {
 			debug.log(`[WSTransport] closed code=${ev.code} reason=${ev.reason || 'n/a'}`);
-			if (this._open && !this._closed) this.emit('close', 'local' satisfies TransportCloseReason);
+			if (this._open && !this._closed) {
+				this._closeReason = 'local';
+				this.emit('close', this._closeReason);
+			}
 			this._open = false;
 			this._closed = true;
 		};
@@ -107,6 +111,7 @@ export class LocalWebSocketTransport {
 	get peer(): string { return this._remotePeer; }
 	get open(): boolean { return this._open; }
 	get isHostHint(): boolean { return this._isHost; }
+	get closeReason(): TransportCloseReason { return this._closeReason; }
 
 	on(event: TransportEvent, listener: TransportListener): void {
 		let bucket = this.listeners.get(event);
@@ -132,6 +137,7 @@ export class LocalWebSocketTransport {
 	}
 
 	close(): void {
+		if (this._open && !this._closed) this._closeReason = 'local';
 		this._closed = true;
 		this._open = false;
 		try { this.ws?.close(); } catch { /* already closed */ }
@@ -182,10 +188,11 @@ export class LocalWebSocketTransport {
 				this.emit('open', payload);
 				return;
 			}
-			case 'close':
-				if (this._open) {
-					this._open = false;
-					this.emit('close', 'opponent' satisfies TransportCloseReason);
+		case 'close':
+			if (this._open) {
+				this._open = false;
+				this._closeReason = 'opponent';
+				this.emit('close', this._closeReason);
 				}
 				return;
 			case 'error': {

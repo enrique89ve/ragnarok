@@ -143,6 +143,19 @@ describe('TransportManager', () => {
 		expect(receivedIceServers).toEqual([{ urls: 'stun:testnetdev.ragnaroknft.quest:3478' }]);
 	});
 
+	it('closes an adapter that resolves without confirming connected state', async () => {
+		const webRtc = fakeTransport('webrtc', async () => undefined);
+		const manager = createTransportManager(managerOptions({
+			plan: { mode: 'webrtc-first', relayFallback: false, webrtcConnectMs: 20_000, relayConnectMs: 8_000 },
+		}), {
+			createWebRTC: () => webRtc.transport,
+		});
+
+		await expect(manager.connect()).rejects.toThrow('webrtc transport did not confirm an open state');
+		expect(webRtc.close).toHaveBeenCalledTimes(1);
+		expect(manager.state).toBe('failed');
+	});
+
 	it('falls back to relay when WebRTC fails before the match opens', async () => {
 		resetTransportTelemetryForTests();
 		const webRtc = fakeTransport('webrtc', async () => { throw new Error('ICE failed'); });

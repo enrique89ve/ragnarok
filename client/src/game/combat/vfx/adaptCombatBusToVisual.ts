@@ -26,12 +26,14 @@ function withResolvedImpactAmounts(
 		target: {
 			...presentation.target,
 			amount: targetAmount,
+			healthDamage: presentation.target.outcome === 'shield' ? 0 : targetAmount,
 			level: impactLevelFor(targetAmount),
 		},
 		...(counter && counterAmount > 0 ? {
 			counter: {
 				...counter,
 				amount: counterAmount,
+				healthDamage: counter.outcome === 'shield' ? 0 : counterAmount,
 				level: impactLevelFor(counterAmount),
 			},
 		} : {}),
@@ -66,6 +68,7 @@ function presentationForImpact(
 			source: targetPresentation.target.target,
 			target: targetPresentation.source,
 			amount: counterIntent.impact.amount,
+			healthDamage: counterIntent.impact.amount,
 			level: impactLevelFor(counterIntent.impact.amount),
 			outcome: 'damage',
 			lethal: null,
