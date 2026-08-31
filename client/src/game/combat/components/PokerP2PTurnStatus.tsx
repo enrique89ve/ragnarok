@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Clock3, Hourglass, Radio, WifiOff } from 'lucide-react';
 import type { PokerCombatState } from '../../types/PokerCombatTypes';
 import type { P2PConnectionState } from '../../stores/peerStore';
@@ -72,32 +72,71 @@ export const PokerP2PTurnStatus: React.FC<PokerP2PTurnStatusProps> = ({
 	isP2PCombat,
 	connectionState,
 }) => {
+	const connectionInterrupted = connectionState !== 'connected';
+	const opponentConnectionLost = connectionState === 'reconnecting'
+		|| connectionState === 'grace_period'
+		|| connectionState === 'error'
+		|| connectionState === 'disconnected';
+	const [detailsOpen, setDetailsOpen] = useState(connectionInterrupted);
 	const view = useMemo(() => {
 		if (!isP2PCombat || !combatState) return null;
 		return getPokerP2PTurnStatusView({ combatState, connectionState });
 	}, [combatState, connectionState, isP2PCombat]);
 
+	useEffect(() => {
+		setDetailsOpen(connectionInterrupted);
+	}, [connectionInterrupted]);
+
 	if (!view) return null;
+
+	const isExpanded = connectionInterrupted || detailsOpen;
+	const statusLabel = connectionInterrupted ? 'P2P' : 'LIVE';
+	const statusTitle = opponentConnectionLost ? 'Opponent lost connection' : view.title;
+	const statusDetail = opponentConnectionLost
+		? connectionState === 'error'
+			? 'Match paused — leave or wait for recovery'
+			: 'Trying to reconnect to the match…'
+		: view.detail;
 
 	return (
 		<aside
 			className={`p2p-poker-turn-status state-${view.variant}`}
 			data-zone="p2p-poker-turn-status"
-			aria-live="polite"
-			aria-label={`${view.label}: ${view.title}`}
+			data-expanded={isExpanded}
+			aria-live={connectionInterrupted ? 'assertive' : 'polite'}
+			aria-label={`${statusLabel}: ${statusTitle}`}
 		>
-			<div className="p2p-poker-turn-status-icon" aria-hidden="true">
-				{getStatusIcon(view.variant)}
-			</div>
-			<div className="p2p-poker-turn-status-copy">
-				<span className="p2p-poker-turn-status-label">{view.label}</span>
-				<strong className="p2p-poker-turn-status-title">{view.title}</strong>
-				<span className="p2p-poker-turn-status-detail">{view.detail}</span>
-			</div>
-			<div className="p2p-poker-turn-status-meta" aria-label="Poker decision metadata">
-				<span>{view.phaseLabel}</span>
-				<span>{view.turnLabel}</span>
-				<span>{view.clockLabel}</span>
+			<button
+				type="button"
+				className="p2p-poker-live-trigger"
+				aria-controls="p2p-poker-turn-status-details"
+				aria-expanded={isExpanded}
+				aria-label={isExpanded ? 'Hide poker connection details' : 'Show poker connection details'}
+				title={isExpanded ? 'Hide poker connection details' : 'Show poker connection details'}
+				onClick={() => setDetailsOpen(open => !open)}
+			>
+				<span className="p2p-poker-live-dot" aria-hidden="true" />
+				<Radio size={16} strokeWidth={2.4} aria-hidden="true" />
+				<span className="p2p-poker-live-label">{connectionInterrupted ? 'P2P' : 'LIVE'}</span>
+			</button>
+			<div
+				id="p2p-poker-turn-status-details"
+				className="p2p-poker-turn-status-details"
+				hidden={!isExpanded}
+			>
+				<div className="p2p-poker-turn-status-icon" aria-hidden="true">
+					{connectionInterrupted ? <WifiOff size={18} strokeWidth={2.2} /> : getStatusIcon(view.variant)}
+				</div>
+				<div className="p2p-poker-turn-status-copy">
+					<span className="p2p-poker-turn-status-label">{statusLabel}</span>
+					<strong className="p2p-poker-turn-status-title">{statusTitle}</strong>
+					<span className="p2p-poker-turn-status-detail">{statusDetail}</span>
+				</div>
+				<div className="p2p-poker-turn-status-meta" aria-label="Poker decision metadata">
+					<span>{view.phaseLabel}</span>
+					<span>{view.turnLabel}</span>
+					<span>{view.clockLabel}</span>
+				</div>
 			</div>
 		</aside>
 	);

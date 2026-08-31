@@ -54,6 +54,7 @@ import {
 } from '../services/p2pRelayProtocol';
 import { verifyP2PActiveMatchTicket } from '../services/p2pActiveMatchRegistry';
 import { hasStarterCeremonyClaim } from '../services/starterClaimRegistry';
+import { getHiveWebSessionUsernameFromCookie } from '../services/hiveWebSession';
 import {
 	markP2PActiveMatchTerminalFromCheckpoint,
 	markP2PRefereePlaneConnected,
@@ -75,6 +76,10 @@ const ROOM_MAX_PEERS = 2;
 const KEEPALIVE_INTERVAL_MS = 15_000;
 const CHECKPOINT_TOKEN_CAPACITY = 8;
 const CHECKPOINT_TOKEN_REFILL_MS = 2_000;
+const MAX_RELAY_ROOMS = 1_024;
+const RELAY_MESSAGE_WINDOW_MS = 1_000;
+const RELAY_MAX_MESSAGES_PER_WINDOW = 60;
+const RELAY_MAX_BYTES_PER_WINDOW = 512 * 1024;
 // Initial GameState sync is gzip-framed before relay fan-out; keep frames tight.
 export const P2P_RELAY_MAX_PAYLOAD_BYTES = 16 * 1024;
 
@@ -192,6 +197,7 @@ async function validateRelayTicketUpgrade(input: {
 	readonly protocolHeader: string | string[] | undefined;
 	readonly roomId: string;
 	readonly peerId: string;
+	readonly cookieHeader?: string;
 }): Promise<RelayUpgradeAccess> {
 	if (!hasP2PRelayProtocol(input.protocolHeader)) {
 		return { ok: false, status: 426, telemetryReason: 'missing_protocol', reason: 'Upgrade Required' };
@@ -225,6 +231,18 @@ async function validateRelayTicketUpgrade(input: {
 		account: ticket.payload.account,
 	})) {
 		return { ok: false, status: 403, telemetryReason: 'starter_claim_required', reason: 'Forbidden' };
+	}
+	// Integration tests exercise the relay in an isolated process without a
+	// browser cookie jar. Deployed shared-network runtimes are always
+	// production, where this parity check is mandatory.
+	if (ticket.ok && isRelayTicketRequired() && !process.env.NODE_ENV?.includes('test')) {
+		const sessionUsername = getHiveWebSessionUsernameFromCookie(input.cookieHeader);
+		if (!sessionUsername) {
+			return { ok: false, status: 401, telemetryReason: 'hive_session_required', reason: 'Hive session required' };
+		}
+		if (ticket.payload.account && ticket.payload.account !== sessionUsername) {
+			return { ok: false, status: 403, telemetryReason: 'ticket_mismatch', reason: 'Forbidden' };
+		}
 	}
 	return { ok: true };
 }
@@ -339,6 +357,7 @@ export function attachP2PRelay(server: HttpServer): void {
 			protocolHeader: req.headers['sec-websocket-protocol'],
 			roomId,
 			peerId,
+			cookieHeader: req.headers.cookie,
 		});
 		if (!ticketAccess.ok) {
 			recordP2PRelayError(ticketAccess.telemetryReason);
@@ -379,6 +398,12 @@ export function attachP2PRelay(server: HttpServer): void {
 
 		let room = rooms.get(roomId);
 		if (!room) {
+			if (rooms.size >= MAX_RELAY_ROOMS) {
+				recordP2PRelayError('room_capacity');
+				sendSys(ws, { event: 'error', reason: 'room_capacity' });
+				ws.close();
+				return;
+			}
 			room = [];
 			rooms.set(roomId, room);
 			markP2PRefereePlaneConnected(roomId, 'relay');
@@ -408,6 +433,9 @@ export function attachP2PRelay(server: HttpServer): void {
 
 		let checkpointTokens = CHECKPOINT_TOKEN_CAPACITY;
 		let checkpointTokensRefilledAt = Date.now();
+		let messageWindowStartedAt = Date.now();
+		let messageWindowCount = 0;
+		let messageWindowBytes = 0;
 		const consumeCheckpointToken = (): boolean => {
 			const now = Date.now();
 			const refill = Math.floor((now - checkpointTokensRefilledAt) / CHECKPOINT_TOKEN_REFILL_MS);
@@ -429,6 +457,20 @@ export function attachP2PRelay(server: HttpServer): void {
 			// how the sender's WebSocket lib emitted the frame. App payloads are
 			// JSON; binary would be a protocol violation we'd rather surface.
 			const text = relayRawFrameToText(raw);
+			const now = Date.now();
+			if (now - messageWindowStartedAt >= RELAY_MESSAGE_WINDOW_MS) {
+				messageWindowStartedAt = now;
+				messageWindowCount = 0;
+				messageWindowBytes = 0;
+			}
+			const frameBytes = Buffer.byteLength(text, 'utf8');
+			if (messageWindowCount >= RELAY_MAX_MESSAGES_PER_WINDOW
+				|| messageWindowBytes + frameBytes > RELAY_MAX_BYTES_PER_WINDOW) {
+				recordP2PRelayDrop('rate_limited');
+				return;
+			}
+			messageWindowCount += 1;
+			messageWindowBytes += frameBytes;
 
 			// Validate envelope BEFORE fan-out. The recipient's `useWireSync` does
 			// deep payload validation per type, so we only enforce the structural

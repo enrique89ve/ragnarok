@@ -10,6 +10,17 @@ function opposingSide(side: 'player' | 'opponent'): 'player' | 'opponent' {
 	return side === 'player' ? 'opponent' : 'player';
 }
 
+export function presentationTargetForCombatant(
+	targetType: CombatStep['targetType'],
+	targetId: string | null,
+	defenderSide: 'player' | 'opponent',
+): PresentationTarget {
+	if (targetType === 'hero' || targetId === null) {
+		return { type: 'hero', side: defenderSide };
+	}
+	return { type: 'card', instanceId: targetId };
+}
+
 export function impactLevelFor(amount: number): ImpactLevel {
 	if (amount >= 8) return 'heavy';
 	if (amount >= 4) return 'normal';
@@ -20,13 +31,7 @@ export function presentationTargetForStep(
 	step: Pick<CombatStep, 'targetId' | 'targetType' | 'attackerSide'>,
 ): PresentationTarget {
 	const defenderSide = opposingSide(step.attackerSide);
-	if (step.targetType === 'hero') {
-		return { type: 'hero', side: defenderSide };
-	}
-	if (step.targetId) {
-		return { type: 'card', instanceId: step.targetId };
-	}
-	return { type: 'field', side: defenderSide };
+	return presentationTargetForCombatant(step.targetType, step.targetId, defenderSide);
 }
 
 function createImpact(
@@ -99,11 +104,11 @@ export function buildCombatPresentation(
 export function buildCombatPresentationFromResolvedAttack(
 	resolved: ResolvedAttack,
 ): CombatPresentation {
-	const target = resolved.targetType === 'hero'
-		? { type: 'hero' as const, side: opposingSide(resolved.attackerSide) }
-		: resolved.targetId
-			? { type: 'card' as const, instanceId: resolved.targetId }
-			: { type: 'field' as const, side: opposingSide(resolved.attackerSide) };
+	const target = presentationTargetForCombatant(
+		resolved.targetType,
+		resolved.targetId,
+		opposingSide(resolved.attackerSide),
+	);
 
 	const targetImpact = createImpact(
 		target,

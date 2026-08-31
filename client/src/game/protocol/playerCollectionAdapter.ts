@@ -38,9 +38,11 @@ export function buildClientPlayerCollection(
 export function buildClientDeckClaimsFromCardIds(
 	cardIds: readonly number[],
 	bridge: INFTBridge = getNFTBridge(),
+	pieces?: readonly (readonly number[])[],
 ) {
 	return buildDeckClaimsFromCardIds({
 		cardIds,
 		collection: buildClientPlayerCollection(bridge),
+		...(pieces ? { pieces } : {}),
 	});
 }

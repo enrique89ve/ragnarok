@@ -105,16 +105,26 @@ function stringifyHiveKeychainMessage(value: unknown): string | null {
     }
   }
 
+  // Keychain can surface Node assertion objects when the selected authority
+  // is unavailable or locked. Never expose the implementation details (or
+  // arbitrary structured data) in product-facing errors.
+  if (isHiveKeychainAssertion(value)) {
+    return "Hive Keychain could not complete the signature. Unlock the correct Posting key for this account and try again.";
+  }
+
   if (value === null || value === undefined) {
     return null;
   }
 
-  try {
-    const serialized = JSON.stringify(value);
-    return serialized && serialized !== "{}" ? serialized : String(value);
-  } catch {
-    return String(value);
-  }
+  // Unknown objects are deliberately treated as absent. Serializing an
+  // untrusted provider response can leak internal fields and produces the
+  // unusable raw JSON shown by the matchmaking panel.
+  return null;
+}
+
+function isHiveKeychainAssertion(value: unknown): boolean {
+	if (!value || typeof value !== "object" || !("code" in value)) return false;
+	return (value as { readonly code?: unknown }).code === "ERR_ASSERTION";
 }
 
 export function getHiveKeychainError(

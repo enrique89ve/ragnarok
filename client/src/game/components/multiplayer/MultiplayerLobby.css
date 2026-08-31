@@ -1,0 +1,207 @@
+@layer components {
+	.multiplayer-lobby-shell {
+		position: relative;
+		isolation: isolate;
+		background:
+			radial-gradient(ellipse 80% 70% at 82% 12%, color-mix(in srgb, var(--gold-500) 11%, transparent), transparent 68%),
+			radial-gradient(ellipse 60% 80% at 8% 92%, color-mix(in srgb, var(--bifrost-500) 9%, transparent), transparent 70%),
+			linear-gradient(135deg, var(--obsidian-950) 0%, var(--obsidian-900) 48%, var(--obsidian-950) 100%);
+	}
+
+	.multiplayer-lobby-shell::before {
+		position: absolute;
+		inset: 0;
+		z-index: -1;
+		background-image:
+			linear-gradient(90deg, color-mix(in srgb, var(--gold-300) 5%, transparent) 1px, transparent 1px),
+			linear-gradient(color-mix(in srgb, var(--gold-300) 5%, transparent) 1px, transparent 1px);
+		background-size: 44px 44px;
+		content: '';
+		opacity: 0.24;
+		pointer-events: none;
+	}
+
+	.multiplayer-lobby-intro {
+		text-wrap: balance;
+		overflow-wrap: anywhere;
+	}
+
+	.multiplayer-lobby-title {
+		text-wrap: balance;
+	}
+
+	.multiplayer-lobby-panel {
+		box-shadow:
+			0 24px 70px -28px color-mix(in srgb, var(--obsidian-950) 95%, transparent),
+			0 0 0 1px color-mix(in srgb, var(--gold-300) 8%, transparent);
+	}
+
+	.multiplayer-lobby-panel button:not(:disabled):hover {
+		filter: brightness(1.08);
+	}
+
+	.multiplayer-lobby-panel button:not(:disabled):active {
+		transform: translateY(1px);
+	}
+
+	.multiplayer-lobby-panel input:hover {
+		border-color: color-mix(in srgb, var(--gold-300) 55%, var(--obsidian-600));
+	}
+
+	.multiplayer-lobby-panel input:focus-visible {
+		border-color: var(--gold-300);
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--gold-300) 35%, transparent);
+		outline: none;
+	}
+
+	.multiplayer-lobby-panel input:disabled {
+		cursor: not-allowed;
+		opacity: 0.5;
+	}
+
+	.p2p-matchup {
+		position: relative;
+		isolation: isolate;
+		overflow: hidden;
+	}
+
+	.p2p-matchup::before {
+		position: absolute;
+		inset: 0;
+		z-index: -1;
+		background:
+			radial-gradient(circle at 18% 52%, color-mix(in srgb, var(--gold-300) 12%, transparent), transparent 34%),
+			radial-gradient(circle at 82% 52%, color-mix(in srgb, var(--blood-500) 13%, transparent), transparent 34%);
+		content: '';
+		pointer-events: none;
+	}
+
+	.p2p-matchup__faceoff {
+		position: relative;
+	}
+
+	.p2p-matchup__faceoff::before {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		width: 9rem;
+		height: 9rem;
+		border: 1px solid color-mix(in srgb, var(--gold-300) 14%, transparent);
+		transform: translate(-50%, -50%) rotate(45deg);
+		content: '';
+		pointer-events: none;
+	}
+
+	.p2p-matchup__identity {
+		position: relative;
+		z-index: 1;
+	}
+
+	.p2p-matchup__avatar-frame {
+		border-radius: 0;
+		box-shadow:
+			0 0 0 3px color-mix(in srgb, var(--obsidian-950) 86%, transparent),
+			0 0 24px -8px currentColor;
+		clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px);
+	}
+
+	.p2p-matchup__identity--local .p2p-matchup__avatar-frame {
+		box-shadow:
+			0 0 0 3px color-mix(in srgb, var(--obsidian-950) 86%, transparent),
+			0 0 26px -8px color-mix(in srgb, var(--gold-300) 65%, transparent);
+	}
+
+	.p2p-matchup__identity--opponent .p2p-matchup__avatar-frame {
+		box-shadow:
+			0 0 0 3px color-mix(in srgb, var(--obsidian-950) 86%, transparent),
+			0 0 26px -8px color-mix(in srgb, var(--blood-300) 70%, transparent);
+	}
+
+	.p2p-matchup__versus {
+		position: relative;
+		z-index: 1;
+		display: grid;
+		place-items: center;
+		width: 3.5rem;
+		height: 3.5rem;
+		color: var(--blood-300);
+		font-family: var(--font-display);
+		font-size: 1.1rem;
+		font-weight: 900;
+		letter-spacing: 0.12em;
+		text-shadow: 0 0 16px color-mix(in srgb, var(--blood-300) 45%, transparent);
+	}
+
+	.p2p-matchup__versus::before {
+		position: absolute;
+		left: 50%;
+		width: 2.75rem;
+		height: 1px;
+		background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--gold-300) 70%, var(--blood-300)), transparent);
+		content: '';
+		top: 0;
+		transform: translateX(-50%) rotate(45deg);
+	}
+
+	.p2p-matchup__versus::after {
+		position: absolute;
+		left: 50%;
+		width: 2.75rem;
+		height: 1px;
+		background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--gold-300) 70%, var(--blood-300)), transparent);
+		content: '';
+		bottom: 0;
+		transform: translateX(-50%) rotate(-45deg);
+	}
+
+	.p2p-matchup__accept-button {
+		border-color: var(--rune-300);
+		background: var(--rune-500);
+		color: var(--obsidian-950);
+		box-shadow: 0 0 22px -8px color-mix(in srgb, var(--rune-300) 80%, transparent);
+	}
+
+	.p2p-matchup__accept-button:hover {
+		border-color: var(--rune-200);
+		background: var(--rune-300);
+	}
+
+	.p2p-matchup__accept-button:focus-visible {
+		border-color: var(--rune-200);
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--rune-300) 42%, transparent);
+		outline: none;
+	}
+
+	.p2p-matchup__accept-button:disabled {
+		box-shadow: none;
+		cursor: not-allowed;
+		opacity: 0.5;
+	}
+
+	.p2p-matchup__approval-wait {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.75rem;
+		border: 1px solid color-mix(in srgb, var(--bifrost-300) 42%, transparent);
+		background: color-mix(in srgb, var(--bifrost-500) 10%, var(--obsidian-950));
+		padding: 0.8rem 1rem;
+		color: var(--bifrost-100);
+		text-align: left;
+	}
+
+	@media (max-width: 420px) {
+		.p2p-matchup__versus {
+			width: 2.5rem;
+			height: 2.5rem;
+			font-size: 0.9rem;
+		}
+
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.multiplayer-lobby-shell::before {
+			opacity: 0.16;
+		}
+	}
+}

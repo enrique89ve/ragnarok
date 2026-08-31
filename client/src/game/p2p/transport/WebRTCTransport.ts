@@ -46,6 +46,10 @@ export type WebRTCTransportOptions = {
 
 export type WebRTCControlState = 'idle' | 'connecting' | 'connected' | 'degraded' | 'closed';
 
+/** Hard cap shared with the relay so every transport rejects oversized frames. */
+export const MAX_P2P_FRAME_BYTES = 16 * 1024;
+const MAX_DATA_CHANNEL_BUFFERED_BYTES = 256 * 1024;
+
 function isOpenDataChannel(channel: RTCDataChannel | null): channel is RTCDataChannel {
 	return channel?.readyState === 'open';
 }
@@ -308,6 +312,10 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 		activeChannel.onopen = maybeResolveDataChannel;
 		activeChannel.onmessage = (event: MessageEvent<unknown>) => {
 			if (typeof event.data !== 'string') return;
+			if (new TextEncoder().encode(event.data).byteLength > MAX_P2P_FRAME_BYTES) {
+				debug.warn('[WebRTCTransport] dropped oversized DataChannel frame');
+				return;
+			}
 			let parsed: unknown;
 			try { parsed = JSON.parse(event.data); } catch { return; }
 			const message = parseWireMessage(parsed);
@@ -485,7 +493,15 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 		connect,
 		send: (message: P2PMessage): void => {
 			if (!isOpenDataChannel(dataChannel)) throw new Error('WebRTC DataChannel is not open');
-			try { dataChannel.send(JSON.stringify(message)); }
+			const payload = JSON.stringify(message);
+			const payloadBytes = new TextEncoder().encode(payload).byteLength;
+			if (payloadBytes > MAX_P2P_FRAME_BYTES) {
+				throw new Error('WebRTC DataChannel payload exceeds the 16KB frame limit');
+			}
+			if ((dataChannel.bufferedAmount ?? 0) > MAX_DATA_CHANNEL_BUFFERED_BYTES) {
+				throw new Error('WebRTC DataChannel backpressure limit reached');
+			}
+			try { dataChannel.send(payload); }
 			catch (error) {
 				const sendError = error instanceof Error ? error : new Error('WebRTC DataChannel send failed');
 				fail(sendError, 'data_channel_failed');

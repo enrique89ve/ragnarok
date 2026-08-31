@@ -1,6 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { playSound } from '../../utils/soundUtils';
 import { CombatEventBus, type ImpactPhaseEvent } from '../../services/CombatEventBus';
+import {
+	presentationTargetForCombatant,
+} from '@/game/effects/presentation/CombatPresentation';
+import { targetEntityId } from '@/game/effects/presentation/EffectTargetResolver';
 
 const CANONICAL_DAMAGE_CLAIM_TTL_MS = 2_000;
 
@@ -8,6 +12,17 @@ type CanonicalDamageClaim = {
 	readonly amount: number;
 	readonly expiresAt: number;
 };
+
+function canonicalTargetIdForImpact(event: ImpactPhaseEvent): string | null {
+	const resolved = event.resolvedAttack;
+	if (!resolved) return event.targetId;
+
+	return targetEntityId(presentationTargetForCombatant(
+		resolved.targetType,
+		resolved.targetId,
+		resolved.attackerSide === 'player' ? 'opponent' : 'player',
+	));
+}
 
 export interface DamageAnimation {
 	id: string;
@@ -48,7 +63,8 @@ export function useDamageAnimations() {
 		const unsubscribe = CombatEventBus.subscribe<ImpactPhaseEvent>('IMPACT_PHASE', event => {
 			const resolved = event.resolvedAttack;
 			if (!resolved) return;
-			addClaim(event.targetId, resolved.healthDamageToTarget);
+			const targetId = canonicalTargetIdForImpact(event);
+			if (targetId) addClaim(targetId, resolved.healthDamageToTarget);
 			if (resolved.counterAttackOccurred) {
 				addClaim(event.attackerId, resolved.healthDamageToAttacker);
 			}

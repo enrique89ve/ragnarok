@@ -27,15 +27,18 @@ export type DeckCardClaim =
 	| {
 		readonly authority: 'starter-entitlement';
 		readonly cardId: StarterCardId;
+		readonly pieceIndex?: number;
 	}
 	| {
 		readonly authority: 'nft-custody';
 		readonly nftUid: NftUid;
 		readonly cardId: CardId;
+		readonly pieceIndex?: number;
 	}
 	| {
 		readonly authority: 'qa_full_catalog';
 		readonly cardId: CardId;
+		readonly pieceIndex?: number;
 	};
 
 export type VerifiedDeckCard =
@@ -102,22 +105,32 @@ export type LegacyCardRefLike = {
 	readonly instanceId?: string;
 	readonly cardId?: number;
 	readonly category?: string;
+	readonly pieceIndex?: number;
 };
+
+// A warband is four piece-decks (queen, rook, bishop, knight). Claims carry the
+// zero-based piece index so the starter/QA copy limits reset per piece instead
+// of being enforced across the flattened 120-card aggregate. Single-deck callers
+// omit it and the verifier treats the whole deck as piece 0.
+export const DeckPieceIndexSchema = z.number().int().min(0).max(3);
 
 export const StarterDeckCardClaimSchema = z.object({
 	authority: z.literal('starter-entitlement'),
 	cardId: StarterCardIdSchema,
+	pieceIndex: DeckPieceIndexSchema.optional(),
 }).strict();
 
 export const NftDeckCardClaimSchema = z.object({
 	authority: z.literal('nft-custody'),
 	nftUid: NftUidSchema,
 	cardId: CardIdSchema,
+	pieceIndex: DeckPieceIndexSchema.optional(),
 }).strict();
 
 export const QaFullCatalogDeckCardClaimSchema = z.object({
 	authority: z.literal('qa_full_catalog'),
 	cardId: CardIdSchema,
+	pieceIndex: DeckPieceIndexSchema.optional(),
 }).strict();
 
 export const DeckCardClaimSchema = z.union([
@@ -240,43 +253,60 @@ function qaEntriesByCardId(
 	return entries;
 }
 
+type PieceCardCounters = Map<number, Map<number, number>>;
+
+function pieceCardCount(counters: PieceCardCounters, pieceIndex: number, cardId: number): number {
+	return counters.get(pieceIndex)?.get(cardId) ?? 0;
+}
+
+function setPieceCardCount(counters: PieceCardCounters, pieceIndex: number, cardId: number, count: number): void {
+	let piece = counters.get(pieceIndex);
+	if (!piece) {
+		piece = new Map();
+		counters.set(pieceIndex, piece);
+	}
+	piece.set(cardId, count);
+}
+
 export function buildDeckClaimsFromCardIds(input: {
 	readonly cardIds: readonly number[];
 	readonly collection: readonly PlayerCollectionEntry[];
+	readonly pieces?: readonly (readonly number[])[];
 }): DeckClaimParseResult {
 	const starterLookup = starterEntriesByCardId(input.collection);
 	const nftLookup = nftEntriesByCardId(input.collection);
 	const qaLookup = qaEntriesByCardId(input.collection);
 
-	const starterUseCounts = new Map<number, number>();
+	const starterUseCounts: PieceCardCounters = new Map();
 	const usedNftUids = new Set<string>();
-	const qaUseCounts = new Map<number, number>();
+	const qaUseCounts: PieceCardCounters = new Map();
 	const claims: DeckCardClaim[] = [];
 	const rejections: DeckRejection[] = [];
 
-	for (const [index, rawCardId] of input.cardIds.entries()) {
-		const slotIndex = deckSlotIndex(index);
+	const appendCardClaim = (rawCardId: number, flatIndex: number, pieceIndex: number | undefined): void => {
+		const counterPiece = pieceIndex ?? 0;
 		const cardId = CardIdSchema.safeParse(rawCardId);
 		if (!cardId.success) {
 			rejections.push(rejection({
-				slotIndex,
+				slotIndex: deckSlotIndex(flatIndex),
 				code: 'invalid-claim',
 				detail: 'selected card id is invalid',
 			}));
-			continue;
+			return;
 		}
 
 		const starterCardId = StarterCardIdSchema.safeParse(rawCardId);
 		if (starterCardId.success) {
 			const entry = starterLookup.get(starterCardId.data);
-			const nextCount = (starterUseCounts.get(starterCardId.data) ?? 0) + 1;
+			const nextCount = pieceCardCount(starterUseCounts, counterPiece, starterCardId.data) + 1;
 			if (entry && nextCount <= entry.ownedCopies) {
-				starterUseCounts.set(starterCardId.data, nextCount);
+				setPieceCardCount(starterUseCounts, counterPiece, starterCardId.data, nextCount);
 				claims.push({
 					authority: 'starter-entitlement',
 					cardId: starterCardId.data,
+					...(pieceIndex !== undefined ? { pieceIndex } : {}),
 				});
-				continue;
+				return;
 			}
 		}
 
@@ -288,23 +318,25 @@ export function buildDeckClaimsFromCardIds(input: {
 				authority: 'nft-custody',
 				nftUid: nftEntry.nftUid,
 				cardId: nftEntry.cardId,
+				...(pieceIndex !== undefined ? { pieceIndex } : {}),
 			});
-			continue;
+			return;
 		}
 
 		const qaEntry = qaLookup.get(cardId.data);
-		const qaNextCount = (qaUseCounts.get(cardId.data) ?? 0) + 1;
+		const qaNextCount = pieceCardCount(qaUseCounts, counterPiece, cardId.data) + 1;
 		if (qaEntry && qaNextCount <= qaEntry.ownedCopies) {
-			qaUseCounts.set(cardId.data, qaNextCount);
+			setPieceCardCount(qaUseCounts, counterPiece, cardId.data, qaNextCount);
 			claims.push({
 				authority: 'qa_full_catalog',
 				cardId: cardId.data,
+				...(pieceIndex !== undefined ? { pieceIndex } : {}),
 			});
-			continue;
+			return;
 		}
 
 		rejections.push(rejection({
-			slotIndex,
+			slotIndex: deckSlotIndex(flatIndex),
 			code: starterCardId.success ? 'copy-limit-exceeded' : 'not-owner',
 			detail: starterCardId.success
 				? 'starter card copy limit exceeded and no NFT copy is available'
@@ -312,6 +344,20 @@ export function buildDeckClaimsFromCardIds(input: {
 			cardId: cardId.data,
 			...(starterCardId.success ? { authority: 'starter-entitlement' as const } : {}),
 		}));
+	};
+
+	if (input.pieces) {
+		let flatIndex = 0;
+		for (const [pieceIndex, pieceCardIds] of input.pieces.entries()) {
+			for (const rawCardId of pieceCardIds) {
+				appendCardClaim(rawCardId, flatIndex, pieceIndex);
+				flatIndex += 1;
+			}
+		}
+	} else {
+		for (const [index, rawCardId] of input.cardIds.entries()) {
+			appendCardClaim(rawCardId, index, undefined);
+		}
 	}
 
 	if (rejections.length === 0) return { status: 'parsed', claims };
@@ -369,13 +415,18 @@ export function toDeckClaimsFromLegacyCardRefs(
 				authority: 'nft-custody',
 				nftUid: nftUid.data,
 				cardId: cardId.data,
+				...(ref.pieceIndex !== undefined ? { pieceIndex: ref.pieceIndex } : {}),
 			});
 			continue;
 		}
 
 		const starterCardId = StarterCardIdSchema.safeParse(ref.cardId);
 		if (ref.category === 'starter' && starterCardId.success) {
-			claims.push({ authority: 'starter-entitlement', cardId: starterCardId.data });
+			claims.push({
+				authority: 'starter-entitlement',
+				cardId: starterCardId.data,
+				...(ref.pieceIndex !== undefined ? { pieceIndex: ref.pieceIndex } : {}),
+			});
 			continue;
 		}
 
@@ -472,8 +523,8 @@ export function verifyDeckClaims(input: {
 	const starterLookup = starterEntriesByCardId(input.collection);
 	const nftLookup = nftEntriesByUid(input.collection);
 	const qaLookup = qaEntriesByCardId(input.collection);
-	const starterUseCounts = new Map<number, number>();
-	const qaUseCounts = new Map<number, number>();
+	const starterUseCounts: PieceCardCounters = new Map();
+	const qaUseCounts: PieceCardCounters = new Map();
 	const seenNftUids = new Set<string>();
 	const cards: VerifiedDeckCard[] = [];
 	const rejections: DeckRejection[] = [];
@@ -482,9 +533,10 @@ export function verifyDeckClaims(input: {
 		const slotIndex = deckSlotIndex(index);
 
 		if (claim.authority === 'starter-entitlement') {
+			const pieceIndex = claim.pieceIndex ?? 0;
 			const entry = starterLookup.get(claim.cardId);
-			const nextCount = (starterUseCounts.get(claim.cardId) ?? 0) + 1;
-			starterUseCounts.set(claim.cardId, nextCount);
+			const nextCount = pieceCardCount(starterUseCounts, pieceIndex, claim.cardId) + 1;
+			setPieceCardCount(starterUseCounts, pieceIndex, claim.cardId, nextCount);
 
 			if (!entry || entry.ownedCopies <= 0) {
 				rejections.push(rejection({
@@ -519,9 +571,10 @@ export function verifyDeckClaims(input: {
 		}
 
 		if (claim.authority === 'qa_full_catalog') {
+			const pieceIndex = claim.pieceIndex ?? 0;
 			const entry = qaLookup.get(claim.cardId);
-			const nextCount = (qaUseCounts.get(claim.cardId) ?? 0) + 1;
-			qaUseCounts.set(claim.cardId, nextCount);
+			const nextCount = pieceCardCount(qaUseCounts, pieceIndex, claim.cardId) + 1;
+			setPieceCardCount(qaUseCounts, pieceIndex, claim.cardId, nextCount);
 
 			if (!entry || entry.ownedCopies <= 0) {
 				rejections.push(rejection({

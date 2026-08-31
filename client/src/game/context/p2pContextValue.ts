@@ -38,6 +38,7 @@ export interface P2PActions {
 		origin: PokerActionOrigin;
 		hpCommitment?: number;
 		turnId?: string | null;
+		prevStateHash?: string;
 	}) => void;
 	sendPokerTurnStarted: (input: {
 		combatId: string;

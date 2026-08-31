@@ -12,6 +12,7 @@ import { derivePokerTurnPolicy, type PokerOpponentKind } from '../decision/poker
 import { derivePokerTimeoutIntent } from '../rules/pokerActionRules';
 import { resolvePokerTurnAnnouncement } from '../decision/pokerTurnAnnouncement';
 import type { PokerActionOrigin } from '../../../../../shared/p2p-wire/combat';
+import { computePokerCombatStateHash } from '../../p2p/phaseBoundaryRoot';
 
 interface UseCombatTimerOptions {
   combatState: PokerCombatState | null;
@@ -25,6 +26,7 @@ interface UseCombatTimerOptions {
     origin: PokerActionOrigin;
     hpCommitment?: number;
     turnId?: string | null;
+    prevStateHash?: string;
   }) => void;
   sendPokerTurnStarted?: (input: {
     combatId: string;
@@ -192,6 +194,7 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
         }
 
         const previousState = freshState;
+        const previousStateHash = isP2PCombat ? computePokerCombatStateHash(previousState) ?? undefined : undefined;
         getPokerCombatAdapterState().performAction(actorId, autoAction, undefined, 'timeout');
         const appliedState = getPokerCombatAdapterState().combatState;
         if (!appliedState || appliedState === previousState) return;
@@ -203,6 +206,7 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
             action: autoAction,
             origin: 'timeout',
             turnId: freshState.turnId,
+            prevStateHash: previousStateHash,
           });
         }
         getPokerCombatAdapterState().maybeCloseBettingRound();

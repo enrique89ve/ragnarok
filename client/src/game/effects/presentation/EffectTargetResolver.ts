@@ -1,6 +1,6 @@
 import {
 	getArenaVfxCombatantTarget,
-	getArenaVfxHeroTarget,
+	getArenaVfxHeroSurfaceTarget,
 	getArenaVfxMinionFieldTarget,
 	getElementCenter,
 	type QueryRoot,
@@ -24,7 +24,7 @@ function resolveTargetElement(target: PresentationTarget, root?: QueryRoot | nul
 		case 'card':
 			return getArenaVfxCombatantTarget(target.instanceId, root);
 		case 'hero':
-			return getArenaVfxHeroTarget(target.side, root);
+			return getArenaVfxHeroSurfaceTarget(target.side, root);
 		case 'field':
 			return getArenaVfxMinionFieldTarget(target.side, root);
 		default: {

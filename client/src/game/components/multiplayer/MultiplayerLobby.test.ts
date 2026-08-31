@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { CHALLENGE_SIGNATURE_ALGORITHM, type P2PMatchTicket, type ServerSignedChallenge } from '@shared/p2pAvailability';
 import type { P2PBattleReadyProof } from '../../p2p/battleReady';
 
-let helpers: typeof import('./MultiplayerLobby');
+let helpers: typeof import('./MultiplayerLobby.logic');
 
 beforeAll(async () => {
 	vi.stubGlobal('window', { location: { origin: 'http://localhost' } });
@@ -11,7 +11,7 @@ beforeAll(async () => {
 		setItem: vi.fn(),
 		removeItem: vi.fn(),
 	});
-	helpers = await import('./MultiplayerLobby');
+	helpers = await import('./MultiplayerLobby.logic');
 }, 30_000);
 
 function challenge(overrides: Partial<ServerSignedChallenge> = {}): ServerSignedChallenge {
@@ -202,8 +202,8 @@ describe('MultiplayerLobby direct challenge helpers', () => {
 			reconnectAttemptCount: 0,
 		})).toEqual({
 			ready: false,
-			title: 'Connected to opponent',
-			detail: 'Waiting for the opponent loadout.',
+			title: 'Connected',
+			detail: 'Waiting for loadout.',
 		});
 
 		expect(helpers.getConnectedMatchProgress({
@@ -217,8 +217,8 @@ describe('MultiplayerLobby direct challenge helpers', () => {
 			reconnectAttemptCount: 0,
 		})).toEqual({
 			ready: false,
-			title: 'Connected to opponent',
-			detail: 'Syncing the initial match state.',
+			title: 'Syncing',
+			detail: 'Preparing match.',
 		});
 	});
 
@@ -234,8 +234,8 @@ describe('MultiplayerLobby direct challenge helpers', () => {
 			reconnectAttemptCount: 0,
 		})).toEqual({
 			ready: true,
-			title: 'Opponent connected',
-			detail: 'Starting match.',
+			title: 'Ready',
+			detail: 'Starting.',
 		});
 	});
 
@@ -251,7 +251,7 @@ describe('MultiplayerLobby direct challenge helpers', () => {
 			reconnectAttemptCount: 1,
 		})).toEqual({
 			ready: false,
-			title: 'Reconnecting with opponent',
+			title: 'Reconnecting',
 			detail: 'Attempt 1/2. 25s before technical result.',
 		});
 	});

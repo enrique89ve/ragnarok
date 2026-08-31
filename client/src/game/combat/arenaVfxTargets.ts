@@ -107,6 +107,12 @@ export function getArenaVfxHeroTarget(owner: ArenaVfxOwner, root?: QueryRoot | n
 	);
 }
 
+/** The portrait/frame is the impact receiver; the semantic hero wrapper also contains HUD overlays. */
+export function getArenaVfxHeroSurfaceTarget(owner: ArenaVfxOwner, root?: QueryRoot | null): HTMLElement | null {
+	const hero = getArenaVfxHeroTarget(owner, root);
+	return hero?.querySelector<HTMLElement>('.hero-card-wrapper') ?? hero;
+}
+
 export function getArenaVfxMinionFieldTarget(owner: ArenaVfxOwner, root?: QueryRoot | null): HTMLElement | null {
 	return getArenaVfxTarget(
 		owner === 'player' ? ARENA_VFX_TARGETS.playerMinion : ARENA_VFX_TARGETS.opponentMinion,

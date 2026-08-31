@@ -6,12 +6,6 @@
 	pointer-events: auto;
 }
 
-/* Keep the destructive match action reachable when the fixed P2P status
-   badge occupies the same top-right lane. */
-body:has(.p2p-status-badge) .match-exit-control {
-	top: 48px;
-}
-
 /* Leave Match is fixed outside the arena, so explicitly suspend it while a
    card inspector is open instead of allowing it to float above the modal. */
 .ragnarok-chess-game:has(.card-inspector-overlay) :is(.match-exit-control, .match-exit-backdrop) {

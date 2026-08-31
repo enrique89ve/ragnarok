@@ -30,7 +30,6 @@ import { useKingChessAbility } from '../../../hooks/useKingChessAbility';
 import { resolveHeroPortrait, DEFAULT_PORTRAIT } from '../../../utils/art/artMapping';
 import { useGameStore } from '../../../stores/gameStore';
 import { isDevBuild } from '../../../config/buildMode';
-import { useMatchStore } from '../../../match/store';
 import { useChessHoverStore } from '../../../stores/chessHoverStore';
 import { Tooltip } from '../../ui/Tooltip';
 import ChessBoard from '../ChessBoard';
@@ -464,7 +463,6 @@ const ChessPhase: React.FC<ChessPhaseProps> = ({
 }) => {
 	const myCanonicalSide = useGameStore(s => s.myCanonicalSide) ?? 'player';
 	const enemyCanonicalSide: 'player' | 'opponent' = myCanonicalSide === 'player' ? 'opponent' : 'player';
-	const isPeerMatch = useMatchStore(s => s.activeMatch?.opponent.kind === 'peer');
 	const { isPlacementMode } = useKingChessAbility(myCanonicalSide);
 	const playerPieceCount = boardState.pieces.filter(p => p.owner === myCanonicalSide).length;
 	const opponentPieceCount = boardState.pieces.filter(p => p.owner === enemyCanonicalSide).length;
@@ -539,12 +537,6 @@ const ChessPhase: React.FC<ChessPhaseProps> = ({
 					You must escape check! Move King, block, or capture the threat.
 				</p>
 			)}
-			{isPeerMatch && (
-				<p className="chess-context-notice text-[10px] text-amber-200/70 font-semibold mt-1 text-center tracking-wide uppercase">
-					Pawns execute on the board. Heroes fight in poker. Touch the king and you win. The king does not capture.
-				</p>
-			)}
-
 			{isDevBuild() && (
 				<button
 					onClick={(e) => {

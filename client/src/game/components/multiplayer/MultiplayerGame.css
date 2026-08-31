@@ -1,70 +1,240 @@
 .pvp-vs-screen {
+  --pvp-vs-gold: #d9a844;
+  --pvp-vs-blood: #e04b4b;
   position: fixed;
   inset: 0;
   z-index: 9000;
-  display: flex;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse 28% 34% at 50% 50%, rgba(41, 28, 31, 0.5), transparent 72%),
+    #020307;
+  font-family: var(--type-display, Cinzel, Georgia, serif);
+}
+
+.pvp-vs-screen::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgba(2, 3, 7, 0.76), transparent 32%, transparent 68%, rgba(2, 3, 7, 0.76)),
+    radial-gradient(ellipse 44% 22% at 50% 50%, transparent 0%, rgba(0, 0, 0, 0.56) 100%);
+  content: '';
+  pointer-events: none;
+}
+
+.pvp-vs-screen::after {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border: 1px solid rgba(217, 168, 68, 0.12);
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.82);
+  content: '';
+  pointer-events: none;
+}
+
+.pvp-vs-stage {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  width: min(820px, calc(100% - 2rem));
+  grid-template-columns: minmax(0, 1fr) clamp(72px, 10vw, 112px) minmax(0, 1fr);
   align-items: center;
-  justify-content: center;
-  gap: 60px;
-  background: radial-gradient(ellipse, rgba(8, 6, 14, 0.92) 0%, #000 100%);
-  font-family: Cinzel, Georgia, serif;
+  gap: clamp(1rem, 5vw, 4rem);
+  text-align: center;
 }
 
 .pvp-vs-fighter {
+  --pvp-vs-accent: var(--pvp-vs-gold);
   display: flex;
+  min-width: 0;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 0.85rem;
+  text-align: center;
 }
 
 .pvp-vs-fighter-left {
-  animation: pvp-vs-screen-slide-left 0.6s ease-out;
+  animation: pvp-vs-screen-slide-left 650ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .pvp-vs-fighter-right {
-  animation: pvp-vs-screen-slide-right 0.6s ease-out;
+  --pvp-vs-accent: var(--pvp-vs-blood);
+  animation: pvp-vs-screen-slide-right 650ms cubic-bezier(0.16, 1, 0.3, 1) 60ms both;
+}
+
+.pvp-vs-portrait-frame {
+  position: relative;
+  display: grid;
+  width: clamp(104px, 14vw, 152px);
+  aspect-ratio: 1;
+  place-items: center;
+  overflow: hidden;
+  border: 2px solid var(--pvp-vs-accent);
+  border-radius: 50%;
+  background: #08070b;
+  box-shadow:
+    0 0 0 5px rgba(2, 3, 7, 0.86),
+    0 0 0 6px color-mix(in srgb, var(--pvp-vs-accent) 45%, transparent),
+    0 0 38px -8px color-mix(in srgb, var(--pvp-vs-accent) 75%, transparent);
+}
+
+.pvp-vs-portrait-frame::before {
+  position: absolute;
+  inset: 6px;
+  z-index: 1;
+  border: 1px solid color-mix(in srgb, var(--pvp-vs-accent) 68%, transparent);
+  border-radius: 50%;
+  content: '';
+  pointer-events: none;
+}
+
+.pvp-vs-portrait-frame::after {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), transparent 28%, transparent 72%, rgba(0, 0, 0, 0.34));
+  content: '';
+  pointer-events: none;
+}
+
+.pvp-vs-portrait-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pvp-vs-portrait-frame--unknown {
+  background: radial-gradient(circle, rgba(75, 22, 25, 0.8), rgba(12, 4, 7, 0.96));
+  color: color-mix(in srgb, var(--pvp-vs-blood) 74%, transparent);
+  font-family: var(--type-numeric, monospace);
+  font-size: clamp(2rem, 5vw, 3.2rem);
+}
+
+.pvp-vs-fighter-label {
+  max-width: min(260px, 100%);
+  overflow: hidden;
+  color: var(--pvp-vs-accent);
+  font-size: clamp(0.82rem, 1.35vw, 1.1rem);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  text-shadow: 0 2px 12px color-mix(in srgb, var(--pvp-vs-accent) 36%, transparent);
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .pvp-vs-mark {
-  color: #ef4444;
-  font-size: 56px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  color: var(--pvp-vs-blood);
+  font-size: clamp(2.5rem, 5.5vw, 4.5rem);
   font-weight: 900;
-  letter-spacing: 0.15em;
-  text-shadow: 0 0 40px rgba(239, 68, 68, 0.6), 0 4px 20px rgba(0, 0, 0, 0.9);
-  animation: pvp-vs-screen-pulse 1.5s ease-in-out infinite;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-shadow:
+    0 0 18px rgba(224, 75, 75, 0.6),
+    0 4px 0 rgba(78, 13, 18, 0.92),
+    0 12px 28px rgba(0, 0, 0, 0.8);
+  animation: pvp-vs-screen-pulse 1.6s ease-in-out infinite;
+}
+
+.pvp-vs-mark::before {
+  position: absolute;
+  top: -1.1rem;
+  left: 50%;
+  width: clamp(52px, 8vw, 92px);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--pvp-vs-gold), transparent);
+  content: '';
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.pvp-vs-mark::after {
+  position: absolute;
+  bottom: -1.1rem;
+  left: 50%;
+  width: clamp(52px, 8vw, 92px);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--pvp-vs-gold), transparent);
+  content: '';
+  transform: translateX(-50%) rotate(-45deg);
 }
 
 @keyframes pvp-vs-screen-slide-left {
   from {
     opacity: 0;
-    transform: translateX(-60px);
+    transform: translateX(-60px) scale(0.96);
   }
 
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateX(0) scale(1);
   }
 }
 
 @keyframes pvp-vs-screen-slide-right {
   from {
     opacity: 0;
-    transform: translateX(60px);
+    transform: translateX(60px) scale(0.96);
   }
 
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateX(0) scale(1);
   }
 }
 
 @keyframes pvp-vs-screen-pulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
 
   50% {
-    transform: scale(1.08);
+    transform: scale(1.06);
+  }
+}
+
+@media (max-width: 560px) {
+  .pvp-vs-stage {
+    width: min(440px, calc(100% - 1rem));
+    grid-template-columns: minmax(0, 1fr) 48px minmax(0, 1fr);
+    gap: 0.35rem;
+  }
+
+  .pvp-vs-fighter {
+    gap: 0.65rem;
+  }
+
+  .pvp-vs-portrait-frame {
+    width: clamp(86px, 25vw, 120px);
+  }
+
+  .pvp-vs-fighter-label {
+    max-width: 42vw;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+  }
+
+  .pvp-vs-mark {
+    font-size: 2rem;
+  }
+}
+
+@media (max-height: 500px) {
+  .pvp-vs-portrait-frame {
+    width: clamp(74px, 20vh, 112px);
+  }
+
+  .pvp-vs-fighter {
+    gap: 0.45rem;
   }
 }
 

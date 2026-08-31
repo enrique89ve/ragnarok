@@ -179,6 +179,8 @@ export const ChessCommandEnvelopeSchema = z
 		prevChessStateHash: z.string(),
 		prevCardsStateHash: z.string(),
 		command: ChessCommandSchema,
+		signerPubkey: z.string().regex(/^[A-Za-z0-9_-]{43}$/).optional(),
+		signature: z.string().regex(/^[A-Za-z0-9_-]{86}$/).optional(),
 	})
 	.strict()
 	.superRefine((env, ctx) => {

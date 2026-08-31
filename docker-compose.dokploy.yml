@@ -36,9 +36,11 @@ services:
       P2P_WEBRTC_NORMAL_MS: ${P2P_WEBRTC_NORMAL_MS:-8000}
       P2P_WEBRTC_AGGRESSIVE_MS: ${P2P_WEBRTC_AGGRESSIVE_MS:-5000}
       P2P_RELAY_CONNECT_MS: ${P2P_RELAY_CONNECT_MS:-8000}
-      P2P_ICE_SERVERS: ${P2P_ICE_SERVERS:-stun:testnetdev.ragnaroknft.quest:3478}
-      P2P_STUN_ENABLED: ${P2P_STUN_ENABLED:-true}
-      P2P_STUN_HOST: ${P2P_STUN_HOST:-0.0.0.0}
+      # WebRTC/STUN stay disabled until both peers complete the bilateral
+      # transport commit. Relay-only is the safe default for the shared testnet.
+      P2P_ICE_SERVERS: ${P2P_ICE_SERVERS:-}
+      P2P_STUN_ENABLED: ${P2P_STUN_ENABLED:-false}
+      P2P_STUN_HOST: ${P2P_STUN_HOST:-127.0.0.1}
       P2P_STUN_PORT: ${P2P_STUN_PORT:-3478}
       VITE_NETWORK_STAGE: ${VITE_NETWORK_STAGE:-testnet}
       VITE_RAGNAROK_PROTOCOL_ID: ${VITE_RAGNAROK_PROTOCOL_ID:-rk_game_testnet}
@@ -61,10 +63,6 @@ services:
       ENABLE_CHAIN_INDEXER: ${ENABLE_CHAIN_INDEXER:-true}
     expose:
       - "5000"
-    ports:
-      - target: 3478
-        published: 3478
-        protocol: udp
     networks:
       - dokploy-network
     volumes:

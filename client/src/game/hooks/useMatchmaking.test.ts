@@ -172,6 +172,34 @@ describe('useMatchmaking quick-match access helpers', () => {
 		);
 	});
 
+	it('turns a Keychain assertion into actionable Find feedback', async () => {
+		vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+			success: true,
+			challenge: {
+				protocol: 'ragnarok-matchmaking-delegation-v1',
+				delegationId: 'delegation-assertion',
+				account: 'alice',
+				peerId: 'peer-one',
+				rulesetHash: 'ruleset-hash',
+				engineHash: 'engine-hash',
+				serverNonce: 'nonce_assertion_1234',
+				issuedAt: Date.now(),
+				expiresAt: Date.now() + 600_000,
+			},
+		}), { status: 200 })));
+		matchmakingMocks.signHiveMessage.mockResolvedValueOnce({
+			success: false,
+			error: { code: 'ERR_ASSERTION', expected: true, actual: false },
+		});
+
+		await expect(buildMatchmakingDelegation({
+			peerId: 'peer-one',
+			accountId: 'alice',
+			rulesetHash: 'ruleset-hash',
+			engineHash: 'engine-hash',
+		})).rejects.toThrow('Posting key');
+	});
+
 	it('keeps local quick match behind local starter claim without requiring Hive or Keychain', () => {
 		expect(resolveQuickMatchQueueAccess({
 			accountId: null,

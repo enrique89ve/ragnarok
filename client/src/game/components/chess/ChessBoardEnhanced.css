@@ -88,7 +88,7 @@
 /* 1. BOARD FRAME - Premium Stone Slab with Gold Frame */
 .chess-board {
   position: relative;
-  background-image: url('/textures/board/texture.png');
+  background-image: url('/textures/board/texture.webp');
   background-size: 100% 100%;
   background-position: center;
   --board-corner-cut: 18px;
@@ -378,12 +378,6 @@
   text-transform: uppercase;
   font-size: 0.85rem;
   white-space: nowrap;
-}
-
-.chess-context-notice {
-  inline-size: min(36rem, calc(100vw - 32px));
-  max-inline-size: 100%;
-  text-wrap: balance;
 }
 
 @keyframes chess-banner-enter {

@@ -38,6 +38,7 @@ export interface CardRef {
 	instanceId?: string;
 	cardId?: number;
 	category?: CardCategory;
+	pieceIndex?: number;
 }
 
 export interface DeckVerificationResult {
@@ -89,6 +90,7 @@ export async function verifyDeckOwnership(
 			qaClaims.push({
 				authority: 'qa_full_catalog',
 				cardId: parsedCardId.data,
+				...(card.pieceIndex !== undefined ? { pieceIndex: card.pieceIndex } : {}),
 			});
 			continue;
 		}

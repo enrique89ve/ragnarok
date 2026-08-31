@@ -409,7 +409,7 @@
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: url("/ui/poker-action-socket-v2.png") center / contain no-repeat;
+  background: url("/ui/poker-action-socket-v2.webp") center / contain no-repeat;
   filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.84))
     drop-shadow(
       0 0 4px color-mix(in srgb, var(--poker-button-accent) 28%, transparent)

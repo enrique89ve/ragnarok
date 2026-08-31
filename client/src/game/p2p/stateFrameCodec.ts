@@ -104,6 +104,6 @@ export function decodeCompressedGameState(payload: CompressedGameStatePayload): 
 }
 
 export function decodeWireGameState(payload: GameStateWirePayload): GameState | null {
-	if ('gameState' in payload) return payload.gameState;
+	if ('gameState' in payload) return isGameStateLike(payload.gameState) ? payload.gameState : null;
 	return decodeCompressedGameState(payload);
 }

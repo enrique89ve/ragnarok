@@ -4,6 +4,7 @@ import { usePeerStore } from '../stores/peerStore';
 import { useNFTUsername } from '../nft/hooks';
 import { debug } from '../config/debugConfig';
 import { signHiveMessage } from '../../data/HiveAuth';
+import { getHiveKeychainError } from '../../data/HiveKeychain';
 import { getAuthenticatedHiveUsername } from '../../data/HiveSessionIdentity';
 import { isSharedNetworkEnvironment } from '../config/featureFlags';
 import { readP2PMatchTicket, readServerSignedChallenge } from '@shared/p2pAvailability';
@@ -179,7 +180,9 @@ export async function buildMatchmakingDelegation(input: {
 			title: 'Ragnarok: find opponent',
 		}),
 	);
-	if (!signed.success || !signed.signature) throw new Error(signed.error ?? 'Matchmaking authorization signature rejected.');
+	if (!signed.success || !signed.signature) {
+		throw new Error(getHiveKeychainError({ success: false, error: signed.error }, 'Matchmaking authorization signature rejected.'));
+	}
 	return {
 		delegation: { ...delegation, hiveSig: signed.signature },
 		ephemeralKey,

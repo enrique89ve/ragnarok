@@ -156,6 +156,6 @@ The previous likely root cause (`PhasePipIndicator` / `.hand-strength-compact` m
 - `client/public/art/orphaned/` — **28MB / 226 files**, literally named "orphaned". Verify no JSX refs, then delete.
 - `client/public/ui/` — 10 dead jpg/png files (no JSX/CSS refs):
   - `attack-button-v2.jpg`, `board-frame.jpg`, `card-frame-v1.jpg`
-  - `hero-frame-v1.jpg`, `hero-frame-v2-alt.jpg`, `pvp-background.png`
+  - `hero-frame-v1.jpg`, `hero-frame-v2-alt.jpg`
   - `ragnarok-sky-bg.jpg`, `ragnarok-sky-bg-alt.jpg`
   - `rune-chain-divider.jpg`, `rune-chain-divider-v2.jpg`

@@ -108,6 +108,7 @@ __tests__/
 !client/src/game/combat/vfx/pokerEventFx.test.ts
 !client/src/game/combat/vfx/handlers/pokerDramaHandlers.test.ts
 !client/src/game/effects/presentation/CombatPresentation.test.ts
+!client/src/game/effects/presentation/arenaEffectAnchors.test.ts
 !client/src/game/services/AttackResolutionService.test.ts
 !client/src/game/utils/effects/statusEffectUtils.test.ts
 !client/src/game/combat/vfx/combatVisualLifetime.test.ts

@@ -20,6 +20,10 @@ export type CardsDeckAnnounce = {
 	readonly heroId?: string;
 	readonly cardIds: readonly number[];
 	readonly nftLevels: readonly { readonly cardId: number; readonly level: number }[];
+	/** Piece grouping of `cardIds` (queen, rook, bishop, knight order). Present
+	 * only when the announce is a warband deck, not a saved single deck. Used
+	 * by the sender to derive per-piece ownership claims; not sent on the wire. */
+	readonly cardIdsByPiece?: readonly (readonly number[])[];
 };
 
 export type CardsDeckHandshakeInput = {
@@ -37,18 +41,21 @@ export function snapshotLocalCardsDeck(input: {
 	readonly selectedHeroId?: string | null;
 	readonly savedDecksJson?: string;
 	readonly warbandCardIds?: readonly number[];
+	readonly deckCardIdsByPiece?: readonly (readonly number[])[];
 	readonly hiveCollection?: readonly HiveCardAsset[];
 }): CardsDeckAnnounce {
 	const heroClass = input.selectedHeroClass ?? FALLBACK_HERO;
 	const heroId = input.selectedHeroId ?? undefined;
 	const fromSaved = snapshotSavedDeckCardIds(input.selectedDeckId, input.savedDecksJson);
-	const cardIds = fromSaved.length > 0
-		? fromSaved
-		: (input.warbandCardIds ?? []).filter((id) => Number.isInteger(id) && id >= 0);
+	const usesWarband = fromSaved.length === 0;
+	const cardIds = usesWarband
+		? (input.warbandCardIds ?? []).filter((id) => Number.isInteger(id) && id >= 0)
+		: fromSaved;
 	return {
 		heroClass,
 		...(heroId ? { heroId } : {}),
 		cardIds,
+		...(usesWarband && input.deckCardIdsByPiece ? { cardIdsByPiece: input.deckCardIdsByPiece } : {}),
 		nftLevels: snapshotNftLevels(cardIds, input.hiveCollection),
 	};
 }

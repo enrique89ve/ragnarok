@@ -1,29 +1,17 @@
-/* P2P poker turn status — peer-state pill with icon, title, detail, meta tags.
-   4 states: default (gold), opponent (red), reconnecting (warning), showdown/syncing (gray). */
+/* P2P poker status — quiet LIVE marker in the lower HUD rail.
+   Connection interruptions open the detail card automatically. */
 
 .p2p-poker-turn-status {
   --p2p-status-accent: color-mix(in srgb, var(--gold-300) 84%, white 8%);
   --p2p-status-bg: color-mix(in srgb, var(--gold-300) 9%, transparent);
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr);
-  gap: var(--space-10) 12px;
-  align-items: center;
-  min-height: 86px;
-  padding: var(--space-10) 12px;
-  border: 1px solid color-mix(in srgb, var(--p2p-status-accent) 42%, transparent);
-  border-radius: var(--radius-norse);
-  background:
-    linear-gradient(90deg, var(--p2p-status-bg), transparent 70%),
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--obsidian-850) 76%, transparent),
-      color-mix(in srgb, var(--obsidian-950) 92%, transparent)
-    );
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: flex-end;
+  justify-content: flex-end;
   color: var(--text-bright);
-  box-shadow:
-    0 14px 30px rgba(0, 0, 0, 0.32),
-    inset 0 1px 0 color-mix(in srgb, var(--ink-0) 7%, transparent);
-  backdrop-filter: blur(10px);
+  pointer-events: none;
 }
 
 .p2p-poker-turn-status.state-opponent {
@@ -36,10 +24,106 @@
   --p2p-status-bg: color-mix(in srgb, var(--warning-400, #fbbf24) 12%, transparent);
 }
 
+.p2p-poker-turn-status.state-error {
+  --p2p-status-accent: color-mix(in srgb, var(--danger-400) 88%, white 6%);
+  --p2p-status-bg: color-mix(in srgb, var(--danger-400) 12%, transparent);
+}
+
 .p2p-poker-turn-status.state-showdown,
 .p2p-poker-turn-status.state-syncing {
   --p2p-status-accent: color-mix(in srgb, var(--text-e2) 70%, transparent);
   --p2p-status-bg: color-mix(in srgb, var(--text-e2) 8%, transparent);
+}
+
+.p2p-poker-live-trigger {
+  display: inline-flex;
+  width: 152px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--p2p-status-accent) 42%, transparent);
+  border-radius: var(--radius-full);
+  background:
+    linear-gradient(90deg, var(--p2p-status-bg), transparent 82%),
+    color-mix(in srgb, var(--obsidian-950) 90%, transparent);
+  color: var(--p2p-status-accent);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 color-mix(in srgb, var(--ink-0) 8%, transparent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  pointer-events: auto;
+  text-transform: uppercase;
+  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.p2p-poker-live-trigger:hover {
+  border-color: color-mix(in srgb, var(--p2p-status-accent) 70%, transparent);
+  background-color: color-mix(in srgb, var(--p2p-status-bg) 55%, var(--obsidian-950));
+}
+
+.p2p-poker-live-trigger:active {
+  transform: translateY(1px);
+}
+
+.p2p-poker-live-trigger:focus-visible {
+  outline: 2px solid var(--p2p-status-accent);
+  outline-offset: 3px;
+}
+
+.p2p-poker-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 16%, transparent), 0 0 12px currentColor;
+}
+
+.p2p-poker-turn-status:not([data-expanded="true"]) .p2p-poker-live-dot {
+  animation: p2p-live-pulse 1.8s ease-in-out infinite;
+}
+
+.p2p-poker-live-label {
+  min-width: 3.8em;
+  text-align: center;
+}
+
+.p2p-poker-turn-status-details {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 10px);
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: var(--space-10) 12px;
+  width: 320px;
+  box-sizing: border-box;
+  align-items: center;
+  padding: var(--space-10) 12px;
+  border: 1px solid color-mix(in srgb, var(--p2p-status-accent) 42%, transparent);
+  border-radius: var(--radius-norse);
+  background:
+    linear-gradient(90deg, var(--p2p-status-bg), transparent 70%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--obsidian-850) 76%, transparent),
+      color-mix(in srgb, var(--obsidian-950) 94%, transparent)
+    );
+  color: var(--text-bright);
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 color-mix(in srgb, var(--ink-0) 7%, transparent);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+}
+
+.p2p-poker-turn-status-details[hidden] {
+  display: none;
 }
 
 .p2p-poker-turn-status-icon {
@@ -115,4 +199,17 @@
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+@keyframes p2p-live-pulse {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(0.9);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }

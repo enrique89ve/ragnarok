@@ -151,6 +151,11 @@ const GameCommandEnvelopeSchema = z.object({
 	commandId: NonEmptyString(128),
 	prevStateHash: HashString,
 	command: WireGameCommandSchema,
+	// Optional at the parser boundary so legacy/manual envelopes are dropped by
+	// the session-authority gate rather than crashing the decoder. Active
+	// matches must provide both fields before the engine is allowed to mutate.
+	signerPubkey: z.string().regex(/^[A-Za-z0-9_-]{43}$/).optional(),
+	signature: z.string().regex(/^[A-Za-z0-9_-]{86}$/).optional(),
 }).strict();
 
 // ── Lifecycle / handshake ──────────────────────────────────────────────────
@@ -311,6 +316,10 @@ const PokerActionSchema = z.object({
 	compact: CompactPokerActionSchema.optional(),
 	turnId: NonEmptyString(256),
 	decisionId: NonEmptyString(256),
+	seq: NonNegativeInt.optional(),
+	prevStateHash: HashString.optional(),
+	signerPubkey: z.string().regex(/^[A-Za-z0-9_-]{43}$/).optional(),
+	signature: z.string().regex(/^[A-Za-z0-9_-]{86}$/).optional(),
 	sentAtMs: NonNegativeInt.optional(),
 }).strict().superRefine((message, ctx) => {
 	if (!message.compact) return;

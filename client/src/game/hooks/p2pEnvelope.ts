@@ -30,4 +30,7 @@ export interface GameCommandEnvelope {
 	commandId: string;
 	prevStateHash: string;
 	command: WireGameCommand;
+	/** Ed25519 session-key proof over every routing and command field. */
+	signerPubkey?: string;
+	signature?: string;
 }

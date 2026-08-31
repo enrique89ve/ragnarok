@@ -16,7 +16,9 @@ export type ChessIntegrityDivergence = Readonly<{
 		| 'sequence_mismatch'
 		| 'prev_root_mismatch'
 		| 'next_root_mismatch'
-		| 'local_checkpoint_unavailable';
+		| 'local_checkpoint_unavailable'
+		| 'signature_unavailable'
+		| 'signature_failed';
 	commandId: string;
 	expectedRoot: Hash256 | null;
 	receivedRoot: Hash256 | null;

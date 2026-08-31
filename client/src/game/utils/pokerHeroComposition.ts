@@ -3,7 +3,7 @@ export const POKER_HERO_FRAME_SIZE = {
 	height: 1448,
 } as const;
 
-/** Alpha-visible bounds measured from player-v2.png. The transparent export
+/** Alpha-visible bounds measured from player-v2.webp. The transparent export
  * bleed is cropped at render time so the visible frame fills the 3:4 Hero
  * stage without changing the board-level footprint. */
 export const POKER_HERO_FRAME_VISIBLE_BOUNDS = {
@@ -13,11 +13,11 @@ export const POKER_HERO_FRAME_VISIBLE_BOUNDS = {
 	height: 1327,
 } as const;
 
-export const POKER_HERO_FRAME_ASSET = '/ui/poker-hero-frames/player-v2.png';
+export const POKER_HERO_FRAME_ASSET = '/ui/poker-hero-frames/player-v2.webp';
 
 export const POKER_HERO_CORNER_ASSETS = {
-	left: '/ui/poker-hero-corners/top-left-v2.png',
-	right: '/ui/poker-hero-corners/top-right-v2.png',
+	left: '/ui/poker-hero-corners/top-left-v2.webp',
+	right: '/ui/poker-hero-corners/top-right-v2.webp',
 } as const;
 
 export type HeroSide = 'player' | 'opponent';
@@ -44,17 +44,17 @@ export type IdentityOrnamentTransforms = Record<IdentityOrnamentKey, IdentityOrn
 
 export const IDENTITY_ORNAMENT_ASSETS: Record<HeroSide, readonly IdentityOrnamentAsset[]> = {
 	player: [
-		{ id: 'crest', label: 'Forge crest', src: '/ui/poker-hero-ornaments/player-crest-v1.png', width: 1634, height: 645 },
-		{ id: 'side', label: 'Flame side plate', src: '/ui/poker-hero-ornaments/player-side-v1.png', width: 323, height: 1536 },
-		{ id: 'seal', label: 'Ember seal', src: '/ui/poker-hero-ornaments/player-seal-v1.png', width: 1490, height: 843 },
-		{ id: 'plate', label: 'Straight ember plate', src: '/ui/poker-hero-ornaments/player-plate-v1.png', width: 2165, height: 207 },
-		{ id: 'relic', label: 'Forge relic', src: '/ui/poker-hero-ornaments/player-relic-v1.png', width: 591, height: 1255 },
+		{ id: 'crest', label: 'Forge crest', src: '/ui/poker-hero-ornaments/player-crest-v1.webp', width: 1634, height: 645 },
+		{ id: 'side', label: 'Flame side plate', src: '/ui/poker-hero-ornaments/player-side-v1.webp', width: 323, height: 1536 },
+		{ id: 'seal', label: 'Ember seal', src: '/ui/poker-hero-ornaments/player-seal-v1.webp', width: 1490, height: 843 },
+		{ id: 'plate', label: 'Straight ember plate', src: '/ui/poker-hero-ornaments/player-plate-v1.webp', width: 2165, height: 207 },
+		{ id: 'relic', label: 'Forge relic', src: '/ui/poker-hero-ornaments/player-relic-v1.webp', width: 591, height: 1255 },
 	],
 	opponent: [
-		{ id: 'crest', label: 'Rune crest', src: '/ui/poker-hero-ornaments/enemy-crest-v1.png', width: 1774, height: 791 },
-		{ id: 'seal', label: 'Frost seal', src: '/ui/poker-hero-ornaments/enemy-seal-v1.png', width: 1373, height: 910 },
-		{ id: 'plate', label: 'Straight rune plate', src: '/ui/poker-hero-ornaments/enemy-plate-v1.png', width: 2128, height: 232 },
-		{ id: 'relic', label: 'Rune relic', src: '/ui/poker-hero-ornaments/enemy-relic-v1.png', width: 626, height: 1518 },
+		{ id: 'crest', label: 'Rune crest', src: '/ui/poker-hero-ornaments/enemy-crest-v1.webp', width: 1774, height: 791 },
+		{ id: 'seal', label: 'Frost seal', src: '/ui/poker-hero-ornaments/enemy-seal-v1.webp', width: 1373, height: 910 },
+		{ id: 'plate', label: 'Straight rune plate', src: '/ui/poker-hero-ornaments/enemy-plate-v1.webp', width: 2128, height: 232 },
+		{ id: 'relic', label: 'Rune relic', src: '/ui/poker-hero-ornaments/enemy-relic-v1.webp', width: 626, height: 1518 },
 	],
 };
 

@@ -14,6 +14,7 @@ import { useHiveDataStore } from '@/data/HiveDataLayer';
 import { routes } from '@/lib/routes';
 import { getNFTBridge } from '@/game/nft';
 import type { Tier } from '../ornaments/RunicSigils';
+import { getHiveAvatarUrl, normalizeHiveUsername } from './hiveAvatar';
 
 interface UserChipProps {
 	username: string;
@@ -33,14 +34,6 @@ interface UserChipProps {
 
 const MENU_WIDTH = 196;
 const MENU_HEIGHT_ESTIMATE = 168;
-
-function normalizeHiveUsername(username: string): string {
-	return username.trim().toLowerCase().replace(/^@/, '');
-}
-
-function getHiveAvatarUrl(username: string): string {
-	return `https://images.hive.blog/u/${encodeURIComponent(normalizeHiveUsername(username))}/avatar`;
-}
 
 function getMenuPosition(anchor: HTMLElement): React.CSSProperties {
 	const rect = anchor.getBoundingClientRect();

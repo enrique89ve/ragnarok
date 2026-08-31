@@ -473,6 +473,7 @@ function scheduleDamageNumber(
 	seed: string,
 ): GameEffectHandle | null {
 	if (phase.impact.outcome !== 'damage' || phase.impact.healthDamage <= 0) return null;
+	const numberPoint = damageNumberPoint(phase.impact.target, targetPoint);
 
 	return scheduleDelayedChild(
 		`${seed}:${phase.id}:damage-number`,
@@ -480,7 +481,7 @@ function scheduleDamageNumber(
 		priority,
 		() => {
 			const effectId = scheduleDamageEffect(
-				targetPoint,
+				numberPoint,
 				phase.impact.healthDamage,
 				event.kind === 'counter' || phase.id === 'counter'
 					? 'combat-counter'
@@ -500,6 +501,20 @@ function scheduleDamageNumber(
 			};
 		},
 	);
+}
+
+function damageNumberPoint(target: PresentationTarget, impactPoint: Point): Point {
+	if (target.type === 'hero') {
+		return resolveArenaEffectPoint({
+			entityId: `${target.side}-hero`,
+			anchor: 'health-bar',
+		}) ?? { x: impactPoint.x, y: impactPoint.y + 86 };
+	}
+
+	// Keep the number just above a card/field receiver so it does not cover the
+	// card art or collide with the center HUD. The impact burst still lands on
+	// the receiver's center.
+	return { x: impactPoint.x, y: impactPoint.y - 48 };
 }
 
 function scheduleImpactPhase(

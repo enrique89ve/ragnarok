@@ -58,7 +58,7 @@ function useAuthenticatedHiveUsername(): string | null {
   Opponent hero identity isn't known until game state syncs (after this screen
   closes), so we show their peer ID as a stable identifier and a silhouette.
 */
-function PvPVSScreen({ playerArmy, opponentArmy, opponentPeerId, onComplete }: { playerArmy: ArmySelectionType; opponentArmy: ArmySelectionType | null; opponentPeerId: string | null; onComplete: () => void }) {
+function PvPVSScreen({ playerArmy, opponentArmy, opponentPeerId, playerUsername, opponentUsername, onComplete }: { playerArmy: ArmySelectionType; opponentArmy: ArmySelectionType | null; opponentPeerId: string | null; playerUsername: string | null | undefined; opponentUsername: string | null | undefined; onComplete: () => void }) {
 	useEffect(() => {
 		const timer = setTimeout(onComplete, 3200);
 		return () => clearTimeout(timer);
@@ -68,43 +68,33 @@ function PvPVSScreen({ playerArmy, opponentArmy, opponentPeerId, onComplete }: {
 	const playerPortrait = resolveHeroPortrait(playerHeroId);
 	const opponentHeroId = opponentArmy?.queen?.id || opponentArmy?.rook?.id || null;
 	const opponentPortrait = opponentHeroId ? resolveHeroPortrait(opponentHeroId) : null;
-		const opponentLabel = opponentArmy?.king?.name?.toUpperCase()
+		const playerLabel = playerUsername ? `@${playerUsername}` : 'YOU';
+		const opponentLabel = opponentUsername ? `@${opponentUsername}` : opponentArmy?.king?.name?.toUpperCase()
 			?? (opponentPeerId ? `${opponentPeerId.slice(0, 8)}…` : 'OPPONENT');
 		return (
 			<div className="pvp-vs-screen">
+				<div className="pvp-vs-stage" role="status" aria-live="polite">
 				{/* Player hero */}
 				<div className="pvp-vs-fighter pvp-vs-fighter-left">
-					<div style={{
-						width: 140, height: 140, borderRadius: '50%', overflow: 'hidden',
-						border: '3px solid rgba(212,175,55,0.7)',
-						boxShadow: '0 0 30px rgba(212,175,55,0.3)',
-					}}>
-						<img src={playerPortrait} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+					<div className="pvp-vs-portrait-frame">
+						<img src={playerPortrait} alt={`${playerLabel} hero portrait`} width={140} height={140} fetchPriority="high" decoding="async" />
 					</div>
-					<span style={{ color: '#ffd97a', fontSize: 18, fontWeight: 700, letterSpacing: '0.1em' }}>YOU</span>
+					<span className="pvp-vs-fighter-label">{playerLabel}</span>
 				</div>
 
 				{/* VS text */}
-				<div className="pvp-vs-mark">
-					VS
-				</div>
+				<div className="pvp-vs-mark" role="img" aria-label="Versus">VS</div>
 
 				{/* Opponent — real portrait when army announced, mystery silhouette otherwise */}
 				<div className="pvp-vs-fighter pvp-vs-fighter-right">
-					<div style={{
-						width: 140, height: 140, borderRadius: '50%', overflow: 'hidden',
-						border: '3px solid rgba(150,30,30,0.7)',
-					boxShadow: '0 0 30px rgba(150,30,30,0.3)',
-					background: opponentPortrait ? undefined : 'radial-gradient(circle, rgba(60,20,20,0.8) 0%, rgba(20,5,5,0.9) 100%)',
-					display: 'flex', alignItems: 'center', justifyContent: 'center',
-					fontSize: 48, color: 'rgba(239,68,68,0.5)',
-				}}>
+					<div className={`pvp-vs-portrait-frame ${opponentPortrait ? '' : 'pvp-vs-portrait-frame--unknown'}`}>
 					{opponentPortrait
-						? <img src={opponentPortrait} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-						: '?'}
+						? <img src={opponentPortrait} alt={`${opponentLabel} hero portrait`} width={140} height={140} loading="lazy" decoding="async" />
+						: <span aria-hidden={true}>?</span>}
 					</div>
-					<span style={{ color: '#f17070', fontSize: 18, fontWeight: 700, letterSpacing: '0.1em' }}>{opponentLabel}</span>
+					<span className="pvp-vs-fighter-label">{opponentLabel}</span>
 				</div>
+			</div>
 			</div>
 		);
 	}
@@ -143,7 +133,7 @@ export const MultiplayerGame: React.FC = () => {
 	const connectAttemptRoomRef = useRef<string | null>(null);
 	const persistedArmy = useWarbandStore(selectArmy);
 	const navigate = useNavigate();
-	const { status: matchmakingStatus, roomId, joinQueue, leaveQueue } = useMatchmaking();
+	const { status: matchmakingStatus, roomId, offer, joinQueue, leaveQueue } = useMatchmaking();
 	const opponentArmyFromPeer = usePeerStore(s => s.opponentArmy);
 	const p2pInitApplied = usePeerStore(s => s.p2pInitApplied);
 	const p2pSessionLocalAuthorized = usePeerStore(s => s.p2pSessionLocalAuthorized);
@@ -356,6 +346,8 @@ export const MultiplayerGame: React.FC = () => {
 					playerArmy={readyArmy}
 					opponentArmy={opponentArmyFromPeer}
 					opponentPeerId={usePeerStore.getState().remotePeerId}
+					playerUsername={hiveUsername}
+					opponentUsername={offer?.opponent.username}
 					onComplete={() => { setShowVS(false); setGameStarted(true); }}
 				/>
 			);

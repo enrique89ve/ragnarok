@@ -93,6 +93,10 @@ const PokerActionControlSchema = z.object({
 	compact: CompactPokerActionSchema.optional(),
 	turnId: z.string().min(1).max(256),
 	decisionId: z.string().min(1).max(256),
+	seq: z.number().int().nonnegative().optional(),
+	prevStateHash: z.string().min(1).max(256).optional(),
+	signerPubkey: z.string().regex(/^[A-Za-z0-9_-]{43}$/).optional(),
+	signature: z.string().regex(/^[A-Za-z0-9_-]{86}$/).optional(),
 	sentAtMs: z.number().int().nonnegative().optional(),
 }).strict();
 

@@ -388,8 +388,20 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
 
     const prev = prevHealthRef.current;
     if (prev) {
-      const getDamagePos = (targetId: string) =>
-        captureVisualSnapshot(presentationTargetForEntityId(targetId))?.center ?? null;
+      const getDamagePos = (targetId: string) => {
+        const target = presentationTargetForEntityId(targetId);
+        const snapshot = captureVisualSnapshot(target);
+        if (!snapshot) return null;
+        return target.type === 'hero'
+          ? {
+              x: snapshot.center.x,
+              y: snapshot.rect.top + snapshot.rect.height * 0.82,
+            }
+          : {
+              x: snapshot.center.x,
+              y: snapshot.rect.top + snapshot.rect.height * 0.32,
+            };
+      };
       const triggerHealthDamage = (targetId: string, damage: number) => {
         const showNumber = !consumeCanonicalDamageClaim(targetId, damage);
         const pos = getDamagePos(targetId);

@@ -4,9 +4,14 @@ import { normalizeHiveUsername } from '../../shared/p2pAvailability';
 
 export const HIVE_WEB_SESSION_COOKIE = 'ragnarok-hive-session';
 export const HIVE_WEB_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+// Sliding renewal must not turn a browser tab into an immortal credential.
+// The absolute cap is intentionally explicit so deployments can shorten it
+// without changing cookie semantics.
+export const HIVE_WEB_SESSION_ABSOLUTE_TIMEOUT_MS = 24 * 60 * 60 * 1000;
 
 type HiveWebSession = {
 	readonly username: string;
+	readonly createdAt: number;
 	expiresAt: number;
 	lastSeenAt: number;
 };
@@ -30,9 +35,15 @@ export function getHiveWebSessionUsernameFromCookie(cookieHeader: string | undef
 	const now = Date.now();
 	pruneExpiredSessions(now);
 	const session = sessions.get(token);
-	if (!session || session.expiresAt <= now) return null;
+	if (!session || session.expiresAt <= now || session.createdAt + HIVE_WEB_SESSION_ABSOLUTE_TIMEOUT_MS <= now) {
+		if (session) sessions.delete(token);
+		return null;
+	}
 	session.lastSeenAt = now;
-	session.expiresAt = now + HIVE_WEB_SESSION_TTL_MS;
+	session.expiresAt = Math.min(
+		now + HIVE_WEB_SESSION_TTL_MS,
+		session.createdAt + HIVE_WEB_SESSION_ABSOLUTE_TIMEOUT_MS,
+	);
 	return session.username;
 }
 
@@ -51,7 +62,12 @@ export function issueHiveWebSession(res: Response, username: string): void {
 	if (!normalized) throw new Error('Cannot issue a Hive session without a username');
 	const token = randomBytes(32).toString('base64url');
 	const now = Date.now();
-	sessions.set(token, { username: normalized, expiresAt: now + HIVE_WEB_SESSION_TTL_MS, lastSeenAt: now });
+	sessions.set(token, {
+		username: normalized,
+		createdAt: now,
+		expiresAt: now + HIVE_WEB_SESSION_TTL_MS,
+		lastSeenAt: now,
+	});
 	res.cookie(HIVE_WEB_SESSION_COOKIE, token, {
 		httpOnly: true,
 		secure: process.env.NODE_ENV === 'production',

@@ -81,8 +81,8 @@ export const P2PStatusBadge: React.FC<P2PStatusBadgeProps> = ({ className = '' }
 				title={`P2P Multiplayer — ${transportRoleLabel} — ${config.label}`}
 				style={{
 					position: 'fixed',
-					top: '8px',
-					right: '8px',
+					bottom: '18px',
+					right: '18px',
 					zIndex: 900,
 					display: 'flex',
 					alignItems: 'center',

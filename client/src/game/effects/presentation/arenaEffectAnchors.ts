@@ -1,6 +1,6 @@
 import {
 	getArenaVfxCombatantTarget,
-	getArenaVfxHeroTarget,
+	getArenaVfxHeroSurfaceTarget,
 	getArenaVfxMinionFieldTarget,
 	getElementCenter,
 	type QueryRoot,
@@ -47,7 +47,7 @@ export function resolveArenaEffectPoint(
 	const yRatio = anchorYRatio(anchor);
 
 	if (isHeroEntity(entityId)) {
-		const hero = getArenaVfxHeroTarget(isOpponentEntity(entityId) ? 'opponent' : 'player', root);
+		const hero = getArenaVfxHeroSurfaceTarget(isOpponentEntity(entityId) ? 'opponent' : 'player', root);
 		return hero ? getElementCenter(hero, yRatio) : null;
 	}
 
@@ -56,5 +56,13 @@ export function resolveArenaEffectPoint(
 
 	if (anchor !== 'board-slot') return null;
 	const field = getArenaVfxMinionFieldTarget(isOpponentEntity(entityId) ? 'opponent' : 'player', root);
-	return field ? getElementCenter(field, yRatio) : null;
+	if (field?.querySelector('[data-instance-id], [data-card-id]')) {
+		return getElementCenter(field, yRatio);
+	}
+
+	// An empty minion row is not a gameplay receiver. Keep combat feedback on
+	// the defending avatar instead of painting an unexplained effect in the
+	// middle of the board.
+	const hero = getArenaVfxHeroSurfaceTarget(isOpponentEntity(entityId) ? 'opponent' : 'player', root);
+	return hero ? getElementCenter(hero, yRatio) : null;
 }

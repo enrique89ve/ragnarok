@@ -11,10 +11,10 @@ const BLUE_GLOW = 0x62b8ff;
 type ThorHammerPose = 'left' | 'right' | 'strike' | 'front';
 
 const HAMMER_POSE_URLS: Record<ThorHammerPose, string> = {
-	left: '/assets/vfx/thor-hammer/hammer-left.png',
-	right: '/assets/vfx/thor-hammer/hammer-right.png',
-	strike: '/assets/vfx/thor-hammer/hammer-strike.png',
-	front: '/assets/vfx/thor-hammer/hammer-front.png',
+	left: '/assets/vfx/thor-hammer/hammer-left.webp',
+	right: '/assets/vfx/thor-hammer/hammer-right.webp',
+	strike: '/assets/vfx/thor-hammer/hammer-strike.webp',
+	front: '/assets/vfx/thor-hammer/hammer-front.webp',
 };
 
 type ThorHammerTextures = Record<ThorHammerPose, Texture>;

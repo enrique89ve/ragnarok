@@ -99,6 +99,17 @@ describe('parseWireMessage — game_command envelope (cards integrity)', () => {
 		expect(result?.type).toBe('game_command');
 	});
 
+	it('rejects malformed gameplay signature fields at the wire boundary', () => {
+		expect(parseWireMessage({
+			...validEnvelope,
+			signerPubkey: 'not-base64url',
+		})).toBeNull();
+		expect(parseWireMessage({
+			...validEnvelope,
+			signature: 'short',
+		})).toBeNull();
+	});
+
 	it('accepts a Quick Match room id in a game command envelope', () => {
 		const matchId = `${'a'.repeat(36)}-${'b'.repeat(36)}`;
 		expect(parseWireMessage({ ...validEnvelope, matchId })).not.toBeNull();
@@ -258,6 +269,10 @@ describe('parseWireMessage — handshake variants', () => {
 			stateCodec: GAME_STATE_WIRE_CODEC,
 			compressedGameState: 'not-a-gzip-payload',
 		})).toBeNull();
+	});
+
+	it('rejects uncompressed state objects that do not meet the state contract', () => {
+		expect(decodeWireGameState({ gameState: { turnNumber: 1 } })).toBeNull();
 	});
 
 	it('rejects init with non-boolean isHost', () => {
@@ -487,6 +502,21 @@ describe('parseWireMessage — poker action and clock variants', () => {
 
 	it('accepts poker_action when legacy fields and compact tuple agree', () => {
 		expect(parseWireMessage(validPokerAction)).not.toBeNull();
+	});
+
+	it('accepts a poker_action carrying its per-action signature binding', () => {
+		expect(parseWireMessage({
+			...validPokerAction,
+			seq: 3,
+			prevStateHash: 'a'.repeat(64),
+			signerPubkey: 'A'.repeat(43),
+			signature: 'B'.repeat(86),
+		})).not.toBeNull();
+	});
+
+	it('rejects malformed poker per-action signature fields', () => {
+		expect(parseWireMessage({ ...validPokerAction, signerPubkey: 'short' })).toBeNull();
+		expect(parseWireMessage({ ...validPokerAction, signature: 'short' })).toBeNull();
 	});
 
 	it('rejects poker_action without an explicit origin', () => {

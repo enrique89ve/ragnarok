@@ -58,9 +58,19 @@ import {
 	captureChessIntegrityCheckpoint,
 } from './chessIntegrityCheckpoint';
 import { chessIntegrityMonitor } from './chessIntegrityMonitor';
+import type { GameplaySignatureInput } from '../protocol/signedGameplayEnvelope';
 
 let outgoingChessSeq = 0;
 let pendingChessEnvelope: ChessCommandEnvelope | null = null;
+type ChessGameplaySigner = (input: GameplaySignatureInput) => Promise<Readonly<{
+	signerPubkey: string;
+	signature: string;
+}> | null>;
+let chessGameplaySigner: ChessGameplaySigner | null = null;
+
+export function setChessGameplaySigner(signer: ChessGameplaySigner | null): void {
+	chessGameplaySigner = signer;
+}
 
 /**
  * Snapshot the local chess board for hashing. The combat store's
@@ -194,9 +204,13 @@ function dispatchChessCommand(
 		console.warn('[chessWireSender] SKIP: not connected', { connectionState });
 		return false;
 	}
+	if (!peerState.p2pSessionLocalAuthorized || !peerState.p2pSessionRemoteAuthorized || !chessGameplaySigner) {
+		console.warn('[chessWireSender] SKIP: session authorization is incomplete');
+		return false;
+	}
 
-	const envelope: ChessCommandEnvelope = {
-		type: 'chess_command',
+	const unsignedEnvelope = {
+		type: 'chess_command' as const,
 		matchId,
 		seq: outgoingChessSeq,
 		commandId: crypto.randomUUID(),
@@ -216,7 +230,7 @@ function dispatchChessCommand(
 	if (preCheckpoint === null || postCheckpoint === null) {
 		chessIntegrityMonitor.quarantine({
 			reason: 'local_checkpoint_unavailable',
-			commandId: envelope.commandId,
+			commandId: unsignedEnvelope.commandId,
 			expectedRoot: preCheckpoint?.root ?? null,
 			receivedRoot: postCheckpoint?.root ?? null,
 			detail: 'cannot build a complete chess+cards transition checkpoint',
@@ -226,15 +240,15 @@ function dispatchChessCommand(
 	}
 	const intentHash = computeTransitionIntentHash({
 		matchId,
-		seq: envelope.seq,
-		commandId: envelope.commandId,
+		seq: unsignedEnvelope.seq,
+		commandId: unsignedEnvelope.commandId,
 		prevRoot: preCheckpoint.root,
 		action: command,
 	});
 	const registration = chessIntegrityMonitor.register({
 		matchId,
-		seq: envelope.seq,
-		commandId: envelope.commandId,
+		seq: unsignedEnvelope.seq,
+		commandId: unsignedEnvelope.commandId,
 		intentHash,
 		prevRoot: preCheckpoint.root,
 		nextRoot: postCheckpoint.root,
@@ -243,43 +257,73 @@ function dispatchChessCommand(
 		debug.warn(`[chessWireSender] transition blocked — ${registration.reason}`);
 		return false;
 	}
-	pendingChessEnvelope = envelope;
-	outgoingChessSeq += 1;
+	const signInput: GameplaySignatureInput = {
+		matchId,
+		seq: unsignedEnvelope.seq,
+		commandId: unsignedEnvelope.commandId,
+		prevStateHash: `${prev.chess}|${prev.cards}`,
+		command,
+	};
+	void chessGameplaySigner(signInput).then((signed) => {
+		if (!signed) {
+			debug.warn('[chessWireSender] SKIP: gameplay signature unavailable');
+			chessIntegrityMonitor.quarantine({
+				reason: 'signature_unavailable',
+				commandId: unsignedEnvelope.commandId,
+				expectedRoot: postCheckpoint.root,
+				receivedRoot: null,
+				detail: 'the browser session key did not produce a gameplay signature',
+			});
+			return;
+		}
+		const envelope: ChessCommandEnvelope = { ...unsignedEnvelope, ...signed };
+		pendingChessEnvelope = envelope;
+		outgoingChessSeq += 1;
 
-	// Unconditional console.log — temporary diagnostic. Will move back to
-	// debug.chess once the channel is verified active for users.
-	console.log('[chessWireSender] SEND chess_command', {
-		commandType: command.type,
-		seq: envelope.seq,
-		commandId: envelope.commandId.slice(0, 8),
-		matchId: matchId.slice(0, 8),
-		mySide: myCanonicalSide,
-		piece: command.pieceId.slice(0, 8),
-		from: command.from,
-		to: command.to,
-		prevChessHash: prev.chess ? prev.chess.slice(0, 12) : '(empty)',
-		prevCardsHash: prev.cards ? prev.cards.slice(0, 12) : '(empty)',
-	});
-	send(envelope);
-	const actorId = usePeerStore.getState().myPeerId;
-	if (actorId) {
-		usePeerStore.getState().recordCanonicalAction({
-			actionId: envelope.commandId,
-			actorId,
-			canonicalOrder,
+		// Unconditional console.log — temporary diagnostic. Will move back to
+		// debug.chess once the channel is verified active for users.
+		console.log('[chessWireSender] SEND chess_command', {
+			commandType: command.type,
+			seq: envelope.seq,
+			commandId: envelope.commandId.slice(0, 8),
+			matchId: matchId.slice(0, 8),
+			mySide: myCanonicalSide,
+			piece: command.pieceId.slice(0, 8),
+			from: command.from,
+			to: command.to,
+			prevChessHash: prev.chess ? prev.chess.slice(0, 12) : '(empty)',
+			prevCardsHash: prev.cards ? prev.cards.slice(0, 12) : '(empty)',
 		});
-	}
+		send(envelope);
+		const actorId = usePeerStore.getState().myPeerId;
+		if (actorId) {
+			usePeerStore.getState().recordCanonicalAction({
+				actionId: envelope.commandId,
+				actorId,
+				canonicalOrder,
+			});
+		}
 
-	// Transcript: delegated to the bridge-registered observer (C3). Pre-C3
-	// this module called `recordMove` inline; centralising in the bridge
-	// keeps a single audit point for transcript ordering policy (OPEN-2).
-	try {
-		chessSendObserver?.(envelope, transcriptExtra);
-	} catch (error) {
-		debug.warn('[chessWireSender] transcript observer failed after send', error);
-	}
+		// Transcript: delegated to the bridge-registered observer (C3). Pre-C3
+		// this module called `recordMove` inline; centralising in the bridge
+		// keeps a single audit point for transcript ordering policy (OPEN-2).
+		try {
+			chessSendObserver?.(envelope, transcriptExtra);
+		} catch (error) {
+			debug.warn('[chessWireSender] transcript observer failed after send', error);
+		}
+	}).catch((error: unknown) => {
+		debug.warn('[chessWireSender] gameplay signature failed', error);
+		chessIntegrityMonitor.quarantine({
+			reason: 'signature_failed',
+			commandId: unsignedEnvelope.commandId,
+			expectedRoot: postCheckpoint.root,
+			receivedRoot: null,
+			detail: 'browser gameplay signing failed before the command could be sent',
+		});
+	});
 
-	debug.chess(`[chessWireSender] sent ${command.type} seq=${envelope.seq} piece=${command.pieceId.slice(0, 8)} (${command.from.row},${command.from.col})→(${command.to.row},${command.to.col})`);
+	debug.chess(`[chessWireSender] queued signed ${command.type} seq=${unsignedEnvelope.seq} piece=${command.pieceId.slice(0, 8)} (${command.from.row},${command.from.col})→(${command.to.row},${command.to.col})`);
 	return true;
 }
 
@@ -376,5 +420,6 @@ export function sendChessCombatInitiated(attack: ChessCombatInitiatedEmit, prev:
 export function resetChessWireSender(): void {
 	outgoingChessSeq = 0;
 	pendingChessEnvelope = null;
+	chessGameplaySigner = null;
 	chessIntegrityMonitor.reset();
 }

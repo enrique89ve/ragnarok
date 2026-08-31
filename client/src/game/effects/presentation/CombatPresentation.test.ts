@@ -69,6 +69,15 @@ describe('combat presentation contract', () => {
 		expect(presentation.counter).toBeUndefined();
 	});
 
+	it('routes a missing minion receiver to the defending hero instead of an empty field', () => {
+		const presentation = buildCombatPresentation(makeStep({
+			targetId: null,
+			targetType: 'minion',
+		}));
+
+		expect(presentation.target.target).toEqual({ type: 'hero', side: 'opponent' });
+	});
+
 	it('selects recipes from visual outcomes and keeps thresholds pure', () => {
 		expect(impactLevelFor(0)).toBe('light');
 		expect(impactLevelFor(4)).toBe('normal');

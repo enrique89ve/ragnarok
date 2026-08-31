@@ -150,9 +150,11 @@ hop. For a turn-based card game this latency is negligible.
 
 **Frame validation** (`p2pRelay.ts`):
 - Maximum payload: 16 KB (`P2P_RELAY_MAX_PAYLOAD_BYTES`).
-- Initial and recovery `gameState` frames use `json+gzip+base64url@1`
-  (`compressedGameState`) so the relay stays below the 16 KB cap while the
-  receiver restores the same `GameState` before applying `flipGameState`.
+- The relay also enforces a per-connection message/byte budget and a bounded
+  room count. Oversized, burst, or malformed frames are dropped before JSON
+  parsing/fan-out.
+- In production/shared-network mode the relay upgrade requires the same
+  HttpOnly Hive session cookie and ticket account binding as Control WS.
 - Must be valid JSON with a `type` string field.
 - `type` must be in the whitelist (see §4 for the canonical list). Reserved
   prefix `__` is blocked from the client side (only the relay emits `__sys`
@@ -269,8 +271,8 @@ recreated manager from reintroducing WebRTC mid-match.
   state, never a transport timeout.
 - User actions are sent as compact intent envelopes, not full state dumps.
   Chess/poker carry the minimum semantic action plus optional compact tuples.
-  Cards applies `game_command` locally on both peers; host `gameState` is
-  recovery-on-`hash_mismatch` only (OPEN-8 closed).
+  Cards applies only Ed25519-signed `game_command` envelopes after both session
+  keys are authorized; peer-authored `gameState` frames are never installed.
 - Same-tab network loss enters `grace_period`/`reconnecting`; the local seed,
   transcript, seq counters, chess sender state, and queued messages are
   preserved. Reconnect allows two automatic attempts inside a 60s window
@@ -515,7 +517,7 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `deck_verify` | both | both | Phase 2: bind source-aware `protocolVersion: 2` claims to the announced deck; shared-network init waits for identity + IndexedDB + server approval |
 | `init` | host → client | legacy | Phase 2 leftover: ignored after handshake init |
 | `game_command` (envelope) | both | both | Phase 3 cards and Poker auxiliary intents: both peers apply locally |
-| `gameState` | host → client | host recovery | `hash_mismatch` recovery snapshot only, compressed as `json+gzip+base64url@1` |
+| `gameState` | — | — | Rejected as an authority-bearing recovery frame; recover by signed transcript replay or fail closed |
 | `chess_command` (envelope) | both | both (symmetric) | Phase 3 chess: discriminated union of `chess_move` (quiet), `chess_attack` (instant-kill capture), and `chess_combat_initiated` (non-instant capture into poker) — see §5 |
 | `transition_receipt_v1` | receiver → command sender | both (symmetric) | Post-commit chess receipt binding the command intent to the receiver's pre/post chess+cards integrity roots. A rejection or root mismatch quarantines further local chess actions. |
 | `p2p_leave` | peer → peer | leaving peer | Explicit lifecycle event; cancellation before engine commitment, technical defeat after commitment |
@@ -538,7 +540,7 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `session_renewal` | peer→peer | both | **Future ADR 0004 settlement path**; disabled because current matches cannot request a reload Keychain signature |
 | `session_resumed` | peer→peer | both | **Future ADR 0004 settlement path**; not a current testnet release gate |
 | `state_sync_request` | peer→peer | both | Ask the **peer** for missing transcript leaves after reconnect or hard-reload rejoin. The relay only fans the request out. |
-| `action_envelope` | peer→peer | broadcaster | **Future ADR 0004 settlement path**: per-action signed envelope; current gameplay uses its existing deterministic command envelopes |
+| `action_envelope` | peer→peer | broadcaster | Signed transcript leaf; retained for replay/audit and not an alternative to the signed gameplay envelope |
 
 Envelope schemas live next to their handlers:
 - Cards: `client/src/game/hooks/p2pEnvelope.ts` (`GameCommandEnvelope`)
@@ -572,20 +574,22 @@ forward `gameState` dumps are off.
 
 Cards-authority *dumps* go through `isCardsAuthorityRole` (false in the
 default symmetric mode). Do not read `peerStore.isHost` as a gameplay-authority
-proxy. Recovery snapshots and the hash beacon still use the transport host.
+proxy. The hash beacon may use the transport host for diagnostics, but a full
+peer-authored state is never a recovery authority.
 
 The single most important piece of context to hold when working on the
 wire is: **a wrong authority assumption causes silent state divergence**.
 Read `deriveAuthority` once at the entry point, propagate the result —
 never re-derive ad-hoc with `isHost`.
 
-### Cards Phase — Symmetric apply, host recovery (OPEN-8)
+### Cards Phase — Symmetric apply, signed commands
 
 Pattern: both peers announce a single deck+claims snapshot, pass the
 shared-network verification gate when applicable, then call
-`initGameFromHandshake`, send `game_command`, and apply locally. The transport host still sends
-`hash_check` and a `gameState` snapshot on `hash_mismatch`. There is no
-forward `gameState` dump after each action.
+`initGameFromHandshake`. Every gameplay `game_command` is signed with the
+authorized Ed25519 session key before it is sent or applied locally. A
+peer-authored `gameState` snapshot is never installed; divergence is fail-closed
+until signed transcript replay is available.
 
 Implementation:
 - Local action plan: `planCardsLocalAction` in
@@ -610,6 +614,11 @@ Implementation:
 
 Pattern: both peers validate AND apply each chess_command independently.
 No host-only routing.
+
+Every `chess_command` is signed with the browser's authorized ephemeral
+Ed25519 session key. The signature covers `matchId`, `seq`, `commandId`, both
+pre-state hashes, and the inner command; the receiver checks the remote
+session key before running the chess reducer.
 
 **Wire surface** (P0 combat sync):
 - `chess_move`: quiet move (no capture). Both peers apply via
@@ -731,6 +740,11 @@ Implementation:
   for receiver-side duplicate rejection. It also carries required
   `origin: 'player' | 'timeout'`; timeout is semantic gameplay input, not a
   client permission flag.
+- Every `poker_action` carries a browser-generated Ed25519 signature bound to
+  `matchId`, a monotonic per-session `seq`, `decisionId`, the pre-action Poker
+  state hash, and the canonical action fields. The receiver verifies the
+  remote session key and pre-action hash before applying it; Keychain is never
+  prompted for an individual action.
 - On receive, the engine result is discriminated as `applied` or `rejected`.
   Only `applied` commits the decision id to dedup/eviction, records the
   transcript move, and closes the betting round. A rejected/no-op engine action
@@ -838,8 +852,9 @@ against the local user's `getNFTBridge().getUsername()`
 effect):
 1. `matchId` binds every action envelope to a specific match — replays
    across matches are rejected.
-2. Cards integrity uses `prevStateHash` on `game_command` plus host
-   `hash_check` / `hash_mismatch` recovery snapshots (not forward dumps).
+2. Cards, Chess, and Poker integrity use a pre-state hash plus an Ed25519
+   signature over the match, sequence/correlation id, state hash, and command.
+   Unsolicited full-state recovery snapshots are rejected.
 3. `seed_reveal.hiveUsername` is the only place identity is announced;
    `deck_verify` cross-verifies source-aware deck claims (`starter-entitlement`,
    `nft-custody`, or reset-epoch-scoped `qa_full_catalog`) against the chain

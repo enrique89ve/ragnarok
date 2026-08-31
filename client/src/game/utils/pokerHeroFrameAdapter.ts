@@ -59,7 +59,7 @@ export type PokerHeroFrameRenderPlan = Readonly<{
 }>;
 
 const DEFAULT_ART_WINDOW: PokerHeroArtWindow = {
-	// Measured from the transparent inner opening of player-v2.png.
+	// Measured from the transparent inner opening of player-v2.webp.
 	x: 11.1,
 	y: 7.1,
 	width: 77.7,

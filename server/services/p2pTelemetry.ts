@@ -19,7 +19,8 @@ export type P2PRelayErrorReason =
 	| 'ticket_mismatch'
 	| 'bad_ticket_signature'
 	| 'ticket_server_unconfigured'
-	| 'starter_claim_required';
+	| 'starter_claim_required'
+	| 'hive_session_required';
 
 export type P2PRelayTelemetrySnapshot = Readonly<{
 	activeRooms: number;

@@ -520,16 +520,13 @@
 
 .unified-combat-arena [data-zone="p2p-poker-turn-status"] {
   position: absolute;
-  left: var(--poker-zone-wagerPanel-x);
-  top: calc(
-    var(--poker-zone-wagerPanel-y) +
-      var(--poker-zone-wagerPanel-h) + 10px
-  );
+  left: var(--poker-zone-turnBadge-x);
+  top: var(--poker-zone-turnBadge-y);
   right: auto;
   box-sizing: border-box;
-  width: min(var(--poker-zone-wagerPanel-w), 360px);
-  transform: rotate(var(--poker-zone-wagerPanel-rot));
-  transform-origin: top left;
+  width: var(--poker-zone-turnBadge-w);
+  height: var(--poker-zone-turnBadge-h);
+  transform: none;
   z-index: calc(var(--arena-z-wager-panel) + 1);
 }
 

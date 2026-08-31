@@ -46,4 +46,31 @@ describe('HiveKeychain response helpers', () => {
 			success: false,
 		}, 'fallback')).toBe('fallback');
 	});
+
+	it('does not expose raw assertion objects from Keychain', () => {
+		const assertion = {
+			generatedMessage: false,
+			code: 'ERR_ASSERTION',
+			expected: true,
+			operator: '===',
+		};
+
+		const message = getHiveKeychainError({
+			success: false,
+			error: assertion,
+		}, 'fallback');
+
+		expect(message).toContain('Posting key');
+		expect(message).not.toContain('ERR_ASSERTION');
+		expect(message).not.toContain('generatedMessage');
+	});
+
+	it('falls back for unknown structured errors instead of serializing them', () => {
+		const message = getHiveKeychainError({
+			success: false,
+			error: { code: 'UNKNOWN_INTERNAL_ERROR', detail: 'private key' },
+		}, 'safe fallback');
+
+		expect(message).toBe('safe fallback');
+	});
 });
