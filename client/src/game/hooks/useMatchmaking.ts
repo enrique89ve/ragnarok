@@ -9,7 +9,6 @@ import { isSharedNetworkEnvironment } from '../config/featureFlags';
 import { readP2PMatchTicket, readServerSignedChallenge } from '@shared/p2pAvailability';
 import {
 	buildMatchAcceptanceV2Message,
-	isCurrentMatchOffer,
 	readMatchOffer,
 	type MatchAcceptanceProof,
 	type MatchAcceptanceV1,
@@ -295,8 +294,17 @@ function applyOfferedMatchmakingPayload(
 	actions: MatchmakingActions,
 ): void {
 	const offer = readMatchOffer(data.offer);
-	if (!offer || !isCurrentMatchOffer(offer)) {
-		throw new Error('Matchmaking server did not return a valid active match offer');
+	if (!offer) {
+		const rawOffer = isRecord(data.offer) ? data.offer : null;
+		debug.warn('[useMatchmaking] server offer rejected by client parser', {
+			rawType: typeof data.offer,
+			keys: rawOffer ? Object.keys(rawOffer).sort() : [],
+			protocol: rawOffer?.protocol,
+			matchIdLength: typeof rawOffer?.matchId === 'string' ? rawOffer.matchId.length : null,
+			playerPeerIdLength: isRecord(rawOffer?.player) && typeof rawOffer.player.peerId === 'string' ? rawOffer.player.peerId.length : null,
+			opponentPeerIdLength: isRecord(rawOffer?.opponent) && typeof rawOffer.opponent.peerId === 'string' ? rawOffer.opponent.peerId.length : null,
+		});
+		throw new Error('Matchmaking server did not return a valid match offer');
 	}
 	const offeredToken = typeof data.queueToken === 'string' && data.queueToken.length > 0
 		? data.queueToken
@@ -326,8 +334,11 @@ function applyQueuedMatchmakingPayload(
 	actions.setQueuePosition(readMatchmakingPosition(data));
 }
 
-export function isMatchOfferForPeer(offer: MatchOffer, peerId: string, now = Date.now()): boolean {
-	return offer.player.peerId === peerId && isCurrentMatchOffer(offer, now);
+export function isMatchOfferForPeer(offer: MatchOffer, peerId: string): boolean {
+	// Offer freshness is server authority. The status/accept endpoints reject an
+	// expired offer; comparing against the browser wall clock here can reject a
+	// valid offer when client and server clocks differ.
+	return offer.player.peerId === peerId;
 }
 
 export function failQueuedStatus(message: string, actions: MatchmakingActions): void {

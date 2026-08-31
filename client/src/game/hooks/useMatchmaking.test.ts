@@ -228,7 +228,7 @@ describe('useMatchmaking quick-match access helpers', () => {
 		expect(matchmakingMocks.signHiveMessage).not.toHaveBeenCalled();
 	});
 
-	it('accepts the offer addressed to this peer, not the opponent perspective', () => {
+	it('accepts the offer addressed to this peer, leaving freshness to the server', () => {
 		const offer = {
 			protocol: 'ragnarok-match-offer-v1' as const,
 			offerId: 'offer-1',
@@ -240,8 +240,9 @@ describe('useMatchmaking quick-match access helpers', () => {
 			serverNonce: 'nonce-1',
 		};
 
-		expect(isMatchOfferForPeer(offer, 'peer-local', 1_500)).toBe(true);
-		expect(isMatchOfferForPeer(offer, 'peer-remote', 1_500)).toBe(false);
+		expect(isMatchOfferForPeer(offer, 'peer-local')).toBe(true);
+		expect(isMatchOfferForPeer(offer, 'peer-remote')).toBe(false);
+		expect(isMatchOfferForPeer({ ...offer, expiresAt: 1_001 }, 'peer-local')).toBe(true);
 	});
 
 	it('binds acceptance to the opponent in the offer perspective', () => {
