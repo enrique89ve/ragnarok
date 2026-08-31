@@ -13,6 +13,7 @@ import type { GameCommandEnvelope } from '../hooks/p2pEnvelope';
 import type { ArmySelection } from '../types/ChessTypes';
 import type { GameStateWirePayload } from './stateFrameCodec';
 import type { MatchAcceptanceProof } from '../../../../shared/p2pMatchAcceptance';
+import type { MatchmakingDelegationProof } from '@shared/p2pMatchDelegation';
 import type { P2PBattleReadyProof } from './battleReady';
 
 /**
@@ -83,6 +84,7 @@ export type WireMessage =
 		ephemeralPubkey: string;
 		hiveSig?: string;
 		acceptance?: MatchAcceptanceProof;
+		delegation?: MatchmakingDelegationProof;
 		matchChallenge?: SessionAuthorizeChallenge;
 	}
 	| { type: 'session_renewal'; matchId: string; newPubkey: string; hiveSig: string }

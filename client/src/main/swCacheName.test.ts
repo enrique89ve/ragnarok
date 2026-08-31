@@ -44,6 +44,20 @@ function isServiceWorkerImmutableChunk(chunkUrl: string): boolean {
 	return context.__isImmutableChunk === true;
 }
 
+function isServiceWorkerRuntimeApiRequest(requestUrl: string): boolean {
+	const source = readFileSync(resolve(process.cwd(), 'client/public/sw.js'), 'utf8');
+	const context: ServiceWorkerContext & { __isRuntimeApiRequest?: boolean } = {
+		URL,
+		self: {
+			location: new URL('https://example.test/sw.js?resetEpoch=alfa-testnet'),
+			addEventListener: () => undefined,
+		},
+	};
+
+	vm.runInNewContext(`${source}\n__isRuntimeApiRequest = isRuntimeApiRequest(${JSON.stringify(requestUrl)});`, context);
+	return context.__isRuntimeApiRequest === true;
+}
+
 describe('service worker reset epoch cache name', () => {
 	it('isolates asset caches by reset epoch', () => {
 		expect(readServiceWorkerCacheName('https://example.test/sw.js?resetEpoch=QA%20Season%200%20%2F%202026-05')).toBe(
@@ -59,5 +73,11 @@ describe('service worker reset epoch cache name', () => {
 		expect(isServiceWorkerImmutableChunk('https://example.test/assets/index-j87ec-cY.js')).toBe(true);
 		expect(isServiceWorkerImmutableChunk('https://example.test/assets/index-CLoi5iuK.css')).toBe(true);
 		expect(isServiceWorkerImmutableChunk('https://example.test/assets/not-a-chunk.js')).toBe(false);
+	});
+
+	it('identifies runtime API requests that must bypass the cache fallback', () => {
+		expect(isServiceWorkerRuntimeApiRequest('https://example.test/api/matchmaking/status/peer-one')).toBe(true);
+		expect(isServiceWorkerRuntimeApiRequest('https://example.test/api/health')).toBe(true);
+		expect(isServiceWorkerRuntimeApiRequest('https://example.test/assets/index-j87ec-cY.js')).toBe(false);
 	});
 });

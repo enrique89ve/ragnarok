@@ -1,5 +1,5 @@
 import { Router, Request, Response, type NextFunction } from 'express';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import type { HiveAuthenticatedRequest } from '../middleware/hiveAuth';
 import { getPlayer, registerAccount } from '../services/chainState';
 import { buildServerSignedChallenge } from '../services/p2pChallengeSigner';
@@ -15,6 +15,7 @@ import { hasStarterCeremonyClaim } from '../services/starterClaimRegistry';
 import {
 	CHALLENGE_STALE_THRESHOLD_MS,
 	isSafePeerId,
+	isValidAvailabilityHiveUsername,
 	normalizeHiveUsername,
 	resolveP2PTransportRole,
 	type P2PMatchTicket,
@@ -22,14 +23,25 @@ import {
 } from '../../shared/p2pAvailability';
 import {
 	buildMatchAcceptanceMessage,
+	buildMatchAcceptanceV2Message,
 	MATCH_OFFER_PROTOCOL,
 	MATCH_OFFER_TTL_MS,
 	readMatchAcceptanceProof,
 	type MatchAcceptanceProof,
 	type MatchOffer,
 } from '../../shared/p2pMatchAcceptance';
-import { getHiveWebSessionUsername } from '../services/hiveWebSession';
+import { getHiveWebSessionUsername, issueHiveWebSession } from '../services/hiveWebSession';
 import { log } from '../static';
+import {
+	MATCHMAKING_DELEGATION_PROTOCOL,
+	MATCHMAKING_DELEGATION_TTL_MS,
+	buildMatchmakingDelegationMessage,
+	isCurrentMatchmakingDelegation,
+	readMatchmakingDelegationProof,
+	type MatchmakingDelegationChallenge,
+	type MatchmakingDelegationProof,
+} from '../../shared/p2pMatchDelegation';
+import { verifyP2PSessionSignature } from '../../shared/p2pSessionSignature';
 import {
 	clearP2PActiveMatches,
 	getP2PActiveMatchById,
@@ -63,6 +75,7 @@ type QueuedPlayer = {
 	readonly elo: number;
 	readonly timestamp: number;
 	readonly queueTokenHash: string;
+	readonly delegation?: MatchmakingDelegationProof;
 };
 
 type MatchChallenges = {
@@ -124,8 +137,11 @@ type SharedQueueStarterClaimAccess =
 const matchmakingQueue: QueuedPlayer[] = [];
 const pendingMatchOffers = new Map<string, PendingMatchOffer>();
 const pendingOfferIdsByPeerId = new Map<string, string>();
+const delegationChallenges = new Map<string, MatchmakingDelegationChallenge>();
+const delegationProofFingerprints = new Map<string, string>();
 
 const QUEUE_STALE_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_DELEGATION_CHALLENGES = 10_000;
 
 function pendingOfferForPeer(peerId: string): PendingMatchOffer | null {
 	const offerId = pendingOfferIdsByPeerId.get(peerId);
@@ -200,6 +216,12 @@ function removeStaleQueueEntries() {
 	for (const [offerId, pending] of pendingMatchOffers.entries()) {
 		if (pending.offerA.expiresAt <= now) deletePendingMatchOffer(offerId);
 	}
+	for (const [delegationId, challenge] of delegationChallenges.entries()) {
+		if (challenge.expiresAt <= now) {
+			delegationChallenges.delete(delegationId);
+			delegationProofFingerprints.delete(delegationId);
+		}
+	}
 }
 
 function buildMatchChallenges(
@@ -255,6 +277,8 @@ export function clearP2PMatchmakingStateForTests(): void {
 	matchmakingQueue.splice(0, matchmakingQueue.length);
 	pendingMatchOffers.clear();
 	pendingOfferIdsByPeerId.clear();
+	delegationChallenges.clear();
+	delegationProofFingerprints.clear();
 	clearP2PActiveMatches();
 }
 
@@ -295,6 +319,92 @@ function isSharedServerNetworkEnvironment(): boolean {
 	return process.env.VITE_NETWORK_STAGE === 'testnet' || process.env.VITE_NETWORK_STAGE === 'mainnet';
 }
 
+function isSafeHash(value: unknown): value is string {
+	return typeof value === 'string' && value.length > 0 && value.length <= 256;
+}
+
+function readDelegationChallengeBody(value: unknown): {
+	readonly account: string;
+	readonly peerId: string;
+	readonly rulesetHash: string;
+	readonly engineHash: string;
+} | null {
+	if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+	const body = value as Record<string, unknown>;
+	const account = typeof body.account === 'string' ? normalizeHiveUsername(body.account) : '';
+	if (!isValidAvailabilityHiveUsername(account) || typeof body.peerId !== 'string' || !isSafePeerId(body.peerId)) return null;
+	if (!isSafeHash(body.rulesetHash) || !isSafeHash(body.engineHash)) return null;
+	return { account, peerId: body.peerId, rulesetHash: body.rulesetHash, engineHash: body.engineHash };
+}
+
+function createDelegationChallenge(input: {
+	readonly account: string;
+	readonly peerId: string;
+	readonly rulesetHash: string;
+	readonly engineHash: string;
+}): MatchmakingDelegationChallenge {
+	removeStaleQueueEntries();
+	if (delegationChallenges.size >= MAX_DELEGATION_CHALLENGES) {
+		const oldest = delegationChallenges.keys().next().value;
+		if (typeof oldest === 'string') delegationChallenges.delete(oldest);
+	}
+	const issuedAt = Date.now();
+	const challenge: MatchmakingDelegationChallenge = {
+		protocol: MATCHMAKING_DELEGATION_PROTOCOL,
+		delegationId: `delegation_${issuedAt}_${randomBytes(9).toString('hex')}`,
+		account: input.account,
+		peerId: input.peerId,
+		rulesetHash: input.rulesetHash,
+		engineHash: input.engineHash,
+		serverNonce: randomBytes(18).toString('base64url'),
+		issuedAt,
+		expiresAt: issuedAt + MATCHMAKING_DELEGATION_TTL_MS,
+	};
+	delegationChallenges.set(challenge.delegationId, challenge);
+	return challenge;
+}
+
+async function verifyQueueDelegation(proof: MatchmakingDelegationProof): Promise<string | null> {
+	const challenge = delegationChallenges.get(proof.delegationId);
+	if (!challenge) return 'matchmaking delegation challenge not found or already expired';
+	if (challenge.expiresAt <= Date.now()) {
+		delegationChallenges.delete(proof.delegationId);
+		return 'matchmaking delegation expired';
+	}
+	const matchesChallenge = challenge.account === proof.account
+		&& challenge.peerId === proof.peerId
+		&& challenge.rulesetHash === proof.rulesetHash
+		&& challenge.engineHash === proof.engineHash
+		&& challenge.serverNonce === proof.serverNonce
+		&& challenge.issuedAt === proof.issuedAt
+		&& challenge.expiresAt === proof.expiresAt;
+	if (!matchesChallenge) return 'matchmaking delegation does not match its challenge';
+	// The Hive signature covers only the delegation payload. Never include the
+	// signature itself in the signed bytes.
+	const { hiveSig, ...delegationPayload } = proof;
+	const auth = await verifyHiveAuth(
+		proof.account,
+		buildMatchmakingDelegationMessage(delegationPayload),
+		hiveSig,
+	);
+	if (!auth.valid) return 'Invalid Hive matchmaking delegation signature';
+	return null;
+}
+
+function verifyMatchAcceptanceV2(proof: MatchAcceptanceProof, player: QueuedPlayer): boolean {
+	if (proof.protocol !== 'ragnarok-match-accept-v2' || !player.delegation) return false;
+	if (!isCurrentMatchmakingDelegation(player.delegation)) return false;
+	if (proof.delegationId !== player.delegation.delegationId || proof.account !== player.delegation.account) return false;
+	if (proof.ephemeralPubkey !== player.delegation.ephemeralPubkey) return false;
+	if (proof.rulesetHash !== player.delegation.rulesetHash || proof.engineHash !== player.delegation.engineHash) return false;
+	const { sessionSig: _sessionSig, ...payload } = proof;
+	return verifyP2PSessionSignature({
+		bytes: new TextEncoder().encode(buildMatchAcceptanceV2Message(payload)),
+		signature: proof.sessionSig,
+		publicKey: proof.ephemeralPubkey,
+	});
+}
+
 function requireMatchmakingSession(req: Request, res: Response, next: NextFunction): void {
 	const username = getHiveWebSessionUsername(req);
 	if (username) {
@@ -302,11 +412,19 @@ function requireMatchmakingSession(req: Request, res: Response, next: NextFuncti
 		next();
 		return;
 	}
-	if (isSharedServerNetworkEnvironment()) {
-		res.status(401).json({ success: false, error: 'Hive web session required for shared-network matchmaking' });
+	if (!isSharedServerNetworkEnvironment() || readMatchmakingDelegationProof(req.body?.delegation)) {
+		next();
 		return;
 	}
-	next();
+	// A V2 Accept proof is already bound to the Hive delegation stored with the
+	// queued player. This lets a client finish Accept if the HttpOnly cookie was
+	// lost between Find and the offer without opening Keychain again.
+	if (readMatchAcceptanceProof(req.body?.acceptance)?.protocol === 'ragnarok-match-accept-v2') {
+		next();
+		return;
+	}
+	res.status(401).json({ success: false, error: 'Hive web session required for shared-network matchmaking' });
+	return;
 }
 
 export function resolveQueueUsername(input: {
@@ -343,6 +461,7 @@ function resolveQueueElo(queueUsername: string | undefined): number {
 function createQueuedPlayer(input: {
 	readonly peerId: string;
 	readonly username: string | undefined;
+	readonly delegation?: MatchmakingDelegationProof;
 }): QueuePlayerCreation {
 	const queueToken = createP2PQueueToken();
 	return {
@@ -353,6 +472,7 @@ function createQueuedPlayer(input: {
 			elo: resolveQueueElo(input.username),
 			timestamp: Date.now(),
 			queueTokenHash: hashP2PQueueToken(queueToken),
+			...(input.delegation ? { delegation: input.delegation } : {}),
 		},
 	};
 }
@@ -574,6 +694,8 @@ function commitPendingMatch(pending: PendingMatchOffer): MatchCreationResult {
 		player2MatchTicket: matchTickets.player2MatchTicket,
 		player1QueueTokenHash: pending.playerA.queueTokenHash,
 		player2QueueTokenHash: pending.playerB.queueTokenHash,
+		...(pending.acceptanceA ? { player1Acceptance: pending.acceptanceA } : {}),
+		...(pending.acceptanceB ? { player2Acceptance: pending.acceptanceB } : {}),
 	};
 	registerP2PActiveMatch(pending.offerA.matchId, activeMatch);
 	deletePendingMatchOffer(pending.offerA.offerId);
@@ -610,6 +732,11 @@ async function verifyMatchAcceptance(
 	if (!acceptanceMatchesOffer(proof, offer, player)) {
 		return { ok: false, statusCode: 409, error: 'match acceptance does not match the offer' };
 	}
+	if (proof.protocol === 'ragnarok-match-accept-v2') {
+		return verifyMatchAcceptanceV2(proof, player)
+			? { ok: true }
+			: { ok: false, statusCode: 401, error: 'Invalid local match acceptance signature' };
+	}
 	if (isSharedServerNetworkEnvironment() && (!proof.account || !proof.hiveSig)) {
 		return { ok: false, statusCode: 401, error: 'Hive match acceptance signature required' };
 	}
@@ -627,6 +754,10 @@ async function verifyMatchAcceptance(
 }
 
 function acceptanceMessage(proof: MatchAcceptanceProof): string {
+	if (proof.protocol === 'ragnarok-match-accept-v2') {
+		const { sessionSig: _sessionSig, ...payload } = proof;
+		return buildMatchAcceptanceV2Message(payload);
+	}
 	const { hiveSig: _hiveSig, ...payload } = proof;
 	return buildMatchAcceptanceMessage(payload);
 }
@@ -684,10 +815,48 @@ async function queueNewPlayer(newPlayer: QueuedPlayer, queueToken: string): Prom
 	return { status: 'queued', position: matchmakingQueue.length, elo: newPlayer.elo, queueToken };
 }
 
+router.post('/delegation-challenge', (req: Request, res: Response) => {
+	const body = readDelegationChallengeBody(req.body);
+	if (!body) {
+		return res.status(400).json({ success: false, error: 'account, peerId, rulesetHash and engineHash are required' });
+	}
+	return res.json({ success: true, challenge: createDelegationChallenge(body) });
+});
+
 router.post('/queue', validateQueuePeerId, requireMatchmakingSession, async (req: Request, res: Response) => {
 	const { peerId, username } = req.body;
 
 	removeStaleQueueEntries();
+	const rawDelegation = readMatchmakingDelegationProof(req.body?.delegation);
+	const delegationFingerprint = rawDelegation
+		? createHash('sha256').update(`${buildMatchmakingDelegationMessage(rawDelegation)}|${rawDelegation.hiveSig}`, 'utf8').digest('hex')
+		: null;
+	if (req.body?.delegation !== undefined && !rawDelegation) {
+		return res.status(400).json({ success: false, error: 'Invalid matchmaking delegation proof' });
+	}
+	// Keep the already-authenticated session-only request as a rolling-deploy
+	// compatibility path. The current client always sends a delegation; this
+	// branch can be removed once all deployed clients speak V2.
+	if (isSharedServerNetworkEnvironment() && !rawDelegation && !getHiveWebSessionUsername(req)) {
+		return res.status(401).json({ success: false, error: 'Hive matchmaking delegation required' });
+	}
+	if (rawDelegation) {
+		if (rawDelegation.peerId !== peerId) {
+			return res.status(403).json({ success: false, error: 'Matchmaking delegation peer mismatch' });
+		}
+		const delegationError = await verifyQueueDelegation(rawDelegation);
+		if (delegationError) return res.status(401).json({ success: false, error: delegationError });
+		const previousFingerprint = delegationProofFingerprints.get(rawDelegation.delegationId);
+		if (previousFingerprint && previousFingerprint !== delegationFingerprint) {
+			return res.status(409).json({ success: false, error: 'Matchmaking delegation was already used with different proof' });
+		}
+		const sessionUsername = getHiveWebSessionUsername(req);
+		if (sessionUsername && normalizeHiveUsername(sessionUsername) !== rawDelegation.account) {
+			return res.status(403).json({ success: false, error: 'Matchmaking delegation account does not match the Hive web session' });
+		}
+		(req as HiveAuthenticatedRequest).hiveUsername = rawDelegation.account;
+		if (!sessionUsername) issueHiveWebSession(res, rawDelegation.account);
+	}
 
 	const queueUsername = resolveQueueUsername({
 		authenticatedUsername: Reflect.get(req, 'hiveUsername'),
@@ -709,8 +878,10 @@ router.post('/queue', validateQueuePeerId, requireMatchmakingSession, async (req
 	const { player: newPlayer, queueToken } = createQueuedPlayer({
 		peerId,
 		username: queueUsername,
+		delegation: rawDelegation ?? undefined,
 	});
 	const result = await queueNewPlayer(newPlayer, queueToken);
+	if (rawDelegation && delegationFingerprint) delegationProofFingerprints.set(rawDelegation.delegationId, delegationFingerprint);
 	if (result.status === 'failed') {
 		return res.status(result.statusCode).json({ success: false, error: result.error });
 	}
@@ -739,7 +910,7 @@ router.post('/accept', validateQueuePeerId, requireMatchmakingSession, async (re
 		return res.status(400).json({ success: false, error: 'offerId and valid match acceptance required' });
 	}
 	const sessionUsername = Reflect.get(req, 'hiveUsername');
-	if (isSharedServerNetworkEnvironment() && (
+	if (isSharedServerNetworkEnvironment() && proof.protocol !== 'ragnarok-match-accept-v2' && (
 		typeof sessionUsername !== 'string'
 		|| !proof.account
 		|| normalizeHiveUsername(sessionUsername) !== normalizeHiveUsername(proof.account)
@@ -752,6 +923,15 @@ router.post('/accept', validateQueuePeerId, requireMatchmakingSession, async (re
 	const activeMatchId = getP2PActiveMatchIdForPeer(peerId);
 	const activeMatch = activeMatchId ? getP2PActiveMatchById(activeMatchId) : undefined;
 	if (activeMatch && proof.offerId === activeMatch.offerId && proof.matchId === activeMatchId) {
+		const recordedAcceptance = activeMatch.player1 === peerId
+			? activeMatch.player1Acceptance
+			: activeMatch.player2Acceptance;
+		const sameSignature = recordedAcceptance && recordedAcceptance.protocol === 'ragnarok-match-accept-v2' && proof.protocol === 'ragnarok-match-accept-v2'
+			? recordedAcceptance.sessionSig === proof.sessionSig
+			: recordedAcceptance?.hiveSig === proof.hiveSig;
+		if (!recordedAcceptance || acceptanceMessage(recordedAcceptance) !== acceptanceMessage(proof) || !sameSignature) {
+			return res.status(409).json({ success: false, error: 'match acceptance proof does not match the committed match' });
+		}
 		const activeResponse = await getActiveMatchStatusResponse(req, peerId);
 		if (activeResponse) return res.status(activeResponse.statusCode).json(activeResponse.body);
 	}
@@ -768,7 +948,10 @@ router.post('/accept', validateQueuePeerId, requireMatchmakingSession, async (re
 
 	const previous = acceptanceForPeer(pending, peerId);
 	if (previous) {
-		if (acceptanceMessage(previous) !== acceptanceMessage(proof) || previous.hiveSig !== proof.hiveSig) {
+		const sameSignature = previous.protocol === 'ragnarok-match-accept-v2' && proof.protocol === 'ragnarok-match-accept-v2'
+			? previous.sessionSig === proof.sessionSig
+			: previous.hiveSig === proof.hiveSig;
+		if (acceptanceMessage(previous) !== acceptanceMessage(proof) || !sameSignature) {
 			return res.status(409).json({ success: false, error: 'match acceptance already recorded with different proof' });
 		}
 	} else if (pending.playerA.peerId === peerId) {

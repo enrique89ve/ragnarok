@@ -8,10 +8,11 @@ import { canonicalStringify } from './protocol-core/hash';
 
 export const MATCH_OFFER_PROTOCOL = 'ragnarok-match-offer-v1' as const;
 export const MATCH_ACCEPTANCE_PROTOCOL = 'ragnarok-match-accept-v1' as const;
+export const MATCH_ACCEPTANCE_V2_PROTOCOL = 'ragnarok-match-accept-v2' as const;
 // Acceptance includes deterministic WASM/card-registry preparation and, on
-// shared-network, one visible wallet signature. Keep the offer alive long
-// enough for those user-controlled steps while still bounding stale queue
-// state on the server.
+// shared-network, a local Ed25519 signature over the key delegated at FIND.
+// Keep the offer alive long enough for those user-controlled steps while still
+// bounding stale queue state on the server.
 export const MATCH_OFFER_TTL_MS = 60_000;
 
 export type MatchOfferPlayer = {
@@ -46,12 +47,23 @@ export type MatchAcceptanceV1 = {
 	readonly expiresAt: number;
 };
 
-export type MatchAcceptanceProof = MatchAcceptanceV1 & {
-	readonly hiveSig?: string;
+export type MatchAcceptanceV2 = Omit<MatchAcceptanceV1, 'protocol'> & {
+	readonly protocol: typeof MATCH_ACCEPTANCE_V2_PROTOCOL;
+	readonly delegationId: string;
+	readonly sessionSig: string;
+	readonly hiveSig?: never;
 };
 
-export function buildMatchAcceptanceMessage(acceptance: MatchAcceptanceV1): string {
+export type MatchAcceptanceProof = (MatchAcceptanceV1 & {
+	readonly hiveSig?: string;
+}) | MatchAcceptanceV2;
+
+export function buildMatchAcceptanceMessage(acceptance: MatchAcceptanceV1 | Omit<MatchAcceptanceV2, 'sessionSig'>): string {
 	return `${MATCH_ACCEPTANCE_PROTOCOL} | ${canonicalStringify(acceptance)}`;
+}
+
+export function buildMatchAcceptanceV2Message(acceptance: Omit<MatchAcceptanceV2, 'sessionSig'>): string {
+	return `${MATCH_ACCEPTANCE_V2_PROTOCOL} | ${canonicalStringify(acceptance)}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -114,8 +126,9 @@ export function readMatchAcceptanceProof(value: unknown): MatchAcceptanceProof |
 	const allowed = new Set([
 		'protocol', 'offerId', 'matchId', 'account', 'peerId', 'opponentAccount',
 		'opponentPeerId', 'ephemeralPubkey', 'rulesetHash', 'engineHash', 'serverNonce', 'expiresAt', 'hiveSig',
+		'delegationId', 'sessionSig',
 	]);
-	if (!hasOnlyKeys(value, allowed) || value.protocol !== MATCH_ACCEPTANCE_PROTOCOL) return null;
+	if (!hasOnlyKeys(value, allowed) || (value.protocol !== MATCH_ACCEPTANCE_PROTOCOL && value.protocol !== MATCH_ACCEPTANCE_V2_PROTOCOL)) return null;
 	const offerId = value.offerId;
 	const matchId = value.matchId;
 	const peerId = value.peerId;
@@ -136,6 +149,27 @@ export function readMatchAcceptanceProof(value: unknown): MatchAcceptanceProof |
 		if (typeof value.opponentAccount !== 'string' || !isValidAvailabilityHiveUsername(normalizeHiveUsername(value.opponentAccount))) return null;
 	}
 	if (value.hiveSig !== undefined && !isSafeText(value.hiveSig, 1024)) return null;
+	if (value.protocol === MATCH_ACCEPTANCE_V2_PROTOCOL) {
+		if (!isSafeText(value.delegationId, 128) || !isSafeText(value.sessionSig, 256)) return null;
+		if (value.hiveSig !== undefined) return null;
+		return {
+			protocol: MATCH_ACCEPTANCE_V2_PROTOCOL,
+			offerId,
+			matchId,
+			...(typeof value.account === 'string' ? { account: normalizeHiveUsername(value.account) } : {}),
+			peerId,
+			...(typeof value.opponentAccount === 'string' ? { opponentAccount: normalizeHiveUsername(value.opponentAccount) } : {}),
+			opponentPeerId,
+			ephemeralPubkey,
+			rulesetHash,
+			engineHash,
+			serverNonce,
+			expiresAt,
+			delegationId: value.delegationId,
+			sessionSig: value.sessionSig,
+		};
+	}
+	if (value.delegationId !== undefined || value.sessionSig !== undefined) return null;
 	return {
 		protocol: MATCH_ACCEPTANCE_PROTOCOL,
 		offerId,

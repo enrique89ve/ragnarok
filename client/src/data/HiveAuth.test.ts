@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	clearActiveHiveSession,
 	getAuthenticatedHiveUsername,
+	hydrateHiveWebSession,
 	loginWithHiveWallet,
 	setActiveHiveSession,
 	signHiveMessage,
@@ -104,6 +105,21 @@ describe('HiveAuth signHiveMessage', () => {
 		});
 
 		expect(getAuthenticatedHiveUsername()).toBe('alice');
+	});
+
+	it('hydrates a valid HttpOnly web session without opening Keychain', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(new Response(
+			JSON.stringify({ success: true, authenticated: true, username: 'alice' }),
+			{ status: 200, headers: { 'Content-Type': 'application/json' } },
+		));
+		vi.stubGlobal('fetch', fetchMock);
+
+		await expect(hydrateHiveWebSession()).resolves.toBe('alice');
+		expect(getAuthenticatedHiveUsername()).toBe('alice');
+		expect(fetchMock).toHaveBeenCalledWith(
+			'http://localhost/api/session/status',
+			expect.objectContaining({ method: 'GET', credentials: 'include' }),
+		);
 	});
 
 	it('returns the login proof and establishes the reusable HTTP session', async () => {

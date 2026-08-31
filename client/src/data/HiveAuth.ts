@@ -26,7 +26,7 @@ export type HiveAuthResult = WalletAuthResult & {
 };
 export type HiveSignedMessageResult = SignedMessageResult;
 export type HiveWalletProviderId = Extract<WalletProviderId, "hive_keychain">;
-export type HiveSessionAuthentication = "keychain_signature" | "stored_identity";
+export type HiveSessionAuthentication = "keychain_signature" | "server_session" | "stored_identity";
 export type HiveWalletSession = WalletSession<HiveWalletProviderId> & {
   namespace: "hive";
   accountId: string;
@@ -283,8 +283,35 @@ export function getActiveHiveUsername(): string | null {
 }
 
 export function getAuthenticatedHiveUsername(): string | null {
-  if (activeHiveSession?.authentication !== "keychain_signature") return null;
-  return normalizeHiveUsername(activeHiveSession.username);
+	if (activeHiveSession?.authentication !== "keychain_signature" && activeHiveSession?.authentication !== "server_session") return null;
+	return normalizeHiveUsername(activeHiveSession.username);
+}
+
+/**
+ * Restore the server-authenticated Hive identity after a page reload. The
+ * HttpOnly cookie is the authority here; no wallet prompt is involved.
+ */
+export async function hydrateHiveWebSession(): Promise<string | null> {
+	try {
+		const apiBase = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+		const response = await fetch(`${apiBase}/api/session/status`, {
+			method: 'GET',
+			credentials: 'include',
+			cache: 'no-store',
+		});
+		if (!response.ok) return null;
+		const body: unknown = await response.json();
+		if (typeof body !== 'object' || body === null || Array.isArray(body)) return null;
+		const username = normalizeHiveUsername((body as Record<string, unknown>).username as string | undefined);
+		if ((body as Record<string, unknown>).authenticated !== true || !username) return null;
+		if (activeHiveSession?.authentication === 'keychain_signature' && activeHiveSession.username !== username) {
+			return null;
+		}
+		setActiveHiveSession(username, DEFAULT_HIVE_WALLET_PROVIDER_ID, 'server_session');
+		return username;
+	} catch {
+		return null;
+	}
 }
 
 export function hasAuthenticatedHiveSessionFor(username: string | null | undefined): boolean {

@@ -5,6 +5,9 @@ import {
 	Trophy,
 	type LucideIcon,
 } from 'lucide-react';
+import type { RuneSeasonAccountView } from '@shared/protocol-core/types';
+import { getRuneEconomy } from '@shared/protocol-core/types';
+import { getRuntimeExecutionMode } from '../../config/featureFlags';
 import type { LocalRuneSeasonState } from '../../../data/runeSeasonReadModel';
 import { formatNumber } from './walletFormatting';
 
@@ -19,30 +22,32 @@ type CapRow = {
 	status: CapStatus;
 };
 
-function buildRows(state: LocalRuneSeasonState): CapRow[] {
+function buildRows(account: RuneSeasonAccountView): CapRow[] {
+	const economy = getRuneEconomy(getRuntimeExecutionMode());
+
 	return [
 		{
 			key: 'p2p_ranked',
 			label: 'Ranked reward',
 			icon: Trophy,
-			cap: state.p2pCap,
-			issued: state.earnedBySource.p2p_ranked,
+			cap: economy.maxP2PRunePerAccount,
+			issued: account.earnedBySource.p2p_ranked,
 			status: 'deferred',
 		},
 		{
 			key: 'campaign_first_clear',
 			label: 'Campaign clear',
 			icon: Sparkles,
-			cap: state.campaignCap,
-			issued: state.earnedBySource.campaign_first_clear,
+			cap: economy.maxCampaignRunePerAccount,
+			issued: account.earnedBySource.campaign_first_clear,
 			status: 'active',
 		},
 		{
 			key: 'daily_quest_claim',
 			label: 'Daily quest',
 			icon: CalendarCheck,
-			cap: state.dailyQuestCap,
-			issued: state.earnedBySource.daily_quest_claim,
+			cap: economy.maxDailyQuestRunePerAccount,
+			issued: account.earnedBySource.daily_quest_claim,
 			status: 'active',
 		},
 	];
@@ -59,8 +64,12 @@ function formatPercent(issued: number, cap: number): string {
 	return `${ratio(issued, cap).toFixed(1)}%`;
 }
 
-export function SeasonStateOverview({ state }: { state: LocalRuneSeasonState }) {
-	const rows = buildRows(state);
+export function SeasonStateOverview({ state, account }: {
+	state: LocalRuneSeasonState;
+	account: RuneSeasonAccountView;
+}) {
+	const rows = buildRows(account);
+	const playerCap = rows.reduce((total, row) => total + row.cap, 0);
 
 	return (
 		<section className="runic-panel texture-grain relative border border-obsidian-700 bg-obsidian-900/80 p-5">
@@ -83,7 +92,7 @@ export function SeasonStateOverview({ state }: { state: LocalRuneSeasonState }) 
 					</div>
 				</div>
 				<span className="rounded border border-obsidian-700 bg-obsidian-950/70 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-300">
-					{formatNumber(state.totalCap)} total
+					{formatNumber(playerCap)} max/player
 				</span>
 			</header>
 

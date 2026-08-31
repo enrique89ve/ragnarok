@@ -80,6 +80,15 @@ function isViteDevRequest(url) {
 		|| parsed.pathname.includes('/node_modules/.vite/');
 }
 
+function isRuntimeApiRequest(url) {
+	var parsed = new URL(url);
+	var base = getBase();
+	var normalized = parsed.pathname.startsWith(base)
+		? '/' + parsed.pathname.slice(base.length)
+		: parsed.pathname;
+	return normalized === '/api' || normalized.startsWith('/api/');
+}
+
 // Install: pre-cache index.html for offline navigation, then activate immediately
 self.addEventListener('install', function(event) {
 	event.waitUntil(
@@ -125,6 +134,10 @@ self.addEventListener('fetch', function(event) {
 	if (url.origin !== self.location.origin) return;
 
 	if (isViteDevRequest(request.url)) return;
+
+	// Runtime API responses include short-lived matchmaking offers and tokens.
+	// They must never be served from an offline cache fallback.
+	if (isRuntimeApiRequest(request.url)) return;
 
 	// Navigation: network-first with offline fallback to cached index.html
 	if (request.mode === 'navigate') {

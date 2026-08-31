@@ -7,14 +7,33 @@ import { signHiveMessage } from '../../data/HiveAuth';
 import { getAuthenticatedHiveUsername } from '../../data/HiveSessionIdentity';
 import { isSharedNetworkEnvironment } from '../config/featureFlags';
 import { readP2PMatchTicket, readServerSignedChallenge } from '@shared/p2pAvailability';
-import { isCurrentMatchOffer, readMatchOffer, buildMatchAcceptanceMessage, type MatchAcceptanceProof, type MatchAcceptanceV1, type MatchOffer } from '@shared/p2pMatchAcceptance';
+import {
+	buildMatchAcceptanceV2Message,
+	isCurrentMatchOffer,
+	readMatchOffer,
+	type MatchAcceptanceProof,
+	type MatchAcceptanceV1,
+	type MatchOffer,
+} from '@shared/p2pMatchAcceptance';
 import { useStarterStore } from '../stores/starterStore';
-import { ensureSharedNetworkStarterClaimReceipt } from '../data/starterClaim';
+import { hasSharedNetworkStarterClaimReceipt } from '../data/starterClaim';
 import { getCardRegistryHash } from '../data/effects/registryHash';
 import { getWasmHash, loadWasmEngine } from '../engine/wasmLoader';
-import { generateSessionKey } from '../protocol/sessionKey';
+import { bindSessionKey, generateEphemeralSigningKey, generateSessionKey } from '../protocol/sessionKey';
 import { invokeClientWalletAction } from '../../data/wallet/clientWalletInvocation';
-import { cacheMatchAcceptance, clearCachedMatchAcceptance, getCachedMatchAcceptance } from '../p2p/matchAcceptance';
+import {
+	cacheMatchAcceptance,
+	cacheMatchmakingDelegation,
+	clearCachedMatchAcceptance,
+	clearCachedMatchmakingDelegation,
+	getCachedMatchAcceptance,
+	getCachedMatchmakingDelegation,
+} from '../p2p/matchAcceptance';
+import {
+	buildMatchmakingDelegationMessage,
+	readMatchmakingDelegationChallenge,
+	type MatchmakingDelegationProof,
+} from '@shared/p2pMatchDelegation';
 import {
 	normalizeProtectedFlowAccountId,
 	resolveProtectedFlowAccess,
@@ -79,13 +98,14 @@ export function resolveQuickMatchQueueAccess(input: {
 	readonly sharedNetwork: boolean;
 	readonly starterClaimed: boolean;
 	readonly hiveWalletAvailable?: boolean;
+	readonly requiresAuthenticatedSession?: boolean;
 }): QuickMatchQueueAccess {
 	const p2pAccess = resolveProtectedFlowAccess({
 		accountId: input.accountId,
 		authenticatedAccountId: input.authenticatedHiveUsername,
 		sharedNetwork: input.sharedNetwork,
 		surface: 'quick_match',
-		requiresAuthenticatedSession: true,
+		requiresAuthenticatedSession: input.requiresAuthenticatedSession ?? true,
 		requiresStarterClaim: true,
 		starterClaimed: input.starterClaimed,
 	});
@@ -120,12 +140,60 @@ function unsignedQueueBody(input: {
 	};
 }
 
+type MatchmakingDelegationBuildResult = Readonly<{
+	delegation: MatchmakingDelegationProof;
+	ephemeralKey: Awaited<ReturnType<typeof generateEphemeralSigningKey>>;
+}>;
+
+export async function buildMatchmakingDelegation(input: {
+	readonly peerId: string;
+	readonly accountId: string;
+	readonly rulesetHash: string;
+	readonly engineHash: string;
+}): Promise<MatchmakingDelegationBuildResult> {
+	const ephemeralKey = await generateEphemeralSigningKey();
+	const challengeResponse = await fetch(`${getMatchmakingApiBase()}/api/matchmaking/delegation-challenge`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify({
+			account: input.accountId,
+			peerId: input.peerId,
+			rulesetHash: input.rulesetHash,
+			engineHash: input.engineHash,
+		}),
+	});
+	if (!challengeResponse.ok) throw new Error(`Matchmaking authorization challenge rejected: ${await readMatchmakingError(challengeResponse)}`);
+	const challengePayload: unknown = await challengeResponse.json();
+	const challenge = isRecord(challengePayload)
+		? readMatchmakingDelegationChallenge(challengePayload.challenge)
+		: null;
+	if (!challenge) throw new Error('Matchmaking server returned an invalid authorization challenge');
+	const delegation = {
+		...challenge,
+		ephemeralPubkey: ephemeralKey.pubkey,
+	};
+	const signed = await invokeClientWalletAction(
+		{ kind: 'p2p_matchmaking_delegation', authority: 'Posting', label: 'Find opponent' },
+		() => signHiveMessage(buildMatchmakingDelegationMessage(delegation), {
+			username: input.accountId,
+			title: 'Ragnarok: find opponent',
+		}),
+	);
+	if (!signed.success || !signed.signature) throw new Error(signed.error ?? 'Matchmaking authorization signature rejected.');
+	return {
+		delegation: { ...delegation, hiveSig: signed.signature },
+		ephemeralKey,
+	};
+}
+
 export async function buildQuickMatchQueueBody(input: {
 	readonly peerId: string;
 	readonly accountId: string | null;
 	readonly sharedNetwork: boolean;
 	readonly starterClaimed: boolean;
 	readonly walletAuthMode?: 'unsigned-local' | 'hive-body-auth';
+	readonly delegation?: MatchmakingDelegationProof;
 }): Promise<QueueBodyBuildResult> {
 	void input.walletAuthMode;
 	if (input.sharedNetwork && !input.accountId) {
@@ -134,11 +202,14 @@ export async function buildQuickMatchQueueBody(input: {
 	if (input.accountId) {
 		return {
 			ok: true,
-			body: unsignedQueueBody({
-				peerId: input.peerId,
-				accountId: input.accountId,
-				starterClaimed: input.starterClaimed,
-			}),
+			body: {
+				...unsignedQueueBody({
+					peerId: input.peerId,
+					accountId: input.accountId,
+					starterClaimed: input.starterClaimed,
+				}),
+				...(input.delegation ? { delegation: input.delegation } : {}),
+			},
 		};
 	}
 	return { ok: true, body: { peerId: input.peerId } };
@@ -173,8 +244,9 @@ async function readSharedNetworkStarterReceiptError(input: {
 	readonly accountId: string | null;
 }): Promise<string | null> {
 	if (!input.sharedNetwork || !input.accountId) return null;
-	const receipt = await ensureSharedNetworkStarterClaimReceipt(input.accountId);
-	return receipt.success ? null : receipt.error;
+	return await hasSharedNetworkStarterClaimReceipt(input.accountId)
+		? null
+		: 'Complete the starter claim before searching for a PvP opponent.';
 }
 
 export async function readMatchmakingError(response: Response): Promise<string> {
@@ -393,6 +465,7 @@ export function useMatchmaking() {
 				sharedNetwork,
 				starterClaimed,
 				hiveWalletAvailable: true,
+				requiresAuthenticatedSession: false,
 			});
 			if (p2pAccess.kind === 'blocked') {
 				return failJoin(p2pAccess.message);
@@ -403,11 +476,37 @@ export function useMatchmaking() {
 			});
 			if (starterReceiptError) return failJoin(starterReceiptError);
 
+			let delegation: MatchmakingDelegationProof | undefined;
+			if (sharedNetwork && p2pAccess.accountId) {
+				await loadWasmEngine();
+				const [rulesetHash] = await Promise.all([getCardRegistryHash()]);
+				const cachedDelegation = getCachedMatchmakingDelegation();
+				const cachedIsReusable = cachedDelegation
+					&& cachedDelegation.delegation.account === p2pAccess.accountId
+					&& cachedDelegation.delegation.peerId === peerId
+					&& cachedDelegation.delegation.rulesetHash === rulesetHash
+					&& cachedDelegation.delegation.engineHash === getWasmHash()
+					&& cachedDelegation.delegation.expiresAt > Date.now();
+				if (cachedIsReusable) {
+					delegation = cachedDelegation.delegation;
+				} else {
+					const built = await buildMatchmakingDelegation({
+						peerId,
+						accountId: p2pAccess.accountId,
+						rulesetHash,
+						engineHash: getWasmHash(),
+					});
+					delegation = built.delegation;
+					cacheMatchmakingDelegation(built);
+				}
+			}
+
 			const queueBodyResult = await buildQuickMatchQueueBody({
 				peerId,
 				accountId: p2pAccess.accountId,
 				sharedNetwork,
 				starterClaimed,
+				delegation,
 			});
 			if (!queueBodyResult.ok) return failJoin(queueBodyResult.message);
 
@@ -496,31 +595,43 @@ export function useMatchmaking() {
 			} else {
 				await loadWasmEngine();
 				const [rulesetHash] = await Promise.all([getCardRegistryHash()]);
-				const sessionKey = await generateSessionKey(currentOffer.matchId);
 				const account = getAuthenticatedHiveUsername() ?? hiveUsername ?? undefined;
-				const acceptance = buildMatchAcceptance({
-					offer: currentOffer,
-					peerId,
-					account,
-					ephemeralPubkey: sessionKey.pubkey,
-					rulesetHash,
-					engineHash: getWasmHash(),
-				});
-				proof = acceptance;
 				if (isSharedNetworkEnvironment()) {
-					if (!account) throw new Error('Hive session required before accepting a match.');
-					const signed = await invokeClientWalletAction(
-						{ kind: 'p2p_match_acceptance', authority: 'Posting', label: 'Accept match' },
-						() => signHiveMessage(buildMatchAcceptanceMessage(acceptance), {
-							username: account,
-							title: 'Ragnarok: accept match',
+					const delegation = getCachedMatchmakingDelegation();
+					if (!delegation || delegation.delegation.expiresAt <= Date.now()) {
+						throw new Error('Matchmaking authorization expired; search again to accept this offer.');
+					}
+					if (delegation.delegation.account !== account || delegation.delegation.rulesetHash !== rulesetHash || delegation.delegation.engineHash !== getWasmHash()) {
+						throw new Error('Matchmaking authorization no longer matches this client. Search again.');
+					}
+					const sessionKey = bindSessionKey(delegation.ephemeralKey, currentOffer.matchId);
+					const acceptance = {
+						...buildMatchAcceptance({
+							offer: currentOffer,
+							peerId,
+							account: delegation.delegation.account,
+							ephemeralPubkey: sessionKey.pubkey,
+							rulesetHash,
+							engineHash: getWasmHash(),
 						}),
-					);
-					if (!signed.success || !signed.signature) throw new Error(signed.error ?? 'Match acceptance signature rejected.');
-					proof = { ...acceptance, hiveSig: signed.signature };
+						protocol: 'ragnarok-match-accept-v2' as const,
+						delegationId: delegation.delegation.delegationId,
+					};
+					const sessionSig = await sessionKey.sign(new TextEncoder().encode(buildMatchAcceptanceV2Message(acceptance)));
+					proof = { ...acceptance, sessionSig };
+					cacheMatchAcceptance({ offer: currentOffer, proof, sessionKey });
+				} else {
+					const sessionKey = await generateSessionKey(currentOffer.matchId);
+					proof = buildMatchAcceptance({
+						offer: currentOffer,
+						peerId,
+						account,
+						ephemeralPubkey: sessionKey.pubkey,
+						rulesetHash,
+						engineHash: getWasmHash(),
+					});
+					cacheMatchAcceptance({ offer: currentOffer, proof, sessionKey });
 				}
-
-				cacheMatchAcceptance({ offer: currentOffer, proof, sessionKey });
 			}
 			const response = await fetch(`${getMatchmakingApiBase()}/api/matchmaking/accept`, {
 				method: 'POST',
@@ -575,6 +686,7 @@ export function useMatchmaking() {
 			}).catch((err: unknown) => debug.warn('[useMatchmaking] decline failed:', err));
 		}
 		clearCachedMatchAcceptance();
+		clearCachedMatchmakingDelegation();
 		reset();
 	}, [offer, reset]);
 
@@ -582,6 +694,7 @@ export function useMatchmaking() {
 		const peerId = usePeerStore.getState().myPeerId;
 		usePeerStore.getState().clearMatchChallenges();
 		clearCachedMatchAcceptance();
+		clearCachedMatchmakingDelegation();
 		clearServerStatusPoller();
 
 		if (!peerId) {

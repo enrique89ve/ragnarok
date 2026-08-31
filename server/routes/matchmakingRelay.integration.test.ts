@@ -21,6 +21,7 @@ import {
 	setStarterCeremonyClaim,
 } from '../services/starterClaimRegistry';
 import { clearHiveWebSessionsForTests } from '../services/hiveWebSession';
+import { buildMatchmakingDelegationMessage } from '../../shared/p2pMatchDelegation';
 
 vi.mock('../services/hiveAuth', async () => {
 	const actual = await vi.importActual<typeof import('../services/hiveAuth')>('../services/hiveAuth');
@@ -524,6 +525,59 @@ describe('matchmaking and relay integration', () => {
 					socket.close();
 				}
 			}
+			await closeServer(server);
+		}
+	});
+
+	it('accepts a single Hive-signed Find delegation and creates the reusable web session', async () => {
+		const { default: matchmakingRouter, clearP2PMatchmakingStateForTests } = await import('./matchmakingRoutes');
+		clearP2PMatchmakingStateForTests();
+		const app = express();
+		app.use(express.json());
+		app.use('/api/matchmaking', matchmakingRouter);
+		const server = createServer(app);
+
+		try {
+			const port = await listenOnEphemeralPort(server);
+			const baseUrl = `http://127.0.0.1:${port}`;
+			const peerId = 'find-delegation-peer';
+			await setStarterCeremonyClaim('alice', 1_800_000_000_000);
+
+			const challengeResponse = await postJson(baseUrl, '/api/matchmaking/delegation-challenge', {
+				account: 'alice',
+				peerId,
+				rulesetHash: 'registry-test',
+				engineHash: 'engine-test',
+			});
+			expect(challengeResponse.status).toBe(200);
+			expect(isRecord(challengeResponse.body)).toBe(true);
+			const challenge = isRecord(challengeResponse.body) && isRecord(challengeResponse.body.challenge)
+				? challengeResponse.body.challenge
+				: null;
+			expect(challenge).not.toBeNull();
+			if (!challenge) throw new Error('delegation challenge missing');
+
+			const proof = {
+				...challenge,
+				ephemeralPubkey: 'c'.repeat(43),
+				hiveSig: 'delegation-signature',
+			};
+			vi.mocked(verifyHiveAuth).mockClear();
+			const queueResponse = await fetch(`${baseUrl}/api/matchmaking/queue`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ peerId, username: 'alice', starterClaimed: true, delegation: proof }),
+			});
+			expect(queueResponse.status).toBe(200);
+			expect(await queueResponse.json()).toMatchObject({ success: true, status: 'queued' });
+			expect(queueResponse.headers.get('set-cookie')).toContain('ragnarok-hive-session=');
+			const { hiveSig: _hiveSig, ...delegationPayload } = proof;
+			expect(vi.mocked(verifyHiveAuth)).toHaveBeenCalledWith(
+				'alice',
+				buildMatchmakingDelegationMessage(delegationPayload),
+				'delegation-signature',
+			);
+		} finally {
 			await closeServer(server);
 		}
 	});

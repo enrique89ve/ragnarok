@@ -352,7 +352,7 @@ const PubkeyString = z.string().min(32).max(256);
 // here, only require non-empty + reasonable cap.
 const HiveSigString = NonEmptyString(512);
 
-const MatchAcceptanceProofSchema = z.object({
+const MatchAcceptanceV1Schema = z.object({
 	protocol: z.literal('ragnarok-match-accept-v1'),
 	offerId: NonEmptyString(128),
 	matchId: MatchIdString,
@@ -368,6 +368,39 @@ const MatchAcceptanceProofSchema = z.object({
 	hiveSig: HiveSigString.optional(),
 }).strict();
 
+const MatchAcceptanceV2Schema = z.object({
+	protocol: z.literal('ragnarok-match-accept-v2'),
+	offerId: NonEmptyString(128),
+	matchId: MatchIdString,
+	account: NonEmptyString(32).optional(),
+	peerId: NonEmptyString(64),
+	opponentAccount: NonEmptyString(32).optional(),
+	opponentPeerId: NonEmptyString(64),
+	ephemeralPubkey: PubkeyString,
+	rulesetHash: NonEmptyString(256),
+	engineHash: NonEmptyString(256),
+	serverNonce: NonEmptyString(128),
+	expiresAt: z.number().int().positive(),
+	delegationId: NonEmptyString(128),
+	sessionSig: z.string().regex(/^[A-Za-z0-9_-]{86}$/),
+}).strict();
+
+const MatchAcceptanceProofSchema = z.union([MatchAcceptanceV1Schema, MatchAcceptanceV2Schema]);
+
+const MatchmakingDelegationProofSchema = z.object({
+	protocol: z.literal('ragnarok-matchmaking-delegation-v1'),
+	delegationId: NonEmptyString(128),
+	account: NonEmptyString(32),
+	peerId: NonEmptyString(64),
+	ephemeralPubkey: PubkeyString,
+	rulesetHash: NonEmptyString(256),
+	engineHash: NonEmptyString(256),
+	serverNonce: NonEmptyString(128),
+	issuedAt: z.number().int().positive(),
+	expiresAt: z.number().int().positive(),
+	hiveSig: HiveSigString,
+}).strict();
+
 const SessionAuthorizeSchema = z.object({
 	type: z.literal('session_authorize'),
 	// Quick Match room ids are composed from both 36-character peer ids.
@@ -377,6 +410,7 @@ const SessionAuthorizeSchema = z.object({
 	ephemeralPubkey: PubkeyString,
 	hiveSig: HiveSigString.optional(),
 	acceptance: MatchAcceptanceProofSchema.optional(),
+	delegation: MatchmakingDelegationProofSchema.optional(),
 	matchChallenge: z.object({
 		from: NonEmptyString(32),
 		to: NonEmptyString(32),
@@ -387,7 +421,11 @@ const SessionAuthorizeSchema = z.object({
 		sigAlg: z.literal(CHALLENGE_SIGNATURE_ALGORITHM),
 		serverSig: z.string().regex(/^[a-f0-9]{64}$/),
 	}).strict().optional(),
-}).strict();
+}).strict().superRefine((value, ctx) => {
+	if (value.acceptance?.protocol === 'ragnarok-match-accept-v2' && !value.delegation) {
+		ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['delegation'], message: 'V2 acceptance requires its Hive delegation' });
+	}
+});
 
 const BattleReadySchema = z.object({
 	type: z.literal('battle_ready_v1'),

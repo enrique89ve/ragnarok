@@ -6,10 +6,11 @@
 > **Active testnet contract:** [ADR 0007](adr/0007-p2p-gameplay-only-testnet.md)
 > enables deterministic WebSocket phase checkpoints but disables P2P
 > `match_anchor`, `match_result` and economic settlement. Quick Match follows
-> `Offer → Accept → Ready`: queue/search is unsigned, `Accept` is the one
-> match-specific Posting signature per player, and no later handshake,
-> reconnect or result path may prompt Keychain. A completed match shows and
-> exports a local result only.
+> `Find → Offer → Accept → Ready`: `Find` makes the one visible Posting
+> signature per player, delegating an ephemeral Ed25519 key to the matchmaking
+> server; `Accept` is local Ed25519 signing and never opens Keychain. No later
+> handshake, reconnect or result path may prompt Keychain. A completed match
+> shows and exports a local result only.
 
 **Audience**: contributors writing or auditing P2P wire code, the transcript
 pipeline, or the matchmaking surface. Ranked settlement canon:
@@ -18,8 +19,8 @@ pipeline, or the matchmaking surface. Ranked settlement canon:
 Normative Quick Match invariants:
 
 ```text
-SEARCH ≠ SIGN
-ACCEPT = única firma Keychain de la partida
+FIND = única firma Keychain de la partida
+ACCEPT = firma Ed25519 local (sin Keychain)
 BATTLE_START ⇒ A_AUTHORIZED ∧ B_AUTHORIZED ∧ P2P_READY
 P2P ∨ UNKNOWN_STATE ⇒ AI_DISABLED
 ```
@@ -306,31 +307,38 @@ in phases 0-2 before any gameplay action is sent.
 ### Phase 0 — Matchmaking
 
 1. LOGIN signs `ragnarok-login:<username>:<timestamp>` once with Hive Posting
-   authority and establishes the reusable `/api/session` HTTP session. In
-   shared-network runtime (`testnet`/`mainnet`), Quick Match queue/search
-   requires that session; it does not open Keychain or sign the queue body.
-   The server also requires a server-side starter ceremony receipt recorded
-   through `/api/starter/claim` before the account can enqueue. The request may
-   carry identity metadata for ELO lookup, but the HTTP session is the
-   authentication authority. The server returns a process-local `queueToken`;
-   clients send it as `x-p2p-queue-token` for queue rechecks, status polling and
-   leave requests.
-2. The server runs `findBestEloMatch` (`matchmakingRoutes.ts:93`):
+   authority and establishes the reusable `/api/session` HTTP session. The
+   client hydrates that HttpOnly session on reload, so returning to the app does
+   not require a new login prompt.
+2. FIND creates a server challenge bound to the account, peer id, ruleset and
+   engine hashes. The client generates an ephemeral Ed25519 key and signs the
+   canonical delegation payload with Hive Posting exactly once. The signed
+   delegation is sent with `POST /api/matchmaking/queue`; the server verifies
+   the Hive signature, issues the reusable HTTP session when needed, and stores
+   the delegation with the queue entry. In shared-network runtime
+   (`testnet`/`mainnet`) the server also requires the server-side starter
+   ceremony receipt recorded through `/api/starter/claim` before enqueueing.
+   The server returns a process-local `queueToken`; clients send it as
+   `x-p2p-queue-token` for queue rechecks, status polling and leave requests.
+   During rolling deployment, an already-authenticated legacy client may still
+   enqueue through its existing Hive web session; new clients use the signed
+   delegation path above.
+3. The server runs `findBestEloMatch` (`matchmakingRoutes.ts:93`):
    - First pass: closest ELO within ±200 (expands to ±500 after 30s,
      anyone after 60s — see `matchmakingRoutes.ts:99-102`).
    - Second pass: if no ELO match, pair with anyone waiting >60s.
    A pair receives perspective-specific `offer` objects, not relay tickets.
    The offer includes the shared `offerId`, `matchId`, both peer identities,
    nonce and expiry. No active room exists yet.
-3. Each player explicitly accepts their offer with `POST
+4. Each player explicitly accepts their offer with `POST
    /api/matchmaking/accept`. On shared network this is the only
-   match-specific Keychain action: the player signs the canonical acceptance
-   payload containing the offer, peer binding, ruleset/engine hashes,
-   ephemeral session public key, nonce and expiry. The server verifies the
-   proof against the reusable HTTP session and stores it idempotently.
+   match-specific local action: the player signs the canonical acceptance
+   payload with the ephemeral key authorized at FIND. The server verifies the
+   Ed25519 proof against the stored Hive delegation and reusable HTTP session,
+   then stores it idempotently.
    One acceptance returns `waiting_opponent`; two valid acceptances commit the
    match. A declined or expired offer creates no room.
-4. Only after bilateral acceptance does the server create the peer-specific
+5. Only after bilateral acceptance does the server create the peer-specific
    relay tickets/challenges and return `status: ready`. Each status response
    contains only that caller's own `matchTicket`. Direct challenges and manual
    rooms remain legacy compatibility paths and are outside this Quick Match
@@ -526,7 +534,7 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `ping` / `pong` | both | both | Lower-level RTT probe |
 | `opponentDisconnected` | — | — | **Dropped.** Not a legal relay type. Departure is `__sys.close` only. |
 | `spectator_state` | host | host | Future / unused in beta |
-| `session_authorize` | peer→peer | both | Quick Match carries the already-verified `Accept` proof `{ matchId, ephemeralPubkey, hiveSig, acceptance }` into the handshake. Both peers must verify the bilateral proof before BattleReady; it never opens a second Keychain prompt. Direct challenges retain their existing session/ticket authorization path. |
+| `session_authorize` | peer→peer | both | Quick Match carries the already-verified `Accept` proof plus its Hive-signed ephemeral-key delegation. Both peers verify the delegation and local Ed25519 acceptance before BattleReady; it never opens another Keychain prompt. Direct challenges retain their existing session/ticket authorization path. |
 | `session_renewal` | peer→peer | both | **Future ADR 0004 settlement path**; disabled because current matches cannot request a reload Keychain signature |
 | `session_resumed` | peer→peer | both | **Future ADR 0004 settlement path**; not a current testnet release gate |
 | `state_sync_request` | peer→peer | both | Ask the **peer** for missing transcript leaves after reconnect or hard-reload rejoin. The relay only fans the request out. |
@@ -795,11 +803,16 @@ Implementation:
 ## §6 Identity Binding (Hive ↔ Peer)
 
 PeerIds are ephemeral UUIDs — not cryptographic identity. The only durable,
-arbitrable identity is the Hive username (signed-in via Keychain).
+arbitrable identity is the Hive username, authenticated by the reusable
+HttpOnly Hive session established at LOGIN or FIND.
 
 **Binding moment**: Phase 2 `seed_reveal` includes `hiveUsername` if the
 peer is logged in (`useWireSync.ts:437`). The receiver stores it in
 `opponentUsernameRef` (`useWireSync.ts:511-513`).
+
+For Quick Match, the server additionally binds the peer id and ephemeral
+Ed25519 public key to the Hive account in the FIND delegation. The later
+`Accept` proof signs locally with that key; peers and server verify both links.
 
 **Identity in wire envelopes**: NONE of the in-match envelopes carry the
 sender's username. Authority is implicit:

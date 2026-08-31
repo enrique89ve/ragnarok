@@ -11,7 +11,7 @@ import {
 	type LocalBattleMode,
 	type SingleMatchRecord,
 } from '../../data/singleRecord';
-import { routes } from '../../../lib/routes';
+import { openLoginModal } from '../../../components/account/LoginModal';
 import { useNFTUsername } from '../../nft/hooks';
 import { useReplayStore, type MatchRecord } from '../../stores/replayStore';
 import ReplayViewer from './ReplayViewer';
@@ -220,12 +220,13 @@ function LoginLedgerEmpty() {
 			<p className="mt-2 max-w-md text-sm leading-relaxed text-ink-300">
 				Battle history stays on this device, scoped to the Hive account that is logged in.
 			</p>
-			<Link
-				to={routes.settings}
+			<button
+				type="button"
+				onClick={openLoginModal}
 				className={`mt-5 inline-flex min-h-11 items-center justify-center border border-gold-500 bg-obsidian-850 px-4 font-display text-[11px] font-bold uppercase tracking-[0.18em] text-gold-300 hover:border-gold-300 hover:text-gold-200 ${FOCUS_RING}`}
 			>
 				Login
-			</Link>
+			</button>
 		</div>
 	);
 }

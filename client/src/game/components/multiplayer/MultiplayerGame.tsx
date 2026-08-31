@@ -162,7 +162,7 @@ export const MultiplayerGame: React.FC = () => {
 		authenticatedAccountId: authenticatedHiveUsername,
 		sharedNetwork: requiresHiveSession,
 		surface: 'multiplayer',
-		requiresAuthenticatedSession: true,
+		requiresAuthenticatedSession: false,
 	});
 	const hasHiveSession = p2pAccess.kind === 'allowed' && (!requiresHiveSession || isHiveWalletAvailable());
 	const resumeAccount = authenticatedHiveUsername ?? hiveUsername ?? 'local';

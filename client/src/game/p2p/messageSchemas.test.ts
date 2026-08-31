@@ -650,6 +650,52 @@ describe('parseWireMessage — session_authorize challenge boundary', () => {
 		})).not.toBeNull();
 	});
 
+	it('accepts V2 local acceptance only with the matching Hive delegation', () => {
+		const matchId = `${'a'.repeat(36)}-${'b'.repeat(36)}`;
+		const ephemeralPubkey = 'c'.repeat(43);
+		const delegation = {
+			protocol: 'ragnarok-matchmaking-delegation-v1',
+			delegationId: 'delegation-1',
+			account: 'alice',
+			peerId: 'peer-1',
+			ephemeralPubkey,
+			rulesetHash: 'ruleset',
+			engineHash: 'engine',
+			serverNonce: 'nonce_1234567890ab',
+			issuedAt: 1_000,
+			expiresAt: 100_000,
+			hiveSig: 'hive-signature',
+		};
+		const acceptance = {
+			protocol: 'ragnarok-match-accept-v2',
+			offerId: 'offer-1',
+			matchId,
+			account: 'alice',
+			peerId: 'peer-1',
+			opponentPeerId: 'peer-2',
+			ephemeralPubkey,
+			rulesetHash: 'ruleset',
+			engineHash: 'engine',
+			serverNonce: 'nonce_1234567890ab',
+			expiresAt: 100_000,
+			delegationId: 'delegation-1',
+			sessionSig: 's'.repeat(86),
+		};
+		expect(parseWireMessage({
+			type: 'session_authorize',
+			matchId,
+			ephemeralPubkey,
+			acceptance,
+			delegation,
+		})).not.toBeNull();
+		expect(parseWireMessage({
+			type: 'session_authorize',
+			matchId,
+			ephemeralPubkey,
+			acceptance,
+		})).toBeNull();
+	});
+
 	it('rejects relay match tickets inside session_authorize challenges', () => {
 		expect(parseWireMessage({
 			type: 'session_authorize',

@@ -12,6 +12,7 @@ vi.mock('../../data/HiveAuth', async () => {
 });
 
 import {
+	buildMatchmakingDelegation,
 	buildMatchAcceptance,
 	buildQuickMatchQueueBody,
 	failQueuedStatus,
@@ -124,6 +125,51 @@ describe('useMatchmaking quick-match access helpers', () => {
 			kind: 'allowed',
 			accountId: 'alice',
 		});
+	});
+
+	it('allows Find to establish the session when the account has no hydrated session yet', () => {
+		expect(resolveQuickMatchQueueAccess({
+			accountId: 'alice',
+			authenticatedHiveUsername: null,
+			sharedNetwork: true,
+			starterClaimed: true,
+			hiveWalletAvailable: true,
+			requiresAuthenticatedSession: false,
+		})).toEqual({ kind: 'allowed', accountId: 'alice' });
+	});
+
+	it('builds the Find delegation with exactly one visible Hive signature', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+			success: true,
+			challenge: {
+				protocol: 'ragnarok-matchmaking-delegation-v1',
+				delegationId: 'delegation-1',
+				account: 'alice',
+				peerId: 'peer-one',
+				rulesetHash: 'ruleset-hash',
+				engineHash: 'engine-hash',
+				serverNonce: 'nonce_1234567890ab',
+				issuedAt: Date.now(),
+				expiresAt: Date.now() + 600_000,
+			},
+		}), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+		vi.stubGlobal('fetch', fetchMock);
+		matchmakingMocks.signHiveMessage.mockResolvedValueOnce({ success: true, signature: 'hive-signature' });
+
+		const result = await buildMatchmakingDelegation({
+			peerId: 'peer-one',
+			accountId: 'alice',
+			rulesetHash: 'ruleset-hash',
+			engineHash: 'engine-hash',
+		});
+
+		expect(result.delegation).toMatchObject({ account: 'alice', peerId: 'peer-one', hiveSig: 'hive-signature' });
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(matchmakingMocks.signHiveMessage).toHaveBeenCalledTimes(1);
+		expect(matchmakingMocks.signHiveMessage).toHaveBeenCalledWith(
+			expect.stringContaining('ragnarok-matchmaking-delegation-v1'),
+			expect.objectContaining({ username: 'alice' }),
+		);
 	});
 
 	it('keeps local quick match behind local starter claim without requiring Hive or Keychain', () => {

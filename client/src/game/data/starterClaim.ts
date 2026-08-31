@@ -34,7 +34,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-async function hasSharedNetworkStarterClaimReceipt(accountId: string): Promise<boolean> {
+export async function hasSharedNetworkStarterClaimReceipt(accountId: string): Promise<boolean> {
 	const response = await fetch(`/api/starter/status/${encodeURIComponent(accountId)}`);
 	if (!response.ok) return false;
 	const payload: unknown = await response.json().catch(() => null);

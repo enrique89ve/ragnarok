@@ -4,6 +4,7 @@ import { routes } from './lib/routes';
 import { getWarbandEntryRoute } from './lib/warbandRoutes';
 import { Button, ToastProvider } from './components/ui-norse';
 import { AccountSlot } from './components/account/AccountSlot';
+import { LoginModalHost } from './components/account/LoginModal';
 import {
 	ChevronRight,
 	Compass,
@@ -34,6 +35,7 @@ import { useStarterStore } from "./game/stores/starterStore";
 import type { AiStyle } from "./game/match/types";
 import { useNFTUsername } from './game/nft/hooks';
 import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from "./data/HiveSessionIdentity";
+import { hydrateHiveWebSession } from './data/HiveAuth';
 import { createRuntimeStorageKey, getRagnarokNetworkConfig } from "./game/config/networkConfig";
 import { getDataLayerMode, isSharedNetworkEnvironment, isTestnetStage } from "./game/config/featureFlags";
 import { getRagnarokRuntimePhase } from '@shared/runtimeConfig';
@@ -1209,12 +1211,17 @@ function GameOrientationGate({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+	useEffect(() => {
+		void hydrateHiveWebSession();
+	}, []);
+
 	return (
 		<ErrorBoundary>
 			<EitrMigrationBanner />
 
 			<ToastProvider position="top-right" richColors />
 			<HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+				<LoginModalHost />
 				<Suspense fallback={<LoadingScreen />}>
 					<Routes>
 						<Route path={routes.map} element={<MapPage />} />
@@ -1255,7 +1262,7 @@ function App() {
 									<Route path={routes.campaignGame} element={<CampaignGameRoute />} />
 									<Route path="/game/multiplayer" element={<Navigate to={routes.multiplayer} replace />} />
 									<Route path={routes.multiplayer} element={
-										<ProtectedAccountGate surface="multiplayer" requiresSignedSession>
+										<ProtectedAccountGate surface="multiplayer">
 											<StarterEntitlementGate surface="multiplayer"><MultiplayerGame /></StarterEntitlementGate>
 										</ProtectedAccountGate>
 									} />

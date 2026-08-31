@@ -34,11 +34,14 @@ import { toast } from 'sonner';
 
 export type SessionKeyMode = 'webcrypto' | 'noble';
 
-export type SessionKey = Readonly<{
-	matchId: string;
+export type EphemeralSigningKey = Readonly<{
 	pubkey: string;        // base64url, 43 chars (32 bytes, unpadded)
 	mode: SessionKeyMode;
 	sign: (bytes: Uint8Array) => Promise<string>; // base64url, 86 chars
+}>;
+
+export type SessionKey = EphemeralSigningKey & Readonly<{
+	matchId: string;
 }>;
 
 // ─── Constants ─────────────────────────────────────────────────────────────
@@ -165,9 +168,9 @@ export async function _generateForTests(matchId: string, mode: SessionKeyMode): 
 		if (!(await webcryptoEd25519Supported())) {
 			throw new Error('[sessionKey] WebCrypto Ed25519 unavailable in this environment');
 		}
-		return generateWebCryptoSessionKey(matchId);
+		return bindSessionKey(await generateWebCryptoEphemeralKey(), matchId);
 	}
-	return generateNobleSessionKey(matchId);
+	return bindSessionKey(generateNobleEphemeralKey(), matchId);
 }
 
 /**
@@ -202,14 +205,21 @@ export async function generateSessionKey(matchId: string): Promise<SessionKey> {
 	if (!matchId || matchId.length === 0) {
 		throw new Error('[sessionKey] matchId is required');
 	}
-	if (await webcryptoEd25519Supported()) {
-		return generateWebCryptoSessionKey(matchId);
-	}
-	emitCompatModeWarning();
-	return generateNobleSessionKey(matchId);
+	return bindSessionKey(await generateEphemeralSigningKey(), matchId);
 }
 
-async function generateWebCryptoSessionKey(matchId: string): Promise<SessionKey> {
+export async function generateEphemeralSigningKey(): Promise<EphemeralSigningKey> {
+	if (await webcryptoEd25519Supported()) return generateWebCryptoEphemeralKey();
+	emitCompatModeWarning();
+	return generateNobleEphemeralKey();
+}
+
+export function bindSessionKey(key: EphemeralSigningKey, matchId: string): SessionKey {
+	if (!matchId || matchId.length === 0) throw new Error('[sessionKey] matchId is required');
+	return Object.freeze({ ...key, matchId });
+}
+
+async function generateWebCryptoEphemeralKey(): Promise<EphemeralSigningKey> {
 	const generated = await crypto.subtle.generateKey(
 		{ name: 'Ed25519' },
 		false, // non-extractable — XSS cannot exfil
@@ -229,10 +239,10 @@ async function generateWebCryptoSessionKey(matchId: string): Promise<SessionKey>
 		return bytesToBase64Url(new Uint8Array(sigBuf));
 	};
 
-	return Object.freeze({ matchId, pubkey, mode: 'webcrypto', sign });
+	return Object.freeze({ pubkey, mode: 'webcrypto', sign });
 }
 
-function generateNobleSessionKey(matchId: string): SessionKey {
+function generateNobleEphemeralKey(): EphemeralSigningKey {
 	const secretKey = ed25519.utils.randomSecretKey();
 	const publicKey = ed25519.getPublicKey(secretKey);
 	if (publicKey.length !== ED25519_PUBKEY_BYTES) {
@@ -245,7 +255,7 @@ function generateNobleSessionKey(matchId: string): SessionKey {
 		return bytesToBase64Url(sig);
 	};
 
-	return Object.freeze({ matchId, pubkey, mode: 'noble', sign });
+	return Object.freeze({ pubkey, mode: 'noble', sign });
 }
 
 // ─── Verification (cross-mode) ─────────────────────────────────────────────

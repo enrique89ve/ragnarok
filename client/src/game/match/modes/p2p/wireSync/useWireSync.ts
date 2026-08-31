@@ -103,8 +103,10 @@ import { isRetryablePhaseCheckpointDispute, type PhaseCheckpointPhase, type Phas
 import { isRetryablePokerTurnNotaryDispute } from '@shared/p2p-wire/pokerTimeNotary';
 import type { PokerTurnClockProposal } from '@shared/p2p-wire/pokerTimeNotary';
 import { settleRemoteCommand } from './remoteCommandSettlement';
-import { getCachedMatchAcceptance } from '../../../../p2p/matchAcceptance';
-import { buildMatchAcceptanceMessage, readMatchAcceptanceProof } from '../../../../../../../shared/p2pMatchAcceptance';
+import { getCachedMatchAcceptance, getCachedMatchmakingDelegation } from '../../../../p2p/matchAcceptance';
+import { buildMatchAcceptanceMessage, buildMatchAcceptanceV2Message, readMatchAcceptanceProof } from '../../../../../../../shared/p2pMatchAcceptance';
+import { isCurrentMatchmakingDelegation, readMatchmakingDelegationProof, buildMatchmakingDelegationMessage } from '@shared/p2pMatchDelegation';
+import { verifyEnvelope } from '../../../../protocol/sessionKey';
 import { useMatchmakingStore } from '../../../../stores/matchmakingStore';
 import { buildBattleReadyLoadoutCommitmentPayload, compareBattleReadyProofs, type P2PBattleReadyProof } from '../../../../p2p/battleReady';
 import { createSeededIdGen } from '../../../../utils/seededRng';
@@ -1329,7 +1331,13 @@ export function useWireSync() {
 						if (cachedAcceptance && cachedAcceptance.offer.matchId === localMatchId) {
 							sessionKeyRef.current = cachedAcceptance.sessionKey;
 							const localProof = cachedAcceptance.proof;
-							if (isSharedNetworkEnvironment() && (!localProof.account || !localProof.hiveSig)) {
+							const localDelegation = getCachedMatchmakingDelegation()?.delegation;
+							const localProofIsAuthorized = localProof.protocol === 'ragnarok-match-accept-v2'
+								? Boolean(localDelegation
+									&& localDelegation.delegationId === localProof.delegationId
+									&& localDelegation.account === localProof.account)
+								: Boolean(localProof.account && localProof.hiveSig);
+							if (isSharedNetworkEnvironment() && !localProofIsAuthorized) {
 								usePeerStore.getState().setP2pSessionAuthorization({
 									localAuthorized: false,
 									remoteAuthorized: false,
@@ -1342,6 +1350,9 @@ export function useWireSync() {
 									ephemeralPubkey: cachedAcceptance.sessionKey.pubkey,
 									...(localProof.hiveSig ? { hiveSig: localProof.hiveSig } : {}),
 									acceptance: localProof,
+									...(localProof.protocol === 'ragnarok-match-accept-v2' && localDelegation
+										? { delegation: localDelegation }
+										: {}),
 								});
 								debug.log('[wireSync] Sent session_authorize', {
 									matchId: localMatchId,
@@ -1349,11 +1360,12 @@ export function useWireSync() {
 									proofHasHiveSignature: Boolean(localProof.hiveSig),
 								});
 								usePeerStore.getState().setP2pSessionAuthorization({ localAuthorized: true, error: null });
-								if (localProof.hiveSig) {
+								const localDelegationSig = localProof.hiveSig ?? localDelegation?.hiveSig;
+								if (localDelegationSig) {
 									try {
 										const [db, encKey] = await Promise.all([
 											openActionLog(),
-											deriveActionLogEncKey(localProof.hiveSig, localMatchId),
+											deriveActionLogEncKey(localDelegationSig, localMatchId),
 										]);
 										actionLogDbRef.current = db;
 										actionLogEncKeyRef.current = encKey;
@@ -2489,161 +2501,193 @@ export function useWireSync() {
 					break;
 				}
 
-					case 'session_authorize': {
-						// ADR 0004 §Decision.3 — cache opponent's ephemeral pubkey +
-						// the Hive sig that binds it to their on-chain identity.
-						if (data.matchId !== matchIdRef.current) {
-							debug.warn('[wireSync] session_authorize matchId mismatch — ignoring', {
-								received: data.matchId,
-								expected: matchIdRef.current,
-							});
-							break;
-						}
-							if (data.acceptance) {
-							const remoteAcceptance = readMatchAcceptanceProof(data.acceptance);
-							const localAcceptance = getCachedMatchAcceptance();
-							const offer = localAcceptance?.offer;
-							const proofMatchesLocalOffer = Boolean(
-								remoteAcceptance && offer
-								&& remoteAcceptance.offerId === offer.offerId
-								&& remoteAcceptance.matchId === offer.matchId
-								&& remoteAcceptance.peerId === offer.opponent.peerId
-								&& remoteAcceptance.opponentPeerId === offer.player.peerId
-								&& remoteAcceptance.serverNonce === offer.serverNonce
-								&& remoteAcceptance.expiresAt === offer.expiresAt
-								&& remoteAcceptance.ephemeralPubkey === data.ephemeralPubkey
-								&& remoteAcceptance.hiveSig === data.hiveSig
-								&& remoteAcceptance.rulesetHash === localAcceptance?.proof.rulesetHash
-								&& remoteAcceptance.engineHash === localAcceptance?.proof.engineHash
-								&& (!offer.player.username || remoteAcceptance.opponentAccount === offer.player.username)
-								&& (!offer.opponent.username || remoteAcceptance.account === offer.opponent.username)
-							);
-							let acceptanceValid = proofMatchesLocalOffer;
-							if (acceptanceValid && isSharedNetworkEnvironment()) {
-								if (!remoteAcceptance?.account || !remoteAcceptance.hiveSig) {
-									acceptanceValid = false;
-								} else {
-									const { hiveSig, ...payload } = remoteAcceptance;
-									acceptanceValid = await verifyHiveSignature(
-										remoteAcceptance.account,
-										buildMatchAcceptanceMessage(payload),
-										hiveSig,
-									);
-								}
-							}
-							if (!acceptanceValid || !remoteAcceptance) {
-								debug.warn('[wireSync] session_authorize dropped — match acceptance verification failed');
-								usePeerStore.getState().setP2pSessionAuthorization({
-									remoteAuthorized: false,
-									error: 'Opponent match acceptance verification failed',
-								});
-								break;
-							}
-							opponentSessionPubkeyRef.current = remoteAcceptance.ephemeralPubkey;
-							opponentSessionHiveSigRef.current = remoteAcceptance.hiveSig ?? null;
-							usePeerStore.getState().setP2pSessionAuthorization({ remoteAuthorized: true, error: null });
-							debug.log('[wireSync] Verified opponent match acceptance', { matchId: data.matchId });
-							break;
-						}
-							if (useMatchmakingStore.getState().matchCommitted) {
-								debug.warn('[wireSync] Quick Match session_authorize missing acceptance proof');
-							usePeerStore.getState().setP2pSessionAuthorization({
-								remoteAuthorized: false,
-								error: 'Opponent Quick Match acceptance proof is missing',
-							});
-								break;
-							}
-
-							const opponentUsername = opponentUsernameRef.current;
-							if (!opponentUsername) {
-								debug.warn('[wireSync] session_authorize dropped — no opponent Hive username');
-								usePeerStore.getState().setP2pSessionAuthorization({
-									remoteAuthorized: false,
-									error: 'Missing opponent Hive username',
-								});
-								break;
-							}
-
-							const expectedChallenges = getSessionAuthChallenges();
-						if (expectedChallenges.length > 0) {
-							if (!data.matchChallenge) {
-								debug.warn('[wireSync] session_authorize dropped — expected match challenge missing', {
-									opponentUsername,
-									matchId: data.matchId,
-								});
-								usePeerStore.getState().setP2pSessionAuthorization({
-									remoteAuthorized: false,
-									error: 'Missing opponent match challenge',
-								});
-								break;
-							}
-							const matchedChallenge = findMatchingSessionAuthChallenge(data.matchChallenge);
-							if (!matchedChallenge) {
-								debug.warn('[wireSync] session_authorize dropped — match challenge mismatch', {
-									opponentUsername,
-									matchId: data.matchId,
-								});
-								usePeerStore.getState().setP2pSessionAuthorization({
-									remoteAuthorized: false,
-									error: 'Opponent match challenge mismatch',
-								});
-								break;
-							}
-							if (!isFreshMatchChallenge(matchedChallenge)) {
-								debug.warn('[wireSync] session_authorize dropped — opponent match challenge expired', {
-									opponentUsername,
-									matchId: data.matchId,
-								});
-								usePeerStore.getState().setP2pSessionAuthorization({
-									remoteAuthorized: false,
-									error: 'Opponent match challenge expired',
-								});
-								break;
-							}
-						}
-
-						if (!data.hiveSig) {
-							usePeerStore.getState().setP2pSessionAuthorization({
-								remoteAuthorized: false,
-								error: 'Missing Hive session authorization signature',
-							});
-							break;
-						}
-						const authorizeMessage = buildSessionAuthorizeMessage(
-							data.matchId,
-							data.ephemeralPubkey,
-							data.matchChallenge,
-						);
-						const sigValid = await verifyHiveSignature(opponentUsername, authorizeMessage, data.hiveSig);
-						if (!sigValid) {
-							debug.warn('[wireSync] session_authorize dropped — Hive signature verification failed', {
-								opponentUsername,
-								matchId: data.matchId,
-								pubkeyPrefix: data.ephemeralPubkey.slice(0, 8),
-							});
-							usePeerStore.getState().setP2pSessionAuthorization({
-								remoteAuthorized: false,
-								error: 'Opponent Hive signature verification failed',
-							});
-							break;
-						}
-						if (opponentSessionPubkeyRef.current && opponentSessionPubkeyRef.current !== data.ephemeralPubkey) {
-							debug.warn('[wireSync] session_authorize replaced opponent pubkey mid-match — possible re-key', {
-								before: opponentSessionPubkeyRef.current.slice(0, 8),
-								after: data.ephemeralPubkey.slice(0, 8),
-							});
-						}
-						opponentSessionPubkeyRef.current = data.ephemeralPubkey;
-						opponentSessionHiveSigRef.current = data.hiveSig;
-						usePeerStore.getState().setP2pSessionAuthorization({
-							remoteAuthorized: true,
-						});
-						debug.log('[wireSync] Cached opponent session_authorize', {
-							matchId: data.matchId,
-							pubkeyPrefix: data.ephemeralPubkey.slice(0, 8),
+				case 'session_authorize': {
+					// Quick Match carries the already-verified Accept proof. V2 binds
+					// the ephemeral key once at FIND and uses local Ed25519 at ACCEPT.
+					if (data.matchId !== matchIdRef.current) {
+						debug.warn('[wireSync] session_authorize matchId mismatch — ignoring', {
+							received: data.matchId,
+							expected: matchIdRef.current,
 						});
 						break;
 					}
+					if (data.acceptance) {
+						const remoteAcceptance = readMatchAcceptanceProof(data.acceptance);
+						if (!remoteAcceptance) {
+							debug.warn('[wireSync] session_authorize dropped — malformed match acceptance');
+							usePeerStore.getState().setP2pSessionAuthorization({
+								remoteAuthorized: false,
+								error: 'Opponent match acceptance verification failed',
+							});
+							break;
+						}
+						const remoteDelegation = data.delegation ? readMatchmakingDelegationProof(data.delegation) : null;
+						const localAcceptance = getCachedMatchAcceptance();
+						const offer = localAcceptance?.offer;
+						const isV2 = remoteAcceptance?.protocol === 'ragnarok-match-accept-v2';
+						const proofMatchesLocalOffer = Boolean(offer
+							&& remoteAcceptance.offerId === offer.offerId
+							&& remoteAcceptance.matchId === offer.matchId
+							&& remoteAcceptance.peerId === offer.opponent.peerId
+							&& remoteAcceptance.opponentPeerId === offer.player.peerId
+							&& remoteAcceptance.serverNonce === offer.serverNonce
+							&& remoteAcceptance.expiresAt === offer.expiresAt
+							&& remoteAcceptance.ephemeralPubkey === data.ephemeralPubkey
+							&& (isV2 ? remoteAcceptance.delegationId === remoteDelegation?.delegationId : remoteAcceptance.hiveSig === data.hiveSig)
+							&& remoteAcceptance.rulesetHash === localAcceptance?.proof.rulesetHash
+							&& remoteAcceptance.engineHash === localAcceptance?.proof.engineHash
+							&& (!offer.player.username || remoteAcceptance.opponentAccount === offer.player.username)
+							&& (!offer.opponent.username || remoteAcceptance.account === offer.opponent.username));
+						let acceptanceValid = proofMatchesLocalOffer;
+						if (acceptanceValid && isSharedNetworkEnvironment()) {
+							if (isV2) {
+								if (!remoteAcceptance.account || !remoteDelegation
+									|| remoteDelegation.account !== remoteAcceptance.account
+									|| remoteDelegation.peerId !== remoteAcceptance.peerId
+									|| remoteDelegation.ephemeralPubkey !== remoteAcceptance.ephemeralPubkey
+									|| remoteDelegation.rulesetHash !== remoteAcceptance.rulesetHash
+									|| remoteDelegation.engineHash !== remoteAcceptance.engineHash
+									|| !isCurrentMatchmakingDelegation(remoteDelegation)) {
+									acceptanceValid = false;
+								} else {
+									const { hiveSig, ...delegationPayload } = remoteDelegation;
+									const { sessionSig, ...acceptancePayload } = remoteAcceptance;
+									const hiveValid = await verifyHiveSignature(
+										remoteDelegation.account,
+										buildMatchmakingDelegationMessage(delegationPayload),
+										hiveSig,
+									);
+									const sessionValid = await verifyEnvelope(
+										new TextEncoder().encode(buildMatchAcceptanceV2Message(acceptancePayload)),
+										sessionSig,
+										remoteAcceptance.ephemeralPubkey,
+									);
+									acceptanceValid = hiveValid && sessionValid;
+								}
+							} else if (!remoteAcceptance.account || !remoteAcceptance.hiveSig) {
+								acceptanceValid = false;
+							} else {
+								const { hiveSig, ...payload } = remoteAcceptance;
+								acceptanceValid = await verifyHiveSignature(
+									remoteAcceptance.account,
+									buildMatchAcceptanceMessage(payload),
+									hiveSig,
+								);
+							}
+						}
+						if (!acceptanceValid) {
+							debug.warn('[wireSync] session_authorize dropped — match acceptance verification failed');
+							usePeerStore.getState().setP2pSessionAuthorization({
+								remoteAuthorized: false,
+								error: 'Opponent match acceptance verification failed',
+							});
+							break;
+						}
+						opponentSessionPubkeyRef.current = remoteAcceptance.ephemeralPubkey;
+						opponentSessionHiveSigRef.current = remoteDelegation?.hiveSig ?? remoteAcceptance.hiveSig ?? data.hiveSig ?? null;
+						usePeerStore.getState().setP2pSessionAuthorization({ remoteAuthorized: true, error: null });
+						debug.log('[wireSync] Verified opponent match acceptance', { matchId: data.matchId });
+						break;
+					}
+					if (useMatchmakingStore.getState().matchCommitted) {
+						debug.warn('[wireSync] Quick Match session_authorize missing acceptance proof');
+						usePeerStore.getState().setP2pSessionAuthorization({
+							remoteAuthorized: false,
+							error: 'Opponent Quick Match acceptance proof is missing',
+						});
+						break;
+					}
+
+					const opponentUsername = opponentUsernameRef.current;
+					if (!opponentUsername) {
+						debug.warn('[wireSync] session_authorize dropped — no opponent Hive username');
+						usePeerStore.getState().setP2pSessionAuthorization({
+							remoteAuthorized: false,
+							error: 'Missing opponent Hive username',
+						});
+						break;
+					}
+
+					const expectedChallenges = getSessionAuthChallenges();
+					if (expectedChallenges.length > 0) {
+						if (!data.matchChallenge) {
+							debug.warn('[wireSync] session_authorize dropped — expected match challenge missing', {
+								opponentUsername,
+								matchId: data.matchId,
+							});
+							usePeerStore.getState().setP2pSessionAuthorization({
+								remoteAuthorized: false,
+								error: 'Missing opponent match challenge',
+							});
+							break;
+						}
+						const matchedChallenge = findMatchingSessionAuthChallenge(data.matchChallenge);
+						if (!matchedChallenge) {
+							debug.warn('[wireSync] session_authorize dropped — match challenge mismatch', {
+								opponentUsername,
+								matchId: data.matchId,
+							});
+							usePeerStore.getState().setP2pSessionAuthorization({
+								remoteAuthorized: false,
+								error: 'Opponent match challenge mismatch',
+							});
+							break;
+						}
+						if (!isFreshMatchChallenge(matchedChallenge)) {
+							debug.warn('[wireSync] session_authorize dropped — opponent match challenge expired', {
+								opponentUsername,
+								matchId: data.matchId,
+							});
+							usePeerStore.getState().setP2pSessionAuthorization({
+								remoteAuthorized: false,
+								error: 'Opponent match challenge expired',
+							});
+							break;
+						}
+					}
+
+					if (!data.hiveSig) {
+						usePeerStore.getState().setP2pSessionAuthorization({
+							remoteAuthorized: false,
+							error: 'Missing Hive session authorization signature',
+						});
+						break;
+					}
+					const authorizeMessage = buildSessionAuthorizeMessage(
+						data.matchId,
+						data.ephemeralPubkey,
+						data.matchChallenge,
+					);
+					const sigValid = await verifyHiveSignature(opponentUsername, authorizeMessage, data.hiveSig);
+					if (!sigValid) {
+						debug.warn('[wireSync] session_authorize dropped — Hive signature verification failed', {
+							opponentUsername,
+							matchId: data.matchId,
+							pubkeyPrefix: data.ephemeralPubkey.slice(0, 8),
+						});
+						usePeerStore.getState().setP2pSessionAuthorization({
+							remoteAuthorized: false,
+							error: 'Opponent Hive signature verification failed',
+						});
+						break;
+					}
+					if (opponentSessionPubkeyRef.current && opponentSessionPubkeyRef.current !== data.ephemeralPubkey) {
+						debug.warn('[wireSync] session_authorize replaced opponent pubkey mid-match — possible re-key', {
+							before: opponentSessionPubkeyRef.current.slice(0, 8),
+							after: data.ephemeralPubkey.slice(0, 8),
+						});
+					}
+					opponentSessionPubkeyRef.current = data.ephemeralPubkey;
+					opponentSessionHiveSigRef.current = data.hiveSig;
+					usePeerStore.getState().setP2pSessionAuthorization({
+						remoteAuthorized: true,
+					});
+					debug.log('[wireSync] Cached opponent session_authorize', {
+						matchId: data.matchId,
+						pubkeyPrefix: data.ephemeralPubkey.slice(0, 8),
+					});
+					break;
+				}
 
 				case 'session_renewal': {
 					// ADR 0004 §Decision.6 B–E (issue 06). Opponent reloaded;

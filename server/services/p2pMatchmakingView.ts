@@ -1,4 +1,5 @@
 import type { P2PMatchTicket, ServerSignedChallenge } from '../../shared/p2pAvailability';
+import type { MatchAcceptanceProof } from '../../shared/p2pMatchAcceptance';
 
 export type P2PActiveMatch = {
 	readonly offerId: string;
@@ -13,6 +14,8 @@ export type P2PActiveMatch = {
 	readonly player2MatchTicket: P2PMatchTicket;
 	readonly player1QueueTokenHash: string;
 	readonly player2QueueTokenHash: string;
+	readonly player1Acceptance?: MatchAcceptanceProof;
+	readonly player2Acceptance?: MatchAcceptanceProof;
 };
 
 export type P2PMatchPeerView = {

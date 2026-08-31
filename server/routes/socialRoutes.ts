@@ -15,6 +15,7 @@ import {
 	requireHiveHeaderAuth,
 	type HiveAuthenticatedRequest,
 } from '../middleware/hiveAuth';
+import { getHiveWebSessionUsername } from '../services/hiveWebSession';
 import {
 	CHALLENGE_RATE_LIMIT_MAX_ACCEPTED,
 	CHALLENGE_RATE_LIMIT_WINDOW_MS,
@@ -98,6 +99,12 @@ function getCookieValue(cookieHeader: string | undefined, name: string): string 
 }
 
 function readFriendSessionRequest(req: Request): FriendSessionRequest | null {
+	// Matchmaking establishes the shared HttpOnly Hive session. Reuse it for
+	// social presence/challenges so opening the warband does not trigger a
+	// second Keychain signature.
+	const hiveWebUsername = getHiveWebSessionUsername(req);
+	if (hiveWebUsername) return { username: hiveWebUsername };
+
 	const cookieToken = getCookieValue(req.headers.cookie, SOCIAL_SESSION_COOKIE_NAME);
 	if (!cookieToken) return null;
 	const now = Date.now();

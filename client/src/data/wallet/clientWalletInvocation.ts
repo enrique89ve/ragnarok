@@ -11,6 +11,7 @@ export type ClientWalletActionKind =
 	| 'card_transfer'
 	| 'market_action'
 	| 'p2p_session_authorize'
+	| 'p2p_matchmaking_delegation'
 	| 'p2p_match_acceptance'
 	| 'p2p_result_signature'
 	| 'slash_evidence'
