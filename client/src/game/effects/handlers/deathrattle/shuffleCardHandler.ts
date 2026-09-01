@@ -10,7 +10,7 @@ import { GameContext } from '../../../GameContext';
 import { CardData, CardInstance, DeathrattleEffect } from '../../../types';
 import { EffectResult } from '../../../types/EffectTypes';
 import { getCardById } from '../../../data/cardManagement/cardRegistry';
-import { v4 as uuidv4 } from 'uuid';
+import { cryptoIdGen } from '../../../utils/seededRng';
 import { cardsRng } from '../../../utils/cardsCommandRng';
 
 /**
@@ -42,7 +42,7 @@ export default function executeShuffleCardShuffleCard(
     
     for (let i = 0; i < count; i++) {
       const newCardInstance: CardInstance = {
-        instanceId: uuidv4(),
+        instanceId: cryptoIdGen(),
         card: cardToShuffle,
         currentHealth: 'health' in cardToShuffle ? (cardToShuffle.health ?? 0) : 0,
         canAttack: false,
@@ -60,7 +60,7 @@ export default function executeShuffleCardShuffleCard(
     if (shuffleForOpponent) {
       for (let i = 0; i < count; i++) {
         const opponentCardInstance: CardInstance = {
-          instanceId: uuidv4(),
+          instanceId: cryptoIdGen(),
           card: cardToShuffle,
           currentHealth: 'health' in cardToShuffle ? (cardToShuffle.health ?? 0) : 0,
           canAttack: false,

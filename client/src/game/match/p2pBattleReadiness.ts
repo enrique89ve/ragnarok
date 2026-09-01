@@ -59,7 +59,10 @@ export function computeP2PBattleReadiness(input: P2PBattleReadinessInput): P2PBa
 	if (!input.p2pInitApplied) return { ready: false, reason: 'P2P initial state has not been applied' };
 	if (!input.localBattleReady) return { ready: false, reason: 'Local battle-ready proof is not complete' };
 	if (!input.remoteBattleReady) return { ready: false, reason: 'Opponent battle-ready proof is not complete' };
-	if (input.expectedRemoteLoadoutHash === null) {
+	// `undefined` is possible while the handshake is still being assembled
+	// (the field is optional for legacy/direct callers). It is still an
+	// unavailable commitment, never evidence that the remote loadout is safe.
+	if (input.expectedRemoteLoadoutHash == null) {
 		return { ready: false, reason: 'Opponent loadout commitment is not available' };
 	}
 	const proofComparison = compareBattleReadyProofs(input.localBattleReady, input.remoteBattleReady, {

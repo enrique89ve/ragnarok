@@ -47,7 +47,7 @@ describe('card surface CSS ownership', () => {
 		expect(norseCardCss).toContain(
 			'calc(var(--norse-card-name-font-size) * var(--norse-card-name-font-scale))',
 		);
-		expect(norseCardCss).toContain('--norse-card-name-height: clamp(15px, 12cqw, 26px)');
+		expect(norseCardCss).toContain('--norse-card-name-height: calc(15px * var(--norse-card-ui-scale));');
 		expect(norseCardCss).not.toMatch(/\.card-frame__name-plate\[data-size="(?:small|medium|large)"\]\s*\{[^}]*font-size/);
 		expect(surfaceCss).toContain(
 			'.collection-card-frame.collection-card-frame--profile-minion.norse-card-frame--surface-collection',

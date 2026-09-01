@@ -96,6 +96,8 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 	let remoteDescriptionSet = false;
 	let controlState: WebRTCControlState = 'idle';
 	let fallbackSent = false;
+	let transportReadySent = false;
+	let transportCommitted = false;
 	let connectStartedAtMs: number | null = null;
 	let connectedAtMs: number | null = null;
 	const pendingIceCandidates: WebRTCIceCandidateInit[] = [];
@@ -178,18 +180,23 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 		fail(message, reason);
 	};
 
-	const sendControl = (message: P2PControlClientMessage): void => {
+	const sendControl = (message: P2PControlClientMessage): boolean => {
 		if (socket?.readyState !== WebSocket.OPEN) {
 			failControl('Control WebSocket is not open');
-			return;
+			return false;
 		}
-		try { socket.send(JSON.stringify(message)); }
+		try {
+			socket.send(JSON.stringify(message));
+			return true;
+		}
 		catch {
 			failControl('Control WebSocket send failed');
+			return false;
 		}
 	};
 
 	const sendTransportReady = (): void => {
+		if (transportReadySent) return;
 		if (socket?.readyState !== WebSocket.OPEN) {
 			const error = createTransportFailure('Control WebSocket is not open', 'ice_failed');
 			failControl(error.message, 'ice_failed');
@@ -209,6 +216,7 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 			failControl(failure.message, 'ice_failed');
 			throw failure;
 		}
+		transportReadySent = true;
 	};
 
 	const emitMessage = (message: P2PMessage): void => {
@@ -233,6 +241,7 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 		} catch {
 			return;
 		}
+		if (!transportCommitted) return;
 		connectedAtMs = Date.now();
 		setState('connected');
 		resolvePending();
@@ -319,7 +328,16 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 			let parsed: unknown;
 			try { parsed = JSON.parse(event.data); } catch { return; }
 			const message = parseWireMessage(parsed);
-			if (message) emitMessage(message);
+			if (!message) return;
+			// DataChannel open is not the gameplay-ready boundary. The Control WS
+			// must first confirm bilateral transport commitment; otherwise a fast
+			// peer frame could be retained by TransportManager and applied after
+			// the adapter transitions to `connected`.
+			if (!transportCommitted) {
+				debug.warn('[WebRTCTransport] dropped gameplay frame before transport commitment', { type: message.type });
+				return;
+			}
+			emitMessage(message);
 		};
 		activeChannel.onerror = () => fail('WebRTC DataChannel error', 'data_channel_failed');
 		activeChannel.onclose = () => {
@@ -382,7 +400,8 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 			|| message.type === 'phase_checkpoint_dispute_v1'
 			|| message.type === 'poker_turn_notary_commit_v1'
 			|| message.type === 'poker_turn_notary_dispute_v1'
-			|| message.type === 'poker_action_time_gate_v1') {
+			|| message.type === 'poker_action_time_gate_v1'
+			|| message.type === 'poker_action_time_gate_ack_v1') {
 			emitControlMessage(message);
 			return;
 		}
@@ -390,7 +409,27 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 			if (state !== 'connected') fail('Opponent selected relay transport', message.reason, false);
 			return;
 		}
-		if (message.type === 'transport_ready_v1') return;
+		if (message.type === 'transport_ready_v1') {
+			if (message.matchId !== options.roomId) {
+				failControl('Transport readiness match mismatch');
+				return;
+			}
+			if (message.kind !== 'webrtc' && state !== 'connected') {
+				// The peer selected relay before this DataChannel committed. Close
+				// this attempt so TransportManager can take its sticky relay path.
+				fail('Opponent selected a different transport', 'manual');
+			}
+			return;
+		}
+		if (message.type === 'transport_committed_v1') {
+			if (message.matchId !== options.roomId || message.kind !== 'webrtc') {
+				failControl('Transport commitment mismatch');
+				return;
+			}
+			transportCommitted = true;
+			maybeResolveDataChannel();
+			return;
+		}
 		if (message.type === 'control_peer_left_v1') {
 			if (state === 'connected') {
 				failControl('Opponent control connection lost');
@@ -493,6 +532,9 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 		connect,
 		send: (message: P2PMessage): void => {
 			if (!isOpenDataChannel(dataChannel)) throw new Error('WebRTC DataChannel is not open');
+			if (state !== 'connected' || !transportCommitted) {
+				throw new Error('WebRTC transport is not committed for gameplay');
+			}
 			const payload = JSON.stringify(message);
 			const payloadBytes = new TextEncoder().encode(payload).byteLength;
 			if (payloadBytes > MAX_P2P_FRAME_BYTES) {
@@ -517,7 +559,14 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 			return () => stateListeners.delete(listener);
 		},
 		close,
-		sendControlMessage: sendControl,
+		sendControlMessage: (message: P2PControlClientMessage): void => {
+			if (sendControl(message)) return;
+			// The public GameTransport control contract must not report a successful
+			// proposal when the authenticated socket rejected it. Internal ICE/SDP
+			// callbacks consume the boolean above and let the normal failure path
+			// continue; gameplay callers need an observable synchronous rejection.
+			throw createTransportFailure('Control WebSocket send failed', 'ice_failed');
+		},
 		onControlMessage: (listener): (() => void) => {
 			controlMessageListeners.add(listener);
 			return () => controlMessageListeners.delete(listener);

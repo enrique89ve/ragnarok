@@ -87,6 +87,15 @@ const BEYOND_SIGIL_MARK: Record<string, string> = {
 
 type View = 'norse' | 'greek' | 'beyond';
 
+type CampaignLead = {
+	view: View;
+	chapter: CampaignChapter;
+	mission: CampaignMission;
+	title: string;
+	copy: string;
+	cta: string;
+};
+
 type MapRealmShape = {
 	id: string;
 	position: { x: number; y: number };
@@ -366,7 +375,8 @@ function NorseRealmNode({
 			aria-label={`${realm.name}: ${progress.completed} of ${progress.total} missions cleared`}
 			aria-pressed={selected}
 			disabled={!hasMissions}
-			className={`realm-node ${!hasMissions ? 'realm-node-locked' : ''} ${selected ? 'realm-node-selected' : ''} ${hasUnlockedMission && !allDone ? 'realm-node-available' : ''}`}
+		className={`realm-node ${!hasMissions ? 'realm-node-locked' : ''} ${selected ? 'realm-node-selected' : ''} ${hasUnlockedMission && !allDone ? 'realm-node-available' : ''}`}
+			data-realm-id={realm.id}
 			style={{ left: `${realm.position.x}%`, top: `${realm.position.y}%` }}
 			onClick={onClick}
 		>
@@ -417,7 +427,8 @@ function GreekRealmNode({
 			aria-label={`${realm.name}: ${progress.completed} of ${progress.total} missions cleared`}
 			aria-pressed={selected}
 			disabled={!hasMissions}
-			className={`realm-node ${!hasMissions ? 'realm-node-locked' : ''} ${selected ? 'realm-node-selected' : ''} ${hasUnlockedMission && !allDone ? 'realm-node-available' : ''}`}
+		className={`realm-node ${!hasMissions ? 'realm-node-locked' : ''} ${selected ? 'realm-node-selected' : ''} ${hasUnlockedMission && !allDone ? 'realm-node-available' : ''}`}
+			data-realm-id={realm.id}
 			style={{ left: `${realm.position.x}%`, top: `${realm.position.y}%` }}
 			onClick={onClick}
 		>
@@ -548,11 +559,15 @@ export default function CampaignPage() {
 	const [selectedChapter, setSelectedChapter] = useState<CampaignChapter | null>(null);
 	const [cinematicChapter, setCinematicChapter] = useState<CampaignChapter | null>(null);
 	const pageRef = useRef<HTMLDivElement>(null);
+	const campaignBoardScrollRef = useRef<HTMLDivElement>(null);
 	const navigate = useNavigate();
 	const startMission = useCampaignStore(state => state.startMission);
 	const markCinematicSeen = useCampaignStore(state => state.markCinematicSeen);
 	const currentMissionId = useCampaignStore(state => state.currentMission);
 	const completedMissions = useCampaignStore(state => state.completedMissions);
+	const campaignProgressStatus = useCampaignStore(state => state.campaignProgressStatus);
+	const campaignProgressError = useCampaignStore(state => state.campaignProgressError);
+	const hydrateLocalProgress = useCampaignStore(state => state.hydrateLocalProgress);
 	const seenCinematics = useCampaignStore(state => state.seenCinematics);
 	const isAllComplete = useCampaignStore(state => state.isAllBaseChaptersComplete(BASE_CHAPTER_MISSION_IDS));
 	const hiveUsername = useNFTUsername();
@@ -790,14 +805,7 @@ export default function CampaignPage() {
 		return buildConnectionData(STAGE_GREEK_REALMS, STAGE_GREEK_REALM_MAP, activeRealms);
 	}, [greekChapter.missions, completedMissions]);
 
-	const campaignLead = useMemo<{
-		view: View;
-		chapter: CampaignChapter;
-		mission: CampaignMission;
-		title: string;
-		copy: string;
-		cta: string;
-	} | null>(() => {
+	const campaignLead = useMemo<CampaignLead | null>(() => {
 		if (currentMissionData) {
 			const leadView: View = currentMissionData.chapter.faction === 'norse'
 				? 'norse'
@@ -829,6 +837,22 @@ export default function CampaignPage() {
 		};
 	}, [currentMissionData, currentDisplayChapter, nextMissionByChapter, view]);
 
+	useEffect(() => {
+		if (selectedMission || selectedRealm || campaignProgressStatus !== 'ready') return;
+		if (window.innerWidth > 480 || (view !== 'norse' && view !== 'greek')) return;
+		const lead = campaignLead;
+		if (!lead || lead.view !== view) return;
+		const realmId = view === 'norse'
+			? MISSION_REALM_MAP[lead.mission.id]
+			: GREEK_MISSION_REALM_MAP[lead.mission.id];
+		if (!realmId) return;
+
+		const scroller = campaignBoardScrollRef.current;
+		const node = scroller?.querySelector<HTMLElement>(`[data-realm-id="${realmId}"].realm-node-available`);
+		if (!scroller || !node) return;
+		scroller.scrollLeft = Math.max(0, node.offsetLeft - (scroller.clientWidth - node.offsetWidth) / 2);
+	}, [campaignLead, campaignProgressStatus, selectedMission, selectedRealm, view]);
+
 	const stageMission = (mission: CampaignMission, chapter: CampaignChapter, nextView?: View) => {
 		if (nextView) {
 			setView(nextView);
@@ -843,10 +867,10 @@ export default function CampaignPage() {
 		setCinematicChapter(chapter);
 	};
 
-	const handleStartMission = (difficulty: Difficulty) => {
+	const handleStartMission = async (difficulty: Difficulty) => {
 		if (campaignAccess.kind === 'blocked') return;
 		if (!selectedMission) return;
-		startMission(selectedMission.id, difficulty);
+		await startMission(selectedMission.id, difficulty);
 		navigate(routes.campaignGame);
 	};
 
@@ -873,6 +897,32 @@ export default function CampaignPage() {
 							{campaignAccess.message}
 						</p>
 						<HiveKeychainLogin />
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	if (campaignProgressStatus !== 'ready') {
+		return (
+			<div className="relative min-h-dvh w-full overflow-y-auto overflow-x-hidden text-ink-0 bg-(image:--bg-cosmos-nav)">
+				<CampaignHeader title="Campaign" subtitle="Preparing local progress" />
+				<div className="n-page-gutter mx-auto flex min-h-[calc(100dvh-3.5rem)] max-w-md items-center">
+					<div className={`${SURFACE_STRONG_CLASS} w-full p-6 text-center`} role="status" aria-live="polite">
+						<div className="font-mono text-[10px] uppercase tracking-[0.28em] text-gold-300 mb-3">
+							{campaignProgressStatus === 'error' ? 'Progress unavailable' : 'Local replay sync'}
+						</div>
+						<h1 className="font-display text-2xl font-black uppercase tracking-[0.12em] text-ink-0 mb-3">
+							{campaignProgressStatus === 'error' ? 'Campaign is paused' : 'Preparing Campaign'}
+						</h1>
+						<p className="text-sm leading-6 text-ink-200 mb-6">
+							{campaignProgressError ?? 'Reading your local campaign settlements before opening the route.'}
+						</p>
+						{campaignProgressStatus === 'error' && (
+							<Button variant="primary" size="sm" onClick={() => void hydrateLocalProgress(hiveUsername)}>
+								Retry Progress Sync
+							</Button>
+						)}
 					</div>
 				</div>
 			</div>
@@ -982,7 +1032,7 @@ export default function CampaignPage() {
 							</div>
 
 							<div className="campaign-command-actions">
-								{campaignLead && (
+								{campaignLead && !selectedNorseRealm && !selectedGreekRealm && (
 									<Button
 										variant="primary"
 										size="sm"
@@ -1037,7 +1087,7 @@ export default function CampaignPage() {
 					</nav>
 				</div>
 				{view === 'norse' ? (
-					<div className="campaign-board-scroll">
+					<div ref={campaignBoardScrollRef} className="campaign-board-scroll">
 						<div className="constellation-map-area">
 							<CosmicCanvas realms={STAGE_NINE_REALMS} connections={norseConnections} className="constellation-cosmic-canvas" />
 							<div className="constellation-map-shroud" />
@@ -1048,13 +1098,13 @@ export default function CampaignPage() {
 								<div className="constellation-intro absolute inset-0 flex items-center justify-center px-6">
 									<MapIntroCard
 										chapter={norseChapter}
-										nextMission={nextMissionByChapter.get(norseChapter.id) ?? null}
+										nextMission={campaignLead?.view === 'norse' ? campaignLead.mission : null}
 										onPlayPrologue={() => openChapterCinematic(norseChapter)}
 										onStageNextBattle={() => {
-											const nextMission = nextMissionByChapter.get(norseChapter.id);
-											if (nextMission) stageMission(nextMission, norseChapter, 'norse');
-										}}
-										prologueSeen={seenCinematics.includes(norseChapter.id)}
+										if (campaignLead?.view === 'norse') stageMission(campaignLead.mission, campaignLead.chapter, 'norse');
+									}}
+									primaryLabel={campaignLead?.view === 'norse' ? campaignLead.cta : 'Stage Next Battle'}
+									prologueSeen={seenCinematics.includes(norseChapter.id)}
 										accentClass={FACTION_ACCENT[norseChapter.faction]}
 									/>
 								</div>
@@ -1093,7 +1143,7 @@ export default function CampaignPage() {
 						</div>
 					</div>
 				) : view === 'greek' ? (
-					<div className="campaign-board-scroll">
+					<div ref={campaignBoardScrollRef} className="campaign-board-scroll">
 						<div className="constellation-map-area">
 							<CosmicCanvas realms={STAGE_GREEK_REALMS} connections={greekConnections} className="constellation-cosmic-canvas" />
 							<div className="constellation-map-shroud constellation-map-shroud-greek" />
@@ -1104,13 +1154,13 @@ export default function CampaignPage() {
 								<div className="constellation-intro absolute inset-0 flex items-center justify-center px-6">
 									<MapIntroCard
 										chapter={greekChapter}
-										nextMission={nextMissionByChapter.get(greekChapter.id) ?? null}
+										nextMission={campaignLead?.view === 'greek' ? campaignLead.mission : null}
 										onPlayPrologue={() => openChapterCinematic(greekChapter)}
 										onStageNextBattle={() => {
-											const nextMission = nextMissionByChapter.get(greekChapter.id);
-											if (nextMission) stageMission(nextMission, greekChapter, 'greek');
-										}}
-										prologueSeen={seenCinematics.includes(greekChapter.id)}
+										if (campaignLead?.view === 'greek') stageMission(campaignLead.mission, campaignLead.chapter, 'greek');
+									}}
+									primaryLabel={campaignLead?.view === 'greek' ? campaignLead.cta : 'Stage Next Battle'}
+									prologueSeen={seenCinematics.includes(greekChapter.id)}
 										accentClass={FACTION_ACCENT[greekChapter.faction]}
 									/>
 								</div>

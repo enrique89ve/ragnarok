@@ -3,7 +3,7 @@ import { CombatPhase, PokerCombatState } from '../../types/PokerCombatTypes';
 import { getPokerCombatAdapterState } from '../../hooks/usePokerCombatAdapter';
 import { useGameStore } from '../../stores/gameStore';
 import { debug } from '../../config/debugConfig';
-import type { PokerTurnProcessMode } from '../decision/pokerTurnPolicy';
+import { shouldAutoAdvanceAllIn, type PokerTurnProcessMode } from '../decision/pokerTurnPolicy';
 import { shouldPrepareLocalAiCards } from '../decision/pokerAiCardSetup';
 
 interface UsePokerPhasesOptions {
@@ -65,6 +65,7 @@ export function usePokerPhases(options: UsePokerPhasesOptions): void {
 
     useEffect(() => {
       if (!combatState || !isActive) return;
+      if (!shouldAutoAdvanceAllIn(processMode)) return;
       if (!combatState.isAllInShowdown) return;
       if (cardGameMulliganActive) return;
 
@@ -116,5 +117,5 @@ export function usePokerPhases(options: UsePokerPhasesOptions): void {
         clearTimeout(autoAdvanceTimer);
         allInAdvanceInProgressRef.current = false;
       };
-    }, [combatState?.phase, combatState?.isAllInShowdown, isActive, cardGameMulliganActive]);
+    }, [combatState?.phase, combatState?.isAllInShowdown, isActive, cardGameMulliganActive, processMode]);
 }

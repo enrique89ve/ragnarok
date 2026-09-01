@@ -61,7 +61,7 @@ Required secret:
 P2P_CHALLENGE_SIGNING_SECRET=<64-hex-chars>
 ```
 
-Optional secrets (uncomment in the tab; never add `VITE_`):
+Optional secrets/runtime settings (uncomment in the tab; never add `VITE_`):
 
 ```dotenv
 RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY=<active-private-key>
@@ -69,6 +69,9 @@ P2P_RELAY_ALLOWED_ORIGINS=https://<your-public-game-host>
 RAGNAROK_INDEX_POSTING_KEY=<posting-private-key>
 WITNESS_HIVE_ACCOUNT=
 WITNESS_HIVE_POSTING_KEY=
+# Only behind a verified proxy; set one, never both (otherwise leave blank).
+RAGNAROK_TRUST_PROXY_HOPS=1
+# RAGNAROK_TRUST_PROXY_CIDRS=203.0.113.0/24,2001:db8::/32
 ```
 
 The same paste file already includes the launch fingerprint (`VITE_*` =
@@ -81,6 +84,13 @@ requires the pair to match.
 from the API/relay host. Same-host deploys can omit it. Keep
 `P2P_RELAY_TRUST_FORWARDED_HOST` unset unless Dokploy is behind a trusted
 proxy that overwrites `X-Forwarded-Host`.
+
+The Alfa compose runs one app instance because relay rooms, referee state, and
+active-match registries are process-local. Do not add replicas or a second
+relay process until shared state and sticky routing are implemented. If a
+reverse proxy sits in front of Dokploy, configure exactly one of
+`RAGNAROK_TRUST_PROXY_HOPS` or `RAGNAROK_TRUST_PROXY_CIDRS`; leave both blank for
+direct exposure and never use `trust proxy=true`.
 
 Baked in the image (do not paste into Dokploy). The Dockerfile uses one ARG
 block for both the Vite bundle and the Node process, so `VITE_*` and

@@ -103,6 +103,54 @@ export type P2PDisconnectSide = 'local' | 'opponent' | 'unknown';
 
 export type P2PConnectionState = P2PConnectionAvailabilityState;
 
+/**
+ * A failed reconnect promise may settle after the user has left the match or
+ * after a newer room attempt has taken ownership. Only the still-active
+ * reconnect generation may schedule another backoff; otherwise an old
+ * promise can resurrect a deliberately disconnected room.
+ */
+export function shouldContinueP2PReconnect(input: {
+	readonly connectionState: P2PConnectionState;
+	readonly activeConnection: P2PConnection | null;
+	readonly activeRoomId: string | null;
+	readonly targetRoomId: string;
+}): boolean {
+	return input.connectionState === 'reconnecting'
+		&& input.activeConnection === null
+		&& input.activeRoomId === input.targetRoomId;
+}
+
+/**
+ * A transport close can be observed by more than one lifecycle path (for
+ * example, the heartbeat watchdog closes the adapter and receives its
+ * synchronous `close` event). Only the first path may install a backoff
+ * timer; consuming another reconnect attempt for the same outage shortens
+ * the supported VPN/NAT recovery window.
+ */
+export function shouldScheduleP2PReconnect(input: {
+	readonly connectionState: P2PConnectionState;
+	readonly activeConnection: P2PConnection | null;
+	readonly activeRoomId: string | null;
+	readonly targetRoomId: string;
+	readonly reconnectTimerActive: boolean;
+}): boolean {
+	return !input.reconnectTimerActive
+		&& (input.connectionState === 'grace_period' || input.connectionState === 'reconnecting')
+		&& input.activeConnection === null
+		&& input.activeRoomId === input.targetRoomId;
+}
+
+/** Keep a failed automatic attempt inside the reconnect window; initial
+ * connection failures still surface as `error` to the caller/UI. */
+export function stateAfterP2PTransportFailure(input: {
+	readonly currentState: P2PConnectionState;
+	readonly preserveReconnectWindow: boolean;
+}): P2PConnectionState {
+	return input.preserveReconnectWindow && input.currentState === 'reconnecting'
+		? 'reconnecting'
+		: 'error';
+}
+
 export type PeerStore = {
 	myPeerId: string | null;
 	remotePeerId: string | null;
@@ -124,6 +172,8 @@ export type PeerStore = {
 	p2pSessionLocalAuthorized: boolean;
 	p2pSessionRemoteAuthorized: boolean;
 	p2pSessionAuthError: string | null;
+	/** Non-recoverable divergence for the current match; gameplay is frozen. */
+	p2pIntegrityError: string | null;
 	p2pBattleReadyLocal: P2PBattleReadyProof | null;
 	p2pBattleReadyRemote: P2PBattleReadyProof | null;
 	p2pBattleReadyExpectedRemoteLoadoutHash: string | null;
@@ -159,6 +209,7 @@ export type PeerStore = {
 		readonly remoteAuthorized?: boolean;
 		readonly error?: string | null;
 	}) => void;
+	setP2pIntegrityError: (error: string | null) => void;
 	setP2pBattleReady: (state: {
 		readonly local?: P2PBattleReadyProof | null;
 		readonly remote?: P2PBattleReadyProof | null;
@@ -204,8 +255,10 @@ export type PeerStore = {
 	/** Quick Match join: opens the room emitted by matchmaking (matchId). */
 	connectToRoom: (roomId: string, isReconnect?: boolean) => Promise<void>;
 	disconnect: () => void;
-	send: (data: WireMessage) => void;
-	handleHeartbeat: () => void;
+	/** Queue/send a wire message and report whether delivery was accepted. */
+	send: (data: WireMessage) => boolean;
+	/** Accept heartbeats only from the currently active transport. */
+	handleHeartbeat: (source?: P2PConnection) => void;
 };
 
 type PeerRuntimeState = Pick<
@@ -222,6 +275,7 @@ type PeerRuntimeState = Pick<
 	| 'p2pSessionLocalAuthorized'
 	| 'p2pSessionRemoteAuthorized'
 	| 'p2pSessionAuthError'
+	| 'p2pIntegrityError'
 	| 'p2pBattleReadyLocal'
 	| 'p2pBattleReadyRemote'
 	| 'p2pBattleReadyExpectedRemoteLoadoutHash'
@@ -256,6 +310,7 @@ export function hasVolatileP2PRuntimeState(state: HiveSessionChangeRuntimeState)
 		state.peer.p2pSessionLocalAuthorized,
 		state.peer.p2pSessionRemoteAuthorized,
 		state.peer.p2pSessionAuthError,
+		state.peer.p2pIntegrityError,
 		state.peer.p2pBattleReadyLocal,
 		state.peer.p2pBattleReadyRemote,
 		state.peer.p2pBattleReadyExpectedRemoteLoadoutHash,
@@ -505,6 +560,14 @@ function startGracePeriod(side: P2PDisconnectSide, get: () => PeerStore, set: (s
 }
 
 function attemptReconnect(roomId: string, get: () => PeerStore, set: (state: Partial<PeerStore>) => void): void {
+	const current = get();
+	if (!shouldScheduleP2PReconnect({
+		connectionState: current.connectionState,
+		activeConnection: current.connection,
+		activeRoomId: current.lastRoomId,
+		targetRoomId: roomId,
+		reconnectTimerActive: reconnectTimerId !== null,
+	})) return;
 	if (reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
 		const remaining = getReconnectCountdownSeconds();
 		if (remaining <= 0) {
@@ -553,6 +616,16 @@ function attemptReconnect(roomId: string, get: () => PeerStore, set: (state: Par
 				bufferedMessageCount: messageBuffer.length,
 			});
 		}).catch(() => {
+			const current = get();
+			if (!shouldContinueP2PReconnect({
+				connectionState: current.connectionState,
+				activeConnection: current.connection,
+				activeRoomId: current.lastRoomId,
+				targetRoomId: roomId,
+			})) {
+				debug.log('[PeerStore] Ignoring stale reconnect failure after session ownership changed');
+				return;
+			}
 			attemptReconnect(roomId, get, set);
 		});
 	}, delay);
@@ -750,7 +823,14 @@ async function openTransport(
 				return;
 			}
 			if (!settled) {
-				set({ error: connectionError.message, connectionState: 'error' });
+				const currentState = get().connectionState;
+				set({
+					error: connectionError.message,
+					connectionState: stateAfterP2PTransportFailure({
+						currentState,
+						preserveReconnectWindow: preserveSession,
+					}),
+				});
 				rejectConnection(connectionError);
 			}
 		});
@@ -815,6 +895,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	p2pSessionLocalAuthorized: false,
 	p2pSessionRemoteAuthorized: false,
 	p2pSessionAuthError: null,
+	p2pIntegrityError: null,
 	p2pBattleReadyLocal: null,
 	p2pBattleReadyRemote: null,
 	p2pBattleReadyExpectedRemoteLoadoutHash: null,
@@ -844,6 +925,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		...(state.remoteAuthorized !== undefined ? { p2pSessionRemoteAuthorized: state.remoteAuthorized } : {}),
 		...(state.error !== undefined ? { p2pSessionAuthError: state.error } : {}),
 	}),
+	setP2pIntegrityError: (error) => set({ p2pIntegrityError: error }),
 	setP2pBattleReady: (state) => set({
 		...(state.local !== undefined ? { p2pBattleReadyLocal: state.local } : {}),
 		...(state.remote !== undefined ? { p2pBattleReadyRemote: state.remote } : {}),
@@ -958,9 +1040,13 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		attemptReconnect(roomId, get, set);
 	},
 
-	handleHeartbeat: () => {
+	handleHeartbeat: (source) => {
+		const { connection, connectionState } = get();
+		// A heartbeat can arrive from the old WebSocket after its close event
+		// entered the grace window. It must never resurrect the UI lifecycle
+		// without the replacement transport that will carry gameplay.
+		if (!connection || !connection.open || (source && connection !== source)) return;
 		lastHeartbeatReceived = Date.now();
-		const { connectionState } = get();
 		if (connectionState === 'grace_period') {
 			const restoredParticipantId = participantIdForDisconnect(get(), get().disconnectSide ?? 'unknown');
 			if (restoredParticipantId) {
@@ -1018,6 +1104,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			p2pSessionLocalAuthorized: false,
 			p2pSessionRemoteAuthorized: false,
 			p2pSessionAuthError: null,
+			p2pIntegrityError: null,
 			p2pBattleReadyLocal: null,
 			p2pBattleReadyRemote: null,
 			p2pBattleReadyExpectedRemoteLoadoutHash: null,
@@ -1036,7 +1123,13 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		const { connection } = get();
 		if (connection) get().disconnect();
 
-		if (!isReconnect) messageBuffer.length = 0;
+		if (!isReconnect) {
+			// A manual room change can happen while the previous match is in its
+			// grace window and has no live socket. Cancel that old window before
+			// the new lifecycle gets an opportunity to inherit its timers.
+			clearAllTimers();
+			messageBuffer.length = 0;
+		}
 
 		const peerId = get().myPeerId ?? generatePeerId();
 		const matchChallenge = get().matchChallenge;
@@ -1059,6 +1152,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			p2pSessionLocalAuthorized: isReconnect ? get().p2pSessionLocalAuthorized : false,
 			p2pSessionRemoteAuthorized: isReconnect ? get().p2pSessionRemoteAuthorized : false,
 			p2pSessionAuthError: isReconnect ? get().p2pSessionAuthError : null,
+			p2pIntegrityError: isReconnect ? get().p2pIntegrityError : null,
 			p2pBattleReadyLocal: isReconnect ? get().p2pBattleReadyLocal : null,
 			p2pBattleReadyRemote: isReconnect ? get().p2pBattleReadyRemote : null,
 			p2pBattleReadyExpectedRemoteLoadoutHash: isReconnect ? get().p2pBattleReadyExpectedRemoteLoadoutHash : null,
@@ -1075,7 +1169,13 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			try { connection.close(); } catch { /* ignored */ }
 		}
 
-		if (!isReconnect) messageBuffer.length = 0;
+		if (!isReconnect) {
+			// Quick Match may replace a reconnecting room after its socket has
+			// already been cleared. The old grace/retry timers must not outlive
+			// that match and mutate the new room's lifecycle.
+			clearAllTimers();
+			messageBuffer.length = 0;
+		}
 
 		const peerId = get().myPeerId ?? generatePeerId();
 		const matchChallenge = get().matchChallenge;
@@ -1099,6 +1199,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			p2pSessionLocalAuthorized: isReconnect ? get().p2pSessionLocalAuthorized : false,
 			p2pSessionRemoteAuthorized: isReconnect ? get().p2pSessionRemoteAuthorized : false,
 			p2pSessionAuthError: isReconnect ? get().p2pSessionAuthError : null,
+			p2pIntegrityError: isReconnect ? get().p2pIntegrityError : null,
 			p2pBattleReadyLocal: isReconnect ? get().p2pBattleReadyLocal : null,
 			p2pBattleReadyRemote: isReconnect ? get().p2pBattleReadyRemote : null,
 			p2pBattleReadyExpectedRemoteLoadoutHash: isReconnect ? get().p2pBattleReadyExpectedRemoteLoadoutHash : null,
@@ -1141,6 +1242,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			p2pSessionLocalAuthorized: false,
 			p2pSessionRemoteAuthorized: false,
 			p2pSessionAuthError: null,
+			p2pIntegrityError: null,
 			p2pBattleReadyLocal: null,
 			p2pBattleReadyRemote: null,
 			p2pBattleReadyExpectedRemoteLoadoutHash: null,
@@ -1150,20 +1252,23 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		});
 	},
 
-	send: (data: WireMessage) => {
+	send: (data: WireMessage): boolean => {
 		const { connection, connectionState } = get();
 
 		if (connection && connectionState === 'connected') {
 			try {
 				connection.send(data);
+				return true;
 			} catch (err) {
 				debug.error('[PeerStore] Send failed, buffering:', err);
 				if (messageBuffer.length < MAX_BUFFERED_MESSAGES) {
 					messageBuffer.push(data);
 					set({ bufferedMessageCount: messageBuffer.length });
+					return true;
 				}
+				debug.warn('[PeerStore] Send failed and reconnect buffer is full — dropping message');
+				return false;
 			}
-			return;
 		}
 
 		if (connectionState === 'reconnecting' || connectionState === 'grace_period') {
@@ -1171,15 +1276,15 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 				messageBuffer.push(data);
 				set({ bufferedMessageCount: messageBuffer.length });
 				debug.log(`[PeerStore] Buffered message (${messageBuffer.length}/${MAX_BUFFERED_MESSAGES})`);
+				return true;
 			} else {
-				debug.warn('[PeerStore] Message buffer full — dropping oldest');
-				messageBuffer.shift();
-				messageBuffer.push(data);
+				debug.warn('[PeerStore] Message buffer full — dropping gameplay message');
+				return false;
 			}
-			return;
 		}
 
 		debug.warn('[PeerStore] Cannot send — not connected');
+		return false;
 	},
 }));
 

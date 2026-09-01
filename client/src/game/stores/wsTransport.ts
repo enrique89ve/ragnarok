@@ -10,7 +10,7 @@
  *
  * Compatibility surface — must keep these stable for the WebRTC upgrade
  * path to swap transports later without touching `useWireSync`:
- *   .on(event, listener), .off(event, listener)  for 'data'|'open'|'close'|'error'
+ *   .on(event, listener), .off(event, listener)  for 'data'|'control'|'open'|'close'|'error'
  *   .send(data)
  *   .close()
  *   .peer    → remote peer id (string)
@@ -27,9 +27,13 @@ import {
 	type P2PMatchTicket,
 } from '@shared/p2pAvailability';
 import { tryParsePhaseCheckpointServerMessage } from '@shared/p2p-wire/phaseCheckpoint';
-import { tryParsePokerTurnNotaryServerMessage } from '@shared/p2p-wire/pokerTimeNotary';
+import {
+	tryParsePokerActionTimeGateAck,
+	tryParsePokerTurnNotaryServerMessage,
+	type PokerActionTimeGateAck,
+} from '@shared/p2p-wire/pokerTimeNotary';
 
-export type TransportEvent = 'data' | 'open' | 'close' | 'error';
+export type TransportEvent = 'data' | 'control' | 'open' | 'close' | 'error';
 export type TransportCloseReason = 'local' | 'opponent' | 'unknown';
 export type TransportListener = (...args: unknown[]) => void;
 
@@ -217,6 +221,15 @@ export class LocalWebSocketTransport {
 					return;
 				}
 				this.emit('data', message);
+				return;
+			}
+			case 'poker_action_time_gate': {
+				const message = tryParsePokerActionTimeGateAck(msg.message);
+				if (!message) {
+					debug.warn('[WSTransport] malformed Poker action gate acknowledgement');
+					return;
+				}
+				this.emit('control', message satisfies PokerActionTimeGateAck);
 				return;
 			}
 			default:

@@ -102,7 +102,7 @@ function PvPVSScreen({ playerArmy, opponentArmy, opponentPeerId, playerUsername,
 function P2PHiveSessionRequired({ onBack }: { readonly onBack: () => void }) {
 	const keychainAvailable = isHiveWalletAvailable();
 	return (
-		<div className="flex items-center justify-center min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+		<div className="flex items-center justify-center min-h-screen bg-obsidian-950 p-4">
 			<Panel className="w-full max-w-md">
 				<PanelHeader>
 					<PanelTitle>Hive Keychain Required</PanelTitle>
@@ -319,7 +319,7 @@ export const MultiplayerGame: React.FC = () => {
 
 	if (resumeBoot === 'checking') {
 		return (
-			<div className="flex items-center justify-center min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+			<div className="flex items-center justify-center min-h-screen bg-obsidian-950 p-4">
 				<div className="text-center space-y-3 max-w-md px-4">
 					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-(--gold-400) mx-auto" />
 					<p className="text-sm text-(--ink-300)">Checking this device for a saved match…</p>
@@ -391,7 +391,7 @@ export const MultiplayerGame: React.FC = () => {
 			terminalLifecycle: battleLifecycle?.phase === 'resolved',
 		});
 		const spinner = (
-			<div className="flex items-center justify-center min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+			<div className="flex items-center justify-center min-h-screen bg-obsidian-950 p-4">
 				<div className="text-center space-y-3 max-w-md px-4">
 					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-(--gold-400) mx-auto" />
 					<p className="text-sm text-(--ink-300) break-words">{guard.kind === 'wait' ? guard.reason : 'Syncing match…'}</p>
@@ -400,7 +400,7 @@ export const MultiplayerGame: React.FC = () => {
 		);
 		if (guard.kind === 'wait') return spinner;
 		return (
-				<>
+			<>
 					<P2PStatusBadge />
 					<MatchSetupP2P fallback={spinner}>
 						<RagnarokGameCoordinator initialArmy={readyArmy} opponentArmy={opponentArmyFromPeer} />

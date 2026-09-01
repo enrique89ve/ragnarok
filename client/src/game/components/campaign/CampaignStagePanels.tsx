@@ -36,10 +36,6 @@ const DIFFICULTY_META: Record<Difficulty, { label: string; blurb: string }> = {
 const BRIEFING_SYMBOLS = {
 	tone: 'T',
 	record: 'R',
-	beat: 'O',
-	rhythm: 'C',
-	aftermath: 'A',
-	launch: 'L',
 	boss: '!',
 	reward: '+',
 };
@@ -108,6 +104,7 @@ interface MapIntroCardProps {
 	nextMission: CampaignMission | null;
 	onPlayPrologue: () => void;
 	onStageNextBattle: () => void;
+	primaryLabel: string;
 	prologueSeen: boolean;
 	accentClass: string;
 }
@@ -117,6 +114,7 @@ export function MapIntroCard({
 	nextMission,
 	onPlayPrologue,
 	onStageNextBattle,
+	primaryLabel,
 	prologueSeen,
 	accentClass,
 }: MapIntroCardProps) {
@@ -142,7 +140,7 @@ export function MapIntroCard({
 				</p>
 				<p className="mt-2 hidden text-[13px] leading-relaxed text-ink-300 sm:block">
 					{nextMission
-						? `${nextMission.description} Select a realm to inspect the route, or move straight into the authored briefing from here.`
+						? nextMission.description
 						: 'Replay the prologue, revisit completed fights, or move through the realm map to review pacing and rewards.'}
 				</p>
 			</div>
@@ -154,13 +152,13 @@ export function MapIntroCard({
 				{nextMission && (
 					<Button variant="primary" size="default" className="w-full sm:w-auto" onClick={onStageNextBattle}>
 						<Play size={13} strokeWidth={2.4} fill="currentColor" />
-						Stage Next Battle
+						{primaryLabel}
 					</Button>
 				)}
 			</div>
 
-			<p className="mt-4 hidden font-mono text-[10px] uppercase tracking-[0.18em] text-ink-300 sm:block">
-				Select a realm to inspect missions, route order, and rewards.
+			<p className="mt-4 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-300">
+				Swipe to explore realms · select a realm to inspect its missions.
 			</p>
 		</motion.div>
 	);
@@ -169,7 +167,7 @@ export function MapIntroCard({
 interface MissionBriefingProps {
 	mission: CampaignMission;
 	chapter: CampaignChapter;
-	onStart: (difficulty: Difficulty) => void;
+	onStart: (difficulty: Difficulty) => void | Promise<void>;
 	onBack: () => void;
 	onWatchPrologue: () => void;
 	accentClass: string;
@@ -184,11 +182,11 @@ export function MissionBriefing({
 	accentClass,
 }: MissionBriefingProps) {
 	const [difficulty, setDifficulty] = useState<Difficulty>('normal');
+	const [isStarting, setIsStarting] = useState(false);
+	const [startError, setStartError] = useState<string | null>(null);
 	const completed = useCampaignStore(state => state.completedMissions[mission.id]);
 	const account = useNFTUsername();
 	const encounterTone = getEncounterTone(mission);
-	const phaseCount = mission.bossPhases?.length ?? 0;
-	const bridgeCount = mission.storyBridge?.length ?? 0;
 	const firstClearRune = getCampaignFirstClearRuneReward(mission.id);
 	const rewardCopy = getCampaignBriefingRewardCopy({
 		completed: Boolean(completed),
@@ -196,6 +194,17 @@ export function MissionBriefing({
 		campaignRuneCap: TESTNET_RUNE_ECONOMY.maxCampaignRunePerAccount,
 		policy: buildRagnarokRuntimeEvidence(getRagnarokNetworkConfig()).phasePolicy,
 	});
+	const handleStart = async () => {
+		if (isStarting) return;
+		setIsStarting(true);
+		setStartError(null);
+		try {
+			await onStart(difficulty);
+		} catch (error) {
+			setStartError(error instanceof Error ? error.message : 'Battle setup could not be saved.');
+			setIsStarting(false);
+		}
+	};
 
 	return (
 		<motion.div
@@ -281,59 +290,6 @@ export function MissionBriefing({
 						</BriefingCard>
 					</div>
 				</div>
-			</div>
-
-			{/* Opening beat — quote */}
-			<BriefingCard
-				label="Opening Beat"
-				title="Before the board opens"
-				symbol={BRIEFING_SYMBOLS.beat}
-				className="campaign-brief-card-wide mt-5 border-l-2 border-l-gold-300/50"
-			>
-				<p className="font-display text-base italic leading-[1.7] text-ink-100 sm:text-[17px]">
-					"{mission.narrativeBefore}"
-				</p>
-			</BriefingCard>
-
-			{/* Briefing 3-up */}
-			<div className="mt-5 grid gap-3 lg:grid-cols-3">
-				<BriefingCard
-					label="Combat Rhythm"
-					title={phaseCount > 0 ? `${phaseCount} escalation beat${phaseCount === 1 ? '' : 's'}` : 'Single-beat combat pass'}
-					symbol={BRIEFING_SYMBOLS.rhythm}
-					tone={phaseCount > 0 ? 'ember' : 'bifrost'}
-				>
-					<p className="text-[12.5px] leading-relaxed text-ink-300">
-						{phaseCount > 0
-							? 'Expect the opponent to shift tempo mid-fight. Learn the thresholds once, then push harder on later clears.'
-							: 'This mission leans on clean board pressure rather than multi-stage boss theatrics.'}
-					</p>
-				</BriefingCard>
-
-				<BriefingCard
-					label="Aftermath"
-					title={bridgeCount > 0 ? `${bridgeCount} bridge scene${bridgeCount === 1 ? '' : 's'}` : 'Direct return to campaign'}
-					symbol={BRIEFING_SYMBOLS.aftermath}
-					tone={bridgeCount > 0 ? 'bifrost' : 'gold'}
-				>
-					<p className="text-[12.5px] leading-relaxed text-ink-300">
-						{bridgeCount > 0
-							? 'A short connective cinematic carries the win forward into the next chapter beat before you return to the map.'
-							: 'Results flow straight back to the campaign shell with no additional bridge scene.'}
-					</p>
-				</BriefingCard>
-
-				<BriefingCard
-					label="Launch Sequence"
-					title="Three-step handoff"
-					symbol={BRIEFING_SYMBOLS.launch}
-				>
-					<ol className="space-y-2 text-[13px] text-ink-200">
-						<li className="flex gap-2"><span className="font-mono text-ink-400">01</span> Chapter prologue establishes the arc.</li>
-						<li className="flex gap-2"><span className="font-mono text-ink-400">02</span> This briefing locks tone & difficulty.</li>
-						<li className="flex gap-2"><span className="font-mono text-ink-400">03</span> Battle launches into chess + poker flow.</li>
-					</ol>
-				</BriefingCard>
 			</div>
 
 			{/* Boss rules — danger surface */}
@@ -424,10 +380,11 @@ export function MissionBriefing({
 							size="lg"
 							className="relative z-10 whitespace-nowrap"
 							aria-label="Enter Battle"
-							onClick={() => onStart(difficulty)}
+							onClick={() => void handleStart()}
+							disabled={isStarting}
 						>
 							<Play size={14} strokeWidth={2.4} fill="currentColor" aria-hidden="true" />
-							Enter Battle
+							{isStarting ? 'Preparing Battle' : 'Enter Battle'}
 						</Button>
 						<CeremonyEvidenceButton
 							ceremony="campaign_reward"
@@ -440,11 +397,16 @@ export function MissionBriefing({
 								completed: Boolean(completed),
 								firstClearRune,
 								rewardEvidence: null,
-								location: 'campaign_mission_briefing',
-							})}
+		location: 'campaign_mission_briefing',
+		})}
 							className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md border border-obsidian-700 bg-obsidian-900/60 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-300 transition-colors hover:border-gold-500/60 hover:text-gold-200"
 						/>
 					</div>
+					{startError && (
+						<p className="mt-3 text-right text-xs text-ember-200" role="alert">
+							{startError}
+						</p>
+					)}
 				</div>
 			</div>
 		</motion.div>

@@ -7,14 +7,13 @@
 
 import { GameState, CardInstance, CardData, MinionCardData, GameLogEvent } from '../../types';
 import { drawCard } from '../drawUtils';
-import { v4 as uuidv4 } from 'uuid';
 import { processTurnStartEffects as processStatusTurnStart, clearEndOfTurnEffects } from './statusEffectUtils';
 import { isMinion, getAttack, getHealth } from '../cards/typeGuards';
 import { debug } from '../../config/debugConfig';
 import { executeDeathrattle } from '../deathrattleUtils';
 import { removeDeadMinions } from '../zoneUtils';
 import { getCardById } from '../../data/allCards';
-import { cryptoRng } from '../seededRng';
+import { cryptoIdGen, cryptoRng } from '../seededRng';
 import { MAX_BATTLEFIELD_SIZE } from '../../constants/gameConstants';
 
 // Helper to create type-safe game log entries for effects
@@ -25,7 +24,7 @@ function createEffectLogEntry(
   cardId?: number | string
 ): GameLogEvent {
   return {
-    id: uuidv4(),
+    id: cryptoIdGen(),
     type: 'card_played', // Use 'card_played' as closest valid type for effects
     player,
     text,
@@ -360,7 +359,7 @@ function processGenericStartOfTurnEffect(
       for (let i = 0; i < count; i++) {
         if (playerState.battlefield.length >= MAX_BATTLEFIELD_SIZE) break;
         const tokenInstance: CardInstance = {
-          instanceId: uuidv4(),
+          instanceId: cryptoIdGen(),
           card: tokenCard as CardData,
           currentHealth: getHealth(tokenCard as CardData),
           canAttack: false,

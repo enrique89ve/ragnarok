@@ -96,6 +96,8 @@ __tests__/
 !client/src/game/p2p/transport/WebRTCTransport.test.ts
 !client/src/game/p2p/transport/TransportManager.test.ts
 !client/src/game/p2p/transport/transportCapabilities.test.ts
+!client/src/game/match/modes/p2p/wireSync/endTurnPokerFold.test.ts
+!client/src/game/stores/gameStore.p2pPokerEndTurn.test.ts
 !client/src/game/p2p/transport/transportPolicy.test.ts
 !client/src/game/p2p/transport/transportSession.test.ts
 !client/src/game/components/multiplayer/multiplayerRenderGuard.test.ts
@@ -168,6 +170,7 @@ __tests__/
 !client/src/game/p2p/phaseBoundaryRoot.test.ts
 !shared/p2p-wire/integrity.test.ts
 !shared/p2p-wire/phaseCheckpoint.test.ts
+!shared/p2p-wire/pokerTurnClock.test.ts
 !shared/p2p-wire/spellcraft.test.ts
 !shared/p2p-wire/transportConfig.test.ts
 !client/src/data/HiveAuth.test.ts
@@ -272,9 +275,11 @@ __tests__/
 !server/routes/matchmakingRoutes.ticketBoundary.test.ts
 !server/routes/p2pRelay.loggingBoundary.test.ts
 !server/routes/p2pRelay.securityBoundary.test.ts
+!server/routes/p2pRelay.reconnect.integration.test.ts
 !server/routes/socialRoutes.starterGate.test.ts
 !server/routes/socialRoutes.ticketBoundary.test.ts
 !server/routes/starterClaimRoutes.test.ts
+!server/services/httpRateLimitPolicy.test.ts
 !shared/p2pAvailability.test.ts
 !shared/p2pAvailability.securityBoundary.test.ts
 !shared/p2pMatchmakingAuth.test.ts
@@ -387,6 +392,7 @@ client/src/game/combat/prototypes/
 # Server-side chain indexer state (runtime data)
 data/chain-state.json
 data/chain-state.*.json
+data/chain-state.*.json.*
 
 # Claude Code local settings
 .claude/

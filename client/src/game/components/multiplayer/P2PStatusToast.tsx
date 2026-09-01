@@ -41,7 +41,8 @@ export function P2PStatusToast(): null {
 	const battleLifecyclePhase = usePeerStore(state => state.battleLifecycle?.phase ?? null);
 	const sessionReadinessError = usePeerStore(state => state.p2pSessionAuthError);
 	const battleReadinessError = usePeerStore(state => state.p2pBattleReadyError);
-	const readinessError = battleReadinessError ?? sessionReadinessError;
+	const integrityError = usePeerStore(state => state.p2pIntegrityError);
+	const readinessError = integrityError ?? battleReadinessError ?? sessionReadinessError;
 	const flowTag = useGameFlowStore(selectFlowTag);
 	const disconnect = usePeerStore(state => state.disconnect);
 	const requestP2PLeave = usePeerStore(state => state.requestP2PLeave);
@@ -90,7 +91,7 @@ export function P2PStatusToast(): null {
 	]);
 
 	useEffect(() => {
-		if (battleLifecyclePhase === 'resolved' || battleLifecyclePhase === 'cancelled' || flowTag === 'poker_combat') {
+		if (!integrityError && (battleLifecyclePhase === 'resolved' || battleLifecyclePhase === 'cancelled' || flowTag === 'poker_combat')) {
 			toast.dismiss(READINESS_TOAST_ID);
 			return;
 		}
@@ -98,13 +99,13 @@ export function P2PStatusToast(): null {
 			toast.dismiss(READINESS_TOAST_ID);
 			return;
 		}
-		toast.error('Match verification paused', {
+		toast.error(integrityError ? 'Game integrity paused' : 'Match verification paused', {
 			id: READINESS_TOAST_ID,
 			description: readinessError,
 			duration: Infinity,
 			action: { label: 'Leave match', onClick: leaveMatch },
 		});
-	}, [battleLifecyclePhase, connectionState, flowTag, leaveMatch, readinessError]);
+	}, [battleLifecyclePhase, connectionState, flowTag, integrityError, leaveMatch, readinessError]);
 
 	return null;
 }

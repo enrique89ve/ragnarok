@@ -271,7 +271,8 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	overflow: hidden;
+	overflow-y: auto;
+	padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
 }
 
 .mission-intro-bg {
@@ -290,9 +291,10 @@
 .mission-intro-content {
 	position: relative;
 	z-index: 2;
-	max-width: 600px;
+	width: min(600px, 100%);
+	max-height: 100%;
 	text-align: center;
-	padding: 0 32px;
+	margin: auto;
 }
 
 .mission-intro-realm-icon {
@@ -392,22 +394,80 @@
 	margin-bottom: 4px;
 }
 
-.mission-intro-prompt {
-	margin-top: 40px;
+.mission-intro-action {
+	display: inline-flex;
+	min-height: 44px;
+	align-items: center;
+	justify-content: center;
+	margin-top: 32px;
+	padding: 0 24px;
+	border: 1px solid color-mix(in srgb, var(--realm-text, #c9a44c) 58%, transparent);
+	border-radius: 6px;
+	background: linear-gradient(180deg, color-mix(in srgb, var(--realm-color, rgba(201, 164, 76, 0.08)) 100%, transparent), rgba(0, 0, 0, 0.52));
+	color: var(--realm-text, #c9a44c);
+	font-family: var(--type-display, 'Cinzel', Georgia, serif);
 	font-size: var(--text-xs);
-	color: rgba(255, 255, 255, 0.2);
-	letter-spacing: 0.15em;
-	animation: prompt-pulse 2s ease-in-out infinite;
+	font-weight: 800;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	cursor: pointer;
+	box-shadow: 0 0 24px color-mix(in srgb, var(--realm-color, rgba(201, 164, 76, 0.08)) 80%, transparent);
+	transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
 }
 
-@keyframes prompt-pulse {
-	0%, 100% { opacity: 0.2; }
-	50% { opacity: 0.5; }
+.mission-intro-action:hover {
+	border-color: var(--realm-text, #c9a44c);
+	background: color-mix(in srgb, var(--realm-color, rgba(201, 164, 76, 0.08)) 34%, rgba(0, 0, 0, 0.72));
+	transform: translateY(-1px);
+}
+
+.mission-intro-action:focus-visible {
+	border-color: var(--realm-text, #c9a44c);
+	background: color-mix(in srgb, var(--realm-color, rgba(201, 164, 76, 0.08)) 34%, rgba(0, 0, 0, 0.72));
+	transform: translateY(-1px);
+	outline: 2px solid var(--realm-text, #c9a44c);
+	outline-offset: 3px;
 }
 
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
 	.cinematic-crawl-overlay::before { animation: none; }
 	.cinematic-title-rune { animation: none; }
-	.mission-intro-prompt { animation: none; }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+	.mission-intro-overlay {
+		align-items: flex-start;
+		padding-top: max(12px, env(safe-area-inset-top));
+		padding-bottom: max(12px, env(safe-area-inset-bottom));
+	}
+
+	.mission-intro-content {
+		max-width: 760px;
+		padding: 0 12px;
+	}
+
+	.mission-intro-realm-icon {
+		display: none;
+	}
+
+	.mission-intro-number {
+		margin-bottom: 12px;
+	}
+
+	.mission-intro-narrative {
+		max-height: 132px;
+		overflow-y: auto;
+		font-size: 14px;
+		line-height: 1.45;
+	}
+
+	.mission-intro-boss-rules {
+		margin-top: 12px;
+		padding-top: 10px;
+	}
+
+	.mission-intro-action {
+		margin-top: 14px;
+	}
 }

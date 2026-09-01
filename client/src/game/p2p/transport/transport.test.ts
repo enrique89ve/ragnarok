@@ -121,6 +121,40 @@ describe('GameTransport relay adapter', () => {
 		expect(transport.state).toBe('failed');
 	});
 
+	it('routes relay server gate acknowledgements through the control listener', async () => {
+		vi.stubGlobal('WebSocket', FakeWebSocket);
+		const transport = createWebSocketRelayTransport({
+			url: 'ws://game.test/ws/p2p',
+			roomId: 'room-1',
+			peerId: 'peer-a',
+		});
+		const controlMessages: string[] = [];
+		const dataMessages: string[] = [];
+		transport.onControlMessage?.((message) => controlMessages.push(message.type));
+		transport.onMessage((message) => dataMessages.push(message.type));
+
+		const connected = transport.connect();
+		latestSocket().openRelay();
+		await connected;
+		latestSocket().receive({
+			type: '__sys',
+			event: 'poker_action_time_gate',
+			message: {
+				type: 'poker_action_time_gate_ack_v1',
+				protocolVersion: 1,
+				matchId: 'room-1',
+				turnId: 'combat-1:faith:peer-a:0',
+				decisionId: 'decision-1',
+				seq: 0,
+				allowed: true,
+			},
+		});
+
+		expect(controlMessages).toEqual(['poker_action_time_gate_ack_v1']);
+		expect(dataMessages).toEqual([]);
+		transport.close();
+	});
+
 	it('announces relay transport readiness only after relay and Control WS are both ready', async () => {
 		vi.stubGlobal('WebSocket', FakeWebSocket);
 		const transport = createWebSocketRelayTransport({
@@ -136,6 +170,8 @@ describe('GameTransport relay adapter', () => {
 				role: 'offerer',
 			},
 		});
+		const dataMessages: string[] = [];
+		transport.onMessage(message => dataMessages.push(message.type));
 
 		const connected = transport.connect();
 		const relaySocket = FakeWebSocket.instances[0];
@@ -155,7 +191,18 @@ describe('GameTransport relay adapter', () => {
 		expect(controlSocket.sent.map(value => JSON.parse(value).type)).not.toContain('transport_ready_v1');
 
 		relaySocket.openRelay();
+		expect(transport.state).toBe('connecting');
+		relaySocket.receive({ type: 'ping' });
+		expect(dataMessages).toEqual([]);
+		controlSocket.receive({
+			type: 'transport_committed_v1',
+			protocolVersion: 1,
+			matchId: 'room-1',
+			kind: 'websocket-relay',
+		});
 		await connected;
+		relaySocket.receive({ type: 'ping' });
+		expect(dataMessages).toEqual(['ping']);
 
 		const sentTypes = controlSocket.sent.map(value => JSON.parse(value).type);
 		expect(sentTypes.filter(type => type === 'transport_ready_v1')).toHaveLength(1);

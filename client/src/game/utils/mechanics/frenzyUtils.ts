@@ -1,10 +1,10 @@
 import { GameState, CardInstance } from '../../types';
-import { v4 as uuidv4 } from 'uuid';
 import { findCardInstance, findCardById } from '../cards/cardUtils';
 import { dealDamageToMinion } from '../effects/damageUtils';
 import { isMinion, getAttack, getHealth } from '../cards/typeGuards';
 import { debug } from '../../config/debugConfig';
 import { MAX_HAND_SIZE } from '../../constants/gameConstants';
+import { cryptoIdGen } from '../seededRng';
 
 /**
  * Initializes a card's frenzy effect
@@ -95,7 +95,7 @@ export function executeFrenzyEffect(
   updatedState.gameLog = [
     ...(updatedState.gameLog || []),
     {
-      id: uuidv4(),
+      id: cryptoIdGen(),
       type: 'effect' as const,
       cardId: cardId,
       player: playerId,
@@ -181,7 +181,7 @@ export function executeFrenzyEffect(
         // Create a new instance of the transformed card
         const originalCard = updatedState.players[playerId].battlefield[index];
         const transformedCard: CardInstance = {
-          instanceId: uuidv4(),
+          instanceId: cryptoIdGen(),
           card: transformCard,
           isPlayed: true,
           currentHealth: getHealth(transformCard),
@@ -201,7 +201,7 @@ export function executeFrenzyEffect(
         const spell = findCardById(1001);
         if (spell) {
           updatedState.players[playerId].hand.push({
-            instanceId: uuidv4(),
+            instanceId: cryptoIdGen(),
             card: spell,
             isPlayed: false
           } as CardInstance);

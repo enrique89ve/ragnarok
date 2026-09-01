@@ -78,17 +78,43 @@ export function clearTranscript(): void {
  * (SP / pre-handshake). `playerId` should come from `playerIdentity.ts` so the
  * fallback policy (Hive username → guest sentinel) is uniform across sites.
  */
-export function recordMove(action: string, payload: Record<string, unknown>, playerId: string): void {
+export function recordMove(
+	action: string,
+	payload: Record<string, unknown>,
+	playerId: string,
+	canonicalOrder?: number,
+	): boolean {
 	const transcript = activeTranscript;
-	if (!transcript) return;
+	if (!transcript) return false;
+	if (canonicalOrder !== undefined && (!Number.isSafeInteger(canonicalOrder) || canonicalOrder <= 0)) {
+		throw new Error(`[transcript] canonicalOrder must be a positive safe integer: ${canonicalOrder}`);
+	}
 	const move: GameMove = {
 		moveNumber: moveCounter++,
+		...(canonicalOrder === undefined ? {} : { canonicalOrder }),
 		action,
 		payload,
 		playerId,
 		timestamp: Date.now(),
 	};
 	transcript.addMove(move);
+	return true;
+}
+
+function orderedMovesForMerkle(moves: readonly GameMove[]): GameMove[] {
+	const hasCanonicalOrder = moves.some(move => move.canonicalOrder !== undefined);
+	if (!hasCanonicalOrder) return [...moves];
+	if (moves.some(move => move.canonicalOrder === undefined)) {
+		throw new Error('[transcript] mixed canonical and legacy move ordering');
+	}
+	const ordered = [...moves].sort((left, right) => left.canonicalOrder! - right.canonicalOrder!);
+	for (let index = 0; index < ordered.length; index += 1) {
+		const order = ordered[index]?.canonicalOrder;
+		if (order !== index + 1) {
+			throw new Error(`[transcript] canonical action order is not contiguous at index ${index}: ${order}`);
+		}
+	}
+	return ordered;
 }
 
 /**
@@ -164,10 +190,30 @@ export class TranscriptBuilder {
 		const records: MoveRecord[] = [];
 		let previousHash = '';
 
-		for (const move of this.moves) {
-			const data = canonicalStringify({ ...move, previousHash });
+		const orderedMoves = orderedMovesForMerkle(this.moves);
+		const hasCanonicalOrder = orderedMoves.some(move => move.canonicalOrder !== undefined);
+		for (let index = 0; index < orderedMoves.length; index += 1) {
+			const move = orderedMoves[index];
+			if (!move) continue;
+			// P2P records carry a shared order, so clock skew, VPN latency, and
+			// arrival timing are diagnostic only and must not fork the root. Keep
+			// the pre-existing insertion-order hash for non-P2P transcripts so a
+			// local campaign/session does not silently change its legacy proof.
+			const data = hasCanonicalOrder
+				? canonicalStringify({
+					canonicalOrder: move.canonicalOrder,
+					action: move.action,
+					payload: move.payload,
+					playerId: move.playerId,
+					previousHash,
+				})
+				: canonicalStringify({ ...move, previousHash });
 			const hash = await sha256Hash(data);
-			records.push({ ...move, hash });
+			records.push({
+				...move,
+				...(hasCanonicalOrder ? { moveNumber: index } : {}),
+				hash,
+			});
 			previousHash = hash;
 		}
 

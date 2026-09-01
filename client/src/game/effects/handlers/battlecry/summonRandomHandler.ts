@@ -10,7 +10,7 @@ import { Card, BattlecryEffect, CardInstance } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
 import { MAX_BATTLEFIELD_SIZE } from '../../../constants/gameConstants';
 import cardDatabase from '../../../services/cardDatabase';
-import { v4 as uuidv4 } from 'uuid';
+import { cryptoIdGen } from '../../../utils/seededRng';
 import { cardsRng } from '../../../utils/cardsCommandRng';
 
 
@@ -76,7 +76,7 @@ export default function executeSummonRandom(
       const selectedCard = candidateCards[randomIndex];
       
       const minionInstance: CardInstance = {
-        instanceId: uuidv4(),
+        instanceId: cryptoIdGen(),
         card: {
           id: selectedCard.id,
           name: selectedCard.name,

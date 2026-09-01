@@ -28,6 +28,7 @@ import {
 import {
 	tryParsePokerActionTimeGate,
 	tryParsePokerTurnClockProposal,
+	buildPokerActionTimeGateAck,
 	type PokerTurnNotaryServerMessage,
 } from '../../shared/p2p-wire/pokerTimeNotary';
 import {
@@ -44,7 +45,10 @@ import {
 	type P2PRelayErrorReason,
 	type P2PRelayTelemetrySnapshot,
 } from '../services/p2pTelemetry';
-import { verifyP2PMatchTicketForRoom } from '../services/p2pMatchTicketSigner';
+import {
+	verifyP2PMatchTicketForRoom,
+	type P2PMatchTicketPayload,
+} from '../services/p2pMatchTicketSigner';
 import {
 	isP2PRelayOriginAllowed,
 } from '../services/p2pRelayOrigin';
@@ -67,6 +71,9 @@ import { log } from '../static';
 type RoomMember = {
 	readonly peerId: string;
 	readonly ws: WebSocket;
+	/** The exact bearer ticket used for this room membership, when required. */
+	readonly ticketToken?: string;
+	readonly account?: string;
 };
 
 const rooms = new Map<string, RoomMember[]>();
@@ -143,7 +150,11 @@ type ValidationOk = { readonly ok: true; readonly type: string };
 type ValidationFail = { readonly ok: false; readonly reason: string };
 export type P2PRelayFrameValidationResult = ValidationOk | ValidationFail;
 type RelayUpgradeAccess =
-	| { readonly ok: true }
+	| {
+		readonly ok: true;
+		readonly ticket?: P2PMatchTicketPayload;
+		readonly ticketToken?: string;
+	}
 	| { readonly ok: false; readonly status: number; readonly telemetryReason: P2PRelayErrorReason; readonly reason: string };
 
 export function shouldRequireP2PRelayTicket(input: {
@@ -244,7 +255,13 @@ async function validateRelayTicketUpgrade(input: {
 			return { ok: false, status: 403, telemetryReason: 'ticket_mismatch', reason: 'Forbidden' };
 		}
 	}
-	return { ok: true };
+	return {
+		ok: true,
+		...(ticket.ok ? {
+			ticket: ticket.payload,
+			...(typeof ticketToken === 'string' ? { ticketToken } : {}),
+		} : {}),
+	};
 }
 
 function rejectUpgrade(socket: { write: (chunk: string) => unknown; destroy: () => unknown }, status: number, reason: string): void {
@@ -335,6 +352,7 @@ export function attachP2PRelay(server: HttpServer): void {
 		maxPayload: P2P_RELAY_MAX_PAYLOAD_BYTES,
 		handleProtocols: (protocols) => protocols.has(P2P_MATCH_TICKET_WS_PROTOCOL) ? P2P_MATCH_TICKET_WS_PROTOCOL : false,
 	});
+	const accessBySocket = new WeakMap<WebSocket, Extract<RelayUpgradeAccess, { readonly ok: true }>>();
 
 	async function handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): Promise<void> {
 		const rawUrl = req.url ?? '/';
@@ -366,6 +384,7 @@ export function attachP2PRelay(server: HttpServer): void {
 		}
 
 		wss.handleUpgrade(req, socket, head, (ws) => {
+			accessBySocket.set(ws, ticketAccess);
 			wss.emit('connection', ws, req);
 		});
 	}
@@ -395,6 +414,13 @@ export function attachP2PRelay(server: HttpServer): void {
 			ws.close();
 			return;
 		}
+		const access = accessBySocket.get(ws);
+		if (!access) {
+			recordP2PRelayError('socket_error');
+			sendSys(ws, { event: 'error', reason: 'missing_upgrade_access' });
+			ws.close();
+			return;
+		}
 
 		let room = rooms.get(roomId);
 		if (!room) {
@@ -409,20 +435,42 @@ export function attachP2PRelay(server: HttpServer): void {
 			markP2PRefereePlaneConnected(roomId, 'relay');
 		}
 
+		const existingMember = room.find(member => member.peerId === peerId);
+		if (existingMember) {
+			const sameTicket = existingMember.ticketToken !== undefined
+				&& access.ticketToken !== undefined
+				&& existingMember.ticketToken === access.ticketToken
+				&& existingMember.account === access.ticket?.account;
+			const bothUnauthenticated = existingMember.ticketToken === undefined
+				&& access.ticketToken === undefined;
+			if (!sameTicket && !bothUnauthenticated) {
+				recordP2PRelayError('duplicate_peer');
+				sendSys(ws, { event: 'error', reason: 'duplicate_peer' });
+				ws.close();
+				return;
+			}
+			// A VPN/IP change, tab restore, or retry can leave the previous socket
+			// half-open. Replace only the same authenticated room membership. The
+			// departure handler below uses socket identity, so closing the stale
+			// socket cannot remove the replacement or notify the opponent.
+			const existingIndex = room.indexOf(existingMember);
+			if (existingIndex >= 0) room.splice(existingIndex, 1);
+			try { existingMember.ws.close(); } catch { /* already closed */ }
+		}
 		if (room.length >= ROOM_MAX_PEERS) {
 			recordP2PRelayError('room_full');
 			sendSys(ws, { event: 'error', reason: 'room_full' });
 			ws.close();
 			return;
 		}
-		if (room.some(m => m.peerId === peerId)) {
-			recordP2PRelayError('duplicate_peer');
-			sendSys(ws, { event: 'error', reason: 'duplicate_peer' });
-			ws.close();
-			return;
-		}
 
-		room.push({ peerId, ws });
+		const member: RoomMember = {
+			peerId,
+			ws,
+			...(access.ticketToken ? { ticketToken: access.ticketToken } : {}),
+			...(access.ticket?.account ? { account: access.ticket.account } : {}),
+		};
+		room.push(member);
 		recordP2PRelayConnection();
 		log(`room=${roomId.slice(0, 16)}… peer=${peerId.slice(0, 8)}… joined (${room.length}/${ROOM_MAX_PEERS})`, 'Relay');
 
@@ -557,9 +605,60 @@ export function attachP2PRelay(server: HttpServer): void {
 					receivedAtMs: Date.now(),
 				});
 				if (gate.status === 'drop') {
+					if (gateInput.decisionId !== undefined && gateInput.seq !== undefined) {
+						try {
+							sendSys(ws, {
+								event: 'poker_action_time_gate',
+								message: buildPokerActionTimeGateAck({
+									matchId: roomId,
+									turnId: gateInput.turnId,
+									decisionId: gateInput.decisionId,
+									seq: gateInput.seq,
+									allowed: false,
+									reason: gate.reason,
+								}),
+							});
+						} catch {
+							recordP2PRelayError('socket_error');
+						}
+					}
 					recordP2PRelayDrop(gate.reason);
 					return;
 				}
+
+				// Do not acknowledge an allowed action until the other room member has
+				// accepted the frame. The local reducer commits only after this ack;
+				// acknowledging first would let a VPN/NIC dropout create a local-only
+				// Poker decision with no replay path.
+				const other = currentRoom.find(m => m.peerId !== peerId);
+				if (!other || other.ws.readyState !== WebSocket.OPEN) {
+					recordP2PRelayDrop('opponent_unavailable');
+					return;
+				}
+				try {
+					other.ws.send(text);
+					recordP2PRelayMessage();
+				} catch {
+					recordP2PRelayError('send_failed');
+					return;
+				}
+				if (gateInput.decisionId !== undefined && gateInput.seq !== undefined) {
+					try {
+						sendSys(ws, {
+							event: 'poker_action_time_gate',
+							message: buildPokerActionTimeGateAck({
+								matchId: roomId,
+								turnId: gateInput.turnId,
+								decisionId: gateInput.decisionId,
+								seq: gateInput.seq,
+								allowed: true,
+							}),
+						});
+					} catch {
+						recordP2PRelayError('socket_error');
+					}
+				}
+				return;
 			}
 
 			const other = currentRoom.find(m => m.peerId !== peerId);
@@ -576,7 +675,7 @@ export function attachP2PRelay(server: HttpServer): void {
 		const handleDeparture = () => {
 			const currentRoom = rooms.get(roomId);
 			if (!currentRoom) return;
-			const idx = currentRoom.findIndex(m => m.peerId === peerId);
+			const idx = currentRoom.findIndex(m => m.ws === ws);
 			if (idx === -1) return;
 			currentRoom.splice(idx, 1);
 			log(`room=${roomId.slice(0, 16)}… peer=${peerId.slice(0, 8)}… left (${currentRoom.length}/${ROOM_MAX_PEERS})`, 'Relay');
@@ -614,5 +713,11 @@ export function attachP2PRelay(server: HttpServer): void {
 		});
 	}, KEEPALIVE_INTERVAL_MS);
 	keepaliveTimer.unref?.();
+	// Do not leave a live interval behind when the HTTP server is stopped (tests,
+	// graceful deploys, and local hot reload). The timer is unref'd so it cannot
+	// keep Node alive, but clearing it prevents stale relay telemetry and work
+	// from surviving a server lifecycle boundary.
+	server.once('close', () => clearInterval(keepaliveTimer));
+	wss.once('close', () => clearInterval(keepaliveTimer));
 
 }

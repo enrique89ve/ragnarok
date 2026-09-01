@@ -102,7 +102,11 @@ describe('computeP2PBattleReadiness', () => {
 		expect(computeP2PBattleReadiness(baseInput({ expectedRemoteLoadoutHash: null }))).toEqual({
 		ready: false,
 		reason: 'Opponent loadout commitment is not available',
-	});
+		});
+		expect(computeP2PBattleReadiness(baseInput({ expectedRemoteLoadoutHash: undefined }))).toEqual({
+		ready: false,
+		reason: 'Opponent loadout commitment is not available',
+		});
 	});
 
 	it('keeps direct challenge compatibility without weakening the bilateral BattleReady gate', () => {

@@ -11,7 +11,7 @@ import { EffectResult } from '../../../types/EffectTypes';
 import { MAX_BATTLEFIELD_SIZE } from '../../../constants/gameConstants';
 import { MinionCardData } from '../../../types';
 import cardDatabase from '../../../services/cardDatabase';
-import { v4 as uuidv4 } from 'uuid';
+import { cryptoIdGen } from '../../../utils/seededRng';
 import { isMinion, getAttack, getHealth } from '../../../utils/cards/typeGuards';
 import { cardsRng } from '../../../utils/cardsCommandRng';
 
@@ -94,7 +94,7 @@ export default function executeSummonRandomMinions(
       usedIndices.add(originalIndex);
       
       const minionInstance: CardInstance = {
-        instanceId: uuidv4(),
+        instanceId: cryptoIdGen(),
         card: {
           id: typeof selectedCard.id === 'string' ? parseInt(selectedCard.id, 10) : selectedCard.id,
           name: selectedCard.name,

@@ -962,6 +962,7 @@ export const putRewardClaim = (claim: RewardClaim): Promise<void> =>
 
 export type CampaignRunStatus =
 	| 'started'
+	| 'abandoned'
 	| 'won'
 	| 'published'
 	| 'rejected';
@@ -1030,6 +1031,47 @@ export const putCampaignRun = (run: CampaignRunRecord): Promise<void> =>
 
 export const getCampaignRunsByAccount = (account: string): Promise<CampaignRunRecord[]> =>
 	idbGetByIndex<CampaignRunRecord>('campaign_runs', 'by_account', account);
+
+export async function markCampaignRunWon(input: {
+	readonly localRunId: string;
+	readonly matchId: string;
+	readonly matchSeed: string;
+	readonly turnCount: number;
+	readonly updatedAt?: number;
+}): Promise<boolean> {
+	const run = await getCampaignRun(input.localRunId);
+	if (!run || run.status !== 'started') return false;
+	await putCampaignRun({
+		...run,
+		status: 'won',
+		matchId: input.matchId,
+		matchSeed: input.matchSeed,
+		turnCount: input.turnCount,
+		updatedAt: input.updatedAt ?? Date.now(),
+	});
+	return true;
+}
+
+export async function markCampaignRunAbandoned(
+	localRunId: string,
+	updatedAt = Date.now(),
+): Promise<boolean> {
+	const run = await getCampaignRun(localRunId);
+	if (!run || run.status !== 'started') return false;
+	await putCampaignRun({ ...run, status: 'abandoned', updatedAt });
+	return true;
+}
+
+/**
+ * A hard reload destroys the in-memory match. Reconcile its durable draft on
+ * the next boot so a stale `started` row cannot look like a live run forever.
+ */
+export async function abandonStartedCampaignRuns(account: string): Promise<number> {
+	const runs = await getCampaignRunsByAccount(account);
+	const started = runs.filter(run => run.status === 'started');
+	await Promise.all(started.map(run => markCampaignRunAbandoned(run.localRunId)));
+	return started.length;
+}
 
 export const getCampaignSubmission = (submissionKey: string): Promise<CampaignSubmissionRecord | undefined> =>
 	idbGet<CampaignSubmissionRecord>('campaign_submissions', submissionKey);

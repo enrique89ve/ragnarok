@@ -10,7 +10,7 @@ import { GameContext } from '../../../GameContext';
 import { Card, CardInstance } from '../../../types/CardTypes';
 import { DeathrattleEffect } from '../../../types';
 import { EffectResult } from '../../../types/EffectTypes';
-import { v4 as uuidv4 } from 'uuid';
+import { cryptoIdGen } from '../../../utils/seededRng';
 import { MAX_BATTLEFIELD_SIZE } from '../../../constants/gameConstants';
 
 let yggdrasilGolemCounter = 1;
@@ -58,7 +58,7 @@ export default function executeSummonYggdrasilGolem(
     };
 
     const golemInstance: CardInstance = {
-      instanceId: uuidv4(),
+      instanceId: cryptoIdGen(),
       card: golemCard,
       currentHealth: currentStats,
       canAttack: false,

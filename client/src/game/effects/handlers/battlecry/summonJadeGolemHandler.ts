@@ -10,7 +10,7 @@ import { GameContext, Player } from '../../../GameContext';
 import { Card, BattlecryEffect, CardInstance } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
 import { MAX_BATTLEFIELD_SIZE } from '../../../constants/gameConstants';
-import { v4 as uuidv4 } from 'uuid';
+import { cryptoIdGen } from '../../../utils/seededRng';
 
 const MAX_YGGDRASIL_GOLEM_SIZE = 30;
 
@@ -59,7 +59,7 @@ export default function executeSummonJadeGolem(
     };
 
     const golemInstance: CardInstance = {
-      instanceId: uuidv4(),
+      instanceId: cryptoIdGen(),
       card: golemCard,
       currentHealth: golemSize,
       currentAttack: golemSize,

@@ -76,7 +76,11 @@ export const createKingAbilitySlice: StateCreator<
   placeMine: (
     owner: 'player' | 'opponent',
     centerPosition: ChessBoardPosition,
-    direction?: MineDirection
+    direction?: MineDirection,
+    overrides?: Readonly<{
+      readonly mineId: string;
+      readonly affectedTiles: readonly ChessBoardPosition[];
+    }>
   ): boolean => {
     const state = get();
     const kingState = owner === 'player' 
@@ -102,26 +106,32 @@ export const createKingAbilitySlice: StateCreator<
       .filter(p => p.owner === owner)
       .map(p => p.position);
     
-    const validation = isValidMinePlacement(
-      centerPosition,
-      kingState.kingId,
-      state.allActiveMines,
-      ownPieces,
-      owner,
-      direction
-    );
-
-    if (!validation.valid) {
-      debug.warn('[KingAbility] Invalid placement:', validation.reason);
-      return false;
+    // P2P supplies a signed, seed-scoped tile list and can validate before
+    // applying. SP creates its ambient-random shape first, then validates
+    // that actual shape; validating a separate preview would otherwise allow
+    // a random tile set to overlap an own piece or existing mine.
+    if (overrides) {
+      const validation = isValidMinePlacement(
+        centerPosition,
+        kingState.kingId,
+        state.allActiveMines,
+        ownPieces,
+        owner,
+        direction,
+        overrides.affectedTiles,
+      );
+      if (!validation.valid) {
+        debug.warn('[KingAbility] Invalid placement:', validation.reason);
+        return false;
+      }
     }
 
     const currentTurn = state.boardState.moveCount;
     const enemySide = owner === 'player' ? 'opponent' : 'player';
-    // P2P: both peers seeded the chess slice via `initChessWithSeed(matchSeed)`,
-    // so `_chessIdGen` and `_chessRng` are non-null and produce identical
-    // sequences. SP: nulls fall back to crypto-grade ambient sources, which
-    // are non-deterministic (acceptable, no convergence requirement).
+    // P2P placements carry a seed-scoped id and resolved tile list in the
+    // signed command. This avoids consuming a mutable RNG stream while an
+    // async wallet signature is pending. Legacy/SP calls retain the seeded
+    // chess sources (or crypto fallbacks) used by the original path.
     const idGen = state._chessIdGen ?? cryptoIdGen;
     const rng = state._chessRng ?? cryptoRng;
     const newMine = createMine(
@@ -132,12 +142,29 @@ export const createKingAbilitySlice: StateCreator<
       idGen,
       direction,
       enemySide,
-      rng
-    );
+      rng,
+      overrides,
+	);
 
     if (!newMine) {
       debug.warn('[KingAbility] Failed to create mine');
       return false;
+    }
+
+    if (!overrides) {
+      const validation = isValidMinePlacement(
+        centerPosition,
+        kingState.kingId,
+        state.allActiveMines,
+        ownPieces,
+        owner,
+        direction,
+        newMine.affectedTiles,
+      );
+      if (!validation.valid) {
+        debug.warn('[KingAbility] Invalid random placement:', validation.reason);
+        return false;
+      }
     }
 
     const updatedKingState: KingDivineCommandState = {

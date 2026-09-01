@@ -8,6 +8,8 @@
 import { useEffect } from 'react';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useGameStore } from '../stores/gameStore';
+import { GAME_COMMAND_TYPES } from '../core/commands';
+import { useP2PActions } from '../context/useP2PActions';
 
 interface UseCardGameKeyboardOptions {
 	onToggleGameLog?: () => void;
@@ -15,6 +17,8 @@ interface UseCardGameKeyboardOptions {
 }
 
 export function useCardGameKeyboard({ onToggleGameLog, enabled = true }: UseCardGameKeyboardOptions = {}) {
+	const { dispatchGameCommand } = useP2PActions();
+
 	useEffect(() => {
 		if (!enabled) return;
 
@@ -37,13 +41,13 @@ export function useCardGameKeyboard({ onToggleGameLog, enabled = true }: UseCard
 				e.preventDefault();
 				const gs = useGameStore.getState();
 				if (gs.gameState?.currentTurn === 'player' && gs.gameState?.gamePhase === 'playing') {
-					gs.endTurn();
+					dispatchGameCommand({ type: GAME_COMMAND_TYPES.endTurn });
 				}
 			} else if (match(bindings.useHeroPower)) {
 				e.preventDefault();
 				const gs = useGameStore.getState();
 				if (gs.gameState?.currentTurn === 'player' && gs.gameState?.gamePhase === 'playing') {
-					gs.performHeroPower();
+					dispatchGameCommand({ type: GAME_COMMAND_TYPES.useHeroPower });
 				}
 			} else if (match(bindings.showGameLog)) {
 				e.preventDefault();
@@ -61,5 +65,5 @@ export function useCardGameKeyboard({ onToggleGameLog, enabled = true }: UseCard
 
 		window.addEventListener('keydown', handleKeyDown);
 		return () => window.removeEventListener('keydown', handleKeyDown);
-	}, [enabled, onToggleGameLog]);
+	}, [enabled, onToggleGameLog, dispatchGameCommand]);
 }

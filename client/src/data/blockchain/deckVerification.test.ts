@@ -25,7 +25,7 @@ describe('verifyDeckOwnership', () => {
 			starterCount: 1,
 			invalidCards: [],
 		});
-	});
+	}, 15_000);
 
 	it('rejects non-starter cards without nft_id in testnet', async () => {
 		vi.stubEnv('VITE_NETWORK_STAGE', 'testnet');

@@ -7,6 +7,7 @@ import {
 } from '../../stores/wsTransport';
 import type { P2PMatchTicket } from '@shared/p2pAvailability';
 import type { P2PControlClientMessage, P2PControlServerMessage } from '@shared/p2p-wire/control';
+import type { P2PMessage } from '../messages';
 import {
 	createWebRTCTransport,
 	type WebRTCTransportOptions,
@@ -67,6 +68,15 @@ function hasControlChannel(transport: GameTransport): transport is ControlCapabl
 		&& typeof transport.onControlMessage === 'function';
 }
 
+type ControlMessageCapableTransport = GameTransport & {
+	readonly onControlMessage: (listener: (message: P2PControlServerMessage) => void) => () => void;
+};
+
+function hasControlMessageListener(transport: GameTransport): transport is ControlMessageCapableTransport {
+	return 'onControlMessage' in transport
+		&& typeof transport.onControlMessage === 'function';
+}
+
 export type TransportManagerDependencies = {
 	readonly createWebRTC?: (options: WebRTCTransportOptions) => GameTransport;
 	readonly createRelay?: (options: LocalWebSocketTransportOptions) => GameTransport;
@@ -83,6 +93,22 @@ function safeConnectBudget(value: number): number {
 
 function remainingBudget(deadlineAt: number): number {
 	return Math.max(0, deadlineAt - Date.now());
+}
+
+// A transport can open before React attaches `useWireSync`'s data listener.
+// Keep the short handshake burst so a fast peer (or a reconnect flush) cannot
+// lose the first canonical frame in that listener-installation window.
+const MAX_PENDING_MESSAGES = 256;
+const MAX_PENDING_CONTROL_MESSAGES = 128;
+
+function isBufferedControlMessage(message: P2PControlServerMessage): boolean {
+	return message.type === 'phase_checkpoint_commit_v1'
+		|| message.type === 'phase_checkpoint_dispute_v1'
+	|| message.type === 'poker_turn_notary_commit_v1'
+	|| message.type === 'poker_turn_notary_dispute_v1'
+	|| message.type === 'poker_action_time_gate_v1'
+	|| message.type === 'poker_action_time_gate_ack_v1'
+	|| message.type === 'transport_committed_v1';
 }
 
 async function connectWithinBudget(
@@ -119,7 +145,10 @@ export function createTransportManager(
 ): ManagedTransport {
 	const eventListeners = new Map<TransportEvent, Set<TransportListener>>();
 	const messageListeners = new Set<TransportMessageListener>();
+	const controlMessageListeners = new Set<(message: P2PControlServerMessage) => void>();
 	const stateListeners = new Set<TransportStateListener>();
+	const pendingMessages: P2PMessage[] = [];
+	const pendingControlMessages: P2PControlServerMessage[] = [];
 	const createWebRTC = dependencies.createWebRTC ?? createWebRTCTransport;
 	const createRelay = dependencies.createRelay ?? createWebSocketRelayTransport;
 	let selected: GameTransport | null = null;
@@ -156,6 +185,21 @@ export function createTransportManager(
 		}
 	};
 
+	const dispatchControlMessage = (message: P2PControlServerMessage): void => {
+		if (!isBufferedControlMessage(message)) return;
+		if (controlMessageListeners.size === 0) {
+			if (pendingControlMessages.length < MAX_PENDING_CONTROL_MESSAGES) {
+				pendingControlMessages.push(message);
+				return;
+			}
+			debug.warn('[TransportManager] referee control queue full before a listener attached');
+			return;
+		}
+		for (const listener of controlMessageListeners) {
+			try { listener(message); } catch (error) { debug.error('[TransportManager] control listener failed:', error); }
+		}
+	};
+
 	const cleanupSelected = (): void => {
 		selectedCleanup?.();
 		selectedCleanup = null;
@@ -164,11 +208,22 @@ export function createTransportManager(
 	const attachSelected = (transport: GameTransport, attemptId: number): void => {
 		cleanupSelected();
 		selected = transport;
-		const removeMessage = transport.onMessage(message => {
-			if (selected !== transport || closed || !options.session.isCurrent(attemptId)) return;
+		const dispatchMessage = (message: P2PMessage): void => {
+			if (messageListeners.size === 0) {
+				if (pendingMessages.length < MAX_PENDING_MESSAGES) {
+					pendingMessages.push(message);
+					return;
+				}
+				debug.warn('[TransportManager] inbound message queue full before a listener attached');
+				return;
+			}
 			for (const listener of messageListeners) {
 				try { listener(message); } catch (error) { debug.error('[TransportManager] message listener failed:', error); }
 			}
+		};
+		const removeMessage = transport.onMessage(message => {
+			if (selected !== transport || closed || !options.session.isCurrent(attemptId)) return;
+			dispatchMessage(message);
 			emit('data', message);
 		});
 		const removeState = transport.onStateChange(next => {
@@ -188,9 +243,14 @@ export function createTransportManager(
 				setState(next);
 			}
 		});
+		const removeControl = hasControlMessageListener(transport)
+			? transport.onControlMessage(dispatchControlMessage)
+			: null;
 		selectedCleanup = () => {
 			removeMessage();
 			removeState();
+			removeControl?.();
+			pendingControlMessages.length = 0;
 		};
 	};
 
@@ -325,6 +385,8 @@ export function createTransportManager(
 		cleanupSelected();
 		try { selected?.close(); } catch { /* already closed */ }
 		selected = null;
+		pendingMessages.length = 0;
+		pendingControlMessages.length = 0;
 		open = false;
 		setState('closed');
 	};
@@ -339,6 +401,12 @@ export function createTransportManager(
 		},
 		onMessage: listener => {
 			messageListeners.add(listener);
+			if (pendingMessages.length > 0) {
+				const pending = pendingMessages.splice(0, pendingMessages.length);
+				for (const message of pending) {
+					try { listener(message); } catch (error) { debug.error('[TransportManager] queued message listener failed:', error); }
+				}
+			}
 			return () => messageListeners.delete(listener);
 		},
 		onStateChange: listener => {
@@ -362,8 +430,14 @@ export function createTransportManager(
 			selected.sendControlMessage(message);
 		},
 		onControlMessage: listener => {
-			if (!selected || !hasControlChannel(selected)) return () => undefined;
-			return selected.onControlMessage(listener);
+			controlMessageListeners.add(listener);
+			if (pendingControlMessages.length > 0) {
+				const pending = pendingControlMessages.splice(0, pendingControlMessages.length);
+				for (const message of pending) {
+					try { listener(message); } catch (error) { debug.error('[TransportManager] queued control listener failed:', error); }
+				}
+			}
+			return () => controlMessageListeners.delete(listener);
 		},
 		on,
 		off,

@@ -11,7 +11,7 @@ import { CardData, CardInstance, DeathrattleEffect } from '../../../types';
 import { EffectResult } from '../../../types/EffectTypes';
 import { getGraveyard, getGraveyardByRace } from '../../../data/cardManagement/graveyardTracker';
 import { getCardById } from '../../../data/cardManagement/cardRegistry';
-import { v4 as uuidv4 } from 'uuid';
+import { cryptoIdGen } from '../../../utils/seededRng';
 import { MAX_BATTLEFIELD_SIZE } from '../../../constants/gameConstants';
 
 /**
@@ -63,7 +63,7 @@ export default function executeResurrectResurrect(
       }
       
       const newMinion: CardInstance = {
-        instanceId: uuidv4(),
+        instanceId: cryptoIdGen(),
         card: cardData,
         currentHealth: 'health' in cardData ? (cardData.health ?? 0) : 0,
         canAttack: false,

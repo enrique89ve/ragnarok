@@ -30,6 +30,7 @@ const RoomIdSchema = z.string().min(1).max(128);
 const MatchIdSchema = z.string().min(1).max(MAX_MATCH_ID_LENGTH);
 const NonNegativeInt = z.number().int().nonnegative();
 const ProposalDurationMs = z.number().int().min(1).max(300_000);
+const DecisionIdSchema = z.string().min(1).max(256);
 
 export const TimedPokerDecisionPhaseSchema = z.enum([
 	'pre_flop',
@@ -111,15 +112,68 @@ export const PokerTurnNotaryServerMessageSchema = z.discriminatedUnion('type', [
 
 export type PokerTurnNotaryServerMessage = z.infer<typeof PokerTurnNotaryServerMessageSchema>;
 
+/**
+ * Server acknowledgement for a time-gated Poker action. The relay/control
+ * plane is the authority for the absolute deadline; a sender must not commit
+ * the local reducer merely because its WebSocket accepted the bytes. Keeping
+ * the decision id and sequence in the acknowledgement prevents a late/stale
+ * ack from authorizing a different action after reconnect.
+ */
+const PokerActionTimeGateReasonSchema = z.enum([
+	'missing_notary',
+	'notary_pending',
+	'stale_turn',
+	'late_player_action',
+	'premature_timeout',
+	'room_disputed',
+]);
+
+export const PokerActionTimeGateAckSchema = z.object({
+	type: z.literal('poker_action_time_gate_ack_v1'),
+	protocolVersion: z.literal(POKER_TIME_NOTARY_PROTOCOL_VERSION),
+	matchId: MatchIdSchema,
+	turnId: TurnIdSchema,
+	decisionId: DecisionIdSchema,
+	seq: NonNegativeInt,
+	allowed: z.boolean(),
+	reason: PokerActionTimeGateReasonSchema.optional(),
+}).strict();
+
+export type PokerActionTimeGateAck = z.infer<typeof PokerActionTimeGateAckSchema>;
+
+export function buildPokerActionTimeGateAck(input: {
+	readonly matchId: string;
+	readonly turnId: string;
+	readonly decisionId: string;
+	readonly seq: number;
+	readonly allowed: boolean;
+	readonly reason?: PokerActionTimeGateAck['reason'];
+}): PokerActionTimeGateAck {
+	return PokerActionTimeGateAckSchema.parse({
+		type: 'poker_action_time_gate_ack_v1',
+		protocolVersion: POKER_TIME_NOTARY_PROTOCOL_VERSION,
+		matchId: input.matchId,
+		turnId: input.turnId,
+		decisionId: input.decisionId,
+		seq: input.seq,
+		allowed: input.allowed,
+		...(input.reason ? { reason: input.reason } : {}),
+	});
+}
+
 const PokerActionTimeGateSchema = z.object({
 	type: z.literal('poker_action'),
 	origin: z.enum(['player', 'timeout']),
 	turnId: TurnIdSchema,
+	decisionId: DecisionIdSchema.optional(),
+	seq: NonNegativeInt.optional(),
 }).passthrough();
 
 export type PokerActionTimeGate = Readonly<{
 	origin: PokerActionOrigin;
 	turnId: string;
+	decisionId?: string;
+	seq?: number;
 }>;
 
 export function samePokerTurnClockIdentity(
@@ -220,5 +274,14 @@ export function tryParsePokerActionTimeGate(
 	return {
 		origin: parsed.data.origin,
 		turnId: parsed.data.turnId,
+		...(parsed.data.decisionId ? { decisionId: parsed.data.decisionId } : {}),
+		...(parsed.data.seq === undefined ? {} : { seq: parsed.data.seq }),
 	};
+}
+
+export function tryParsePokerActionTimeGateAck(
+	input: unknown,
+): PokerActionTimeGateAck | null {
+	const parsed = PokerActionTimeGateAckSchema.safeParse(input);
+	return parsed.success ? parsed.data : null;
 }

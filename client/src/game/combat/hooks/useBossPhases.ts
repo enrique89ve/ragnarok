@@ -35,6 +35,7 @@ import { useEffect, useRef } from 'react';
 import { useCampaignStore, getMission } from '../../campaign';
 import type { BossPhase, BossPhaseFlash } from '../../campaign/campaignTypes';
 import { usePokerCombatAdapter } from '../../hooks/usePokerCombatAdapter';
+import { useMatchStore } from '../../match/store';
 import { debug } from '../../config/debugConfig';
 
 interface UseBossPhasesParams {
@@ -53,6 +54,7 @@ export function useBossPhases({
 	setFlash,
 }: UseBossPhasesParams): void {
 	const currentMissionId = useCampaignStore(s => s.currentMission);
+	const isPeerMatch = useMatchStore(s => s.activeMatch?.opponent.kind === 'peer');
 	const { applyDirectDamage, addOpponentArmor } = usePokerCombatAdapter();
 
 	// Stable ref to phases so they can be re-sorted once per mission
@@ -64,6 +66,7 @@ export function useBossPhases({
 	useEffect(() => {
 		firedRef.current = new Set();
 		phasesRef.current = [];
+		if (isPeerMatch) return;
 		if (!currentMissionId) return;
 		const found = getMission(currentMissionId);
 		if (!found?.mission?.bossPhases || found.mission.bossPhases.length === 0) return;
@@ -74,10 +77,11 @@ export function useBossPhases({
 		debug.combat?.(
 			`[BossPhases] Loaded ${phasesRef.current.length} phases for mission ${currentMissionId}`
 		);
-	}, [currentMissionId]);
+	}, [currentMissionId, isPeerMatch]);
 
 	// Watch opponent HP and fire phases when crossed.
 	useEffect(() => {
+		if (isPeerMatch) return;
 		if (phasesRef.current.length === 0) return;
 		if (opponentMaxHP <= 0) return;
 		const hpPct = (opponentCurrentHP / opponentMaxHP) * 100;
@@ -90,7 +94,7 @@ export function useBossPhases({
 			firedRef.current.add(i);
 			runPhase(phase, applyDirectDamage, addOpponentArmor, setQuipText, setQuipKey, setFlash);
 		}
-	}, [opponentCurrentHP, opponentMaxHP, applyDirectDamage, addOpponentArmor, setQuipText, setQuipKey, setFlash]);
+	}, [opponentCurrentHP, opponentMaxHP, applyDirectDamage, addOpponentArmor, setQuipText, setQuipKey, setFlash, isPeerMatch]);
 }
 
 /*

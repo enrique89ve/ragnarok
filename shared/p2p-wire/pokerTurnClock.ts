@@ -49,6 +49,28 @@ export type PokerTurnClock = Readonly<{
 	durationMs: number;
 }>;
 
+/**
+ * Pick the deterministic timestamp used by the local reducer after the
+ * server/referee has accepted a Poker action. Browser clocks are only a
+ * presentation aid and can differ across VPNs, reconnects, or sleeping tabs;
+ * the signed action's server gate is the authority. Evaluating an accepted
+ * player action one millisecond before the committed deadline keeps a client
+ * with a fast clock from rejecting it, while a timeout is evaluated exactly
+ * at the deadline so the same validator accepts the timeout on every peer.
+ *
+ * `undefined` deliberately preserves the normal wall-clock behavior for
+ * single-player/legacy paths that have no canonical turn deadline.
+ */
+export function getCanonicalPokerActionNowMs(input: {
+	readonly origin: 'player' | 'timeout';
+	readonly deadlineAtMs: number | null;
+}): number | undefined {
+	if (input.deadlineAtMs === null || !Number.isFinite(input.deadlineAtMs)) return undefined;
+	return input.origin === 'timeout'
+		? Math.floor(input.deadlineAtMs)
+		: Math.floor(input.deadlineAtMs) - 1;
+}
+
 export type PokerTurnIdentityInput = Readonly<{
 	combatId: string;
 	phase: string;

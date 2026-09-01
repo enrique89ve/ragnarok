@@ -1,7 +1,7 @@
 import { CardData, CardInstance } from '../../types';
 import type { NineRealm } from '../../types/NorseTypes';
 import allCards, { getCardById } from '../../data/allCards';
-import { seededShuffle } from '../seededRng';
+import { getActiveDeterministicIdGen, seededShuffle } from '../seededRng';
 import { initializeSpellPower } from '../spells/spellPowerUtils';
 import { initializePoisonousEffect } from '../mechanics/poisonousUtils';
 import { initializeLifestealEffect } from '../mechanics/lifestealUtils';
@@ -29,7 +29,13 @@ import { getCardAtLevel, type EvolutionLevel } from './cardLevelScaling';
  * (`CardData.id`); a single character has many instances.
  */
 export function createCardInstance(card: CardData, instanceId: string, evolutionLevel?: EvolutionLevel): CardInstance {
-  const level = evolutionLevel ?? (card as any)._evolutionLevel ?? 3;
+	// A command-scoped generator is authoritative for every newly materialized
+	// card, including legacy callers that still pass a UUID/CSPRNG id. Existing
+	// instances moved between zones keep their supplied identity because they do
+	// not pass through this constructor.
+	const scopedIdGen = getActiveDeterministicIdGen();
+	const resolvedInstanceId = scopedIdGen?.() ?? instanceId;
+	  const level = evolutionLevel ?? (card as any)._evolutionLevel ?? 3;
   const scaledCard = level !== 3 ? getCardAtLevel(card, level) : card;
 
   // Check if the card has Charge, which allows it to attack immediately
@@ -39,7 +45,7 @@ export function createCardInstance(card: CardData, instanceId: string, evolution
 
   // Create the basic card instance
   const cardInstance: CardInstance = {
-    instanceId,
+    instanceId: resolvedInstanceId,
     card: scaledCard,
     currentHealth: cardHealth,
     canAttack: false,

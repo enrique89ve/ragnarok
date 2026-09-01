@@ -1,7 +1,7 @@
 /**
  * Browser reload guard for a live match.
  *
- * Single and campaign keep the board in RAM — F5 abandons the run.
+ * Single and campaign keep the board in RAM — a reload discards the battle.
  * P2P tries a local snapshot rejoin (see docs/P2P_MATCH_RESUME.md).
  * Browsers own the dialog copy; returnValue only opts into the prompt.
  */
@@ -36,7 +36,7 @@ const P2P_RELOAD_WARNING =
 	'A live P2P match is in progress. Reloading tries to rejoin from this device (2 attempts).';
 
 const LOCAL_RELOAD_WARNING =
-	'A match is in progress. Reloading this page abandons the current battle.';
+	'A match is in progress. Reloading discards this battle; no result will be recorded.';
 
 export function shouldWarnOnMatchReload(input: MatchReloadGuardInput): boolean {
 	if (!input.hasActiveMatch) return false;
@@ -87,6 +87,6 @@ function recordReloadGuardPrompt(input: AttachMatchReloadGuardInput): void {
 	}
 	recordSessionEvent('match_reload_guard_prompted', {
 		mode: input.mode,
-		policy: 'hard_reload_abandons_in_memory_match',
+		policy: 'hard_reload_discards_in_memory_match',
 	});
 }

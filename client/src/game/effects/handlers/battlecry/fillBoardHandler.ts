@@ -10,7 +10,7 @@ import { GameContext } from '../../../GameContext';
 import { Card, BattlecryEffect, CardInstance } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
 import cardDatabase from '../../../services/cardDatabase';
-import { v4 as uuidv4 } from 'uuid';
+import { cryptoIdGen } from '../../../utils/seededRng';
 import { isMinion, getAttack, getHealth } from '../../../utils/cards/typeGuards';
 import { MAX_BATTLEFIELD_SIZE } from '../../../constants/gameConstants';
 import { cardsRng } from '../../../utils/cardsCommandRng';
@@ -133,7 +133,7 @@ export default function executeFillBoard(
       }
       
       const minionInstance: CardInstance = {
-        instanceId: uuidv4(),
+        instanceId: cryptoIdGen(),
         card: minionCard,
         currentHealth: minionCard.health || 1,
         currentAttack: minionCard.attack || 1,

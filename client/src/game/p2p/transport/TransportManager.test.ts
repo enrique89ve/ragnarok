@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { P2PMessage } from '../messages';
+import type { P2PControlServerMessage } from '@shared/p2p-wire/control';
 import { createTransportManager } from './TransportManager';
 import { createTransportSession } from './transportSession';
 import {
@@ -27,30 +28,39 @@ function fakeTransport(kind: GameTransport['kind'], connect: () => Promise<void>
 	transport: GameTransport;
 	setState: (state: TransportState) => void;
 	emitMessage: (message: P2PMessage) => void;
+	emitControlMessage: (message: P2PControlServerMessage) => void;
 	connect: ReturnType<typeof vi.fn>;
 	close: ReturnType<typeof vi.fn>;
 } {
 	const messageListeners = new Set<TransportMessageListener>();
+	const controlMessageListeners = new Set<(message: P2PControlServerMessage) => void>();
 	const stateListeners = new Set<TransportStateListener>();
 	const connectSpy = vi.fn(connect);
 	const close = vi.fn();
 	let state: TransportState = 'idle';
-	return {
-		transport: {
-			kind,
-			get state(): TransportState { return state; },
-			connect: connectSpy,
-			send: vi.fn(),
-			onMessage: listener => {
-				messageListeners.add(listener);
-				return () => messageListeners.delete(listener);
-			},
-			onStateChange: listener => {
-				stateListeners.add(listener);
-				return () => stateListeners.delete(listener);
-			},
-			close,
+	const transport: GameTransport & {
+		onControlMessage: (listener: (message: P2PControlServerMessage) => void) => () => void;
+	} = {
+		kind,
+		get state(): TransportState { return state; },
+		connect: connectSpy,
+		send: vi.fn(),
+		onMessage: listener => {
+			messageListeners.add(listener);
+			return () => messageListeners.delete(listener);
 		},
+		onStateChange: listener => {
+			stateListeners.add(listener);
+			return () => stateListeners.delete(listener);
+		},
+		close,
+		onControlMessage: listener => {
+			controlMessageListeners.add(listener);
+			return () => controlMessageListeners.delete(listener);
+		},
+	};
+	return {
+		transport,
 		connect: connectSpy,
 		setState: next => {
 			state = next;
@@ -58,6 +68,9 @@ function fakeTransport(kind: GameTransport['kind'], connect: () => Promise<void>
 		},
 		emitMessage: message => {
 			for (const listener of messageListeners) listener(message);
+		},
+		emitControlMessage: message => {
+			for (const listener of controlMessageListeners) listener(message);
 		},
 		close,
 	};
@@ -316,6 +329,54 @@ describe('TransportManager', () => {
 		expect(messages).toEqual([{ type: 'pong' }]);
 		expect(relay.close).toHaveBeenCalledTimes(1);
 		expect(manager.state).toBe('closed');
+	});
+
+	it('retains an inbound frame that arrives before the gameplay listener attaches', async () => {
+		const relay = fakeTransport('websocket-relay', async () => { relay.setState('connected'); });
+		const manager = createTransportManager(managerOptions({
+			plan: { mode: 'relay-only', reason: 'test', relayConnectMs: 8_000 },
+		}), {
+			createRelay: () => relay.transport,
+		});
+
+		await manager.connect();
+		// Models the relay flush/peer response racing React's useWireSync effect
+		// after the socket has opened, including a VPN reconnect replacement.
+		relay.emitMessage({ type: 'ping' });
+		const messages: P2PMessage[] = [];
+		manager.onMessage(message => messages.push(message));
+
+		expect(messages).toEqual([{ type: 'ping' }]);
+		manager.close();
+	});
+
+	it('retains referee control frames that arrive before the control listener attaches', async () => {
+		const relay = fakeTransport('websocket-relay', async () => { relay.setState('connected'); });
+		const manager = createTransportManager(managerOptions({
+			plan: { mode: 'relay-only', reason: 'test', relayConnectMs: 8_000 },
+		}), {
+			createRelay: () => relay.transport,
+		});
+
+		await manager.connect();
+		relay.emitControlMessage({
+			type: 'poker_action_time_gate_ack_v1',
+			protocolVersion: 1,
+			matchId: ticket.roomId,
+			turnId: 'turn-1',
+			decisionId: 'decision-1',
+			seq: 0,
+			allowed: true,
+		});
+		const messages: P2PControlServerMessage[] = [];
+		manager.onControlMessage(message => messages.push(message));
+
+		expect(messages).toHaveLength(1);
+		expect(messages[0]).toMatchObject({
+			type: 'poker_action_time_gate_ack_v1',
+			decisionId: 'decision-1',
+		});
+		manager.close();
 	});
 
 	it('cancels a pending adapter connection when the manager closes', async () => {

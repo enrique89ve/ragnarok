@@ -6,12 +6,12 @@ import { getEffectiveAttack } from '../../utils/effects/statusEffectUtils';
 import { autoAttackWithAllCards, processAttack, playCard, endTurn } from '../../utils/gameUtils';
 import { executeHeroPower } from '../../utils/heroPowerUtils';
 import { applyWeaponUpgrade, executeNorseHeroPower, getNorseHeroById, withNorseHeroPowerRandomness } from '../../utils/norseHeroPowerUtils';
-import { confirmMulligan, skipMulligan, toggleCardSelection } from '../../utils/mulliganUtils';
+import { confirmMulligan, skipMulligan, toggleCardSelection, type MulliganActor } from '../../utils/mulliganUtils';
 import { getArtifactSpellCostReduction } from '../../utils/artifactTriggerProcessor';
 import { MAX_BATTLEFIELD_SIZE } from '../../constants/gameConstants';
 import { validateResourceInvariants, type ResourceInvariantViolation } from '@shared/protocol-core/gameLimits';
 import { createSeededIdGen, cryptoRng } from '../../utils/seededRng';
-import { withCardsRng } from '../../utils/cardsCommandRng';
+import { withCardsIdGen, withCardsRng } from '../../utils/cardsCommandRng';
 import {
 	appliedGameCommand,
 	ignoredGameCommand,
@@ -25,8 +25,21 @@ import { canActInPokerWindow, canPlayCardInPokerWindow, type PokerCardTimingCont
 export type ApplyGameCommandDeps = {
 	readonly isAiSimulationMode?: () => boolean;
 	readonly rng?: () => number;
+	/**
+	 * Deterministic id stream for materialized card/effect instances. P2P
+	 * callers provide one per logical command; local/AI callers omit it and
+	 * retain CSPRNG ids. The scope also covers legacy handlers that call
+	 * `cryptoIdGen()` directly.
+	 */
+	readonly idGen?: () => string;
 	readonly pokerCombat?: PokerCardTimingContext | null;
 	readonly nowMs?: number;
+	/**
+	 * Viewer-relative actor that maps to canonical seat p1. Mulligan replacement
+	 * consumes one shared RNG/id stream and therefore must process p1 before p2
+	 * on both peers, even after the opponent perspective swap.
+	 */
+	readonly canonicalMulliganFirstActor?: MulliganActor;
 };
 
 /**
@@ -127,16 +140,21 @@ export function applyOpponentCommand(
 	const commandState = deps.pokerCombat
 		? { ...swapped, currentTurn: 'player' as const }
 		: swapped;
-	const swappedDeps = deps.pokerCombat
-		? {
-			...deps,
-			pokerCombat: {
-				...deps.pokerCombat,
-				playerId: deps.pokerCombat.opponentId,
-				opponentId: deps.pokerCombat.playerId,
-			},
-		}
-		: deps;
+	const swappedDeps: ApplyGameCommandDeps = {
+		...deps,
+		...(deps.pokerCombat
+			? {
+				pokerCombat: {
+					...deps.pokerCombat,
+					playerId: deps.pokerCombat.opponentId,
+					opponentId: deps.pokerCombat.playerId,
+				},
+			}
+			: {}),
+		...(deps.canonicalMulliganFirstActor
+			? { canonicalMulliganFirstActor: invertMulliganActor(deps.canonicalMulliganFirstActor) }
+			: {}),
+	};
 	const result = applyGameCommand(commandState, command, swappedDeps);
 	const restoredState = result.state === commandState
 		? state
@@ -153,6 +171,10 @@ export function applyOpponentCommand(
 		return { status: 'rejected', state: perspectiveRestoredState, reason: result.reason, effects: flippedEffects };
 	}
 	return { status: 'ignored', state: perspectiveRestoredState, reason: result.reason, effects: flippedEffects };
+}
+
+function invertMulliganActor(actor: MulliganActor): MulliganActor {
+	return actor === 'player' ? 'opponent' : 'player';
 }
 
 const isPlayerCommandAllowed = (state: GameState, deps: ApplyGameCommandDeps): boolean => {
@@ -192,7 +214,15 @@ export function applyGameCommand(
 		return rejectedGameCommand(state, formatResourceViolation(beforeViolation));
 	}
 	const rng = deps.rng ?? cryptoRng;
-	const result = withCardsRng(rng, () => applyGameCommandUnbound(state, command, { ...deps, rng }));
+	const apply = () => applyGameCommandUnbound(state, command, { ...deps, rng });
+	// Keep local/AI ids random, but make every P2P command's materialized
+	// instances deterministic across the two browser perspectives. `idGen`
+	// is supplied by the P2P store and this synchronous scope reaches all
+	// nested battlecry/spell/deathrattle helpers.
+	const result = withCardsRng(
+		rng,
+		deps.idGen ? () => withCardsIdGen(deps.idGen!, apply) : apply,
+	);
 	if (result.status !== 'applied') return result;
 	const afterViolation = findGameStateResourceViolation(result.state);
 	return afterViolation
@@ -243,11 +273,11 @@ function applyGameCommandUnbound(
 		case GAME_COMMAND_TYPES.toggleMulliganCard:
 			return applyToggleMulliganCardCommand(state, command.cardId);
 		case GAME_COMMAND_TYPES.confirmMulligan:
-			return applyConfirmMulliganCommand(state);
+			return applyConfirmMulliganCommand(state, deps);
 		case GAME_COMMAND_TYPES.skipMulligan:
-			return applySkipMulliganCommand(state);
+			return applySkipMulliganCommand(state, deps);
 		case GAME_COMMAND_TYPES.selectDiscoveryOption:
-			return ignoredGameCommand(state, 'discovery callbacks are client-adapter owned');
+			return applySelectDiscoveryOptionCommand(state, command, deps);
 		default:
 			assertNeverCommand(command);
 	}
@@ -359,7 +389,17 @@ function applyAttackCommandInPerspective(
 		]));
 	}
 
-	const newState = processAttack(state, command.attackerId, command.defenderId, deps.rng);
+	// Attack effects can materialize new card instances (for example Overkill
+	// summons/copies).  The command wire does not need another identity field:
+	// the pre-command canonical state plus target/attack ordinal already names
+	// this logical action on both peers.  Thread a deterministic generator into
+	// the legacy combat resolver so those instance ids cannot diverge after a
+	// VPN/reconnect or from different browser CSPRNG streams.
+	const attackEffectIdGen = createSeededIdGen(
+		[command.attackerId, command.defenderId ?? 'opponent-hero', state.turnNumber, attacker.attacksPerformed ?? 0].join(':'),
+		'attack-effects',
+	);
+	const newState = processAttack(state, command.attackerId, command.defenderId, deps.rng, attackEffectIdGen);
 	if (newState === state) {
 		return finish(ignoredGameCommand(state, 'attack produced no state change', [
 			{ type: 'clear_selection', selection: 'attacking_card' },
@@ -486,7 +526,12 @@ function applyFrontlineAttackCommand(
 	const timingRejection = pokerTimingRejection(commandState, deps);
 	if (timingRejection) return finish(rejectedGameCommand(commandState, timingRejection));
 
-	const newState = autoAttackWithAllCards(commandState, command.mode, deps.rng);
+	const newState = autoAttackWithAllCards(
+		commandState,
+		command.mode,
+		deps.rng,
+		createSeededIdGen(command.actionId, 'frontline-attack-effects'),
+	);
 	if (newState === commandState) return finish(ignoredGameCommand(commandState, 'frontline attack produced no state change'));
 	return finish(appliedGameCommand(newState, [
 		{ type: 'play_sound', sound: 'attack' },
@@ -600,12 +645,15 @@ function applyToggleMulliganCardCommand(state: GameState, cardId: string): Apply
 	return appliedGameCommand(newState);
 }
 
-function applyConfirmMulliganCommand(state: GameState): ApplyGameCommandResult {
+function applyConfirmMulliganCommand(state: GameState, deps: ApplyGameCommandDeps): ApplyGameCommandResult {
 	if (state.gamePhase !== 'mulligan' || !state.mulligan?.active) {
 		return rejectedGameCommand(state, 'not in mulligan phase');
 	}
 
-	const newState = confirmMulligan(state);
+	const actorOrder = deps.canonicalMulliganFirstActor
+		? [deps.canonicalMulliganFirstActor, invertMulliganActor(deps.canonicalMulliganFirstActor)] as const
+		: undefined;
+	const newState = confirmMulligan(state, actorOrder);
 	if (newState === state) {
 		return ignoredGameCommand(state, 'confirm mulligan produced no state change');
 	}
@@ -613,17 +661,60 @@ function applyConfirmMulliganCommand(state: GameState): ApplyGameCommandResult {
 	return appliedGameCommand(newState, [{ type: 'play_sound', sound: 'button_click' }]);
 }
 
-function applySkipMulliganCommand(state: GameState): ApplyGameCommandResult {
+function applySkipMulliganCommand(state: GameState, deps: ApplyGameCommandDeps): ApplyGameCommandResult {
 	if (state.gamePhase !== 'mulligan' || !state.mulligan?.active) {
 		return rejectedGameCommand(state, 'not in mulligan phase');
 	}
 
-	const newState = skipMulligan(state);
+	const actorOrder = deps.canonicalMulliganFirstActor
+		? [deps.canonicalMulliganFirstActor, invertMulliganActor(deps.canonicalMulliganFirstActor)] as const
+		: undefined;
+	const newState = skipMulligan(state, actorOrder);
 	if (newState === state) {
 		return ignoredGameCommand(state, 'skip mulligan produced no state change');
 	}
 
 	return appliedGameCommand(newState, [{ type: 'play_sound', sound: 'button_click' }]);
+}
+
+function applySelectDiscoveryOptionCommand(
+	state: GameState,
+	command: Extract<GameCommand, { type: typeof GAME_COMMAND_TYPES.selectDiscoveryOption }>,
+	deps: ApplyGameCommandDeps,
+): ApplyGameCommandResult {
+	const discovery = state.discovery;
+	if (!discovery?.active) return rejectedGameCommand(state, 'discovery is not active');
+	if (typeof discovery.callback !== 'function') {
+		return rejectedGameCommand(state, 'discovery resolver unavailable');
+	}
+
+	// The wire carries the selected card for the local UI contract, but the
+	// receiver must resolve it from its own deterministic option list. This
+	// prevents a peer from injecting an arbitrary card into a hand.
+	const requestedCard = command.card;
+	const selectedCard = requestedCard === null
+		? null
+		: discovery.options.find(option => String(option.id) === String(requestedCard.id)) ?? null;
+	if (requestedCard !== null && !selectedCard) {
+		return rejectedGameCommand(state, 'discovery option is not available');
+	}
+
+	try {
+		const resolved = discovery.callback(selectedCard, state, deps.idGen);
+		if (!resolved) return rejectedGameCommand(state, 'discovery resolver returned no state');
+		// A resolver must consume the modal. Legacy callbacks that leave the
+		// marker active are normalized here so one signed choice cannot be replayed
+		// against the same discovery window.
+		const nextState = resolved.discovery?.active === true
+			? {
+				...resolved,
+				discovery: { ...resolved.discovery, active: false, options: [] },
+			}
+			: resolved;
+		return appliedGameCommand(nextState, [{ type: 'play_sound', sound: 'card_draw' }]);
+	} catch {
+		return rejectedGameCommand(state, 'discovery resolver failed');
+	}
 }
 
 function getPlayCardRejection(

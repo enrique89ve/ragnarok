@@ -155,6 +155,23 @@ describe('poker action intent rules', () => {
 		expect(after?.actionHistory.at(-1)?.origin).toBe('timeout');
 	});
 
+	it('accepts a referee-approved player action despite a skewed local wall clock', () => {
+		const expiredLocally = createCombatState({
+			turnDeadlineAtMs: Date.now() - 1_000,
+		});
+		useUnifiedCombatStore.setState({ pokerCombatState: expiredLocally, pokerIsActive: true });
+
+		useUnifiedCombatStore.getState().performPokerAction(
+			'player-piece',
+			CombatAction.DEFEND,
+			undefined,
+			'player',
+			expiredLocally.turnDeadlineAtMs! - 1,
+		);
+
+		expect(useUnifiedCombatStore.getState().pokerCombatState?.actionHistory.at(-1)?.origin).toBe('player');
+	});
+
   it('derives deterministic timeout actions for either active peer', () => {
     expect(derivePokerTimeoutIntent(createCombatState())).toEqual({
       actorId: 'player-piece',

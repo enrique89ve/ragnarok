@@ -515,7 +515,7 @@ function ConnectingPanel({
 			</div>
 			<div>
 				<p className="font-display text-xs font-black uppercase tracking-[0.14em] text-ink-0">{isHost ? 'Opening your room' : 'Connecting to room'}</p>
-				<p className="mt-1 text-xs leading-relaxed text-ink-200">Linking peer.</p>
+				<p className="mt-1 text-xs leading-relaxed text-ink-200">Authenticated room link. A VPN or IP change can reconnect without changing your player identity.</p>
 			</div>
 		</div>
 	);
@@ -535,7 +535,7 @@ function CopyIdButton({
 			aria-label={copied ? 'Peer ID copied' : 'Copy peer ID'}
 			title={copied ? 'Peer ID copied' : 'Copy peer ID'}
 			onClick={() => { void onCopyId(); }}
-			className="h-8 w-8 p-0"
+			className="h-11 w-11 min-h-11 min-w-11 p-0"
 		>
 			{copied ? (
 				<Check className="w-4 h-4 text-green-500" />

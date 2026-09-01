@@ -21,13 +21,21 @@ vi.hoisted(() => {
 	};
 });
 
-import { useGameStore, selectPlayerHand, EMPTY_HAND } from './gameStore';
+import {
+	disposeGameStoreSubscriptions,
+	initGameStoreSubscriptions,
+	useGameStore,
+	selectPlayerHand,
+	EMPTY_HAND,
+} from './gameStore';
 import { GAME_COMMAND_TYPES } from '../core/commands';
 import { useMatchStore } from '../match/store';
 import type { MatchContext } from '../match/types';
 import { usePeerStore, type P2PConnectionState } from './peerStore';
-import { initializeGame, processAITurn } from '../utils/gameUtils';
+import { initializeGame, initializeGameSeeded, processAITurn } from '../utils/gameUtils';
+import { createSeededIdGen, createSeededRng } from '../utils/seededRng';
 import type { CardData, CardInstance, GameState, HeroClass, Player } from '../types';
+import { flipGameState } from '../engine/wireHash';
 import {
 	shouldBootstrapCampaignBoard,
 	syncCampaignActiveRealm,
@@ -195,6 +203,7 @@ describe('match authority at local opponent automation boundaries', () => {
 
 	afterEach(() => {
 		vi.useRealTimers();
+		disposeGameStoreSubscriptions();
 		useMatchStore.setState({ activeMatch: null });
 		usePeerStore.setState({ connectionState: 'disconnected', connection: null, isHost: false });
 	});
@@ -255,6 +264,115 @@ describe('match authority at local opponent automation boundaries', () => {
 		expect(finalState.players.opponent.hand).toHaveLength(0);
 		expect(finalState.players.opponent.battlefield).toHaveLength(1);
 		expect(finalState.currentTurn).toBe('player');
+	});
+
+	it('does not arm the global auto-end timer for a peer match', () => {
+		vi.useFakeTimers();
+		useMatchStore.setState({ activeMatch: peerMatchContext() });
+		usePeerStore.setState({ connectionState: 'reconnecting', connection: null });
+
+		// The subscription is initialized by the gameplay runtime in production;
+		// this explicit call keeps the regression test independent of runtime boot.
+		initGameStoreSubscriptions();
+		// Trigger the subscription after it is installed so a regression that
+		// arms the timer cannot pass merely because the initial state was missed.
+		useGameStore.setState({ gameState: createPlayerTurnSetupState([]) });
+		vi.advanceTimersByTime(4_000);
+
+		const finalState = useGameStore.getState().gameState;
+		expect(finalState.currentTurn).toBe('player');
+	});
+});
+
+describe('P2P mulligan determinism', () => {
+	beforeEach(() => {
+		useMatchStore.setState({ activeMatch: peerMatchContext() });
+	});
+
+	afterEach(() => {
+		useMatchStore.setState({ activeMatch: null });
+		useGameStore.setState({ gameState: initializeGame(), matchSeed: null });
+	});
+
+	it('uses the seeded command scope for local replacement and draw identities', () => {
+		const matchSeed = 'p2p-mulligan-determinism';
+		const seeded = initializeGameSeeded({
+			rng: createSeededRng(matchSeed),
+			playerIdGen: createSeededIdGen(matchSeed, 'player'),
+			opponentIdGen: createSeededIdGen(matchSeed, 'opponent'),
+		});
+		const playerCard = seeded.players.player.hand[0];
+		const opponentCard = seeded.players.opponent.hand[0];
+		if (!playerCard || !opponentCard) throw new Error('seeded mulligan fixture has no initial cards');
+		const baseState = {
+			...seeded,
+			mulligan: {
+				active: true,
+				playerSelections: { [playerCard.instanceId]: true },
+				opponentSelections: { [opponentCard.instanceId]: true },
+				playerReady: false,
+				opponentReady: true,
+			},
+		};
+
+		const run = (): string => {
+			useGameStore.setState({ gameState: structuredClone(baseState), matchSeed });
+			useGameStore.getState().bindCardsRng(matchSeed);
+			useGameStore.getState().confirmMulligan();
+			const state = useGameStore.getState().gameState;
+			return JSON.stringify({
+				phase: state.gamePhase,
+				players: state.players,
+				mulligan: state.mulligan,
+			});
+		};
+
+		expect(run()).toBe(run());
+	});
+
+	it('uses the canonical frame for remote mulligan ids across opposite viewers', () => {
+		const matchSeed = 'p2p-mulligan-perspective-ids';
+		const seeded = initializeGameSeeded({
+			rng: createSeededRng(matchSeed),
+			playerIdGen: createSeededIdGen(matchSeed, 'player'),
+			opponentIdGen: createSeededIdGen(matchSeed, 'opponent'),
+		});
+		const playerCard = seeded.players.player.hand[0];
+		const opponentCard = seeded.players.opponent.hand[0];
+		if (!playerCard || !opponentCard) throw new Error('seeded mulligan fixture has no initial cards');
+		const canonicalBeforeRemote = {
+			...seeded,
+			mulligan: {
+				active: true,
+				playerSelections: { [playerCard.instanceId]: true },
+				opponentSelections: { [opponentCard.instanceId]: true },
+				playerReady: true,
+				opponentReady: false,
+			},
+		};
+		const confirm = { type: GAME_COMMAND_TYPES.confirmMulligan } as const;
+
+		useGameStore.setState({
+			gameState: structuredClone(canonicalBeforeRemote),
+			matchSeed,
+			myCanonicalSide: 'player',
+		});
+		useGameStore.getState().bindCardsRng(matchSeed);
+		const aResult = useGameStore.getState().applyOpponentCommand(confirm);
+
+		useGameStore.setState({
+			gameState: flipGameState(canonicalBeforeRemote),
+			matchSeed,
+			myCanonicalSide: 'opponent',
+		});
+		useGameStore.getState().bindCardsRng(matchSeed);
+		useGameStore.getState().confirmMulligan();
+		const bState = useGameStore.getState().gameState;
+
+		expect(aResult.status).toBe('applied');
+		expect(bState.mulligan?.active).toBe(false);
+		if (aResult.status !== 'applied') return;
+		expect(aResult.state).toEqual(flipGameState(bState));
 	});
 });
 

@@ -10,7 +10,6 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { toast } from 'sonner';
 import { useUnifiedCombatStore } from '../stores/unifiedCombatStore';
 import { useGameStore } from '../stores/gameStore';
 import { ChessBoardPosition } from '../types/ChessTypes';
@@ -21,6 +20,8 @@ import {
 } from '../utils/chess/kingAbilityUtils';
 
 import { ActiveMine } from '../types/ChessTypes';
+import { createMine } from '../utils/chess/kingAbilityUtils';
+import { cryptoIdGen, cryptoRng, seededRngFromString } from '../utils/seededRng';
 
 export interface KingChessAbilityHook {
   canPlaceMine: boolean;
@@ -33,10 +34,16 @@ export interface KingChessAbilityHook {
   enterPlacementMode: () => void;
   exitPlacementMode: () => void;
   selectDirection: (direction: MineDirection) => void;
-  placeMineAtPosition: (position: ChessBoardPosition) => boolean;
+  placeMineAtPosition: (position: ChessBoardPosition, overrides?: MinePlacementPlan) => boolean;
+  getMinePlacementPlan: (position: ChessBoardPosition) => MinePlacementPlan | null;
   getPreviewForPosition: (position: ChessBoardPosition) => ChessBoardPosition[];
   isValidPlacement: (position: ChessBoardPosition) => boolean;
   clearMineTriggered: () => void;
+}
+
+export interface MinePlacementPlan {
+  readonly mineId: string;
+  readonly affectedTiles: readonly ChessBoardPosition[];
 }
 
 export function useKingChessAbility(side: 'player' | 'opponent' = 'player'): KingChessAbilityHook {
@@ -52,7 +59,6 @@ export function useKingChessAbility(side: 'player' | 'opponent' = 'player'): Kin
     setMinePlacementMode,
     setSelectedMineDirection,
     getVisibleMines,
-    getMinesForOwner,
     lastMineTriggered,
     clearMineTriggered
   } = useUnifiedCombatStore();
@@ -118,23 +124,45 @@ export function useKingChessAbility(side: 'player' | 'opponent' = 'player'): Kin
     return validation.valid;
   }, [kingState?.kingId, allActiveMines, boardState?.pieces, side, selectedMineDirection]);
 
+  const getMinePlacementPlan = useCallback((position: ChessBoardPosition): MinePlacementPlan | null => {
+    const state = useUnifiedCombatStore.getState();
+    const currentKingState = side === 'player' ? state.playerKingAbility : state.opponentKingAbility;
+    if (!currentKingState?.kingId || !state.boardState || !storeCanPlaceMine(side)) return null;
+
+    const ownPieces = state.boardState.pieces
+      .filter(piece => piece.owner === side)
+      .map(piece => piece.position);
+    const direction = selectedMineDirection ?? undefined;
+    const matchSeed = useGameStore.getState().matchSeed;
+    const mineId = matchSeed ? crypto.randomUUID() : cryptoIdGen();
+    const rng = matchSeed
+      ? seededRngFromString(`${matchSeed}:king-mine:${mineId}`)
+      : cryptoRng;
+    const planned = createMine(
+      currentKingState.kingId,
+      side,
+      position,
+      state.boardState.moveCount,
+      () => mineId,
+      direction,
+      side === 'player' ? 'opponent' : 'player',
+      rng,
+    );
+    if (!planned) return null;
+    const validation = isValidMinePlacement(
+      position,
+      currentKingState.kingId,
+      state.allActiveMines,
+      ownPieces,
+      side,
+      direction,
+      planned.affectedTiles,
+    );
+    if (!validation.valid) return null;
+    return { mineId: planned.id, affectedTiles: planned.affectedTiles };
+  }, [selectedMineDirection, side, storeCanPlaceMine]);
+
   const enterPlacementMode = useCallback(() => {
-    // P2P: block king mine placement until cross-peer mine sync ships
-    // (chess_mine_placement envelope, separate workstream). Without sync
-    // the mine lives only on the placer's local store; if any opponent
-    // piece lands on a tile the other peer thinks is empty, mine
-    // triggers fire on one side and not the other -> stamina drift ->
-    // eventual `piece_position_mismatch` rejections cascading. Block
-    // at the entry point so the placement mode UI never opens; cleaner
-    // than rejecting after the player picks a tile.
-    const matchId = useGameStore.getState().matchId;
-    if (matchId) {
-      toast.error('King ability not yet supported in multiplayer', {
-        description: 'Mine placement requires peer synchronization that is not yet implemented. For now the ability is disabled in P2P matches.',
-        duration: 5000,
-      });
-      return;
-    }
     if (canPlaceMine) {
       setMinePlacementMode(true);
     }
@@ -149,12 +177,12 @@ export function useKingChessAbility(side: 'player' | 'opponent' = 'player'): Kin
     setSelectedMineDirection(direction);
   }, [setSelectedMineDirection]);
 
-  const placeMineAtPosition = useCallback((position: ChessBoardPosition): boolean => {
+  const placeMineAtPosition = useCallback((position: ChessBoardPosition, overrides?: MinePlacementPlan): boolean => {
     if (!canPlaceMine || !minePlacementMode) {
       return false;
     }
-    
-    const success = placeMine(side, position, selectedMineDirection ?? undefined);
+
+    const success = placeMine(side, position, selectedMineDirection ?? undefined, overrides);
     
     if (success) {
       exitPlacementMode();
@@ -175,6 +203,7 @@ export function useKingChessAbility(side: 'player' | 'opponent' = 'player'): Kin
     exitPlacementMode,
     selectDirection,
     placeMineAtPosition,
+    getMinePlacementPlan,
     getPreviewForPosition,
     isValidPlacement,
     clearMineTriggered

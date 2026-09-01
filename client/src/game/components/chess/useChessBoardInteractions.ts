@@ -7,10 +7,18 @@ import { useMatchStore } from '../../match/store';
 import { useGameStore } from '../../stores/gameStore';
 import { usePeerStore } from '../../stores/peerStore';
 import { useUnifiedCombatStore } from '../../stores/unifiedCombatStore';
-import { captureChessPrevHashes, sendChessAttack, sendChessCombatInitiated, sendChessMove } from '../../p2p/chessWireSender';
+import {
+  captureChessPrevHashes,
+  isChessCommandPending,
+  sendChessAttack,
+  sendChessCombatInitiated,
+  sendChessMinePlacement,
+  sendChessMove,
+} from '../../p2p/chessWireSender';
 import { buildChessIntegrityCheckpoint } from '../../p2p/chessIntegrityCheckpoint';
 import { chessIntegrityMonitor } from '../../p2p/chessIntegrityMonitor';
 import type { ChessBoardPosition, ChessPiece } from '../../types/ChessTypes';
+import { isChessAttackInstantKill } from '@shared/p2p-wire/chess';
 import {
   didMoveApply,
   getBlockedPieceMessage,
@@ -102,6 +110,7 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
     isPlacementMode,
     visibleMines,
     getPreviewForPosition,
+    getMinePlacementPlan,
     placeMineAtPosition,
     isValidPlacement,
     lastMineTriggered,
@@ -240,37 +249,92 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
     const isValidMove = validMoveSet.has(positionKey(row, col));
     const isAttackMove = attackMoveSet.has(positionKey(row, col));
     const pieceAtPosition = getPieceAtFromMap(position);
-    const action = getCellClickAction({
-      disabled,
-      isPlacementMode,
+		const action = getCellClickAction({
+			disabled,
+			isPlacementMode,
       isValidMove,
       isAttackMove,
       pieceAtPosition,
       currentTurn,
       mySide: myCanonicalSide,
-    });
+		});
 
-    if (action.kind === 'ignored') return;
+		if (action.kind === 'ignored') return;
+		// While a P2P gameplay signature is in flight, freeze every board action
+		// (including mine placement and selection changes). Any concurrent local
+		// mutation would invalidate the pre-state hash captured for the pending
+		// command and force a needless integrity quarantine.
+		if (
+			(isChessCommandPending() || Boolean(usePeerStore.getState().p2pIntegrityError))
+			&& useMatchStore.getState().activeMatch?.opponent.kind === 'peer'
+		) return;
 
-    if (action.kind === 'place_mine') {
-      if (!isValidPlacement(position)) return;
+		if (action.kind === 'place_mine') {
+      const isPeerMatch = useMatchStore.getState().activeMatch?.opponent.kind === 'peer';
+      const activeMatchId = useGameStore.getState().matchId;
+      if (!isPeerMatch) {
+        if (!isValidPlacement(position)) return;
+        const preview = getPreviewForPosition(position);
+        const success = placeMineAtPosition(position);
+        if (!success) return;
+        playSoundEffect('card_play');
+        debug.chess(`Mine placed at (${row}, ${col})`);
+        setMinePlacementEffect({ position, tiles: preview, timestamp: Date.now() });
+        clearTimer(minePlacementTimeoutRef);
+        minePlacementTimeoutRef.current = setTimeout(() => {
+          setMinePlacementEffect(null);
+          minePlacementTimeoutRef.current = null;
+        }, 1200);
+        return;
+      }
 
-      const preview = getPreviewForPosition(position);
-      const success = placeMineAtPosition(position);
-      if (!success) return;
-
-      playSoundEffect('card_play');
-      debug.chess(`Mine placed at (${row}, ${col})`);
-      setMinePlacementEffect({
+      // P2P mine placement follows the same signed-before-mutation contract
+      // as movement. The resolved tile list is included in the command so a
+      // random Void Rift cannot consume a different RNG stream on the peer.
+      const peerState = usePeerStore.getState();
+      if (
+        !activeMatchId
+        || peerState.connectionState !== 'connected'
+        || !peerState.battleLifecycle
+        || peerState.battleLifecycle.phase === 'resolved'
+        || peerState.battleLifecycle.phase === 'cancelled'
+        || peerState.p2pIntegrityError
+        || !chessIntegrityMonitor.canStartTransition()
+      ) return;
+      const prevHashes = captureChessPrevHashes();
+      if (!buildChessIntegrityCheckpoint({
+        matchId: activeMatchId,
+        chessHash: prevHashes.chess,
+        cardsHash: prevHashes.cards,
+      })) return;
+      const plan = getMinePlacementPlan(position);
+      if (!plan) return;
+      const side = myCanonicalSide;
+      const kingState = side === 'player'
+        ? useUnifiedCombatStore.getState().playerKingAbility
+        : useUnifiedCombatStore.getState().opponentKingAbility;
+      if (!kingState) return;
+      sendChessMinePlacement({
+        owner: side,
+        kingId: kingState.kingId,
         position,
-        tiles: preview,
-        timestamp: Date.now(),
+        direction: useUnifiedCombatStore.getState().selectedMineDirection ?? undefined,
+        mineId: plan.mineId,
+        affectedTiles: plan.affectedTiles,
+        canonicalOrder: useUnifiedCombatStore.getState().boardState.moveCount + 1,
+      }, prevHashes, () => {
+        const success = placeMineAtPosition(position, plan);
+        if (!success) return false;
+        playSoundEffect('card_play');
+        debug.chess(`Mine placed at (${row}, ${col})`);
+        setMinePlacementEffect({ position, tiles: plan.affectedTiles, timestamp: Date.now() });
+        clearTimer(minePlacementTimeoutRef);
+        minePlacementTimeoutRef.current = setTimeout(() => {
+          setMinePlacementEffect(null);
+          minePlacementTimeoutRef.current = null;
+        }, 1200);
+        return true;
       });
-      clearTimer(minePlacementTimeoutRef);
-      minePlacementTimeoutRef.current = setTimeout(() => {
-        setMinePlacementEffect(null);
-        minePlacementTimeoutRef.current = null;
-      }, 1200);
       return;
     }
 
@@ -314,76 +378,129 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
 			debug.warn('[Chess] Move blocked until the P2P competitive session is connected and unresolved');
 			return;
 		}
-		if (isPeerMatch && !chessIntegrityMonitor.canStartTransition()) {
-        debug.warn('[Chess] Move blocked while transition integrity is awaiting confirmation or quarantined');
-        return;
-      }
+		if (isPeerMatch && (isChessCommandPending() || !chessIntegrityMonitor.canStartTransition())) {
+			debug.warn('[Chess] Move blocked while transition integrity is awaiting confirmation or quarantined');
+			return;
+		}
 
-      // Capture the moving piece BEFORE movePiece — it clears selectedPiece
-      // as part of the move, so we can't read it post-call. Same with the
-      // defender for instant-kill emit (movePiece removes it).
+		// Capture the moving piece BEFORE movePiece — it clears selectedPiece
+		// as part of the move, so we can't read it post-call. Same with the
+		// defender for instant-kill emit (movePiece removes it).
 		const movingPiece = selectedPiece;
 		const fromPos = movingPiece?.position;
 		const defender = isAttackMove ? getPieceAtFromStore(position) : null;
 		const canonicalOrder = freshSlice.boardState.moveCount + 1;
 
-      // TD-27c-chess: capture prev-state hashes BEFORE movePiece mutates
-      // the local store. The receiver hashes its own state pre-apply, so
-      // the sender must mirror that timing or every envelope diverges.
-      // MatchContext owns mode authority. A peer match must have a complete,
-      // valid checkpoint before gameplay mutates locally; otherwise an
-      // invalid wire identity/hash could create a local-only transition.
-      const prevHashes = isPeerMatch ? captureChessPrevHashes() : null;
-      if (isPeerMatch && (!prevHashes || !matchId || buildChessIntegrityCheckpoint({
-        matchId,
-        chessHash: prevHashes.chess,
-        cardsHash: prevHashes.cards,
-      }) === null)) {
-        debug.warn('[Chess] Move blocked because the P2P transition checkpoint is unavailable');
-        return;
-      }
+		// TD-27c-chess: capture prev-state hashes BEFORE movePiece mutates
+		// the local store. The receiver hashes its own state pre-apply, so
+		// the sender must mirror that timing or every envelope diverges.
+		// MatchContext owns mode authority. A peer match must have a complete,
+		// valid checkpoint before gameplay mutates locally; otherwise an
+		// invalid wire identity/hash could create a local-only transition.
+		const prevHashes = isPeerMatch ? captureChessPrevHashes() : null;
+		if (isPeerMatch && (!prevHashes || !matchId || buildChessIntegrityCheckpoint({
+			matchId,
+			chessHash: prevHashes.chess,
+			cardsHash: prevHashes.cards,
+		}) === null)) {
+			debug.warn('[Chess] Move blocked because the P2P transition checkpoint is unavailable');
+			return;
+		}
 
-      const collision = movePiece(position);
-      if (collision) {
-        debug.chess(`Attack initiated: ${collision.attacker.heroName} -> ${collision.defender.heroName}`);
-        if (isPeerMatch && matchId && prevHashes && movingPiece && fromPos && defender) {
-          const emit = {
-            pieceId: movingPiece.id,
-            from: fromPos,
+		// A P2P action is mutated only after the gameplay signature resolves.
+		// This closes the async-signing window: a rejected signer cannot leave a
+		// board transition that was never represented on the wire.
+		if (isPeerMatch) {
+			if (!matchId || !prevHashes || !movingPiece || !fromPos) return;
+
+			const applyLocalMutation = (): boolean => {
+				const latestPeerState = usePeerStore.getState();
+				if (
+					latestPeerState.connectionState !== 'connected'
+					|| latestPeerState.p2pIntegrityError !== null
+					|| !latestPeerState.p2pSessionLocalAuthorized
+					|| !latestPeerState.p2pSessionRemoteAuthorized
+				) {
+					return false;
+				}
+
+				const latestBoard = useUnifiedCombatStore.getState().boardState;
+				const latestSelected = latestBoard.selectedPiece;
+				const latestMovingPiece = latestBoard.pieces.find(piece => piece.id === movingPiece.id);
+				if (
+					!latestSelected
+					|| latestSelected.id !== movingPiece.id
+					|| !latestMovingPiece
+					|| latestMovingPiece.position.row !== fromPos.row
+					|| latestMovingPiece.position.col !== fromPos.col
+					|| latestBoard.currentTurn !== movingPiece.owner
+				) {
+					return false;
+				}
+
+				const latestDefender = getPieceAtFromStore(position);
+				if (isAttackMove) {
+					if (!defender || !latestDefender || latestDefender.id !== defender.id) return false;
+					const appliedCollision = movePiece(position);
+					if (!appliedCollision) return false;
+					debug.chess(`Attack initiated: ${appliedCollision.attacker.heroName} -> ${appliedCollision.defender.heroName}`);
+					return true;
+				}
+
+				if (latestDefender) return false;
+				const appliedCollision = movePiece(position);
+				if (appliedCollision) return false;
+
+				// Defense-in-depth: confirm the slice actually applied the quiet
+				// move before allowing the sender to register its post-state root.
+				const movedPiece = getPieceAtFromStore(position);
+				if (!didMoveApply({ movingPiece, pieceAtDestination: movedPiece })) return false;
+				playSoundEffect('card_play');
+				return true;
+			};
+
+			if (isAttackMove) {
+				if (!defender) return;
+				const emit = {
+					pieceId: movingPiece.id,
+					from: fromPos,
+					to: position,
+					defenderId: defender.id,
+					canonicalOrder,
+				};
+				const instantKill = isChessAttackInstantKill({
+					attackerType: movingPiece.type,
+					defenderType: defender.type,
+				});
+				if (instantKill) {
+					sendChessAttack(emit, prevHashes, applyLocalMutation);
+				} else {
+					sendChessCombatInitiated(emit, prevHashes, applyLocalMutation);
+				}
+				return;
+			}
+
+			sendChessMove({
+				pieceId: movingPiece.id,
+				from: fromPos,
 				to: position,
-				defenderId: defender.id,
 				canonicalOrder,
-          };
-          if (collision.instantKill) {
-            sendChessAttack(emit, prevHashes);
-          } else {
-            sendChessCombatInitiated(emit, prevHashes);
-          }
-        }
-        return;
-      }
+			}, prevHashes, applyLocalMutation);
+			return;
+		}
 
-      // Defense-in-depth: confirm the slice actually applied the quiet
-      // move before emitting. movePiece returns null both when the move
-      // was applied successfully AND when it silently rejected (no
-      // selected piece, position not in validMoves, ambient state
-      // mismatch). Without this check we could emit a phantom envelope
-      // for a move the local store never executed.
-      const movedPiece = movingPiece ? getPieceAtFromStore(position) : null;
-      if (!didMoveApply({ movingPiece, pieceAtDestination: movedPiece })) {
-        return;
-      }
+		const collision = movePiece(position);
+		if (collision) {
+			debug.chess(`Attack initiated: ${collision.attacker.heroName} -> ${collision.defender.heroName}`);
+			return;
+		}
 
-      playSoundEffect('card_play');
-      if (isPeerMatch && matchId && prevHashes && movingPiece && fromPos) {
-        sendChessMove({
-          pieceId: movingPiece.id,
-          from: fromPos,
-			to: position,
-			canonicalOrder,
-		}, prevHashes);
-      }
-      return;
+		// Defense-in-depth for single-player mode: confirm the slice actually
+		// applied the quiet move before playing its feedback.
+		const movedPiece = movingPiece ? getPieceAtFromStore(position) : null;
+		if (!didMoveApply({ movingPiece, pieceAtDestination: movedPiece })) return;
+		playSoundEffect('card_play');
+		return;
     }
 
     if (action.kind === 'clear_selection') {
@@ -411,6 +528,7 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
     isPlacementMode,
     isValidPlacement,
     getPreviewForPosition,
+    getMinePlacementPlan,
     placeMineAtPosition,
     playSoundEffect,
     validMoves,

@@ -10,7 +10,9 @@ import {
 	isP2PTransportRole,
 	parseP2PControlClientMessage,
 	type P2PControlClientMessage,
+	type P2PTransportFallbackReason,
 } from '../../shared/p2p-wire/control';
+import { buildPokerActionTimeGateAck } from '../../shared/p2p-wire/pokerTimeNotary';
 import {
 	isSafePeerId,
 	isSafeRoomOrMatchId,
@@ -49,6 +51,8 @@ type ControlMember = {
 	readonly ws: WebSocket;
 	hello: boolean;
 	transportReady: boolean;
+	transportKind: Extract<P2PControlClientMessage, { readonly type: 'transport_ready_v1' }>['kind'] | null;
+	transportCommitted: boolean;
 	transportFallback: boolean;
 };
 
@@ -96,9 +100,15 @@ function rejectUpgrade(socket: { write: (chunk: string) => unknown; destroy: () 
 	try { socket.destroy(); } catch { /* already closed */ }
 }
 
-function sendMessage(ws: WebSocket, message: Record<string, unknown>): void {
-	if (ws.readyState !== WebSocket.OPEN) return;
-	try { ws.send(JSON.stringify(message)); } catch { recordP2PControlError('send_failed'); }
+function sendMessage(ws: WebSocket, message: Record<string, unknown>): boolean {
+	if (ws.readyState !== WebSocket.OPEN) return false;
+	try {
+		ws.send(JSON.stringify(message));
+		return true;
+	} catch {
+		recordP2PControlError('send_failed');
+		return false;
+	}
 }
 
 function sendError(ws: WebSocket, code: 'protocol' | 'match_mismatch' | 'role_required' | 'role_conflict' | 'rate_limited'): void {
@@ -158,11 +168,69 @@ function notifyRoomOpen(roomId: string, room: ControlRoom): void {
 	});
 }
 
+function commitTransportIfBilateral(roomId: string, room: ControlRoom): void {
+	if (room.length !== ROOM_MAX_PEERS || room.some(member => !member.hello)) return;
+	const [first, second] = room;
+	if (!first || !second
+		|| !first.transportReady
+		|| !second.transportReady
+		|| first.transportKind === null
+		|| first.transportKind !== second.transportKind) return;
+	if (first.transportCommitted && second.transportCommitted) return;
+	first.transportCommitted = true;
+	second.transportCommitted = true;
+	const message = {
+		type: 'transport_committed_v1' as const,
+		protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+		matchId: roomId,
+		kind: first.transportKind,
+	};
+	sendMessage(first.ws, message);
+	sendMessage(second.ws, message);
+}
+
+function notifyPeerOfTransportFallback(roomId: string, room: ControlRoom, sender: ControlMember, reason: P2PTransportFallbackReason): void {
+	const opponent = room.find(candidate => candidate !== sender && candidate.hello);
+	if (!opponent || opponent.ws.readyState !== WebSocket.OPEN || opponent.transportCommitted) return;
+	sendMessage(opponent.ws, {
+		type: 'transport_fallback_v1',
+		protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+		matchId: roomId,
+		reason,
+	});
+}
+
+function forcePreCommitRelayFallback(roomId: string, member: ControlMember, reason: P2PTransportFallbackReason): void {
+	if (member.transportCommitted || member.transportFallback) return;
+	member.transportReady = false;
+	member.transportKind = null;
+	member.transportFallback = true;
+	sendMessage(member.ws, {
+		type: 'transport_fallback_v1',
+		protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+		matchId: roomId,
+		reason,
+	});
+}
+
 function isSameAuthenticatedSession(member: ControlMember, ticket: P2PMatchTicketPayload): boolean {
 	return member.peerId === ticket.peerId
 		&& member.role === ticket.role
 		&& member.ticketNonce === ticket.nonce
 		&& member.account === ticket.account;
+}
+
+/**
+ * A replacement Control WS starts a new transport negotiation epoch. Keeping
+ * the previous commitment on the surviving peer would let a new WebRTC/relay
+ * choice get compared against stale state and strand the room after a VPN or
+ * network-interface change. Reset both sides before the replacement joins.
+ */
+function resetTransportNegotiation(member: ControlMember): void {
+	member.transportReady = false;
+	member.transportKind = null;
+	member.transportCommitted = false;
+	member.transportFallback = false;
 }
 
 function validateUpgrade(req: IncomingMessage, roomId: string, peerId: string): UpgradeAccess {
@@ -284,6 +352,24 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 				return;
 			}
 			const existingIndex = room.indexOf(existingMember);
+			const survivingPeer = room.find(candidate => candidate !== existingMember && candidate.hello);
+			if (survivingPeer) {
+				// The old control socket may be half-open while the replacement is
+				// already negotiating. Force the surviving client to abandon its old
+				// transport commitment and rejoin the same bilateral epoch. Remove it
+				// synchronously before closing so a delayed readiness frame from the old
+				// socket cannot be accepted into the replacement epoch.
+				resetTransportNegotiation(survivingPeer);
+				sendMessage(survivingPeer.ws, {
+					type: 'control_peer_left_v1', protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+					matchId: roomId, opponentPeerId: peerId,
+				});
+				const survivingIndex = room.indexOf(survivingPeer);
+				if (survivingIndex >= 0) room.splice(survivingIndex, 1);
+				MESSAGE_RATE_LIMIT.delete(survivingPeer.connectionId);
+				try { survivingPeer.ws.close(); } catch { /* already closed */ }
+			}
+			resetTransportNegotiation(existingMember);
 			if (existingIndex >= 0) room.splice(existingIndex, 1);
 			MESSAGE_RATE_LIMIT.delete(existingMember.connectionId);
 			sendMessage(existingMember.ws, {
@@ -306,6 +392,8 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 			ws,
 			hello: false,
 			transportReady: false,
+			transportKind: null,
+			transportCommitted: false,
 			transportFallback: false,
 		};
 		room.push(member);
@@ -374,14 +462,43 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 				return;
 			}
 			if (message.type === 'transport_ready_v1') {
-				if (member.transportFallback) return;
+				if (member.transportCommitted) return;
+				if (member.transportReady) {
+					// Retransmission of the exact readiness advertisement is harmless;
+					// changing kind on one control session is not a valid transport
+					// transition and must not manufacture a second commitment.
+					if (member.transportKind === message.kind) commitTransportIfBilateral(roomId, currentRoom);
+					return;
+				}
+				const opponent = currentRoom.find(candidate => candidate !== member && candidate.hello);
+				if (opponent?.transportReady && opponent.transportKind !== null && opponent.transportKind !== message.kind) {
+					// A WebRTC-first/relay-first race is resolved by the relay. The
+					// WebRTC member must abandon its unilateral advertisement before
+					// either side can become gameplay-connected.
+					const webRtcMember = message.kind === 'webrtc'
+						? member
+						: opponent.transportKind === 'webrtc' ? opponent : null;
+					if (webRtcMember) {
+						forcePreCommitRelayFallback(roomId, webRtcMember, 'manual');
+						if (webRtcMember === member) return;
+					}
+				}
+				// A pre-commit fallback is recoverable: the same authenticated
+				// control session may advertise the relay after abandoning a
+				// WebRTC attempt.  Only the bilateral commitment is terminal.
+				member.transportFallback = false;
 				member.transportReady = true;
+				member.transportKind = message.kind;
 				recordP2PTransportReady(message.kind);
+				commitTransportIfBilateral(roomId, currentRoom);
 			}
 			if (message.type === 'transport_fallback_v1') {
-				if (member.transportReady || member.transportFallback) return;
+				if (member.transportCommitted || member.transportFallback) return;
+				member.transportReady = false;
+				member.transportKind = null;
 				member.transportFallback = true;
 				recordP2PTransportFallback(message.reason);
+				notifyPeerOfTransportFallback(roomId, currentRoom, member, message.reason);
 			}
 			if (message.type === 'poker_action_time_gate_v1') {
 				const gate = p2pPokerTimeNotary.gatePokerAction({
@@ -390,12 +507,40 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 					receivedAtMs: Date.now(),
 				});
 				if (gate.status === 'drop') {
+					if (message.decisionId !== undefined && message.seq !== undefined) {
+						sendMessage(ws, buildPokerActionTimeGateAck({
+							matchId: roomId,
+							turnId: message.turnId,
+							decisionId: message.decisionId,
+							seq: message.seq,
+							allowed: false,
+							reason: gate.reason,
+						}));
+					}
 					recordP2PControlDrop(`poker_action_${gate.reason}`);
 					return;
 				}
 				const opponent = currentRoom.find(candidate => candidate !== member && candidate.hello);
-				if (!opponent || opponent.ws.readyState !== WebSocket.OPEN) return;
-				sendMessage(opponent.ws, message);
+				if (!opponent || opponent.ws.readyState !== WebSocket.OPEN) {
+					recordP2PControlDrop('opponent_unavailable');
+					return;
+				}
+				// The sender commits its local reducer only after the ack below. Forward
+				// first so an opponent disconnect cannot turn a referee decision into a
+				// local-only Poker action.
+				if (!sendMessage(opponent.ws, message)) {
+					recordP2PControlDrop('opponent_unavailable');
+					return;
+				}
+				if (message.decisionId !== undefined && message.seq !== undefined) {
+					sendMessage(ws, buildPokerActionTimeGateAck({
+						matchId: roomId,
+						turnId: message.turnId,
+						decisionId: message.decisionId,
+						seq: message.seq,
+						allowed: true,
+					}));
+				}
 				recordP2PControlMessage();
 				return;
 			}

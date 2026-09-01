@@ -12,7 +12,7 @@ import { CardInstance, DeathrattleEffect } from '../../../types';
 import { EffectResult } from '../../../types/EffectTypes';
 import { getCardById } from '../../../data/cardManagement/cardRegistry';
 import { isMinion, getHealth } from '../../../utils/cards/typeGuards';
-import { v4 as uuidv4 } from 'uuid';
+import { cryptoIdGen } from '../../../utils/seededRng';
 import { MAX_BATTLEFIELD_SIZE } from '../../../constants/gameConstants';
 
 /**
@@ -55,7 +55,7 @@ export default function executeSummonSummon(
       
       const minionHealth = getHealth(cardToSummon);
       const newMinion: any = {
-        instanceId: uuidv4(),
+        instanceId: cryptoIdGen(),
         card: cardToSummon,
         currentHealth: minionHealth,
         canAttack: false,

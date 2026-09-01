@@ -6,7 +6,6 @@
  */
 import { GameState, CardInstance, GameLogEvent, MinionCardData } from '../../../types';
 import { SpellEffect } from '../../../types/CardTypes';
-import { v4 as uuidv4 } from 'uuid';
 import { hasKeyword } from '../../../utils/cards/keywordUtils';
 import { cryptoIdGen } from '../../../utils/seededRng';
 import { cardsRng } from '../../../utils/cardsCommandRng';
@@ -64,7 +63,7 @@ export function executeResurrectRandomResurrectRandom(
   for (const deadMinion of toResurrect) {
     const minionData = deadMinion.card as MinionCardData;
     const resurrectedMinion: CardInstance = {
-      instanceId: uuidv4(),
+      instanceId: cryptoIdGen(),
       card: { ...deadMinion.card },
       currentHealth: minionData.health,
       canAttack: false,

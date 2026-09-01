@@ -25,7 +25,12 @@ import type { Hash256 } from '@shared/p2p-wire/integrity';
 export type PhaseCheckpointRequestResult =
 	| { readonly status: 'committed'; readonly commit: PhaseCheckpointCommit }
 	| { readonly status: 'disputed'; readonly dispute: PhaseCheckpointDispute }
-	| { readonly status: 'unavailable'; readonly reason: 'pending_transition' | 'client_timeout' | 'not_connected' };
+	| {
+		readonly status: 'unavailable';
+		readonly reason: 'pending_transition' | 'client_timeout' | 'not_connected' | 'integrity_quarantined' | 'transport_rejected';
+	};
+
+export type PhaseCheckpointProposalSender = (proposal: PhaseCheckpointProposal) => boolean | void;
 
 type PendingRequest = {
 	readonly proposal: PhaseCheckpointProposal;
@@ -40,10 +45,10 @@ export type PhaseCheckpointClient = Readonly<{
 		readonly fromPhase: PhaseCheckpointPhase;
 		readonly toPhase: PhaseCheckpointPhase;
 		readonly stateRoot: Hash256;
-		readonly send: (proposal: PhaseCheckpointProposal) => void;
+		readonly send: PhaseCheckpointProposalSender;
 	}) => Promise<PhaseCheckpointRequestResult>;
 	handleServerMessage: (message: PhaseCheckpointServerMessage) => boolean;
-	retryPending: (send: (proposal: PhaseCheckpointProposal) => void) => boolean;
+	retryPending: (send: PhaseCheckpointProposalSender) => boolean;
 	reset: () => void;
 	getPendingProposal: () => PhaseCheckpointProposal | null;
 }>;
@@ -62,6 +67,16 @@ function commitMatchesProposal(
 			roomId: commit.roomId,
 			proposal,
 		});
+}
+
+function trySendProposal(send: PhaseCheckpointProposalSender, proposal: PhaseCheckpointProposal): boolean {
+	try {
+		// `undefined` preserves compatibility with legacy direct-room senders;
+		// only an explicit false means the transport rejected the proposal.
+		return send(proposal) !== false;
+	} catch {
+		return false;
+	}
 }
 
 export function createPhaseCheckpointClient(input?: {
@@ -85,7 +100,7 @@ export function createPhaseCheckpointClient(input?: {
 		readonly fromPhase: PhaseCheckpointPhase;
 		readonly toPhase: PhaseCheckpointPhase;
 		readonly stateRoot: Hash256;
-		readonly send: (proposal: PhaseCheckpointProposal) => void;
+		readonly send: PhaseCheckpointProposalSender;
 	}): Promise<PhaseCheckpointRequestResult> {
 		if (terminalDispute) {
 			return Promise.resolve({ status: 'disputed', dispute: terminalDispute });
@@ -105,8 +120,11 @@ export function createPhaseCheckpointClient(input?: {
 
 		if (pending) {
 			if (samePhaseCheckpointProposal(pending.proposal, proposal)) {
-				requestInput.send(pending.proposal);
-				return pending.promise;
+				const pendingPromise = pending.promise;
+				if (!trySendProposal(requestInput.send, pending.proposal)) {
+					settlePending({ status: 'unavailable', reason: 'transport_rejected' });
+				}
+				return pendingPromise;
 			}
 			return Promise.resolve({ status: 'unavailable', reason: 'pending_transition' });
 		}
@@ -119,7 +137,9 @@ export function createPhaseCheckpointClient(input?: {
 			settlePending({ status: 'unavailable', reason: 'client_timeout' });
 		}, timeoutMs);
 		pending = { proposal, promise, resolve, timeout };
-		requestInput.send(proposal);
+		if (!trySendProposal(requestInput.send, proposal)) {
+			settlePending({ status: 'unavailable', reason: 'transport_rejected' });
+		}
 		return promise;
 	}
 
@@ -150,9 +170,13 @@ export function createPhaseCheckpointClient(input?: {
 		return true;
 	}
 
-	function retryPending(send: (proposal: PhaseCheckpointProposal) => void): boolean {
-		if (!pending) return false;
-		send(pending.proposal);
+	function retryPending(send: PhaseCheckpointProposalSender): boolean {
+		const current = pending;
+		if (!current) return false;
+		if (!trySendProposal(send, current.proposal)) {
+			settlePending({ status: 'unavailable', reason: 'transport_rejected' });
+			return false;
+		}
 		return true;
 	}
 

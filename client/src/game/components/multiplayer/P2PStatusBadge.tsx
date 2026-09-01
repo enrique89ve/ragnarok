@@ -28,15 +28,18 @@ function badgeCaption(input: {
 	readonly unstableSubject: string;
 	readonly reconnectLabel: string;
 	readonly fallbackLabel: string;
+	readonly integrityPaused?: boolean;
 }): string {
+	if (input.integrityPaused) return 'Integrity paused';
 	if (input.connectionState === 'connected') return `P2P · ${input.transportRoleLabel}`;
 	if (input.connectionState === 'grace_period') return input.unstableSubject;
 	if (input.connectionState === 'reconnecting') return input.reconnectLabel;
 	return input.fallbackLabel;
 }
 
-function shouldShowBadge(connectionState: string): boolean {
-	return connectionState === 'connected'
+function shouldShowBadge(connectionState: string, integrityPaused = false): boolean {
+	return integrityPaused
+		|| connectionState === 'connected'
 		|| connectionState === 'reconnecting'
 		|| connectionState === 'grace_period'
 		|| connectionState === 'error';
@@ -62,22 +65,37 @@ export const P2PStatusBadge: React.FC<P2PStatusBadgeProps> = ({ className = '' }
 		disconnectSide,
 		bufferedMessageCount,
 		hardReloadResume,
+		p2pIntegrityError,
 	} = usePeerStore();
 	const { downloadSessionLog } = useP2PActions();
+	const integrityPaused = Boolean(p2pIntegrityError);
 
-	if (!shouldShowBadge(connectionState)) return null;
+	if (!shouldShowBadge(connectionState, integrityPaused)) return null;
 
-	const config = STATUS_CONFIG[connectionState as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.connected;
+	const config = integrityPaused
+		? { ...STATUS_CONFIG.error, label: 'Integrity paused' }
+		: STATUS_CONFIG[connectionState as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.connected;
 	const transportRoleLabel = formatP2PTransportRole(getP2PTransportRole(isHost));
-	const showCountdown = shouldShowReconnectCountdown(connectionState) && reconnectCountdown > 0;
+	const showCountdown = !integrityPaused && shouldShowReconnectCountdown(connectionState) && reconnectCountdown > 0;
 	const unstableSubject = disconnectSide === 'opponent' ? 'Opponent unstable' : 'Connection unstable';
 	const reconnectLabel = reconnectStatusLabel(hardReloadResume, reconnectAttemptCount);
+	const caption = badgeCaption({
+		connectionState,
+		transportRoleLabel,
+		unstableSubject,
+		reconnectLabel,
+		fallbackLabel: config.label,
+		integrityPaused,
+	});
 
 	return (
 		<>
 			{/* Badge */}
 			<div
 				className={`p2p-status-badge ${className}`}
+				role="status"
+				aria-live="polite"
+				aria-label={`P2P multiplayer: ${caption}${showCountdown ? `, ${reconnectCountdown} seconds remaining` : ''}`}
 				title={`P2P Multiplayer — ${transportRoleLabel} — ${config.label}`}
 				style={{
 					position: 'fixed',
@@ -108,13 +126,7 @@ export const P2PStatusBadge: React.FC<P2PStatusBadgeProps> = ({ className = '' }
 						flexShrink: 0,
 					}}
 				/>
-				{badgeCaption({
-					connectionState,
-					transportRoleLabel,
-					unstableSubject,
-					reconnectLabel,
-					fallbackLabel: config.label,
-				})}
+				{caption}
 				{showCountdown && ` (${reconnectCountdown}s)`}
 				{bufferedMessageCount > 0 && connectionState !== 'connected' && (
 					<span style={{ fontSize: '9px', opacity: 0.6, marginLeft: 2 }}>
@@ -130,8 +142,10 @@ export const P2PStatusBadge: React.FC<P2PStatusBadgeProps> = ({ className = '' }
 						downloadSessionLog();
 					}}
 					style={{
-						width: 22,
-						height: 22,
+						width: 44,
+						height: 44,
+						minWidth: 44,
+						minHeight: 44,
 						display: 'inline-flex',
 						alignItems: 'center',
 						justifyContent: 'center',

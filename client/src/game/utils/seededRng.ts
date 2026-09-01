@@ -64,6 +64,39 @@ function bytesToHex(bytes: Uint8Array): string {
 
 const TEXT_ENCODER = new TextEncoder();
 
+// Canonical card commands may call legacy effect handlers that still import
+// `cryptoIdGen` directly.  Keep one synchronous, nestable scope so those
+// handlers inherit the command's deterministic id stream without requiring a
+// risky catalog-wide import rewrite.  The scope is intentionally synchronous:
+// command reducers must finish before the generator is restored.
+let activeDeterministicIdGen: (() => string) | null = null;
+let activeDeterministicRng: (() => number) | null = null;
+
+export function withDeterministicRng<T>(rng: () => number, run: () => T): T {
+	const previous = activeDeterministicRng;
+	activeDeterministicRng = rng;
+	try {
+		return run();
+	} finally {
+		activeDeterministicRng = previous;
+	}
+}
+
+export function withDeterministicIdGen<T>(idGen: () => string, run: () => T): T {
+	const previous = activeDeterministicIdGen;
+	activeDeterministicIdGen = idGen;
+	try {
+		return run();
+	} finally {
+		activeDeterministicIdGen = previous;
+	}
+}
+
+/** Read the current command-scoped generator without exposing mutable state. */
+export function getActiveDeterministicIdGen(): (() => string) | null {
+	return activeDeterministicIdGen;
+}
+
 function sha256Hex(input: string): string {
 	return bytesToHex(nobleSha256(TEXT_ENCODER.encode(input)));
 }
@@ -105,6 +138,8 @@ export function createSeededIdGen(seedHex: string, namespace: string): SeededIdG
  * dependency, CSPRNG-grade source.
  */
 export function cryptoRng(): number {
+	const scoped = activeDeterministicRng;
+	if (scoped) return scoped();
 	const buf = new Uint32Array(1);
 	crypto.getRandomValues(buf);
 	return buf[0] / 0x100000000;
@@ -117,6 +152,8 @@ export function cryptoRng(): number {
  * but kept for parity with `peerStore.ts:121-124`).
  */
 export function cryptoIdGen(): string {
+	const scoped = activeDeterministicIdGen;
+	if (scoped) return scoped();
 	if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
 		return crypto.randomUUID();
 	}

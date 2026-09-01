@@ -12,7 +12,6 @@ import { cryptoRng, cryptoIdGen, createSeededRng, createSeededIdGen, seededRngFr
 import type { SeededRng } from '@shared/p2p-wire/rng';
 import type { HiveCardAsset } from '../../data/schemas/HiveTypes';
 import { useMulliganStore } from './mulliganStore';
-import { useDiscoveryStore } from './discoveryStore';
 import { usePokerRewardStore } from './pokerRewardStore';
 import { CardInstance, GameState, CardData } from '../types';
 import { CardInstanceWithCardData } from '../types/interfaceExtensions';
@@ -21,7 +20,7 @@ import { useUnifiedUIStore as useAnnouncementStore } from './unifiedUIStore';
 import { GameEventBus } from '../../core/events/GameEventBus';
 import { isAISimulationMode, debug, getDebugConfig } from '../config/debugConfig';
 import { getPokerCombatAdapterState } from '../hooks/usePokerCombatAdapter';
-import { CombatAction, CombatPhase } from '../types/PokerCombatTypes';
+import { CombatAction } from '../types/PokerCombatTypes';
 import { useUnifiedCombatStore } from './unifiedCombatStore';
 import { useTargetingStore } from './targetingStore';
 import { logActivity } from './activityLogStore';
@@ -29,13 +28,17 @@ import { CombatEventBus } from '../services/CombatEventBus';
 import { getEffectiveAttack } from '../utils/effects/statusEffectUtils';
 import { useMatchStore } from '../match/store';
 import { computeStateHash } from '../engine/engineBridge';
-import { GAME_COMMAND_TYPES, applyGameCommand, applyOpponentCommand, canActInPokerWindow, type ApplyGameCommandResult, type GameCommand, type PokerCardTimingContext } from '../core/commands';
+import { flipGameState } from '../engine/wireHash';
+import { serializeGameState } from '../engine/stateSerializer';
+import { GAME_COMMAND_TYPES, applyGameCommand, applyOpponentCommand, canActInPokerWindow, appliedGameCommand, ignoredGameCommand, rejectedGameCommand, type ApplyGameCommandResult, type GameCommand, type PokerCardTimingContext } from '../core/commands';
 import { applyGameCommandToStore } from './gameCommandStoreAdapter';
 import { buildHandshakeGameState, type CardsDeckAnnounce } from '../p2p/cardsDeckHandshake';
 import { applyPokerAuxiliaryEffects } from '../combat/pokerAuxiliaryEffects';
 import type { FrontlineAttackMode } from '../core/commands';
 import { createCombatStep, createResolvedAttackFromStates } from '../services/AttackResolutionService';
 import { buildCombatPresentationFromResolvedAttack } from '../effects/presentation/CombatPresentation';
+import { planEndTurnPokerFold, type EndTurnPokerFoldSide } from '../match/modes/p2p/wireSync/endTurnPokerFold';
+import { getCanonicalPokerActionNowMs } from '../../../../shared/p2p-wire/pokerTurnClock';
 
 // ============== BATTLEFIELD DEBUG MONITOR ==============
 // Track battlefield changes with stack traces to identify root cause of minion disappearance
@@ -130,31 +133,31 @@ interface GameStore {
    * Guest uses this at seed_reveal so later local apply shares the host stream.
    */
   bindCardsRng: (matchSeed: string) => void;
-  playCard: (cardId: string, targetId?: string, targetType?: 'minion' | 'hero', insertionIndex?: number, payWithBlood?: boolean) => void;
+  playCard: (cardId: string, targetId?: string, targetType?: 'minion' | 'hero', insertionIndex?: number, payWithBlood?: boolean) => ApplyGameCommandResult;
   /**
    * Apply a command issued by the opponent (P2P host receiving remote peer's envelope).
    * Goes through the canonical pipeline via state swap so the host's state correctly
    * reflects the opponent's action. Effects are translated to host perspective.
    */
   applyOpponentCommand: (command: GameCommand) => ApplyGameCommandResult;
-  attackWithCard: (attackerId: string, defenderId?: string) => void; // If defenderId is undefined, attack hero
+  attackWithCard: (attackerId: string, defenderId?: string) => ApplyGameCommandResult; // If defenderId is undefined, attack hero
   autoAttackAll: (mode?: 'minion' | 'hero') => void; // Auto-attack with all minions
-  frontlineAttack: (mode: FrontlineAttackMode, actionId?: string) => void;
+  frontlineAttack: (mode: FrontlineAttackMode, actionId?: string) => ApplyGameCommandResult;
   selectAttacker: (card: CardInstance | CardInstanceWithCardData | null) => void; // Select card to attack with
-  performHeroPower: (targetId?: string, targetType?: 'card' | 'hero') => void; // Renamed to avoid hook errors
-  performNorseHeroPower: (norseHeroId: string, targetId?: string, targetType?: 'minion' | 'hero', actionId?: string) => void;
-  weaponUpgrade: (norseHeroId: string, actionId?: string) => void;
+  performHeroPower: (targetId?: string, targetType?: 'card' | 'hero') => ApplyGameCommandResult; // Renamed to avoid hook errors
+  performNorseHeroPower: (norseHeroId: string, targetId?: string, targetType?: 'minion' | 'hero', actionId?: string) => ApplyGameCommandResult;
+  weaponUpgrade: (norseHeroId: string, actionId?: string) => ApplyGameCommandResult;
   toggleHeroTargetMode: () => void; // Toggle hero power targeting mode
-  endTurn: () => void;
+  endTurn: () => ApplyGameCommandResult;
   selectCard: (card: CardInstance | CardInstanceWithCardData | null) => void;
   resetGameState: () => void;
   setGameState: (state: Partial<GameState>) => void;
-  selectDiscoveryOption: (card: CardData | null) => void;
+  selectDiscoveryOption: (card: CardData | null) => ApplyGameCommandResult;
 
   // Mulligan actions
-  toggleMulliganCard: (cardId: string) => void;
-  confirmMulligan: () => void;
-  skipMulligan: () => void;
+  toggleMulliganCard: (cardId: string) => ApplyGameCommandResult;
+  confirmMulligan: () => ApplyGameCommandResult;
+  skipMulligan: () => ApplyGameCommandResult;
 
   // Poker hand rewards - give mana crystal and draw a card
   grantPokerHandRewards: () => void;
@@ -172,6 +175,25 @@ let cardsRng: SeededRng | null = null;
 
 function commandRng(): () => number {
 	return cardsRng ?? cryptoRng;
+}
+
+/**
+ * Every canonical P2P command gets an independent deterministic identity
+ * stream. The command payload and turn number are the same after the remote
+ * perspective swap, while local/AI matches intentionally keep CSPRNG ids.
+ */
+function commandIdGenFor(
+	matchSeed: string | null,
+	state: GameState,
+	command: GameCommand,
+	myCanonicalSide: 'player' | 'opponent' | null = 'player',
+): (() => string) | undefined {
+	if (!matchSeed) return undefined;
+	const canonicalState = myCanonicalSide === 'opponent' ? flipGameState(state) : state;
+	return createSeededIdGen(
+		`${matchSeed}:${serializeGameState(canonicalState)}:${JSON.stringify(command)}`,
+		'game-command-effects',
+	);
 }
 
 /**
@@ -194,6 +216,45 @@ function getPokerCardTimingContext(): PokerCardTimingContext | null {
 		turnId: combatState.turnId,
 		turnDeadlineAtMs: combatState.turnDeadlineAtMs,
 	};
+}
+
+export type EndTurnPokerFoldResult =
+	| { readonly status: 'not_required' }
+	| { readonly status: 'applied' }
+	| { readonly status: 'rejected'; readonly reason: 'engine_rejected' };
+
+/**
+ * Apply the Poker half of the cross-mode End Turn action. The caller supplies
+ * the viewer-relative side because the remote cards reducer swaps perspective
+ * while the Poker store remains viewer-relative.
+ */
+export function applyEndTurnPokerFold(side: EndTurnPokerFoldSide): EndTurnPokerFoldResult {
+	const adapter = getPokerCombatAdapterState();
+	const before = adapter.combatState;
+	const plan = planEndTurnPokerFold({
+		isActive: adapter.isActive,
+		combatState: before,
+		isTransitioningHand: useUnifiedCombatStore.getState().isTransitioningHand,
+		side,
+	});
+	if (plan.status === 'not_required') return plan;
+
+	adapter.performAction(
+		plan.playerId,
+		CombatAction.BRACE,
+		undefined,
+		'player',
+		useMatchStore.getState().activeMatch?.opponent.kind === 'peer'
+			? getCanonicalPokerActionNowMs({
+				origin: 'player',
+				deadlineAtMs: before?.turnDeadlineAtMs ?? null,
+			})
+			: undefined,
+	);
+	const after = getPokerCombatAdapterState().combatState;
+	return after && after !== before
+		? { status: 'applied' }
+		: { status: 'rejected', reason: 'engine_rejected' };
 }
 
 // Guard: prevents a second attack from being initiated while one is already animating
@@ -325,8 +386,8 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     });
   },
 
-  playCard: (cardId: string, targetId?: string, targetType?: 'minion' | 'hero', insertionIndex?: number, payWithBlood?: boolean) => {
-    const { gameState } = get();
+	  playCard: (cardId: string, targetId?: string, targetType?: 'minion' | 'hero', insertionIndex?: number, payWithBlood?: boolean) => {
+	    const { gameState, matchSeed, myCanonicalSide } = get();
     const command = {
       type: GAME_COMMAND_TYPES.playCard,
       cardId,
@@ -335,27 +396,31 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       insertionIndex,
       payWithBlood,
     } as const;
-    const result = applyGameCommand(gameState, command, {
-      isAiSimulationMode: isAISimulationMode,
-      rng: commandRng(),
-      pokerCombat: getPokerCardTimingContext(),
-    });
+	    const result = applyGameCommand(gameState, command, {
+	      isAiSimulationMode: isAISimulationMode,
+	      rng: commandRng(),
+	      idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
+	      pokerCombat: getPokerCardTimingContext(),
+	    });
 
-    applyGameCommandToStore({
+	    applyGameCommandToStore({
       command,
       beforeState: gameState,
       result,
-      setState: set,
-    });
-  },
+	      setState: set,
+	    });
+	    return result;
+	  },
 
-  applyOpponentCommand: (command: GameCommand) => {
-    const { gameState } = get();
-    const result = applyOpponentCommand(gameState, command, {
-      isAiSimulationMode: isAISimulationMode,
-      rng: commandRng(),
-      pokerCombat: getPokerCardTimingContext(),
-    });
+	  applyOpponentCommand: (command: GameCommand) => {
+	    const { gameState, matchSeed, myCanonicalSide } = get();
+	    const result = applyOpponentCommand(gameState, command, {
+	      isAiSimulationMode: isAISimulationMode,
+	      rng: commandRng(),
+	      idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
+	      pokerCombat: getPokerCardTimingContext(),
+	      canonicalMulliganFirstActor: myCanonicalSide === 'opponent' ? 'opponent' : 'player',
+	    });
 
     applyGameCommandToStore({
       command,
@@ -373,53 +438,46 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     return result;
   },
 
-  endTurn: () => {
-    // Guard: prevent double-firing while AI is thinking
-    if (isAITurnProcessing) {
-      debug.log('[EndTurn] Blocked — AI turn still processing');
-      return;
+	  endTurn: () => {
+	    // Guard: prevent double-firing while AI is thinking
+	    if (isAITurnProcessing) {
+	      debug.log('[EndTurn] Blocked — AI turn still processing');
+	      return ignoredGameCommand(get().gameState, 'ai_turn_in_progress');
     }
 
-    const { gameState } = get();
-
-    // End Turn = Fold in poker (depends on PRE state; runs before pipeline)
-    const pokerAdapter = getPokerCombatAdapterState();
-    if (pokerAdapter.isActive && pokerAdapter.combatState) {
-      const phase = pokerAdapter.combatState.phase;
-      const playerId = pokerAdapter.combatState.player.playerId;
-      const isTransitioning = useUnifiedCombatStore.getState().isTransitioningHand;
-      const hasFoldWinner = !!pokerAdapter.combatState.foldWinner;
-      if (phase !== CombatPhase.MULLIGAN && phase !== CombatPhase.RESOLUTION && !isTransitioning && !hasFoldWinner) {
-        debug.log('[UnifiedEndTurn] End Turn = Fold');
-        pokerAdapter.performAction(playerId, CombatAction.BRACE);
-      } else {
-        debug.log(`[UnifiedEndTurn] Skipping fold: phase=${phase}, transitioning=${isTransitioning}`);
-      }
-    }
+	    const { gameState, matchSeed, myCanonicalSide } = get();
 
     const command = { type: GAME_COMMAND_TYPES.endTurn } as const;
-    const result = applyGameCommand(gameState, command, {
-      isAiSimulationMode: isAISimulationMode,
-      rng: commandRng(),
-    });
+	    const result = applyGameCommand(gameState, command, {
+	      isAiSimulationMode: isAISimulationMode,
+	      rng: commandRng(),
+	      idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
+	    });
 
     applyGameCommandToStore({
       command,
       beforeState: gameState,
       result,
-      setState: set,
-    });
+	      setState: set,
+	    });
 
-    if (result.status !== 'applied') return;
+	    if (result.status !== 'applied') return result;
 
-    // A peer match must never arm local opponent AI, even if its transport is down.
-    if (isPeerOpponentMatch()) return;
+	    // End Turn = Fold in poker, but only after the canonical cards command
+	    // has committed. If the cards reducer rejects/ignores the command, a
+	    // pre-applied Poker fold would become a local-only mutation and the
+	    // remote peer could never reproduce the cross-mode transition.
+	    const pokerFold = applyEndTurnPokerFold('player');
+	    if (pokerFold.status === 'applied') debug.log('[UnifiedEndTurn] End Turn = Fold');
+
+	    // A peer match must never arm local opponent AI, even if its transport is down.
+	    if (isPeerOpponentMatch()) return result;
 
     // AI delay + AI turn — kept in wrapper so the isAITurnProcessing guard above remains coherent.
     const aiDelay = 1800 + Math.random() * 1000;
     const scheduledTurnNumber = result.state.turnNumber;
     isAITurnProcessing = true;
-    setTimeout(() => {
+	    setTimeout(() => {
       try {
         const { gameState: currentState } = get();
         if (currentState.currentTurn !== 'opponent') return;
@@ -434,7 +492,8 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       } finally {
         isAITurnProcessing = false;
       }
-    }, aiDelay);
+	    }, aiDelay);
+	    return result;
   },
 
   // Select a card as a possible attacker
@@ -452,7 +511,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       set({ attackingCard: card as CardInstance });
 
       // Calculate valid targets for this attacker
-      const { gameState } = get();
+	      const { gameState } = get();
       const opponentBattlefield = gameState.players.opponent.battlefield || [];
 
       // Check if any opponent minion has taunt
@@ -490,9 +549,9 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
   },
 
   // Execute an attack with the selected card against a target (or hero if no target)
-  attackWithCard: (attackerId: string, defenderId?: string) => {
-    // Prevent re-entry while a previous attack animation is in flight
-    if (isAttackProcessing) return;
+	  attackWithCard: (attackerId: string, defenderId?: string) => {
+	    // Prevent re-entry while a previous attack animation is in flight
+	    if (isAttackProcessing) return ignoredGameCommand(get().gameState, 'attack_in_progress');
     isAttackProcessing = true;
     if (attackWatchdogTimer) clearTimeout(attackWatchdogTimer);
     attackWatchdogTimer = setTimeout(() => {
@@ -500,8 +559,8 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       attackWatchdogTimer = null;
     }, 5000);
 
-    try {
-      const { gameState } = get();
+	    try {
+	      const { gameState, matchSeed, myCanonicalSide } = get();
       const attackerCard = gameState.players.player.battlefield.find(
         c => c.instanceId === attackerId
       );
@@ -509,10 +568,10 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       // Asymmetric early-return: when the attacker isn't on our player.battlefield,
       // this is either a P2P host receiving an opponent's attack or a stale ID.
       // Bypass the canonical pipeline so processAttack's player-side checks don't surface as toasts.
-      if (!attackerCard) {
-        useTargetingStore.getState().cancelTargeting();
-        set({ attackingCard: null, selectedCard: null });
-        return;
+	      if (!attackerCard) {
+	        useTargetingStore.getState().cancelTargeting();
+	        set({ attackingCard: null, selectedCard: null });
+	        return ignoredGameCommand(gameState, 'attacker_not_found');
       }
 
       const command = {
@@ -520,11 +579,12 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
         attackerId,
         defenderId,
       } as const;
-      const result = applyGameCommand(gameState, command, {
-        isAiSimulationMode: isAISimulationMode,
-        rng: commandRng(),
-        pokerCombat: getPokerCardTimingContext(),
-      });
+	      const result = applyGameCommand(gameState, command, {
+	        isAiSimulationMode: isAISimulationMode,
+	        rng: commandRng(),
+	        idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
+	        pokerCombat: getPokerCardTimingContext(),
+	      });
 
       if (result.status === 'applied') {
         // Keep event data on the same gameplay authority as resolution.
@@ -579,17 +639,19 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
         });
       }
 
-      applyGameCommandToStore({
+	      applyGameCommandToStore({
         command,
         beforeState: gameState,
         result,
-        setState: set,
-      });
-    } catch (error) {
-      debug.error('Error processing attack:', error);
-      useTargetingStore.getState().cancelTargeting();
+	        setState: set,
+	      });
+	      return result;
+	    } catch (error) {
+	      debug.error('Error processing attack:', error);
+	      useTargetingStore.getState().cancelTargeting();
       set({ attackingCard: null, selectedCard: null });
-    } finally {
+	      return rejectedGameCommand(get().gameState, 'attack_processing_failed');
+	    } finally {
       isAttackProcessing = false;
       if (attackWatchdogTimer) { clearTimeout(attackWatchdogTimer); attackWatchdogTimer = null; }
     }
@@ -599,17 +661,19 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     get().frontlineAttack(mode);
   },
 
-  frontlineAttack: (mode: FrontlineAttackMode = 'minion', actionId = crypto.randomUUID()) => {
-    const { gameState } = get();
+	  frontlineAttack: (mode: FrontlineAttackMode = 'minion', actionId = crypto.randomUUID()) => {
+	    const { gameState, matchSeed, myCanonicalSide } = get();
     const command = { type: GAME_COMMAND_TYPES.frontlineAttack, mode, actionId } as const;
-    const result = applyGameCommand(gameState, command, {
-      isAiSimulationMode: isAISimulationMode,
-      rng: commandRng(),
-      pokerCombat: getPokerCardTimingContext(),
-    });
-    applyGameCommandToStore({ command, beforeState: gameState, result, setState: set });
-    if (result.status === 'applied') applyPokerAuxiliaryEffects(command, 'player');
-  },
+	    const result = applyGameCommand(gameState, command, {
+	      isAiSimulationMode: isAISimulationMode,
+	      rng: commandRng(),
+	      idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
+	      pokerCombat: getPokerCardTimingContext(),
+	    });
+	    applyGameCommandToStore({ command, beforeState: gameState, result, setState: set });
+	    if (result.status === 'applied') applyPokerAuxiliaryEffects(command, 'player');
+	    return result;
+	  },
 
   selectCard: (card: CardInstance | CardInstanceWithCardData | null) => {
     if (card) {
@@ -648,15 +712,20 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
   },
 
   selectDiscoveryOption: (card: CardData | null) => {
-    const { gameState } = get();
-    const newState = useDiscoveryStore.getState().selectDiscoveryOption(gameState, card);
-    if (newState) {
-      set({ gameState: newState });
+    const { gameState, matchSeed, myCanonicalSide } = get();
+    const command = { type: GAME_COMMAND_TYPES.selectDiscoveryOption, card } as const;
+    const result = applyGameCommand(gameState, command, {
+      rng: commandRng(),
+      idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
+    });
+    applyGameCommandToStore({ command, beforeState: gameState, result, setState: set });
+    if (result.status === 'applied') {
       setTimeout(() => {
         debug.log('[GameStore] Discovery complete, granting deferred poker hand rewards');
         get().grantPokerHandRewards();
       }, 0);
     }
+    return result;
   },
 
   // Directly set the players (useful for AI simulation)
@@ -728,66 +797,22 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
   toggleMulliganCard: (cardId: string) => {
     const { gameState } = get();
     const newState = useMulliganStore.getState().toggleMulliganCard(gameState, cardId);
-    if (newState) set({ gameState: newState });
+    if (newState) {
+      set({ gameState: newState });
+      return appliedGameCommand(newState);
+    }
+    return rejectedGameCommand(gameState, 'mulligan_selection_rejected');
   },
 
   // Confirm mulligan selections and replace selected cards
   confirmMulligan: () => {
-    const { gameState } = get();
-    const mulliganStore = useMulliganStore.getState();
-    const localState = mulliganStore.confirmMulligan(gameState);
-    const newState = localState && !isPeerOpponentMatch()
-      ? mulliganStore.confirmAiMulligan(localState)
-      : localState;
-    if (newState) set({ gameState: newState });
-  },
-
-  // Skip mulligan and keep all cards
-  skipMulligan: () => {
-    const { gameState } = get();
-    const mulliganStore = useMulliganStore.getState();
-    const localState = mulliganStore.skipMulligan(gameState);
-    const newState = localState && !isPeerOpponentMatch()
-      ? mulliganStore.confirmAiMulligan(localState)
-      : localState;
-    if (newState) set({ gameState: newState });
-  },
-
-  // Use hero power on a target (or no target for some powers like Armor Up).
-  // Note: this covers the GENERIC hero power path (mage fireblast, warrior armor, etc.,
-  // including Norse heroes whose powers route through `executeNorseHeroPower` inside
-  // the canonical `executeHeroPower`). Poker-combat Norse powers use the separate
-  // `norse_hero_power` auxiliary command so their Poker-slot effects can be mirrored
-  // deterministically on both peers.
-  performHeroPower: (targetId?: string, targetType?: 'card' | 'hero') => {
-    const { gameState, heroTargetMode } = get();
-    const player = gameState.players.player;
-
-    // UX pre-step: some hero powers require a target (e.g. mage Fireblast).
-    // If the user clicked the hero-power button without picking a target yet,
-    // enter target-selection mode and bail out — the next click will retry.
-    const heroClass = player.heroClass.toLowerCase();
-    const heroId = player.hero?.id;
-    const needsTarget = heroClass === 'mage' && heroId !== 'hero-odin';
-    if (needsTarget && (!targetId || !targetType)) {
-      if (!heroTargetMode) {
-        set({ heroTargetMode: true });
-        emitNotification({ message: 'Select a target for your hero power', level: 'info' });
-        return;
-      }
-      debug.error('[HeroPower] Target required but none provided');
-      return;
-    }
-
-    const command = {
-      type: GAME_COMMAND_TYPES.useHeroPower,
-      targetId,
-      targetType,
-    } as const;
+    const { gameState, matchSeed, myCanonicalSide } = get();
+    const command = { type: GAME_COMMAND_TYPES.confirmMulligan } as const;
     const result = applyGameCommand(gameState, command, {
       isAiSimulationMode: isAISimulationMode,
       rng: commandRng(),
-      pokerCombat: getPokerCardTimingContext(),
+	      idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
+	      canonicalMulliganFirstActor: myCanonicalSide === 'opponent' ? 'opponent' : 'player',
     });
 
     applyGameCommandToStore({
@@ -797,7 +822,91 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       setState: set,
     });
 
-    if (result.status !== 'applied') return;
+    // Only local AI matches complete the opponent half implicitly. P2P must
+    // wait for the signed remote confirm/skip command so both peers execute
+    // the same deterministic mulligan transition.
+	    if (result.status === 'applied' && !isPeerOpponentMatch()) {
+      const committedState = result.state;
+	      if (!committedState) return result;
+      const aiState = useMulliganStore.getState().confirmAiMulligan(committedState);
+	      if (aiState && aiState !== committedState) set({ gameState: aiState });
+	    }
+	    return result;
+  },
+
+  // Skip mulligan and keep all cards
+  skipMulligan: () => {
+	    const { gameState, matchSeed, myCanonicalSide } = get();
+    const command = { type: GAME_COMMAND_TYPES.skipMulligan } as const;
+    const result = applyGameCommand(gameState, command, {
+      isAiSimulationMode: isAISimulationMode,
+      rng: commandRng(),
+	      idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
+	      canonicalMulliganFirstActor: myCanonicalSide === 'opponent' ? 'opponent' : 'player',
+    });
+
+    applyGameCommandToStore({
+      command,
+      beforeState: gameState,
+      result,
+      setState: set,
+    });
+
+	    if (result.status === 'applied' && !isPeerOpponentMatch()) {
+      const committedState = result.state;
+	      if (!committedState) return result;
+      const aiState = useMulliganStore.getState().confirmAiMulligan(committedState);
+	      if (aiState && aiState !== committedState) set({ gameState: aiState });
+	    }
+	    return result;
+  },
+
+  // Use hero power on a target (or no target for some powers like Armor Up).
+  // Note: this covers the GENERIC hero power path (mage fireblast, warrior armor, etc.,
+  // including Norse heroes whose powers route through `executeNorseHeroPower` inside
+  // the canonical `executeHeroPower`). Poker-combat Norse powers use the separate
+  // `norse_hero_power` auxiliary command so their Poker-slot effects can be mirrored
+  // deterministically on both peers.
+	  performHeroPower: (targetId?: string, targetType?: 'card' | 'hero') => {
+	    const { gameState, heroTargetMode, matchSeed, myCanonicalSide } = get();
+    const player = gameState.players.player;
+
+    // UX pre-step: some hero powers require a target (e.g. mage Fireblast).
+    // If the user clicked the hero-power button without picking a target yet,
+    // enter target-selection mode and bail out — the next click will retry.
+    const heroClass = player.heroClass.toLowerCase();
+    const heroId = player.hero?.id;
+    const needsTarget = heroClass === 'mage' && heroId !== 'hero-odin';
+	    if (needsTarget && (!targetId || !targetType)) {
+      if (!heroTargetMode) {
+        set({ heroTargetMode: true });
+        emitNotification({ message: 'Select a target for your hero power', level: 'info' });
+        return rejectedGameCommand(gameState, 'hero_power_target_required');
+      }
+      debug.error('[HeroPower] Target required but none provided');
+      return rejectedGameCommand(gameState, 'hero_power_target_required');
+    }
+
+    const command = {
+      type: GAME_COMMAND_TYPES.useHeroPower,
+      targetId,
+      targetType,
+    } as const;
+	    const result = applyGameCommand(gameState, command, {
+	      isAiSimulationMode: isAISimulationMode,
+	      rng: commandRng(),
+	      idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
+	      pokerCombat: getPokerCardTimingContext(),
+	    });
+
+    applyGameCommandToStore({
+      command,
+      beforeState: gameState,
+      result,
+      setState: set,
+    });
+
+	    if (result.status !== 'applied') return result;
 
     // Wrapper-only side effects: bespoke UI cues that don't fit the canonical
     // effect vocabulary. Ordered AFTER state apply so they reflect committed action.
@@ -814,11 +923,12 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 
     emitNotification({ message: `Used Hero Power: ${player.heroPower.name}`, level: 'success' });
 
-    GameEventBus.emitAnimationRequest({
+	    GameEventBus.emitAnimationRequest({
       animationType: 'hero_power_effect',
       sourceId: 'player',
-      params: { heroClass, effectType: player.heroPower.name },
-    });
+	      params: { heroClass, effectType: player.heroPower.name },
+	    });
+	    return result;
   },
 
   performNorseHeroPower: (
@@ -827,7 +937,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 		targetType?: 'minion' | 'hero',
 		actionId = crypto.randomUUID(),
 	) => {
-		const { gameState } = get();
+			const { gameState, matchSeed, myCanonicalSide } = get();
 		const command = {
 			type: GAME_COMMAND_TYPES.norseHeroPower,
 			norseHeroId,
@@ -835,25 +945,29 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 			targetType,
 			actionId,
 		} as const;
-		const result = applyGameCommand(gameState, command, {
-			isAiSimulationMode: isAISimulationMode,
-			rng: commandRng(),
-			pokerCombat: getPokerCardTimingContext(),
-		});
+			const result = applyGameCommand(gameState, command, {
+				isAiSimulationMode: isAISimulationMode,
+				rng: commandRng(),
+				idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
+				pokerCombat: getPokerCardTimingContext(),
+			});
 		applyGameCommandToStore({ command, beforeState: gameState, result, setState: set });
 		if (result.status === 'applied') applyPokerAuxiliaryEffects(command, 'player');
+		return result;
 	},
 
 	weaponUpgrade: (norseHeroId: string, actionId = crypto.randomUUID()) => {
-		const { gameState } = get();
+		const { gameState, matchSeed, myCanonicalSide } = get();
 		const command = { type: GAME_COMMAND_TYPES.weaponUpgrade, norseHeroId, actionId } as const;
 		const result = applyGameCommand(gameState, command, {
 			isAiSimulationMode: isAISimulationMode,
 			rng: commandRng(),
+			idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
 			pokerCombat: getPokerCardTimingContext(),
 		});
 		applyGameCommandToStore({ command, beforeState: gameState, result, setState: set });
 		if (result.status === 'applied') applyPokerAuxiliaryEffects(command, 'player');
+		return result;
 	},
 
   grantPokerHandRewards: () => {
@@ -931,6 +1045,13 @@ export function initGameStoreSubscriptions() {
 
 		const gs = state.gameState;
 		if (!gs || gs.currentTurn !== 'player' || gs.gamePhase !== 'playing') return;
+		// A peer match must route every canonical turn transition through the
+		// P2P command wrapper so it is signed and delivered before either browser
+		// mutates its local state. The global auto-end timer has no access to that
+		// wrapper; arming it here would create a local-only endTurn during a
+		// reconnect or VPN/IP transition. The multiplayer controller can still
+		// expose an explicit end-turn action once the transport is ready.
+		if (isPeerOpponentMatch()) return;
 
 		const player = gs.players?.player;
 		if (!player) return;
@@ -963,6 +1084,7 @@ export function initGameStoreSubscriptions() {
 
 			if (autoEndEnabled) {
 				autoEndTurnTimer = setTimeout(() => {
+					if (isPeerOpponentMatch()) return;
 					const currentGs = useGameStore.getState().gameState;
 					if (currentGs?.currentTurn === 'player' && currentGs?.gamePhase === 'playing') {
 						useGameStore.getState().endTurn();

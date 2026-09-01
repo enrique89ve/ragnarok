@@ -73,4 +73,26 @@ describe('phaseCheckpointClient', () => {
 		await expect(result).resolves.toEqual({ status: 'unavailable', reason: 'client_timeout' });
 		vi.useRealTimers();
 	});
+
+	it('resolves immediately when the transport rejects the proposal', async () => {
+		const client = createPhaseCheckpointClient({ timeoutMs: 75_000 });
+		const result = client.request({
+			matchId: 'match-1', fromPhase: 'chess', toPhase: 'game_over', stateRoot: ROOT,
+			send: () => false,
+		});
+
+		await expect(result).resolves.toEqual({ status: 'unavailable', reason: 'transport_rejected' });
+		expect(client.getPendingProposal()).toBeNull();
+	});
+
+	it('fails a pending retry instead of leaving it waiting for a timeout', async () => {
+		const client = createPhaseCheckpointClient({ timeoutMs: 75_000 });
+		const result = client.request({
+			matchId: 'match-1', fromPhase: 'chess', toPhase: 'poker_combat', stateRoot: ROOT,
+			send: () => true,
+		});
+
+		expect(client.retryPending(() => false)).toBe(false);
+		await expect(result).resolves.toEqual({ status: 'unavailable', reason: 'transport_rejected' });
+	});
 });

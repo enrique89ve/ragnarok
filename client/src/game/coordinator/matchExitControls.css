@@ -6,6 +6,18 @@
 	pointer-events: auto;
 }
 
+/* Realm skins position every direct child for their atmospheric stacking
+   context. Keep the exit control viewport-anchored so it cannot slide beyond
+   the left edge of the scaled chess canvas on short landscape screens. */
+.ragnarok-chess-game[class*="realm-"] > .match-exit-control {
+	position: fixed;
+	z-index: 140;
+}
+
+.ragnarok-chess-game[class*="realm-"] > .match-exit-backdrop {
+	z-index: 220;
+}
+
 /* Leave Match is fixed outside the arena, so explicitly suspend it while a
    card inspector is open instead of allowing it to float above the modal. */
 .ragnarok-chess-game:has(.card-inspector-overlay) :is(.match-exit-control, .match-exit-backdrop) {

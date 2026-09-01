@@ -1,5 +1,5 @@
 /**
- * Shared cards-deck announce for OPEN-8 both-peer init.
+ * Shared cards-deck announce for symmetric both-peer initialization.
  *
  * Each peer sends a concrete list (or empty = class deck from the side RNG).
  * Both call `buildHandshakeGameState` with the same seed and opposite

@@ -1,8 +1,8 @@
 import { GameState, GameLogEvent, CardInstance } from '../types';
-import { v4 as uuidv4 } from 'uuid';
 import { dealDamage } from './effects/damageUtils';
 import { MAX_ARMOR, MAX_HAND_SIZE, MAX_BATTLEFIELD_SIZE, MAX_MANA } from '../constants/gameConstants';
 import { cardsRng } from './cardsCommandRng';
+import { cryptoIdGen } from './seededRng';
 
 function getArtifactEffect(state: GameState, playerType: 'player' | 'opponent'): any {
 	const player = state.players[playerType];
@@ -16,7 +16,7 @@ function getArtifactName(state: GameState, playerType: 'player' | 'opponent'): s
 
 function logArtifactTrigger(state: GameState, playerType: 'player' | 'opponent', text: string): void {
 	state.gameLog.push({
-		id: uuidv4(),
+		id: cryptoIdGen(),
 		type: 'artifact_trigger',
 		turn: state.turnNumber,
 		timestamp: Date.now(),
@@ -40,7 +40,7 @@ function summonToken(
 	if (bf.length >= MAX_BATTLEFIELD_SIZE) return null;
 	const kw = token.keywords || [];
 	const inst = {
-		instanceId: uuidv4(),
+		instanceId: cryptoIdGen(),
 		card: {
 			id: tokenId,
 			name: token.name,
@@ -1239,7 +1239,7 @@ export function processArtifactOnEnemyMinionPlayed(
 			const hand = state.players[defenderType].hand;
 			if (hand.length < MAX_HAND_SIZE) {
 				const copy = JSON.parse(JSON.stringify(minion)) as CardInstance;
-				copy.instanceId = uuidv4();
+				copy.instanceId = cryptoIdGen();
 				const reduction = effect.onOpponentPlayCard.copyReduction || 0;
 				(copy.card as any).manaCost = Math.max(0, (copy.card.manaCost ?? 0) - reduction);
 				hand.push(copy);

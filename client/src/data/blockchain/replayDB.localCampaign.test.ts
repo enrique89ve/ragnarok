@@ -3,9 +3,46 @@ import { describe, expect, it } from 'vitest';
 import { createProtocolRuntimeFingerprint } from '@shared/protocolPhase';
 import { createLocalCampaignSettlement } from '@shared/protocol-core/localCampaignSettlement';
 import { createRuneLedgerEntryId, createCampaignFirstClearRuneSourceKey } from '@shared/protocol-core/runeEconomy';
-import { commitLocalCampaignSettlement, getLatestLocalCardProgressionByOwner, getLocalCardProgressionByOwner, getRuneLedgerEntries } from './replayDB';
+import {
+	abandonStartedCampaignRuns,
+	commitLocalCampaignSettlement,
+	getCampaignRun,
+	getLatestLocalCardProgressionByOwner,
+	getLocalCardProgressionByOwner,
+	getRuneLedgerEntries,
+	markCampaignRunAbandoned,
+	markCampaignRunWon,
+	putCampaignRun,
+	type CampaignRunRecord,
+} from './replayDB';
 
 describe('IndexedDB local campaign settlement', () => {
+	it('closes campaign drafts with explicit won and abandoned states', async () => {
+		const run = {
+			localRunId: 'campaign-run-state-test',
+			account: 'campaign-run-state-user',
+			campaignId: 'ragnarok',
+			missionId: 'norse-1',
+			difficulty: 'normal',
+			registryHash: 'registry',
+			nonce: 1,
+			localStartedAt: 1,
+			status: 'started',
+			createdAt: 1,
+			updatedAt: 1,
+		} satisfies CampaignRunRecord;
+		await putCampaignRun(run);
+
+		expect(await markCampaignRunWon({ localRunId: run.localRunId, matchId: 'match-state-test', matchSeed: 'seed', turnCount: 7, updatedAt: 2 })).toBe(true);
+		expect(await getCampaignRun(run.localRunId)).toMatchObject({ status: 'won', matchId: 'match-state-test', turnCount: 7 });
+		expect(await markCampaignRunAbandoned(run.localRunId, 3)).toBe(false);
+
+		const staleRun = { ...run, localRunId: 'campaign-run-stale-test', status: 'started' as const };
+		await putCampaignRun(staleRun);
+		expect(await abandonStartedCampaignRuns(run.account)).toBe(1);
+		expect(await getCampaignRun(staleRun.localRunId)).toMatchObject({ status: 'abandoned' });
+	});
+
 	it('commits, retries idempotently, and detects same-event conflict', async () => {
 		const fingerprint = createProtocolRuntimeFingerprint({ stage: 'testnet', phaseId: 'local-gameplay-v1', protocolId: 'campaign-idb', resetEpoch: 'campaign-idb', seasonStart: '2026-01-01T00:00:00Z', indexStartBlock: 1 });
 		const record = createLocalCampaignSettlement({ runtimeFingerprint: fingerprint, account: 'campaign-idb-user', campaignId: 'ragnarok', missionId: 'norse-1', difficulty: 'normal', matchId: 'campaign-idb-match', matchSeed: 'seed', turnCount: 3, firstClear: true, runeAmount: 2, seasonId: 'S-idb', timestamp: 1, cards: [{ uid: 'starter:1', ownerAccount: 'campaign-idb-user', cardId: 1, rarity: 'common', xpBefore: 95 }] });

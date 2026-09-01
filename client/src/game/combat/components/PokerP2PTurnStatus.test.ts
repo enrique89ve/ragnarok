@@ -50,6 +50,7 @@ describe('getPokerP2PTurnStatusView', () => {
 
 		expect(view.variant).toBe('reconnecting');
 		expect(view.title).toBe('Poker input paused');
+		expect(view.detail).toContain('Turn timer continues');
 	});
 
 	it('shows showdown when wager actions are no longer valid', () => {

@@ -252,10 +252,10 @@ export async function appendSelfAction(
 }
 
 /**
- * Verify + append a remote-originated envelope. Throws on any failure
- * (caller wraps in try/catch + drops the envelope). Failure reasons are
- * encoded into the message so the wire handler can attribute slash
- * evidence (`bad_sig`, `seq_skipped`, `prev_hash_mismatch`, …).
+ * Verify + append a remote-originated envelope. Exact retransmissions of an
+ * already verified leaf are idempotent no-ops; every other failure throws.
+ * Failure reasons are encoded into the message so the wire handler can
+ * attribute slash evidence (`bad_sig`, `seq_skipped`, `prev_hash_mismatch`, …).
  */
 export async function verifyAndAppendRemote(
 	tr: Transcript,
@@ -273,6 +273,19 @@ export async function verifyAndAppendRemote(
 	}
 	const expectedSeq = tr.leaves.length;
 	if (envelope.seq !== expectedSeq) {
+		// Retransmission after a reconnect is allowed to repeat an already
+		// verified leaf. Idempotency is strict: every observable field must
+		// match the stored leaf, otherwise this is a fork and remains rejected.
+		if (envelope.seq >= 0 && envelope.seq < expectedSeq) {
+			const existing = tr.leaves[envelope.seq];
+			if (existing
+				&& existing.prevHash === envelope.prevHash
+				&& existing.sig === envelope.sig
+				&& existing.broadcaster === broadcaster
+				&& canonicalize(existing.action) === canonicalize(envelope.action)) {
+				return tr;
+			}
+		}
 		throw new Error(
 			`[transcript] non-monotonic seq — got ${envelope.seq} expected ${expectedSeq}`,
 		);

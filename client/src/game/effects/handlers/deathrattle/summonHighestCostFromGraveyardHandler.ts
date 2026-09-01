@@ -12,7 +12,7 @@ import { EffectResult } from '../../../types/EffectTypes';
 import { getGraveyard, GraveyardMinion } from '../../../data/cardManagement/graveyardTracker';
 import { getCardById } from '../../../data/cardManagement/cardRegistry';
 import { isMinion, getAttack, getHealth } from '../../../utils/cards/typeGuards';
-import { v4 as uuidv4 } from 'uuid';
+import { cryptoIdGen } from '../../../utils/seededRng';
 import { MAX_BATTLEFIELD_SIZE } from '../../../constants/gameConstants';
 
 /**
@@ -77,7 +77,7 @@ export default function executeSummonHighestCostFromGraveyardSummonHighestCostFr
         
         // Create a minion instance for the summoned card
         const newMinionInstance: CardInstance = {
-          instanceId: uuidv4(),
+          instanceId: cryptoIdGen(),
           card: cardToSummon as Card,
           currentHealth: getHealth(cardToSummon),
           canAttack: false,

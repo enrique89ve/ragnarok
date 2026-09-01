@@ -52,7 +52,13 @@ export interface PokerCombatAdapter {
     deterministic?: PokerCombatDeterministicOptions
   ) => void;
   initializeCombatFromPayload: (payload: PokerCombatAdapterInit) => void;
-  performAction: (playerId: string, action: CombatAction, hpCommitment?: number, origin?: PokerActionOrigin) => void;
+  performAction: (
+    playerId: string,
+    action: CombatAction,
+    hpCommitment?: number,
+    origin?: PokerActionOrigin,
+    nowMs?: number,
+  ) => void;
   advancePhase: () => void;
   maybeCloseBettingRound: () => void;
   resolveCombat: () => CombatResolution | null;
@@ -209,8 +215,12 @@ export function usePokerCombatAdapter(): PokerCombatAdapter {
       },
       initializeCombatFromPayload,
 
-      performAction: (playerId, action, hpCommitment, origin) => {
-        performPokerAction(playerId, action, hpCommitment, origin);
+      performAction: (playerId, action, hpCommitment, origin, nowMs) => {
+        if (nowMs === undefined) {
+          performPokerAction(playerId, action, hpCommitment, origin);
+        } else {
+          performPokerAction(playerId, action, hpCommitment, origin, nowMs);
+        }
       },
 
       advancePhase: () => {
@@ -372,8 +382,12 @@ export function getPokerCombatAdapterState(): PokerCombatAdapter {
       getStore().completeMulligan();
     },
 
-    performAction: (playerId, action, hpCommitment, origin) => {
-      getStore().performPokerAction(playerId, action, hpCommitment, origin);
+    performAction: (playerId, action, hpCommitment, origin, nowMs) => {
+      if (nowMs === undefined) {
+        getStore().performPokerAction(playerId, action, hpCommitment, origin);
+      } else {
+        getStore().performPokerAction(playerId, action, hpCommitment, origin, nowMs);
+      }
     },
 
     advancePhase: () => {

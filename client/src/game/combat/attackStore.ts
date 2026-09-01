@@ -11,6 +11,7 @@
 import { create } from 'zustand';
 import { CardInstance } from '../types';
 import { useGameStore } from '../stores/gameStore';
+import { useMatchStore } from '../match/store';
 import { debug } from '../config/debugConfig';
 
 interface AttackState {
@@ -86,6 +87,14 @@ export const useAttackStore = create<AttackState>((set, get) => ({
     // Safety check - make sure we have an attacking card
     if (!state.attackingCard) {
       debug.error('[AttackStore] No attacking card selected');
+      return false;
+    }
+
+    // This legacy store has no access to the P2P command context. Never let it
+    // mutate a peer match locally during a reconnect; the multiplayer UI uses
+    // the signed dispatcher path instead.
+    if (useMatchStore.getState().activeMatch?.opponent.kind === 'peer') {
+      debug.warn('[AttackStore] P2P attack blocked — use the signed command dispatcher');
       return false;
     }
     

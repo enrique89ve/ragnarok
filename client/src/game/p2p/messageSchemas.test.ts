@@ -63,6 +63,18 @@ describe('parseWireMessage — non-message inputs', () => {
 		expect(parseWireMessage({ type: 'malicious' })).toBeNull();
 		expect(parseWireMessage({ type: 'CHESS_COMMAND' })).toBeNull(); // case-sensitive
 	});
+
+	it('rejects server-only Poker gate acknowledgements on the untrusted data plane', () => {
+		expect(parseWireMessage({
+			type: 'poker_action_time_gate_ack_v1',
+			protocolVersion: 1,
+			matchId: 'match-1',
+			turnId: 'combat-1:faith:peer-a:0',
+			decisionId: 'decision-1',
+			seq: 0,
+			allowed: true,
+		})).toBeNull();
+	});
 });
 
 describe('parseWireMessage — competitive leave event', () => {
@@ -125,6 +137,20 @@ describe('parseWireMessage — game_command envelope (cards integrity)', () => {
 		expect(parseWireMessage({ ...validEnvelope, command: { type: 'toggle_mulligan_card', cardId: 'card-1' } })).not.toBeNull();
 		expect(parseWireMessage({ ...validEnvelope, command: { type: 'confirm_mulligan' } })).not.toBeNull();
 		expect(parseWireMessage({ ...validEnvelope, command: { type: 'skip_mulligan' } })).not.toBeNull();
+	});
+
+	it('accepts a discovery choice while keeping the card payload bounded', () => {
+		expect(parseWireMessage({
+			...validEnvelope,
+			command: {
+				type: 'select_discovery_option',
+				card: { id: 42, name: 'Rune', type: 'spell', description: 'safe' },
+			},
+		})).not.toBeNull();
+		expect(parseWireMessage({
+			...validEnvelope,
+			command: { type: 'select_discovery_option', card: null },
+		})).not.toBeNull();
 	});
 
 	it('rejects envelopes missing commandId — replay-protection field', () => {
@@ -194,6 +220,34 @@ describe('parseWireMessage — chess_command envelope (delegates to chess schema
 
 	it('accepts a well-formed chess_move envelope', () => {
 		expect(parseWireMessage(validChess)).not.toBeNull();
+	});
+
+	it('accepts a well-formed signed King mine placement envelope', () => {
+		expect(parseWireMessage({
+			...validChess,
+			command: {
+				type: 'chess_mine_placement',
+				owner: 'player',
+				kingId: 'king-ymir',
+				position: { row: 4, col: 2 },
+				mineId: 'mine-42',
+				affectedTiles: [{ row: 4, col: 2 }],
+			},
+		})).not.toBeNull();
+	});
+
+	it('rejects a mine placement with an out-of-bounds affected tile', () => {
+		expect(parseWireMessage({
+			...validChess,
+			command: {
+				type: 'chess_mine_placement',
+				owner: 'player',
+				kingId: 'king-ymir',
+				position: { row: 4, col: 2 },
+				mineId: 'mine-42',
+				affectedTiles: [{ row: 7, col: 2 }],
+			},
+		})).toBeNull();
 	});
 
 	it('inherits chess refinement: from === to is rejected', () => {

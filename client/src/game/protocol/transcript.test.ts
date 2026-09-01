@@ -154,6 +154,23 @@ describe('verifyAndAppendRemote — rejection paths', () => {
 		expect(bView.merkleRoot).not.toBe('0'.repeat(64));
 	});
 
+	it('accepts an exact retransmission as an idempotent no-op', async () => {
+		const aKey = await generateSessionKey(MATCH_ID);
+		const { envelope } = await appendSelfAction(emptyTranscript(MATCH_ID), { type: 'playCard' }, aKey, 'A');
+		const bView = await verifyAndAppendRemote(emptyTranscript(MATCH_ID), envelope, aKey.pubkey, 'A');
+
+		expect(await verifyAndAppendRemote(bView, envelope, aKey.pubkey, 'A')).toBe(bView);
+	});
+
+	it('rejects a retransmission that forks an existing sequence', async () => {
+		const aKey = await generateSessionKey(MATCH_ID);
+		const { envelope } = await appendSelfAction(emptyTranscript(MATCH_ID), { type: 'playCard' }, aKey, 'A');
+		const bView = await verifyAndAppendRemote(emptyTranscript(MATCH_ID), envelope, aKey.pubkey, 'A');
+		const forked: ActionEnvelopeWire = { ...envelope, action: { type: 'different' } };
+
+		await expect(verifyAndAppendRemote(bView, forked, aKey.pubkey, 'A')).rejects.toThrow(/seq/);
+	});
+
 	it('rejects a tampered action', async () => {
 		const aKey = await generateSessionKey(MATCH_ID);
 		const { envelope } = await appendSelfAction(emptyTranscript(MATCH_ID), { ok: true }, aKey, 'A');

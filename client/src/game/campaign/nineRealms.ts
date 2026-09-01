@@ -34,7 +34,9 @@ export const NINE_REALMS: Realm[] = [
 		runeSymbol: '\u16A0',
 		environmentEffect: 'Divine Power',
 		environmentDescription: 'The gods grant strength',
-		position: { x: 50, y: 8 },
+		// Keep the opening route below Ginnungagap. The node includes a
+		// floating "Route Here" hint, so the visual hit areas need real air.
+		position: { x: 50, y: 20 },
 		connections: ['midgard', 'vanaheim', 'alfheim'],
 		color: '#fbbf24',
 		glowColor: 'rgba(251, 191, 36, 0.6)',

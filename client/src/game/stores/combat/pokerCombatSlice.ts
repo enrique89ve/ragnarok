@@ -682,7 +682,13 @@ export const createPokerCombatSlice: StateCreator<
 	    emitPhaseEntered({ phase: PokerCombatPhase.PRE_FLOP });
   },
 
-  performPokerAction: (playerId: string, action: CombatAction, hpCommitment?: number, origin: PokerActionOrigin = 'player') => {
+  performPokerAction: (
+    playerId: string,
+    action: CombatAction,
+    hpCommitment?: number,
+    origin: PokerActionOrigin = 'player',
+    nowMs?: number,
+  ) => {
     const state = get();
     if (!state.pokerCombatState) return;
 	const beforeResourceViolation = findPokerResourceViolation(state.pokerCombatState);
@@ -696,7 +702,7 @@ export const createPokerCombatSlice: StateCreator<
       playerId,
       action,
       hpCommitment,
-		  nowMs: Date.now(),
+		  nowMs: nowMs ?? Date.now(),
 		  origin,
     });
     if (!validation.ok) {

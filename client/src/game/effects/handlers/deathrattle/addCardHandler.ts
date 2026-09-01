@@ -11,7 +11,7 @@ import { CardData, CardInstance, DeathrattleEffect } from '../../../types';
 import { EffectResult } from '../../../types/EffectTypes';
 import { MAX_HAND_SIZE } from '../../../constants/gameConstants';
 import { getCardById } from '../../../data/cardManagement/cardRegistry';
-import { v4 as uuidv4 } from 'uuid';
+import { cryptoIdGen } from '../../../utils/seededRng';
 
 /**
  * Execute an add_card deathrattle effect
@@ -46,7 +46,7 @@ export default function executeAddCardAddCard(
       }
       
       const newCardInstance: CardInstance = {
-        instanceId: uuidv4(),
+        instanceId: cryptoIdGen(),
         card: cardToAdd,
         currentHealth: 'health' in cardToAdd ? (cardToAdd.health ?? 0) : 0,
         canAttack: false,

@@ -63,7 +63,17 @@ export type WireMessage =
 	| { type: 'version_check'; buildHash: string }
 	| { type: 'wasm_hash_check'; wasmHash: string }
 	| ({ type: 'battle_ready_v1' } & P2PBattleReadyProof)
-	| { type: 'hash_check'; stateHash: string; chessStateHash: string; chessMoveCount: number; turnNumber: number }
+	| {
+			type: 'hash_check';
+			stateHash: string;
+			chessStateHash: string;
+			chessMoveCount: number;
+			turnNumber: number;
+			/** Highest local game_command seq included in the beacon, if present. */
+			sentCommandSeq?: number;
+			/** Highest remote game_command seq applied by the beacon sender, if present. */
+			receivedCommandSeq?: number;
+		}
 	| { type: 'poker_hash_check'; pokerStateHash: string; phase: 'pre_flop' | 'faith' | 'foresight' | 'destiny'; turnId: string; actionsThisRound: number }
 	| { type: 'hash_mismatch'; turnNumber: number; myHash: string }
 	| { type: 'poker_action'; playerId: string; action: string; origin: PokerActionOrigin; hpCommitment?: number; compact?: CompactPokerAction; turnId: string; decisionId: string; seq?: number; prevStateHash?: string; signerPubkey?: string; signature?: string; sentAtMs?: number }

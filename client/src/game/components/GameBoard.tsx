@@ -64,26 +64,29 @@ import { useAttackVisualization } from '../hooks/useAttackVisualization';
 import { useGameAnimationEffects } from '../hooks/useGameAnimationEffects';
 import { useCardGameKeyboard } from '../hooks/useCardGameKeyboard';
 import { useSettingsStore } from '../stores/settingsStore';
+import { useP2PActions } from '../context/useP2PActions';
+import { GAME_COMMAND_TYPES } from '../core/commands';
 
-// Stable action references — grabbed once, never trigger rerenders
+// Selection/toggle state is presentation-local. Gameplay mutations are read
+// from useP2PActions inside the component so this legacy board cannot bypass
+// the signed P2P dispatcher if it is mounted by a future route.
 const gameActions = useGameStore.getState();
-const playCard = gameActions.playCard;
-const endTurn = gameActions.endTurn;
 const selectAttacker = gameActions.selectAttacker;
-const attackWithCard = gameActions.attackWithCard;
 const toggleHeroTargetMode = gameActions.toggleHeroTargetMode;
-const performHeroPowerAction = gameActions.performHeroPower;
 const selectCard = gameActions.selectCard;
-const selectDiscoveryOption = gameActions.selectDiscoveryOption;
 
 export const GameBoard: React.FC<{}> = () => {
+  const p2pActions = useP2PActions();
+  const playCard = p2pActions.playCard;
+  const endTurn = p2pActions.endTurn;
+  const attackWithCard = p2pActions.attackWithCard;
+  const performHeroPower = p2pActions.performHeroPower;
   // Only subscribe to state that actually drives renders
   const gameState = useGameStore(state => state.gameState);
   const hoveredCard = useGameStore(state => state.hoveredCard);
   const attackingCard = useGameStore(state => state.attackingCard);
   const selectedCard = useGameStore(state => state.selectedCard);
   const heroTargetMode = useGameStore(state => state.heroTargetMode);
-  const performHeroPower = performHeroPowerAction;
 
   // Reference to the game container for effects like screen shake and spell flashes
   const gameContainerRef = useRef<HTMLDivElement>(null);
@@ -307,21 +310,22 @@ export const GameBoard: React.FC<{}> = () => {
 
   // Handle discovery card selection
   const handleDiscoverySelect = (selectedCard: CardData | null) => {
-    // Call the store action
-    selectDiscoveryOption(selectedCard);
-
-    if (selectedCard) {
-      // Play a success sound when a card is selected
+    // Discovery is a signed canonical command in P2P, and a reducer-backed
+    // action in local modes. Presentation feedback follows its commit below.
+    p2pActions.dispatchGameCommand({
+      type: GAME_COMMAND_TYPES.selectDiscoveryOption,
+      card: selectedCard,
+    }, () => {
+      if (!selectedCard) return;
+      // Presentation feedback follows the canonical commit, not the click.
       playSuccess();
-
-      // Show a notification for the discovery selection
       showNotification({
         title: 'Foreseen',
         description: `You foresaw ${selectedCard.name}!`,
         type: 'success',
         duration: 3000
       });
-    }
+    });
   };
 
   // Reference to the registered animation system from above

@@ -8,7 +8,7 @@ import { debug } from '../../../config/debugConfig';
 import { GameContext } from '../../../GameContext';
 import { Card, CardInstance, DeathrattleEffect } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
-import { v4 as uuidv4 } from 'uuid';
+import { cryptoIdGen } from '../../../utils/seededRng';
 import { MAX_BATTLEFIELD_SIZE } from '../../../constants/gameConstants';
 
 /**
@@ -59,7 +59,7 @@ export default function executeSummonWithStatsSummonWithStats(
     
     // Create a minion instance
     const newMinionInstance: CardInstance = {
-      instanceId: uuidv4(),
+      instanceId: cryptoIdGen(),
       card: newMinionCard,
       currentHealth: newMinionCard.health,
       canAttack: false,

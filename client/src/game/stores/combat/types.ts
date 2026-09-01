@@ -160,7 +160,13 @@ export interface PokerCombatSliceActions {
   ) => void;
   completeFirstStrike: () => void;
   completeMulligan: () => void;
-  performPokerAction: (playerId: string, action: CombatAction, hpCommitment?: number, origin?: PokerActionOrigin) => void;
+  performPokerAction: (
+    playerId: string,
+    action: CombatAction,
+    hpCommitment?: number,
+    origin?: PokerActionOrigin,
+    nowMs?: number,
+  ) => void;
   advancePokerPhase: () => void;
   resolvePokerCombat: () => CombatResolution | null;
   endPokerCombat: () => void;
@@ -342,7 +348,11 @@ export interface KingAbilitySliceActions {
   placeMine: (
     owner: 'player' | 'opponent',
     centerPosition: ChessBoardPosition,
-    direction?: MineDirection
+    direction?: MineDirection,
+    overrides?: Readonly<{
+      readonly mineId: string;
+      readonly affectedTiles: readonly ChessBoardPosition[];
+    }>
   ) => boolean;
   checkAndTriggerMine: (
     landingPosition: ChessBoardPosition,

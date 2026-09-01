@@ -11,7 +11,7 @@ import { Card, BattlecryEffect, CardInstance } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
 import { MAX_BATTLEFIELD_SIZE } from '../../../constants/gameConstants';
 import cardDatabase from '../../../services/cardDatabase';
-import { v4 as uuidv4 } from 'uuid';
+import { cryptoIdGen } from '../../../utils/seededRng';
 import { isMinion, getAttack, getHealth } from '../../../utils/cards/typeGuards';
 import { cardsRng } from '../../../utils/cardsCommandRng';
 
@@ -87,7 +87,7 @@ export default function executeSummonFromSpellCost(
     const selectedMinionHealth = getHealth(selectedMinion);
     
     const minionInstance: CardInstance = {
-      instanceId: uuidv4(),
+      instanceId: cryptoIdGen(),
       card: {
         id: typeof selectedMinion.id === 'number' ? selectedMinion.id : parseInt(selectedMinion.id as string, 10),
         name: selectedMinion.name,

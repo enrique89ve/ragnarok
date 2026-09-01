@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { derivePokerTurnPolicy } from './pokerTurnPolicy';
+import { derivePokerTurnPolicy, shouldAutoAdvanceAllIn } from './pokerTurnPolicy';
 
 const BASE_INPUT = {
 	activePlayerId: 'local-piece',
@@ -9,6 +9,11 @@ const BASE_INPUT = {
 };
 
 describe('derivePokerTurnPolicy', () => {
+	it('keeps all-in auto-advance local to AI/campaign matches', () => {
+		expect(shouldAutoAdvanceAllIn('local_ai')).toBe(true);
+		expect(shouldAutoAdvanceAllIn('p2p')).toBe(false);
+	});
+
 	it('treats local P2P decisions as protocol-clock decisions', () => {
 		const policy = derivePokerTurnPolicy({
 			...BASE_INPUT,

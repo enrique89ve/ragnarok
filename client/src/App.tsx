@@ -553,6 +553,8 @@ const UTILITY_LINKS: ReadonlyArray<{ label: string; shortLabel?: string; to: str
 	{ label: 'Explorer', shortLabel: 'Explore', to: routes.explorer, icon: SearchIcon },
 ] as const;
 
+const EMPTY_CAMPAIGN_PROGRESS: Record<string, never> = Object.freeze({});
+
 function StatRow({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
 	return (
 		<div className="flex min-w-0 items-center justify-between gap-3 border-b border-white/5 py-1.5 last:border-b-0">
@@ -629,8 +631,11 @@ function HiveLoginDialog({ onClose }: { onClose: () => void }) {
 }
 
 function HomePage() {
-	const completedMissions = useCampaignStore(s => s.completedMissions);
-	const currentMissionId = useCampaignStore(s => s.currentMission);
+	const storedCompletedMissions = useCampaignStore(s => s.completedMissions);
+	const storedCurrentMissionId = useCampaignStore(s => s.currentMission);
+	const campaignProgressStatus = useCampaignStore(s => s.campaignProgressStatus);
+	const completedMissions = campaignProgressStatus === 'ready' ? storedCompletedMissions : EMPTY_CAMPAIGN_PROGRESS;
+	const currentMissionId = campaignProgressStatus === 'ready' ? storedCurrentMissionId : null;
 	const singleStreak = useSingleRecordStore(selectSingleStreakLabel);
 	const hiveUsername = useStoredHiveUsername();
 	const isHiveMode = useIsHiveMode();
@@ -687,6 +692,8 @@ function HomePage() {
 				? 'Sign Hive First'
 				: 'Login First'
 			: 'Reveal Starter Deck'
+		: campaignProgressStatus !== 'ready'
+			? 'Preparing Campaign'
 		: activeMission
 			? 'Resume Campaign'
 			: completedMissionCount > 0
@@ -694,11 +701,15 @@ function HomePage() {
 				: 'Start Campaign';
 	const activeFocusTitle = !starterClaimed
 		? 'Starter Ceremony'
+		: campaignProgressStatus !== 'ready'
+			? 'Preparing Campaign'
 		: activeMission
 			? activeMission.mission.name
 			: nextMission?.mission.name ?? 'Saga Complete';
 	const activeFocusChapter = !starterClaimed
 		? 'Prologue · pending'
+		: campaignProgressStatus !== 'ready'
+			? 'Local replay · syncing'
 		: activeMission
 			? `${activeMission.chapter.name} · Mission ${activeMission.mission.missionNumber}`
 			: nextMission
@@ -914,15 +925,19 @@ function HomePage() {
 											<span className="btn-runic-stud" aria-hidden />
 										</button>
 									)
-								) : (
-									<Link to={routes.campaign} className="no-underline">
-										<button className="btn-runic btn-runic--gold">
-											<span className="btn-runic-stud" aria-hidden />
-											{primaryLabel}
-											<span className="btn-runic-stud" aria-hidden />
-										</button>
-									</Link>
-								)}
+					) : campaignProgressStatus === 'ready' ? (
+						<Link to={routes.campaign} className="btn-runic btn-runic--gold no-underline">
+							<span className="btn-runic-stud" aria-hidden />
+							{primaryLabel}
+							<span className="btn-runic-stud" aria-hidden />
+						</Link>
+					) : (
+						<button className="btn-runic btn-runic--gold" type="button" disabled aria-busy="true">
+							<span className="btn-runic-stud" aria-hidden />
+							{primaryLabel}
+							<span className="btn-runic-stud" aria-hidden />
+						</button>
+					)}
 								{canInstall && (
 									<button className="btn-runic btn-runic--obsidian px-6 py-2.5" onClick={triggerInstall}>
 										<span className="btn-runic-stud" aria-hidden />
@@ -1135,11 +1150,23 @@ function GlobalOverlaysLayout() {
 	return (
 		<>
 			<EnvironmentBanner />
+			<CampaignProgressHydrator />
 			<Outlet />
 			{sessionHiveUsername && <Suspense fallback={null}><DuatClaimPopup /></Suspense>}
 			{shouldCheckFactionPledge && <Suspense fallback={null}><FactionPledgePopup /></Suspense>}
 		</>
 	);
+}
+
+function CampaignProgressHydrator() {
+	const account = useNFTUsername();
+	const hydrateLocalProgress = useCampaignStore(state => state.hydrateLocalProgress);
+
+	useEffect(() => {
+		void hydrateLocalProgress(account);
+	}, [account, hydrateLocalProgress]);
+
+	return null;
 }
 
 function EnvironmentBanner() {

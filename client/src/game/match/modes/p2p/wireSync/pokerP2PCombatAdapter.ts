@@ -21,6 +21,7 @@ export type P2PPokerCombatAdapter = {
 		readonly action: CombatAction;
 		readonly origin: PokerActionOrigin;
 		readonly hpCommitment?: number;
+		readonly nowMs?: number;
 	}) => P2PPokerActionResult;
 	readonly maybeCloseBettingRound: () => void;
 	readonly syncRemotePokerTurnClock: (input: P2PPokerTurnClockInput) => void;
@@ -50,7 +51,11 @@ export function getP2PPokerCombatAdapter(): P2PPokerCombatAdapter {
 			const engine = getPokerCombatAdapterState();
 			const before = engine.combatState;
 			if (!before) return { status: 'rejected', reason: 'no_combat_state' };
-			engine.performAction(input.playerId, input.action, input.hpCommitment, input.origin);
+			if (input.nowMs === undefined) {
+				engine.performAction(input.playerId, input.action, input.hpCommitment, input.origin);
+			} else {
+				engine.performAction(input.playerId, input.action, input.hpCommitment, input.origin, input.nowMs);
+			}
 			const after = getPokerCombatAdapterState().combatState;
 			// The engine commits a new immutable combat snapshot on accepted actions.
 			// Only this post-engine transition authorizes transcript/dedup side effects.

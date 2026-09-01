@@ -9,11 +9,11 @@
  * - CardInstanceWithCardData (from client/src/game/types/interfaceExtensions.ts)
  */
 
-import { v4 as uuidv4 } from 'uuid';
 import { CardInstance } from '../../types/CardTypes';
 import { CardInstanceWithCardData } from '../../types/interfaceExtensions';
 import { Position } from '../../types/Position';
 import { debug } from '../../config/debugConfig';
+import { cryptoIdGen } from '../seededRng';
 
 /**
  * Debug logging helper for card adapter operations
@@ -71,7 +71,7 @@ export function adaptCardInstance(
     result.card.keywords = result.card.keywords || [];
     
     // Ensure instance level properties are set
-    result.instanceId = result.instanceId || uuidv4();
+    result.instanceId = result.instanceId || cryptoIdGen();
     result.currentHealth = result.currentHealth ?? (result.card as any).health;
     result.currentAttack = (result as any).currentAttack ?? (result.card as any).attack;
     result.mechAttachments = result.mechAttachments || [];
@@ -93,7 +93,7 @@ export function adaptCardInstance(
   const legacyCard = card as CardInstance;
   
   const adaptedCard = {
-    instanceId: legacyCard.instanceId || uuidv4(),
+    instanceId: legacyCard.instanceId || cryptoIdGen(),
     card: {
       id: (legacyCard as any).id || 0,
       name: (legacyCard as any).name || "Unknown Card",
@@ -289,7 +289,7 @@ export function formatPosition(pos: any): Position {
  */
 function createFallbackCardInstance(): CardInstanceWithCardData {
   return {
-    instanceId: uuidv4(),
+    instanceId: cryptoIdGen(),
     card: {
       id: 0,
       name: "Fallback Card",
@@ -321,7 +321,7 @@ function createFallbackCardInstance(): CardInstanceWithCardData {
  */
 function createFallbackStandardCardInstance(): CardInstance {
   return {
-    instanceId: uuidv4(),
+    instanceId: cryptoIdGen(),
     card: {
       id: 0,
       name: "Fallback Card",

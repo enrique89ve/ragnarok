@@ -1,4 +1,4 @@
-# Testnet Readiness Fast Track - 2026-08-23
+# Testnet Readiness Fast Track - 2026-09-01
 
 ## Proposito
 
@@ -21,12 +21,22 @@ con la misma spine chess↔poker→`game_over`, daily quest claimable, poker
 legible, y una sola fuente de verdad por dominio. No es un cemetery de
 archivos sueltos ni las 49 misiones.
 
-Actualizacion 2026-08-23: el runtime del host, headers/cache, build Alfa,
+Actualizacion 2026-08-31: el runtime del host, headers/cache, build Alfa,
 seguridad P2P, lookup canonico, persistencia local y los gates de capacidades
-ya tienen evidencia. `dev/local` permite Single sin login para QA por browser o
-LLM; la Alfa compartida conserva identidad. Siguen abiertos la victoria humana
-de norse-1, el smoke P2P con dos cuentas/Keychain reales, desplegar este arbol
-y el sign-off del operador.
+ya tienen evidencia. El relay automatizado conserva identidad ante cambio de
+IP/VPN y el cliente bloquea acciones durante reconnect o cuarentena. `dev/local`
+permite Single sin login para QA por browser o LLM; la Alfa compartida conserva
+identidad. Siguen abiertos la victoria humana de norse-1, el smoke P2P con dos
+cuentas/Keychain reales, desplegar este arbol y el sign-off del operador.
+
+Actualizacion 2026-09-01: la suite completa se repitio sobre el arbol actual
+(309 archivos, 2.206 tests), junto con build Alfa, stylelint, determinismo WASM
+y la matriz de seguridad P2P; todos pasan. El ADR de transporte se reconcilio
+con el compromiso bilateral `transport_committed_v1` y la recuperacion relay
+pre-commit. Los adaptadores tambien descartan frames de gameplay entrantes antes
+del compromiso, evitando que una cola de transporte los aplique tarde. El host
+sigue con `inviteBlocked=true`, por lo que el deploy y los gates humanos
+continuan siendo requisitos separados.
 
 ## Verdad actual
 
@@ -166,8 +176,8 @@ Closed Beta no se abre hasta que, ademas de lo anterior:
 ## Orden mas corto
 
 El trabajo paralelo que no acorta Alfa Player-Ready (ranked settlement,
-transcript Merkle entre peers, action-log replay, mines P2P, CSP de
-produccion, auditoria de catalogo, cemetery de CSS/VFX, las 49 misiones)
+action-log replay, CSP de produccion, auditoria de catalogo,
+cemetery de CSS/VFX, las 49 misiones)
 se deja fuera hasta que practica, 1 mision y el smoke de dos browsers
 pasen. Cards OPEN-8 (handshake + apply simetrico) ya cerro; no reabrir
 como host-auth.
@@ -194,9 +204,8 @@ como host-auth.
 6. P1: muertos evidentes, CSS dedupe, Closed Beta cutover
 ```
 
-Chequeo 2026-08-23 (codigo + pruebas focalizadas + smokes previos de
-agent-browser; no sustituye Keychain humano, dispositivo fisico ni health del
-deploy real).
+Chequeo 2026-09-01 (codigo + pruebas focalizadas + smoke automatizado de relay;
+no sustituye Keychain humano, dispositivo fisico ni health del deploy real).
 
 | Orden | Gate | Estado actual | Cierre minimo |
 |---|---|---|---|
@@ -207,14 +216,14 @@ deploy real).
 | 4 | Hive session | Abierto P0 humano | Login real con Keychain; Quick Match queue unsigned, una firma `Accept` por jugador y cero prompts posteriores o claims F1. |
 | 5 | Campana 1 mision + daily quest | Persistencia local automatizada cerrada | Claim diario local: commit IDB `claimed` / `already_claimed` con RUNE local una vez. Campana: first-clear concede RUNE/CardXP/level local una sola vez, el replay persiste tras cerrar/reabrir IndexedDB y una derrota no completa la mision. Falta evidencia jugada en browser de una victoria norse-1. |
 | 6 | Dualidades P0 | Cerrado | Fin de partida unico (`matchEndController` cableado). Lookup de cartas unico en `data/cardRegistry`; `allCards.ts` y `cardManagement/cardRegistry.ts` son adaptadores sin dataset propio. Docs: Standard Match historico. OPEN-8 cerrado. Showdown 9s queda como red de seguridad aceptada. |
-| 7 | P2P smoke dos browsers | Automatizacion cerrada; P0 humano abierto | El tracer usa dos perfiles aislados y prueba spine + checkpoints + reload serializado + settlement local externamente silencioso. Falta evidencia de dos browsers/Keychain reales, relay desplegado, desconexion/reconexion de transporte y export. |
-| 8 | Seguridad P2P enfocada | Verde | `bash scripts/p2p-ticket-security-check.sh`: 26/26 suites y 163/163 tests (2026-08-23). El tracer multiperfil y la suite global tambien pasan; esto no sustituye el smoke humano de dos browsers. |
+| 7 | P2P smoke dos browsers | Automatizacion cerrada; P0 humano abierto | El tracer usa dos perfiles aislados y prueba spine + checkpoints + reload serializado + settlement local externamente silencioso. Los tests de relay y control añaden cambio de `X-Forwarded-For`, reemplazo de socket con la misma sesión/ticket/`peerId` y rechazo de ticket distinto sin expulsar al miembro. El transporte conserva frames de referee que llegan antes del listener, no duplica timers de reconnect y no reprograma un reconnect cuyo room ya perdió ownership; una sala nueva cancela la ventana anterior. `transport_ready_v1` es solo anuncio: WebRTC/relay no publican gameplay hasta el `transport_committed_v1` bilateral; una carrera de kinds fuerza fallback coordinado y permite recuperación por relay. El reducer de combate y el smoke de battlecry prueban IDs deterministas para Overkill, deathrattle draw, tokens materializados y Discover después de aplicar local/remoto. La habilidad de Rey usa `chess_mine_placement` firmado y tile-set determinista, pero falta evidencia de dos browsers/Keychain reales, relay desplegado, desconexion/reconexion de transporte y export. |
+| 8 | Seguridad P2P enfocada | Verde | `bash scripts/p2p-ticket-security-check.sh`: 26/26 suites y 209/209 tests (2026-09-01). El tracer multiperfil y la suite global tambien pasan; esto no sustituye el smoke humano de dos browsers. |
 | 9 | Closed Beta cutover | Bloqueado | F2 epoch `closed-beta-*`, env evidence y operator sign-off. NFTLox proof es F3 futuro, no gate F2. |
 
-Validacion del arbol local al cierre de este corte: Vitest 238/238 suites y
-1743/1743 tests; TypeScript y build Alfa verdes; stylelint verde, cero
-duplicados CSS cross-file y ningun nuevo duplicado interno. ESLint no tiene
-errores y conserva 3132 warnings historicos.
+Validacion del arbol local al cierre de este corte: TypeScript, build Alfa,
+stylelint, determinismo WASM, gates P2P y suite completa verdes (309 archivos,
+2.206 tests). ESLint no tiene errores y conserva warnings historicos; los
+warnings de tamaño/chunk del build no bloquean la ejecución.
 
 ## Fuentes de verdad
 
@@ -265,7 +274,7 @@ P1, muertos evidentes. Borrar **despues** del smoke, con grep + smoke visual:
 - `legacyBridge.ts` / `legacySynth.ts`
 - Dedupe de ~62 CSS poker (`docs/POKER_CSS_REFERENCE.md`)
 - `.scratch/*` PRDs (no borrar, no seguir)
-- Ranked settlement, OPEN-1/2 transcript, OPEN-9 mines
+- Ranked settlement
 
 ## Script de spine (practica y campana)
 
@@ -413,7 +422,9 @@ controlado. Antes de ampliar el rollout hay que validar dos browsers reales en
 Chrome/Safari móvil y redes distintas, incluyendo Wi-Fi, celular, presupuesto
 agresivo, fallback coordinado, relay con presupuesto independiente, reconnect
 con relay sticky, política `no-ice` y ausencia de secretos en logs/respuestas.
-Los tests de mocks y el build no sustituyen esa evidencia operativa.
+La automatización ya cubre el reemplazo de relay tras cambio de IP y la
+preservación de la sala por ticket/cuenta/`peerId`; los tests de mocks y el
+build no sustituyen esa evidencia operativa en dos browsers desplegados.
 
 ### Smoke humano P2P
 
@@ -461,9 +472,11 @@ Flujo minimo:
 7. Ambos peers obtienen commit del checkpoint `chess → poker_combat`; poker
    resuelve y solo vuelve a chess tras el commit `poker_combat → chess`.
 8. Reconnect corto conserva estado o exporta blocker con reject code.
-9. Reload duro avisa, restaura el snapshot local sellado y reintenta la sala
-   (2 intentos / 60s). Si el snapshot falta o el sello no cuadra, el tester
-   vuelve al lobby; no hay tablero servido por Express.
+9. Reload duro avisa y, en la Alfa actual, muestra un bloqueo explícito porque
+   la clave efímera no puede renovarse sin un prompt autorizado. El tester
+   vuelve al lobby y crea una nueva partida; no hay tablero servido por
+   Express. Un runtime futuro con `session_renewal` visible podrá reactivar el
+   reintento de sala (2 intentos / 60s).
 10. `game_over` ocurre solo tras el checkpoint terminal; se muestra el resultado
     local y no aparece Keychain ni una operacion Hive después de `Accept`.
 11. Export JSON incluye match/session id, roles, reset epoch, reject code si

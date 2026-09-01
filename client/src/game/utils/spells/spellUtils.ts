@@ -1,5 +1,4 @@
 import { GameState, SpellEffect, CardData, CardInstance, MinionCardData, GameLogEventType, RealmShiftSpellEffect } from '../../types';
-import { v4 as uuidv4 } from 'uuid';
 import { executeBattlecry } from '../battlecryUtils';
 import { createCardInstance } from '../cards/cardUtils';
 import { updateEnrageEffects } from '../mechanics/enrageUtils';
@@ -1752,7 +1751,7 @@ function executeSummonSpell(
   
   // Create a card instance for the summoned minion
   const summonedInstance: CardInstance = {
-    instanceId: uuidv4(),
+    instanceId: cryptoIdGen(),
     card: summonedCard,
     currentHealth: summonedCard.health,
     canAttack: false,
@@ -2076,9 +2075,9 @@ function executeDiscoverSpell(
         rarity: 'any',
         manaCost: 'any'
       },
-      callback: (selectedCard: CardData | null) => {
+      callback: (selectedCard: CardData | null, suppliedState?: GameState, idGen?: () => string) => {
         // Get the CURRENT game state from the store, not the stale captured state
-        const { gameState: currentState } = useGameStore.getState();
+        const currentState = suppliedState ?? useGameStore.getState().gameState;
         const updatedState = JSON.parse(JSON.stringify(currentState));
         
         if (selectedCard) {
@@ -2086,7 +2085,7 @@ function executeDiscoverSpell(
           // Add the selected card to the player's hand if there's room
           if (updatedState.players.player.hand.length < MAX_HAND_SIZE) {
             const cardInstance: CardInstance = {
-              instanceId: uuidv4(),
+              instanceId: idGen?.() ?? cryptoIdGen(),
               card: selectedCard,
               currentHealth: getHealth(selectedCard),
               canAttack: false,
@@ -3157,7 +3156,7 @@ function executeDamageAndShuffleSpell(
   
   // Create a card instance to shuffle in
   const cardInstance: CardInstance = {
-    instanceId: uuidv4(),
+    instanceId: cryptoIdGen(),
     card: cardToShuffle,
     currentHealth: 0, // Not applicable for spells but required by CardInstance interface
     canAttack: false, // Not applicable for spells but required by CardInstance interface
@@ -3471,7 +3470,7 @@ function executeEquipWeaponSpell(
   }
   
   playerState.weapon = {
-    instanceId: uuidv4(),
+    instanceId: cryptoIdGen(),
     card: weaponCard,
     currentAttack: getAttack(weaponCard),
     currentDurability: isWeapon(weaponCard) ? weaponCard.durability || 1 : 1
@@ -3500,7 +3499,7 @@ function executeAddCardSpell(
     if (cardToAdd) {
       for (let i = 0; i < count && playerHand.length < MAX_HAND_SIZE; i++) {
         const instance: CardInstance = {
-          instanceId: uuidv4(),
+          instanceId: cryptoIdGen(),
           card: cardToAdd,
           currentHealth: getHealth(cardToAdd),
           canAttack: false,
@@ -3517,7 +3516,7 @@ function executeAddCardSpell(
       const randomCard = validCards[Math.floor(cardsRng() * validCards.length)];
       if (randomCard) {
         const instance: CardInstance = {
-          instanceId: uuidv4(),
+          instanceId: cryptoIdGen(),
           card: randomCard,
           currentHealth: getHealth(randomCard),
           canAttack: false,
@@ -3643,7 +3642,7 @@ function executeShuffleIntoDeckSpell(
     const cardToShuffle = getCardById(effect.shuffleCardId as number);
     if (cardToShuffle) {
       const instance: CardInstance = {
-        instanceId: uuidv4(),
+        instanceId: cryptoIdGen(),
         card: cardToShuffle,
         currentHealth: getHealth(cardToShuffle),
         canAttack: false,
@@ -3824,7 +3823,7 @@ function executeSummonYggdrasilGolemSpell(
 
   // Create Yggdrasil Golem token
   const golem: CardInstance = {
-    instanceId: uuidv4(),
+    instanceId: cryptoIdGen(),
     card: {
       id: 99999,
       name: 'Yggdrasil Golem',
@@ -3915,7 +3914,7 @@ function executeSummonRandomSpell(
   
   // Create a card instance
   const summonedInstance: CardInstance = {
-    instanceId: uuidv4(),
+    instanceId: cryptoIdGen(),
     card: randomMinion as CardData,
     currentHealth: randomMinion.health || 1,
     canAttack: false,
@@ -3976,7 +3975,7 @@ function executeSummonCopiesSpell(
     }
     
     const copiedInstance: CardInstance = {
-      instanceId: uuidv4(),
+      instanceId: cryptoIdGen(),
       card: targetMinion.card,
       currentHealth: targetMinion.currentHealth || getHealth(targetMinion.card),
       canAttack: false,
@@ -4023,7 +4022,7 @@ function executeSummonTokenSpell(
     }
     
     const tokenInstance: CardInstance = {
-      instanceId: uuidv4(),
+      instanceId: cryptoIdGen(),
       card: tokenCard as CardData,
       currentHealth: getHealth(tokenCard as CardData),
       canAttack: false,
@@ -4156,7 +4155,7 @@ function executeSummonStoredSpell(
     // Create instance from stored minion (already a CardInstance)
     const summonedInstance: CardInstance = {
       ...storedMinion,
-      instanceId: uuidv4(),  // Generate new instance ID
+      instanceId: cryptoIdGen(),  // Generate new instance ID
       isSummoningSick: true,
       canAttack: false
     };
@@ -5390,7 +5389,7 @@ function executeReplaySpellsSpell(
 
   for (const spell of toReplay) {
     if ((spell as any).spellEffect) {
-      const fakeInstance = { instanceId: uuidv4(), card: spell, currentHealth: 0, canAttack: false, isPlayed: true, isSummoningSick: false, attacksPerformed: 0 } as CardInstance;
+      const fakeInstance = { instanceId: cryptoIdGen(), card: spell, currentHealth: 0, canAttack: false, isPlayed: true, isSummoningSick: false, attacksPerformed: 0 } as CardInstance;
       newState = executeSpell(newState, fakeInstance);
     }
   }
@@ -5514,7 +5513,7 @@ function executeRandomWeaponSpell(
   } as CardData;
   
   playerState.weapon = {
-    instanceId: uuidv4(),
+    instanceId: cryptoIdGen(),
     card: weaponCardData,
     currentDurability: weaponDurability,
     currentAttack: weaponAttack
@@ -5553,7 +5552,7 @@ function executeShuffleCopiesSpell(
       for (let i = 0; i < effect.count; i++) {
         const cardCopy = {
           ...targetCard,
-          instanceId: uuidv4(),
+          instanceId: cryptoIdGen(),
           isPlayed: false
         } as CardInstance;
         (playerState.deck as any[]).push(cardCopy);
@@ -5586,7 +5585,7 @@ function executeShuffleCardsSpell(
       if (foundCard) {
         const cardInstance = {
           card: foundCard,
-          instanceId: uuidv4(),
+          instanceId: cryptoIdGen(),
           attacksPerformed: 0,
           canAttack: false,
           currentHealth: getHealth(foundCard) || 0,
@@ -5604,7 +5603,7 @@ function executeShuffleCardsSpell(
       const randomCard = cardsOfType[Math.floor(cardsRng() * cardsOfType.length)];
       const cardInstance = {
         card: randomCard,
-        instanceId: uuidv4(),
+        instanceId: cryptoIdGen(),
         attacksPerformed: 0,
         canAttack: false,
         currentHealth: getHealth(randomCard) || 0,
@@ -6052,7 +6051,7 @@ function executeResurrectSpell(
   
   // Create a fresh copy with full health
   const resurrectedMinion: CardInstance = {
-    instanceId: uuidv4(),
+    instanceId: cryptoIdGen(),
     card: { ...minionToResurrect.card },
     currentHealth: getHealth(minionToResurrect.card),
     currentAttack: getAttack(minionToResurrect.card),
@@ -6090,7 +6089,7 @@ function executeSummonMultipleSpell(
     
     if (cardData && cardData.type === 'minion') {
       const newMinion: CardInstance = {
-        instanceId: uuidv4(),
+        instanceId: cryptoIdGen(),
         card: { ...cardData },
         currentHealth: getHealth(cardData),
         currentAttack: getAttack(cardData),
@@ -6167,7 +6166,7 @@ function executeCopyCardSpell(
   
   // Create copy of the card
   const copiedCard: CardInstance = {
-    instanceId: uuidv4(),
+    instanceId: cryptoIdGen(),
     card: { ...targetMinion.card },
     currentHealth: getHealth(targetMinion.card),
     currentAttack: getAttack(targetMinion.card),
@@ -6213,7 +6212,7 @@ function executeGiveCardsSpell(
     
     if (cardData) {
       const newCard = {
-        instanceId: uuidv4(),
+        instanceId: cryptoIdGen(),
         card: { ...cardData },
         currentHealth: getHealth(cardData),
         currentAttack: getAttack(cardData),
@@ -6447,7 +6446,7 @@ function executeDrawSpecificSpell(
       // Convert to CardInstance if it's a CardData
       const drawnCard: CardInstance = (drawnEntry as any).card ? drawnEntry as unknown as CardInstance : {
         card: drawnEntry,
-        instanceId: uuidv4(),
+        instanceId: cryptoIdGen(),
         canAttack: false,
         isSummoningSick: true,
         attacksPerformed: 0,
@@ -6706,7 +6705,7 @@ function executeConditionalEffectSpell(
   if (conditionMet && effect.thenEffect) {
     // Execute the conditional effect
     newState = executeSpell(newState, {
-      instanceId: uuidv4(),
+      instanceId: cryptoIdGen(),
       card: { 
         id: 0,
         name: 'Conditional Effect',
@@ -6884,7 +6883,7 @@ function executeCopyFromOpponentDeckSpell(
     const deckEntry = opponentDeck[randomIndex] as any;
     const cardData = deckEntry.card ? deckEntry.card : deckEntry;
     const copiedCard: CardInstance = {
-      instanceId: uuidv4(),
+      instanceId: cryptoIdGen(),
       card: { ...cardData },
       canAttack: false,
       isSummoningSick: true,
@@ -7194,7 +7193,7 @@ function executeSummonCopySpell(
   
   // Create copy
   const copy: CardInstance = {
-    instanceId: uuidv4(),
+    instanceId: cryptoIdGen(),
     card: { ...targetMinion.card },
     currentHealth: targetMinion.currentHealth || getHealth(targetMinion.card),
     currentAttack: targetMinion.currentAttack || getAttack(targetMinion.card),
@@ -7281,7 +7280,7 @@ function executeTransformAllSpell(
   if (!cardData) return newState;
   
   const createTransformedMinion = (): CardInstance => ({
-    instanceId: uuidv4(),
+    instanceId: cryptoIdGen(),
     card: { ...cardData },
     currentHealth: getHealth(cardData) || 1,
     currentAttack: getAttack(cardData) || 0,
@@ -7542,7 +7541,7 @@ function executeFillBoardSpell(
     }
 
     const instance: CardInstance = {
-      instanceId: uuidv4(),
+      instanceId: cryptoIdGen(),
       card: cardData,
       currentHealth: getHealth(cardData) || 1,
       canAttack: false,
@@ -7733,15 +7732,15 @@ function executeDiscoverAndSummonSpell(
       allOptions: [...options],
       sourceCardId,
       filters: { type: 'minion' as any, rarity: 'any', manaCost: 'any' },
-      callback: (selectedCard: CardData | null) => {
-        const { gameState: currentState } = useGameStore.getState();
+      callback: (selectedCard: CardData | null, suppliedState?: GameState, idGen?: () => string) => {
+        const currentState = suppliedState ?? useGameStore.getState().gameState;
         if (!selectedCard || !isMinion(selectedCard)) return currentState;
         const updatedState = { ...currentState };
         const currentPlayer = updatedState.currentTurn || 'player';
         const playerState = currentPlayer === 'player' ? updatedState.players.player : updatedState.players.opponent;
         if (playerState.battlefield.length < MAX_BATTLEFIELD_SIZE) {
           const instance: CardInstance = {
-            instanceId: uuidv4(),
+            instanceId: idGen?.() ?? cryptoIdGen(),
             card: selectedCard,
             currentHealth: getHealth(selectedCard) || 1,
             currentAttack: getAttack(selectedCard) || 0,
@@ -7817,7 +7816,7 @@ function executeRecruitSpell(state: GameState, effect: SpellEffect): GameState {
     const idx = playerState.deck.indexOf(picked);
     if (idx !== -1) playerState.deck.splice(idx, 1);
     const instance: CardInstance = {
-      instanceId: uuidv4(),
+      instanceId: cryptoIdGen(),
       card: cardData,
       currentHealth: getHealth(cardData) || 1,
       currentAttack: getAttack(cardData) || 0,
@@ -7850,7 +7849,7 @@ function executeSummonCopyFromHandSpell(state: GameState): GameState {
   if (minionsInHand.length === 0) return state;
   const picked = minionsInHand[Math.floor(cardsRng() * minionsInHand.length)];
   const instance: CardInstance = {
-    instanceId: uuidv4(),
+    instanceId: cryptoIdGen(),
     card: { ...picked.card },
     currentHealth: getHealth(picked.card) || 1,
     currentAttack: getAttack(picked.card) || 0,

@@ -1,5 +1,6 @@
 /**
- * Local P2P match resume (OPEN-5 hard reload).
+ * Local P2P match resume. Hard reload remains an explicit Alfa blocker until
+ * an approved session-key renewal ceremony exists.
  *
  * The browser owns the match snapshot. The relay only reopens the room
  * (max 2 attempts). This is not server-authored gameplay state.

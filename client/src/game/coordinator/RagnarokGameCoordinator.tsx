@@ -43,6 +43,7 @@ import { useCampaignGameBootstrap } from './hooks/useCampaignGameBootstrap';
 import { useBossRuleEffects } from './hooks/useBossRuleEffects';
 import { useMatchReloadGuard } from './hooks/useMatchReloadGuard';
 import { shouldWarnOnMatchReload } from './matchReloadGuard';
+import { markCampaignRunAbandoned } from '../../data/blockchain/replayDB';
 import { shouldEnableRagnarokSceneFx } from '../components/chess/chessSceneFxModel';
 import './matchExitControls.css';
 import {
@@ -316,7 +317,9 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
         level: 'error',
         message: result.status === 'disputed'
           ? 'Phase mismatch detected. The match is frozen for review.'
-          : 'Phase verification timed out. The match remains paused.',
+          : result.reason === 'transport_rejected'
+            ? 'P2P transport rejected the phase proposal. Reconnect before continuing.'
+            : 'Phase verification timed out. The match remains paused.',
         duration: 15_000,
       });
     }).finally(() => {
@@ -1058,9 +1061,14 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
 				return;
 			}
 		}
-    void clearP2PMatchResume();
-    setExitPromptOpen(false);
-    setMatchAbandoned(true);
+		if (isCampaign && ctx?.opponent.kind === 'scripted' && ctx.opponent.script.localRunId) {
+			void markCampaignRunAbandoned(ctx.opponent.script.localRunId)
+				.catch(error => debug.warn('[Campaign] Failed to mark abandoned run:', error));
+		}
+	    void clearP2PMatchResume();
+	    setExitPromptOpen(false);
+	    if (isCampaign) clearCurrent();
+	    setMatchAbandoned(true);
     clearPendingCombat();
     setPokerSlotsSwapped(false);
     endCombat();
@@ -1085,7 +1093,9 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     flowState?.tag,
     matchEndController,
 		handleReturnHome,
-  ]);
+		isCampaign,
+		clearCurrent,
+	]);
 
   /*
     "Back to Campaign" — if the player won AND the mission has an authored

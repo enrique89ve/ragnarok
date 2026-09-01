@@ -392,6 +392,36 @@ describe('ChessCommandEnvelopeSchema', () => {
 		expect(ChessCommandEnvelopeSchema.parse(combatEnvelope)).toEqual(combatEnvelope);
 	});
 
+	it('accepts a deterministic chess_mine_placement envelope', () => {
+		const mineEnvelope = {
+			...validEnvelope,
+			command: {
+				type: 'chess_mine_placement' as const,
+				owner: 'player' as const,
+				kingId: 'king-ymir',
+				position: { row: 4, col: 2 },
+				mineId: 'mine-1',
+				affectedTiles: [{ row: 4, col: 2 }],
+			},
+		};
+		expect(ChessCommandEnvelopeSchema.parse(mineEnvelope)).toEqual(mineEnvelope);
+	});
+
+	it('rejects malformed chess_mine_placement tiles', () => {
+		const mineEnvelope = {
+			...validEnvelope,
+			command: {
+				type: 'chess_mine_placement' as const,
+				owner: 'player' as const,
+				kingId: 'king-ymir',
+				position: { row: 4, col: 2 },
+				mineId: 'mine-1',
+				affectedTiles: [{ row: 99, col: 2 }],
+			},
+		};
+		expect(ChessCommandEnvelopeSchema.safeParse(mineEnvelope).success).toBe(false);
+	});
+
 	it('rejects chess_combat_initiated envelope where pieceId === defenderId', () => {
 		const bad = {
 			...validEnvelope,

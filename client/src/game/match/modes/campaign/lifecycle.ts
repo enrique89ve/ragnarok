@@ -33,6 +33,7 @@ import { buildRagnarokRuntimeEvidence } from '@shared/runtimeConfig';
 import { settleLocalCampaignMatch } from '../../../campaign/localCampaignSettlement';
 import { getCurrentHiveUsername } from '../../../../data/HiveSessionIdentity';
 import { commitProgressAccountId } from '../../../auth/progressAccount';
+import { markCampaignRunWon } from '../../../../data/blockchain/replayDB';
 
 export type CampaignLifecycleDependencies = {
 	readonly getRuntimeConfig: typeof getRagnarokNetworkConfig;
@@ -87,6 +88,14 @@ export async function processCampaignMatchEnd(
 			now: deps.now,
 		});
 		if (result.status === 'skipped' || result.status === 'conflict') return;
+		if (campaignScript.localRunId) {
+			await markCampaignRunWon({
+				localRunId: campaignScript.localRunId,
+				matchId: ctx.matchId,
+				matchSeed: ctx.matchSeed,
+				turnCount: result.record.turnCount,
+			}).catch(error => debug.warn('[Campaign] Failed to close local campaign run:', error));
+		}
 		await deps.completeMission(result.record.missionId, result.record.difficulty, result.record.turnCount);
 		deps.recordFeedback({
 			campaignId: result.record.campaignId, missionId: result.record.missionId, localRunId: campaignScript.localRunId,

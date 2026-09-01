@@ -671,11 +671,12 @@ export const handleAdapt = (
     active: true,
     options: adaptOptions,
     sourceCardId: cardInstanceId,
-    callback: (selectedAdaptation) => {
+    callback: (selectedAdaptation, suppliedState = newGameState) => {
       // This would be called when player selects an adaptation
       if (selectedAdaptation) {
-        applyAdaptation(newGameState, player, cardInstanceId, selectedAdaptation);
+        return applyAdaptation(suppliedState, player, cardInstanceId, selectedAdaptation);
       }
+      return suppliedState;
     }
   };
   
@@ -1027,12 +1028,13 @@ export const handleKazakusGolemDiscover = (
     sourceCardId: "kazakus", // Marker for Kazakus
     // We'd track the golem abilities chosen so far in a real implementation
     // For now, we'll just log the choice
-    callback: (selectedOption) => {
+    callback: (_selectedOption, suppliedState = newGameState) => {
       // This would be called when player selects an option
-      if (selectedOption) {
+      if (_selectedOption) {
         // In a full implementation, we'd add the selected ability to the golem
         // and proceed to the next discovery phase or create the golem
       }
+      return suppliedState;
     }
   };
   

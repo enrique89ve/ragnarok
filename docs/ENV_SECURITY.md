@@ -171,6 +171,15 @@ reverse proxy that overwrites `X-Forwarded-Host`. Leave it false for direct
 Node/Dokploy exposure; otherwise a client could spoof the forwarded host and
 weaken the Origin check.
 
+Express proxy trust is disabled by default. When Dokploy is behind a known
+reverse proxy, configure exactly one of `RAGNAROK_TRUST_PROXY_HOPS` (a fixed
+hop count, capped at eight) or `RAGNAROK_TRUST_PROXY_CIDRS` (explicit IPv4/IPv6
+proxy networks). Never set either through an untrusted client-controlled value,
+never set both, and never use the permissive `trust proxy=true` form: forwarded
+headers influence rate-limit IP fallback and must not let a client forge its
+identity. Alfa keeps both variables blank unless the deployment topology has
+been verified.
+
 `ENABLE_INDEX_CHECKPOINT_PUBLISHER=true` turns on server-side Hive checkpoint
 broadcasts. The publisher uses `hive-tx` with `RAGNAROK_INDEX_ACCOUNT` and
 `RAGNAROK_INDEX_POSTING_KEY` to write compact `index_checkpoint` custom_json

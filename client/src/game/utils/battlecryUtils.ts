@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from 'uuid';
 import { 
   BattlecryEffect, 
   CardInstance, 
@@ -27,6 +26,7 @@ import {
   getCardKeywords,
   getCardRealm
 } from './cards/cardUtils';
+import { cryptoIdGen } from './seededRng';
 import { transformMinion, silenceMinion } from './transformUtils';
 import { dealDamage } from './effects/damageUtils';
 import { destroyCard } from './zoneUtils';
@@ -41,7 +41,6 @@ import { summonColossalParts } from './mechanics/colossalUtils';
 import executeReturnReturn from '../effects/handlers/battlecry/returnHandler';
 import { checkPetEvolutionTrigger } from './petEvolutionTriggers';
 import { executeCThunBattlecry, executeYoggSaronBattlecry, executeNZothBattlecry, buffCThun } from './oldGodsUtils';
-import { cryptoIdGen } from './seededRng';
 import { cardsRng, getCardsRng, withCardsRng } from './cardsCommandRng';
 
 /**
@@ -778,7 +777,7 @@ function executeBattlecryUnbound(
           if (bf.length >= MAX_BATTLEFIELD_SIZE) break;
           const resummoned: CardInstance = {
             ...JSON.parse(JSON.stringify(dead)),
-            instanceId: uuidv4(),
+            instanceId: cryptoIdGen(),
             canAttack: false,
             isSummoningSick: true,
             currentHealth: (dead.card as any).health || 1,
@@ -1661,7 +1660,7 @@ function executeBattlecryUnbound(
           if (newState.players.player.battlefield.length >= MAX_BATTLEFIELD_SIZE) break;
           const raResurrected: CardInstance = {
             ...JSON.parse(JSON.stringify(dead)),
-            instanceId: uuidv4(),
+            instanceId: cryptoIdGen(),
             canAttack: false,
             isSummoningSick: true,
             currentHealth: (dead.card as MinionCardData).health || 1,
@@ -2655,7 +2654,7 @@ function executeBattlecryUnbound(
           const dead = rbShuffled[i];
           const res: CardInstance = {
             ...JSON.parse(JSON.stringify(dead)),
-            instanceId: uuidv4(),
+            instanceId: cryptoIdGen(),
             canAttack: true,
             isSummoningSick: false,
             currentHealth: ((dead.card as MinionCardData).health || 1) + 1,
@@ -4268,7 +4267,7 @@ function executeCastOpponentSpellBattlecry(state: GameState): GameState {
 
 	const { executeSpell } = require('./spells/spellUtils');
 	const fakeInstance = {
-		instanceId: `cast-opponent-spell-${uuidv4()}`,
+		instanceId: `cast-opponent-spell-${cryptoIdGen()}`,
 		card: spellCard.card,
 		currentHealth: 0,
 		canAttack: false,
@@ -4601,7 +4600,7 @@ function executeEquipWeaponBattlecry(
   // Create and equip the new weapon
   const weaponCardData = weaponCard as WeaponCardData;
   state.players.player.weapon = {
-    instanceId: uuidv4(),
+    instanceId: cryptoIdGen(),
     card: weaponCardData,
     currentHealth: weaponCardData.durability || 1,
     canAttack: true,

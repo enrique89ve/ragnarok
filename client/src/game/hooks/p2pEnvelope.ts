@@ -5,6 +5,7 @@ import type {
 	FrontlineAttackCommand,
 	NorseHeroPowerCommand,
 	PlayCardCommand,
+	SelectDiscoveryOptionCommand,
 	SkipMulliganCommand,
 	ToggleMulliganCardCommand,
 	UseHeroPowerCommand,
@@ -19,6 +20,7 @@ export type WireGameCommand =
 	| ToggleMulliganCardCommand
 	| ConfirmMulliganCommand
 	| SkipMulliganCommand
+	| SelectDiscoveryOptionCommand
 	| FrontlineAttackCommand
 	| NorseHeroPowerCommand
 	| WeaponUpgradeCommand;

@@ -7,6 +7,15 @@ import { debug } from '../config/debugConfig';
 import { triggerAutoSave } from '../stores/saveStateManager';
 import { createCampaignRunDraft, saveCampaignRunDraft } from './campaignResultAdapter';
 import {
+	abandonStartedCampaignRuns,
+	getLocalCampaignSettlementsByAccount,
+	type LocalCampaignSettlementRecord,
+} from '../../data/blockchain/replayDB';
+import { commitProgressAccountId } from '../auth/progressAccount';
+import { getRagnarokNetworkConfig } from '../config/networkConfig';
+import { buildRagnarokRuntimeEvidence } from '@shared/runtimeConfig';
+import { CAMPAIGN_ID } from '@shared/campaign/constants';
+import {
 	createCampaignRewardFeedback,
 	type CampaignRewardFeedback,
 	type CampaignRewardFeedbackInput,
@@ -19,8 +28,41 @@ interface MissionCompletion {
 	bestDifficulty: Difficulty;
 }
 
+type CampaignProgressStatus = 'idle' | 'loading' | 'ready' | 'error';
+
+const DIFFICULTY_ORDER: Record<Difficulty, number> = { normal: 0, heroic: 1, mythic: 2 };
+
+function deriveCampaignCompletions(
+	records: readonly LocalCampaignSettlementRecord[],
+): Record<string, MissionCompletion> {
+	const completions: Record<string, MissionCompletion> = {};
+
+	for (const record of records) {
+		if (record.campaignId !== CAMPAIGN_ID) continue;
+		const existing = completions[record.missionId];
+		const latestDifficulty = !existing || record.timestamp >= existing.completedAt
+			? record.difficulty
+			: existing.difficulty;
+		const existingBestDifficulty = existing?.bestDifficulty ?? existing?.difficulty ?? 'normal';
+		completions[record.missionId] = {
+			difficulty: latestDifficulty,
+			completedAt: Math.max(existing?.completedAt ?? 0, record.timestamp),
+			bestTurns: Math.min(existing?.bestTurns ?? Number.POSITIVE_INFINITY, record.turnCount),
+			bestDifficulty: DIFFICULTY_ORDER[record.difficulty] > DIFFICULTY_ORDER[existingBestDifficulty]
+				? record.difficulty
+				: existingBestDifficulty,
+		};
+	}
+
+	return completions;
+}
+
+let progressHydrationRequest = 0;
+
 interface CampaignState {
 	completedMissions: Record<string, MissionCompletion>;
+	campaignProgressStatus: CampaignProgressStatus;
+	campaignProgressError: string | null;
 	currentMission: string | null;
 	currentRunId: string | null;
 	currentDifficulty: Difficulty;
@@ -34,8 +76,9 @@ interface CampaignState {
 }
 
 interface CampaignActions {
-	startMission: (missionId: string, difficulty: Difficulty) => void;
+	startMission: (missionId: string, difficulty: Difficulty) => Promise<void>;
 	completeMission: (missionId: string, difficulty: Difficulty, turns: number) => void;
+	hydrateLocalProgress: (account: string | null) => Promise<void>;
 	isMissionCompleted: (missionId: string) => boolean;
 	isMissionUnlocked: (missionId: string, prerequisites: string[]) => boolean;
 	getChapterProgress: (chapterId: string, missionIds: string[]) => number;
@@ -53,6 +96,8 @@ export const useCampaignStore = create<CampaignState & CampaignActions>()(
 	persist(
 		(set, get) => ({
 			completedMissions: {},
+			campaignProgressStatus: 'idle',
+			campaignProgressError: null,
 			currentMission: null,
 			currentRunId: null,
 			currentDifficulty: 'normal',
@@ -60,12 +105,11 @@ export const useCampaignStore = create<CampaignState & CampaignActions>()(
 			bossRulesApplied: false,
 			lastRewardFeedback: null,
 
-			startMission: (missionId, difficulty) => {
+			startMission: async (missionId, difficulty) => {
 				const account = getNFTBridge().getUsername();
 				const run = createCampaignRunDraft({ account, missionId, difficulty });
 				if (run) {
-					saveCampaignRunDraft(run)
-						.catch(err => debug.warn('[campaignStore] Failed to record campaign run:', err));
+					await saveCampaignRunDraft(run);
 				}
 				set({
 					currentMission: missionId,
@@ -74,6 +118,49 @@ export const useCampaignStore = create<CampaignState & CampaignActions>()(
 					bossRulesApplied: false,
 					lastRewardFeedback: null,
 				});
+			},
+
+			hydrateLocalProgress: async (account) => {
+				const requestId = ++progressHydrationRequest;
+				set({ campaignProgressStatus: 'loading', campaignProgressError: null });
+				const runtimeConfig = getRagnarokNetworkConfig();
+				const runtimeEvidence = buildRagnarokRuntimeEvidence(runtimeConfig);
+				if (!runtimeEvidence.phasePolicy.localSettlement) {
+					if (requestId === progressHydrationRequest) {
+						set({ campaignProgressStatus: 'ready', campaignProgressError: null });
+					}
+					return;
+				}
+
+				const progressAccount = commitProgressAccountId(account, runtimeConfig.stage);
+				if (!progressAccount) {
+					if (requestId === progressHydrationRequest) {
+						set({
+							campaignProgressStatus: 'error',
+							campaignProgressError: 'A local campaign account could not be resolved.',
+						});
+					}
+					return;
+				}
+
+				try {
+					await abandonStartedCampaignRuns(progressAccount);
+					const settlements = await getLocalCampaignSettlementsByAccount(progressAccount);
+					if (requestId !== progressHydrationRequest) return;
+					set({
+						completedMissions: deriveCampaignCompletions(settlements),
+						campaignProgressStatus: 'ready',
+						campaignProgressError: null,
+					});
+				} catch (error) {
+					debug.warn('[campaignStore] Failed to hydrate local campaign progress:', error);
+					if (requestId === progressHydrationRequest) {
+						set({
+							campaignProgressStatus: 'error',
+							campaignProgressError: 'Local campaign progress could not be loaded.',
+						});
+					}
+				}
 			},
 
 			completeMission: (missionId, difficulty, turns) => {
@@ -155,7 +242,9 @@ export const useCampaignStore = create<CampaignState & CampaignActions>()(
 			name: 'ragnarok-campaign',
 			storage: createJSONStorage(() => accountScopedStorage),
 			partialize: (state) => ({
-				completedMissions: state.completedMissions,
+				completedMissions: buildRagnarokRuntimeEvidence(getRagnarokNetworkConfig()).phasePolicy.localSettlement
+					? {}
+					: state.completedMissions,
 				seenCinematics: state.seenCinematics,
 			}),
 		}

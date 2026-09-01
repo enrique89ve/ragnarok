@@ -25,6 +25,12 @@ BATTLE_START ⇒ A_AUTHORIZED ∧ B_AUTHORIZED ∧ P2P_READY
 P2P ∨ UNKNOWN_STATE ⇒ AI_DISABLED
 ```
 
+For cards commands, transport acceptance is only the first boundary: each
+peer must also receive an `applied` result from its local canonical reducer
+before recording the action or advancing its transcript. A rejected command
+cannot be skipped because sequence numbers are contiguous; the session enters
+integrity quarantine and both browsers stop gameplay.
+
 **Companion specs**:
 - `adr/0008-winner-posted-match-result.md` — ranked settlement (winner posts, replay validates)
 - `adr/0011-server-notarized-poker-turn-clock.md` — P2P Time Notary for the 60s poker window
@@ -143,7 +149,8 @@ hop. For a turn-based card game this latency is negligible.
   each. `isHost=true` belongs to the lexicographically smaller `peerId`, so
   reconnect order cannot flip transport host (seed parity, cards hash frame,
   recovery publisher). This `isHost` is a **transport-level hint**. It does
-  NOT confer cards gameplay authority by itself (OPEN-8: both peers apply).
+  NOT confer cards gameplay authority by itself; both peers apply the canonical
+  command.
 - A peer departure (close or error) sends `__sys.event=close` to the
   survivor. Socket membership is garbage-collected when empty; its constant-size
   checkpoint tombstone remains for 120s and is removed by a global sweep.
@@ -193,7 +200,8 @@ either routed to the opponent or delivered back as referee results:
 - `webrtc_offer_v1` from the `offerer`;
 - `webrtc_answer_v1` from the `answerer`;
 - `ice_candidate_v1`;
-- `transport_ready_v1` and `transport_fallback_v1`;
+- `transport_ready_v1`, `transport_fallback_v1`, and the server-only
+  `transport_committed_v1`;
 - `phase_checkpoint_propose_v1` and `poker_turn_started` are submitted to the
   server referee; their commit/dispute results are never sent over gameplay.
 - `poker_action_time_gate_v1` is submitted to the Time Notary and, when
@@ -214,6 +222,20 @@ existing reconnect/toast path to restore both sockets instead of leaving a
 phase transition waiting forever. Legacy direct rooms without a signed
 transport role keep their relay-compatible referee path.
 No live transport switch is performed after gameplay begins.
+
+`transport_ready_v1` is only a local advertisement; it is not bilateral
+readiness and must not expose gameplay. After both authenticated peers have
+advertised the same kind, the Control WS server emits
+`transport_committed_v1` to both. The WebRTC and relay adapters remain in
+`connecting` until that commitment arrives. If the advertisements race with
+different kinds, the server forces the WebRTC attempt to send a bounded
+fallback before either adapter can become gameplay-connected; the relay may
+then be advertised and committed. A pre-commit fallback is recoverable on the
+same authenticated control session or its exact-ticket replacement. Once
+`transport_committed_v1` is emitted, a transport mismatch or control loss is a
+session failure and follows the existing reconnect/quarantine path.
+Gameplay frames received before the commitment are discarded at the adapter
+boundary and are never retained for later application.
 Likewise, `control_peer_left_v1` means the opponent left the control plane: it
 fails an in-progress WebRTC attempt and fails an already-open signed Quick
 Match transport so the normal reconnect/toast flow restores both channels. A
@@ -254,11 +276,12 @@ relay budget. If WebRTC fails after its budget, the relay receives its full
 recompute policy.
 
 Before the DataChannel is ready, a failed WebRTC attempt sends one
-`transport_fallback_v1` with a bounded reason. The server forwards it only
-while that control member has not sent `transport_ready_v1`; after readiness,
-fallback is ignored. Once the manager selects the relay, a match-scoped
-transport session locks relay for subsequent reconnect attempts, preventing a
-recreated manager from reintroducing WebRTC mid-match.
+`transport_fallback_v1` with a bounded reason. The server forwards that signal
+while the match is pre-commit; after `transport_committed_v1`, fallback is
+ignored because switching transports mid-match is not allowed. Once the
+manager selects the relay, a match-scoped transport session locks relay for
+subsequent reconnect attempts, preventing a recreated manager from
+reintroducing WebRTC mid-match.
 
 **Latency and reconnect policy (P0)**:
 - Gameplay inactivity and transport liveness are separate contracts. A quiet
@@ -392,6 +415,10 @@ Triggered by `useWireSync.ts:166-251` (effect dependent on
    `deckHash`, and `claimsHash`.
 4. On receiving the opponent's `seed_commit`, each peer sends
    `seed_reveal: { salt, hiveUsername }`.
+   The first commitment is immutable for the connection: an identical
+   duplicate may be acknowledged, but a different commitment quarantines the
+   session as `seed_commit_equivocation` before any seed-derived game state is
+   initialized.
 5. On receiving `seed_reveal`, the receiver:
    - Verifies `SHA256(theirSalt) === theirCommitment`. Mismatch → disconnect.
    - Derives `matchSeed = SHA256(sortedSalts.join(''))` where sorting is
@@ -516,18 +543,18 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `cards_deck` | both | both | Phase 2: announce the deck half of the immutable deck+claims snapshot |
 | `deck_verify` | both | both | Phase 2: bind source-aware `protocolVersion: 2` claims to the announced deck; shared-network init waits for identity + IndexedDB + server approval |
 | `init` | host → client | legacy | Phase 2 leftover: ignored after handshake init |
-| `game_command` (envelope) | both | both | Phase 3 cards and Poker auxiliary intents: both peers apply locally |
-| `gameState` | — | — | Rejected as an authority-bearing recovery frame; recover by signed transcript replay or fail closed |
-| `chess_command` (envelope) | both | both (symmetric) | Phase 3 chess: discriminated union of `chess_move` (quiet), `chess_attack` (instant-kill capture), and `chess_combat_initiated` (non-instant capture into poker) — see §5 |
-| `transition_receipt_v1` | receiver → command sender | both (symmetric) | Post-commit chess receipt binding the command intent to the receiver's pre/post chess+cards integrity roots. A rejection or root mismatch quarantines further local chess actions. |
+| `game_command` (envelope) | both | both | Phase 3 cards, Discover choices and Poker auxiliary intents: both peers apply locally |
+| `gameState` | — | — | Rejected as an authority-bearing recovery frame; mismatch stays fail-closed until signed replay is available |
+| `chess_command` (envelope) | both | both (symmetric) | Phase 3 chess: discriminated union of `chess_move` (quiet), `chess_attack` (instant-kill capture), `chess_combat_initiated` (non-instant capture into poker), and `chess_mine_placement` (signed King ability) — see §5 |
+| `transition_receipt_v1` | receiver → command sender | both (symmetric) | Post-commit chess receipt binding the command intent to the receiver's pre/post chess+cards integrity roots. A rejection or root mismatch quarantines the whole P2P session, freezing further gameplay actions. |
 | `p2p_leave` | peer → peer | leaving peer | Explicit lifecycle event; cancellation before engine commitment, technical defeat after commitment |
-| `phase_checkpoint_propose_v1` | peer → Control WS referee | both | Fixed-size proposal for a deterministic phase boundary; legacy direct rooms may submit it through the relay compatibility path. |
+| `phase_checkpoint_propose_v1` | peer → Control WS referee | both | Fixed-size proposal for a deterministic phase boundary; legacy direct rooms may submit it through the relay compatibility path. A rejected transport resolves the client gate immediately as `transport_rejected`; it never advances the phase locally. |
 | `phase_checkpoint_commit_v1` / `phase_checkpoint_dispute_v1` | Control WS referee → peers | server referee only | Commit if roots match. Mismatch retries; freeze only after 3 strikes. The referee never picks a winner. |
 | `poker_turn_started` | peer → Control WS referee | both | Timed-poker turn identity proposal; legacy direct rooms may submit it through the relay compatibility path. Client `durationMs` / `remainingMs` / `sentAtMs` are ignored. |
 | `poker_turn_notary_commit_v1` / `poker_turn_notary_dispute_v1` | Control WS referee → peers | server referee only | Commit if both peers proposed the same `turnId`. The first proposal stamps the start; the deadline is always 60s. Mismatch retries; freeze after 3 strikes. The referee never picks a winner. |
-| `poker_action` / `poker_action_time_gate_v1` | both | both (symmetric) | Phase 3 poker: deterministic local apply + server-gated delivery to the peer; Quick Match sends the control wrapper through Control WS, while legacy direct rooms may use the relay. Required `origin` and `turnId`; compact tuple remains optional. |
+| `poker_action` / `poker_action_time_gate_v1` | both | both (symmetric) | Phase 3 poker: the referee gates delivery and returns `poker_action_time_gate_ack_v1` bound to `matchId`, `turnId`, `decisionId` and `seq`; the sender applies locally only after `allowed=true`. Quick Match sends the control wrapper through Control WS, while legacy direct rooms may use the relay. Required `origin` and `turnId`; compact tuple remains optional. |
 | `poker_hash_check` | host → client | host | Turn-scoped Poker integrity probe; compared only when phase, turn id and action count match locally |
-| `hash_check` | host → client | host | Periodic state-hash sanity check |
+| `hash_check` | host → client | host | Periodic state-hash sanity check; optional sent/received `game_command` sequence stamps make the receiver ignore in-flight or reconnect-stale beacons instead of treating a same-turn action as divergence |
 | `hash_mismatch` | client → host | client | Reports a divergent state hash |
 | `result_propose` | winner → relay/indexer path | winner | **Obsolete as loser handshake.** ADR 0008: winner posts `match_result` to Hive. Alfa never initiates it. |
 | `result_countersign` | — | — | **Obsolete.** Loser does not countersign game_over (ADR 0008). |
@@ -540,7 +567,7 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `session_renewal` | peer→peer | both | **Future ADR 0004 settlement path**; disabled because current matches cannot request a reload Keychain signature |
 | `session_resumed` | peer→peer | both | **Future ADR 0004 settlement path**; not a current testnet release gate |
 | `state_sync_request` | peer→peer | both | Ask the **peer** for missing transcript leaves after reconnect or hard-reload rejoin. The relay only fans the request out. |
-| `action_envelope` | peer→peer | broadcaster | Signed transcript leaf; retained for replay/audit and not an alternative to the signed gameplay envelope |
+| `action_envelope` | peer→peer | broadcaster | Signed transcript leaf; retained for replay/audit and not an alternative to the signed gameplay envelope. Exact retransmissions are idempotent; any fork, gap, bad signature or foreign match quarantines the session. The receiver holds the next local cards command behind all remote leaves already applied but not yet verified (bounded queue, 8s timeout). |
 
 Envelope schemas live next to their handlers:
 - Cards: `client/src/game/hooks/p2pEnvelope.ts` (`GameCommandEnvelope`)
@@ -567,7 +594,7 @@ The deliberate omission of `p2p-host-authoritative` /
 matches are symmetric by design**. Both peers compute and apply each phase
 identically; the wire carries intent, not delegation.
 
-Cards apply is symmetric (OPEN-8). Poker already applies `poker_action`
+Cards apply is symmetric. Poker already applies `poker_action`
 symmetrically. Cards hashes use the canonical player frame
 (`myCanonicalSide === 'player'`), independent of the transport host hint;
 forward `gameState` dumps are off.
@@ -601,14 +628,53 @@ Implementation:
   shared deck handshake only after the snapshot gate (`cards_deck` + bound
   `deck_verify` + verification approval in shared-network).
 - Cards-side command RNG is `commandRng()` / `cardsRng()` from
-  `${matchSeed}:cards`. `cryptoRng` is the SP fallback when `matchSeed`
-  is null.
+  `${matchSeed}:cards`. The command scope also intercepts legacy direct
+  `cryptoRng()` and `cryptoIdGen()` calls, so random target picks and
+  materialized instances share the same stream. CSPRNG remains the SP fallback
+  when `matchSeed` is null.
+- Mulligan confirmation/skip also enters that canonical command scope before
+  replacing cards. A local P2P confirm therefore cannot bypass the seeded
+  shuffle/id generator while the remote confirm uses it; replacement draws are
+  consumed in canonical seat order (p1 then p2), so opposite viewer
+  perspectives produce the same hands, deck order and instance ids.
+- Discover choices use the signed `select_discovery_option` command. The wire
+  carries the selected card for the UI contract, but each peer resolves only
+  the matching id from its own deterministic option list; materialized hand or
+  battlefield instances use the command-scoped id stream. A forged or stale
+  option is rejected and quarantines the contiguous command stream instead of
+  letting one browser inject a card or leave the other waiting in the modal.
+- Every card instance materialized while applying a canonical P2P command
+  (battlecries, spells, deathrattles, combo effects, weapon/token creation and
+  combat paths such as Overkill/frontline attack) uses a command/state-scoped
+  deterministic id stream. The state component is serialized after normalizing
+  to the canonical player frame, so a joiner viewing the same command from the
+  opposite side cannot derive different ids. Legacy handlers are wrapped by the same synchronous
+  scope, so they cannot mint peer-visible `instanceId`s from browser CSPRNGs;
+  the local and remote reducers therefore serialize the same post-battle state
+  even when the sockets or source IP change.
 - `game_command` includes the repeatable Poker auxiliary intents
   `play_card`, `frontline_attack`, `norse_hero_power` and `weapon_upgrade`.
   Both peers validate and apply them locally; an auxiliary command does not
   advance the Poker `turnId`, `activePlayerId` or absolute deadline. The
   Poker actor and deadline are read from the Poker combat state, not from the
   legacy cards-only `gameState.currentTurn` field.
+- `end_turn` is a cross-mode canonical command. The local and remote cards
+  paths both apply the same viewer-relative Poker `BRACE` (fold) when the
+  current betting window is eligible; a rejected remote fold quarantines the
+  P2P session instead of allowing the two battle layers to drift.
+- During `reconnecting`/`grace_period`, P2P context wrappers remain installed
+  and fail closed: cards actions are neither applied locally nor recorded in
+  the legacy transcript until a signed envelope is accepted. The transcript
+  entry is appended after the local commit, so a signer or transport failure
+  cannot create a phantom move that the peer never received. Single-player
+  routes retain their local fallback behavior.
+- A remote cards `game_command` is applied before its asynchronously signed
+  `action_envelope` is guaranteed to arrive. The receiver records the expected
+  signed-transcript sequence at the apply boundary and blocks its next local
+  cards command until every pending remote envelope for that turn verifies.
+  This counted barrier survives same-tab reconnect/replay, fails closed after
+  8 seconds while connected, and is reset on a terminal disconnect or new
+  session. It prevents honest VPN/NAT latency from creating transcript forks.
 
 ### Chess Phase — Symmetric (canonical)
 
@@ -632,15 +698,20 @@ session key before running the chess reducer.
 - `chess_combat_initiated`: non-instant capture. Receiver mirrors the
   same attack animation with `isInstantKill=false`; after animation,
   `pendingCombat` boots poker on both peers.
+- `chess_mine_placement`: optional King Divine Command. The signed payload
+  carries canonical `owner`, `kingId`, center `position`, optional `direction`,
+  `mineId`, and resolved `affectedTiles`. Both peers validate the turn, King
+  roster, ownership, overlap, and deterministic shape before applying. Random
+  Void Rift tiles are derived from `matchSeed + mineId`, so no mutable RNG
+  stream is consumed while a wallet signature is pending.
 
-**Sender invariant** (`useChessBoardInteractions.ts:184-238`):
-**every wire envelope represents a mutation that the sender already
-applied locally**. The sender calls `movePiece` first; only if the slice
-returns a collision (attack) or null with no rejection (quiet) does the
-wire emit fire. This guarantees that if the local validation refused to
-apply (illegal move, animation in progress, missing selection), no
-envelope is sent and the remote never sees a mutation that the sender
-itself didn't perform.
+**Sender invariant** (`useChessBoardInteractions.ts:260-365`):
+**every wire envelope represents a mutation that the sender has authorized
+and is about to apply locally**. The sender captures the pre-state hashes,
+signs the command, re-validates the current selection/turn, and only then
+calls `movePiece` or the attack reducer. If signing, authorization, or local
+validation fails (illegal move, animation in progress, missing selection),
+no mutation and no envelope is committed.
 
 **Capture routing rule** (single source of truth:
 `shared/p2p-wire/chess.ts` `isChessAttackInstantKill`): an attack is
@@ -649,20 +720,16 @@ defender is a pawn (no deck), or the defender is a king (touching the
 commander wins). Kings do not capture. Hero vs hero (N/B/R/Q) uses
 `chess_combat_initiated`. Sender and receiver share the predicate.
 
-**King ability (mine placement) blocked in P2P**: each peer's mines
-live in their local store and don't cross the wire today. If kept
-enabled, an opponent piece landing on a mine triggers stamina penalty
-on the placer's side but not on the opponent's, drifting stats over
-time and surfacing as `attacker_position_mismatch` later. Blocked at
-`useKingChessAbility.enterPlacementMode` with a toast until
-`chess_mine_placement` envelope ships (separate workstream — §10
-OPEN-9).
+**King ability visibility**: mines remain hidden from the opponent, matching
+the single-player presentation. The state is nevertheless mirrored in both
+stores; trigger/STA/mana resolution therefore runs from the same mine id and
+tile set on both peers.
 
 **Receiver pipeline** (`useWireSync.ts` case `chess_command`): common
 validations (schema, matchId, contiguous sender-local seq, commandId dedup, rate
-limit, attacker lookup, position match, ownership boundary, currentTurn)
-run once; then a branch on `command.type` dispatches to the move or
-attack apply. The reducer returns an explicit `applied | rejected` union;
+limit, ownership boundary, currentTurn) run once; movement/capture branches
+also verify attacker/defender roster positions, while the mine branch verifies
+King identity, deterministic affected tiles, and overlap. The reducer returns an explicit `applied | rejected` union;
 only an applied result advances seq/transcript and emits
 `transition_receipt_v1`. Reject codes are verbose snake_case (e.g.
 `non_instant_capture_not_supported_p2p`,
@@ -683,11 +750,13 @@ roster dump diagnostic).
 ### Chess transition-integrity receipt v1
 
 The sender computes a pre-root from the hashes already carried by the chess
-envelope, applies locally, computes its expected post-root, and permits only
-one outstanding transition. The receiver independently validates and applies
-the command, then emits a strict receipt containing `intentHash`, `prevRoot`
-and `nextRoot`. `intentHash` binds match, sender-local seq, UUID commandId,
-pre-root and the canonical command payload.
+envelope, signs the command, and only then applies the local canonical
+mutation. It computes the expected post-root and permits only one outstanding
+transition before publishing the envelope. If signing or local application
+fails, no gameplay mutation is committed. The receiver independently validates
+and applies the command, then emits a strict receipt containing `intentHash`,
+`prevRoot` and `nextRoot`. `intentHash` binds match, sender-local seq, UUID
+commandId, pre-root and the canonical command payload.
 
 The receiver caches the bounded receipt by `commandId`. A duplicate intent
 returns the original receipt without reapplying the reducer. After a same-tab
@@ -735,7 +804,10 @@ Implementation:
   the same physical attacker/defender cards even when viewer slots are
   swapped.
 - `poker_action` is applied locally by the sender and by the receiver in
-  `useWireSync`. The message keeps legacy object fields plus a compact
+  `useWireSync`, but the sender's reducer runs only after the signed envelope
+  is accepted for transport. A pending signature blocks a second local
+  decision; timeout decisions follow the same actor-first ordering. The message
+  keeps legacy object fields plus a compact
   tuple from `shared/p2p-wire/combat.ts`, and carries a required `decisionId`
   for receiver-side duplicate rejection. It also carries required
   `origin: 'player' | 'timeout'`; timeout is semantic gameplay input, not a
@@ -775,7 +847,22 @@ Implementation:
   `committed`; a pending notary or a previous `turnId` is dropped.
 - `poker_action_time_gate_v1` carries the same validated action fields through
   Control WS. The referee applies the notary gate before delivering it to the
-  opponent; the receiver unwraps it into the normal `poker_action` envelope.
+  opponent; the sender waits for the server-only
+  `poker_action_time_gate_ack_v1` before applying its local reducer. The
+	acknowledgement is bound to the exact `matchId`, `turnId`, `decisionId` and
+	`seq`, so a late or stale response cannot authorize a different action after
+	reconnect. If the sender loses only that acknowledgement, it retains the
+	signed proposal through the short reconnect window and re-emits the same
+	`decisionId` once the replacement transport opens; the remote decision ledger
+	makes the retry idempotent. An unanswered gate after reconnect quarantines the
+	session. Legacy relay rooms use the same acknowledgement through a reserved
+	`__sys` event.
+- After an allowed acknowledgement, both reducers evaluate the accepted
+  player action at `deadlineAtMs - 1` and a timeout at `deadlineAtMs`. This
+  canonical timestamp is derived from the notarized deadline rather than
+  `Date.now()`, so VPN latency, clock skew, and a delayed tab cannot make one
+  peer reject an action that the referee already accepted. The cross-mode
+  cards `end_turn` bridge follows the same wall-clock-free rule.
 - `origin: 'timeout'` is accepted by the Control WS referee only at or after the notarized
   deadline, and by the local engine only when the action equals the shared
   derivation: no pending wager → `DEFEND`, pending wager → `BRACE`. Timeout
@@ -802,9 +889,19 @@ Implementation:
   respective maxima. Timeout `DEFEND` has an exact stamina delta of `0`;
   manual `DEFEND` has at most `+1` after the max-stamina clamp.
 - P2P poker freezes local input and phase advancement while the transport is
-  in reconnect/grace states, but the absolute deadline remains live. A
-  deterministic timeout may resolve locally; reconnect re-announces the
-  current turn when needed.
+  in reconnect/grace states, but the absolute deadline remains live. Only the
+  browser owning the timed turn may author the deterministic timeout; it signs
+  and sends that decision after transport recovery, retrying a rejected send
+  without marking the turn resolved. The other browser waits for that signed
+  action. Reconnect re-announces the current turn when needed.
+- The local-AI all-in convenience timer and the resolution escape timer are
+  disabled for peer matches. An all-in phase advances from the signed action
+  that closes the betting round; a missing resolution stays fail-closed rather
+  than allowing a presentation timer to write a peer-only Poker snapshot.
+- Campaign boss-phase mutations are disabled whenever the active match is a
+  peer match, even if a stale `currentMission` remains in the campaign store.
+  This prevents local-only HP/armor writes from entering an otherwise signed
+  multiplayer battle.
 - The host emits `poker_hash_check` from the same canonical Poker projection
   used by phase checkpoints. The receiver compares only the same turn identity
   and action count, then records a Poker integrity mismatch without treating
@@ -879,11 +976,14 @@ tree at match end. The root is embedded in the on-chain `match_result`.
 **Lifecycle**:
 - `startNewTranscript()` is called once per session, in the seed-exchange
   effect (`useWireSync.ts:241`).
-- `recordMove(action, payload, playerId)` appends a record. Call sites:
+- `recordMove(action, payload, playerId, canonicalOrder?)` appends a record. In
+  P2P, the fourth argument is mandatory in practice: it comes from the shared
+  `battleLifecycle.lastCanonicalOrder` after the signed command is accepted.
+  Call sites:
   - Cards send: `useWireSync.ts` wrapped actions (`wrappedPlayCard`,
     `wrappedAttack`, `wrappedEndTurn`, `wrappedUseHeroPower`).
-  - Cards receive (host only): the four cases under `case 'game_command'`.
-  - Poker receive (host only): under `case 'poker_action'`.
+  - Cards receive (both peers): the cases under `case 'game_command'`.
+  - Poker receive (both peers): under `case 'poker_action'`.
   - Chess send: `chessWireSender.ts`, after `send(envelope)` succeeds.
   - Chess receive: under `case 'chess_command'`, after `executeMove`.
 - `clearTranscript()` runs in the seed-exchange effect's cleanup and on
@@ -893,16 +993,24 @@ tree at match end. The root is embedded in the on-chain `match_result`.
 **`GameMove` shape** (`client/src/data/blockchain/signedMove.ts`):
 ```ts
 {
-  moveNumber: number;        // monotonic, scoped to the singleton
-  action: string;             // 'playCard' | 'attack' | 'endTurn' | 'useHeroPower' | 'poker_action' | 'chess_move'
+  moveNumber: number;        // diagnostic append index; normalized in the hash
+  canonicalOrder?: number;   // contiguous P2P lifecycle order (1..N)
+  action: string;             // ... | 'chess_move' | 'chess_attack' | 'chess_combat_initiated' | 'chess_mine_placement'
   payload: Record<string, unknown>;
   playerId: string;           // Hive username, or 'guest:<peerId8>' sentinel
-  timestamp: number;          // wall-clock ms
+  timestamp: number;          // diagnostic wall-clock ms, never hashed
 }
 ```
 
-**Merkle algorithm** (`transcriptBuilder.ts:125-161`):
-- Each leaf = `SHA256(canonicalStringify({ ...move, previousHash }))`.
+**Merkle algorithm** (`transcriptBuilder.ts`):
+- A P2P transcript must contain only canonical orders. Moves are sorted by
+  `canonicalOrder` and the sequence must be exactly `1..N`; mixed or gapped
+  transcripts fail closed. Non-P2P transcripts retain insertion-order legacy
+  behavior.
+- Each P2P leaf =
+  `SHA256(canonicalStringify({ canonicalOrder, action, payload, playerId, previousHash }))`.
+  `timestamp` and the local append counter are excluded so VPN latency, clock
+  skew, and socket arrival timing cannot change an otherwise equal root.
 - Hash chain: `previousHash` of leaf N = leaf hash of N-1 ("" for N=0).
 - Tree built bottom-up by pairing siblings (left|right concatenated and
   hashed). Odd-out nodes hash with themselves.
@@ -966,8 +1074,8 @@ the `tc` CID; the chain only carries enough to verify integrity.
 | WASM-engine version mismatch | `wasm_hash_check` envelope | Disconnect immediately (both peers know) |
 | Build-hash mismatch | `version_check` envelope | Toast warning, continue (not a slash) |
 | Seed commitment mismatch | `seed_reveal` validation | Disconnect; possible cheating |
-| State hash mismatch (cards) | `hash_check` from host | Toast + `slash_evidence_deferred` record |
-| Poker state hash mismatch | `poker_hash_check` with matching turn identity | Integrity event + diagnostic path; no relay-side winner selection |
+| State hash mismatch (cards) | `hash_check` from host | Session quarantine + `slash_evidence_deferred` record; all local/remote gameplay actions are dropped |
+| Poker state hash mismatch | `poker_hash_check` with matching turn identity | Session quarantine + integrity event; no relay-side winner selection |
 | Chess transition root/rejection mismatch | `transition_receipt_v1` | Quarantine local chess actions; retain session evidence; no automatic settlement |
 | Mid-match disconnect | WS close handler | No auto-broadcast; future evidence flow required |
 | Duplicate match_result on-chain | Found via `findExistingMatchResult` | `slash_evidence_deferred` record |
@@ -989,6 +1097,9 @@ should NOT depend on without first re-grilling and updating this spec.
 
 ### OPEN-1 — Transcript root comparison can false-reject until ordering is deterministic
 
+**Status**: implementation closed for the current P2P gameplay contract; fresh
+two-browser validation remains an operational gate.
+
 **Where**: `useWireSync.ts:1484-1542` — the opponent now compares
 `result.transcriptRoot` against its own local replay root before signing.
 
@@ -997,37 +1108,40 @@ turns OPEN-2 into a live availability risk. If honest peers record the same
 actions in a different order, the opponent rejects with
 `transcript_root_mismatch` and the ranked result is not broadcast.
 
-**Decision needed**: make transcript ordering deterministic, then collapse
-OPEN-1 into the normal Phase 4 contract. Until then, a mismatch is fail-closed
-and keeps the local action log for dispute export.
+The transcript now orders every P2P Chess, Cards, Poker, and mulligan action by
+the shared lifecycle counter and hashes a normalized projection. Root mismatch
+still fails closed and keeps the local action log for dispute export.
 
-**Dependency**: OPEN-1 cannot be safely closed while OPEN-2 is open.
-Verifying transcript roots between peers requires deterministic ordering;
-without it, honest peers would falsely reject each other due to socket
-scheduling races. The two must be designed together.
+**Dependency**: OPEN-1 is closed in code because OPEN-2 now has a concrete
+total-order contract. It is not a substitute for the required human smoke.
 
 ### OPEN-2 — Transcript order is not deterministic between peers
 
-**Where**: `recordMove` is called inline at send time on the local peer
-and at receive time on the remote peer. Local-and-remote interleaving is
-race-dependent — peer A may record `[A1, B1]` while peer B records
-`[A1, B1]` OR `[B1, A1]` depending on socket scheduling.
+**Status**: implementation closed; fresh two-browser validation remains open.
 
-**Risk**: each peer's transcript can be internally consistent while still
-hashing to a different root because local and remote actions are interleaved
-by arrival time. This still blocks closing §10 OPEN-1 because root comparison
-would otherwise false-reject honest peers under socket scheduling races.
+**Where**: `client/src/game/p2p/canonicalActionOrder.ts` assigns the next
+contiguous order only after the signed gameplay command is accepted and the
+local/remote reducer reports `applied`. Both peers execute the same accepted
+wire sequence, so each records the same `(actionId, actorId, canonicalOrder)`.
+The signed cards transcript barrier remains in place for envelope ordering.
 
-**Decision needed**: order transcript by `(timestamp, commandId)` before
-hashing? Use a deterministic counter from the wire envelope (the
-`envelope.seq`)? Drop the local transcript entirely on the client and
-only host's counts?
+**Risk**: a violated lifecycle or missing canonical order now quarantines the
+session and prevents root construction rather than silently accepting an
+arrival-order transcript. The remaining risk is operational (browser,
+Keychain, reconnect, and real VPN paths), not an implicit ordering policy.
+
+**Decision**: the cross-mode order is the P2P competition lifecycle counter,
+keyed by the signed wire command/decision id. Timestamp and arrival order are
+diagnostic only. Alfa still keeps the legacy result path non-authoritative and
+fails closed on root mismatch.
 
 ### OPEN-3 — Chess non-instant captures + state recovery
 
-**Status**: P0 implementation in progress. Non-instant captures now emit
-`chess_combat_initiated` and no longer stop at the UI toast. Poker bootstrap
-uses deterministic participant ids and seeded deck order.
+**Status**: P0 implementation closed; the Alfa closed-testnet policy is
+explicitly **freeze + diagnostic** on a residual piece-not-found divergence.
+Human/runtime validation remains open.
+Non-instant captures emit `chess_combat_initiated` and no longer stop at the UI
+toast. Poker bootstrap uses deterministic participant ids and seeded deck order.
 
 Additionally: when chess_command is rejected mid-match with
 `attacker_not_found` / `defender_not_found` (post C-Chess.8 these are
@@ -1036,13 +1150,14 @@ The roster dump diagnostic helps debug from logs but the match
 effectively freezes.
 
 **Remaining P0 validation**: two-browser smoke for capture-combat-poker
-resolution, reconnect during poker, and state-sync recovery after mismatch.
+resolution, reconnect during poker, and the expected freeze/diagnostic behavior
+after a deliberately injected mismatch.
 
-**Decision needed (state recovery)**: implement snapshot request
-between peers when divergence is detected, OR keep current
-"freeze + console diagnostic" semantics for beta and rely on the fact
-that the typical divergence sources (AI gate, mines, captures) are now
-each individually blocked or guarded.
+**Decision**: retain "freeze + diagnostic" for Alfa. A peer-authored snapshot
+would create a new authority boundary and is not safe to enable before signed
+replay/recovery is available. The relay never selects or installs a board
+state. This is an explicit availability trade-off for the closed testnet, not
+an implicit recovery promise.
 
 ### OPEN-4 — Poker symmetric hardening
 
@@ -1067,7 +1182,8 @@ checkpoint retries, no HTTP kick of the opponent, no peer-authored disconnect
 frame. The server does not store or judge the board.
 
 **Not this ticket**: ranked `action-log` replay (ADR 0007 / OPEN ranked
-settlement). Cards no longer take *forward* host `gameState`; recovery-on-mismatch remains.
+settlement). Cards no longer take *forward* host `gameState`; mismatch recovery
+remains fail-closed until signed replay is implemented.
 
 ### OPEN-6 — `result_propose` matchType field source-of-truth
 
@@ -1081,21 +1197,19 @@ remain only for compatibility with older clients.
 
 **Status**: closed. Both peers send/apply `game_command`. `cards_deck`
 handshake feeds `initGameFromHandshake` on both sides. Forward `gameState`
-dumps are off. `hash_mismatch` still pushes a host snapshot. Default
-process flags are `symmetric`; hashing uses the canonical player side, not the
-transport host hint.
+dumps are off and unsolicited snapshots are rejected. `hash_mismatch` records
+evidence and keeps the match fail-closed; it does not install a host snapshot.
+Default process flags are `symmetric`; hashing uses the canonical player side,
+not the transport host hint.
 
 ### OPEN-9 — Chess king ability (mine placement) sync
 
-**Where**: `useKingChessAbility.enterPlacementMode` blocks mine
-placement in P2P with a toast. The ability is fully functional in SP.
-
-**Decision needed**: design `chess_mine_placement` envelope (likely a
-new variant added to `ChessCommandSchema`), receiver pipeline that
-mirrors the placement on both peers, and visibility rules (does the
-opponent see the mine? Same as SP today which is hidden until trigger?).
-Same shape as C-Chess.8 — small, scoped, can land as one commit when
-the design is settled.
+**Status**: implementation closed. `chess_mine_placement` is a signed
+`ChessCommand` variant. The sender resolves a seed-scoped tile list before
+signing, applies only after the signature succeeds, and the receiver verifies
+the canonical side, turn, King id, shape, overlap, and deterministic random
+selection before mirroring the mine. Fresh two-browser validation remains an
+operational gate alongside the rest of the testnet readiness checklist.
 
 ---
 

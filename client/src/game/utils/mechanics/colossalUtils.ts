@@ -6,12 +6,12 @@
  */
 
 import { CardInstance, GameState, CardData } from '../../types';
-import { v4 as uuidv4 } from 'uuid';
 import { findCardInstance, findCardById } from '../cards/cardUtils';
 import { isMinion, getHealth, getAttack } from '../cards/typeGuards';
 import { trackQuestProgress } from '../quests/questProgress';
 import { debug } from '../../config/debugConfig';
 import { MAX_BATTLEFIELD_SIZE } from '../../constants/gameConstants';
+import { cryptoIdGen } from '../seededRng';
 
 /**
  * Check if a card is a colossal minion
@@ -135,7 +135,7 @@ export function summonColossalParts(
     
     // Create an instance for the part
     const partInstance: CardInstance = {
-      instanceId: uuidv4(),
+      instanceId: cryptoIdGen(),
       card: partData,
       isPlayed: true,
       currentHealth: getHealth(partData),
@@ -153,7 +153,7 @@ export function summonColossalParts(
     trackQuestProgress(playerType, 'summon_minion', partInstance.card);
     
     newState.gameLog.push({
-      id: uuidv4(),
+      id: cryptoIdGen(),
       type: 'summon',
       turn: newState.turnNumber,
       timestamp: Date.now(),
@@ -210,7 +210,7 @@ export function handleColossalMinionDeath(
       newState.players[playerType].battlefield[parentIndex].colossalParts = filteredParts;
       
       newState.gameLog.push({
-        id: uuidv4(),
+        id: cryptoIdGen(),
         type: 'death',
         turn: newState.turnNumber,
         timestamp: Date.now(),

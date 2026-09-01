@@ -139,6 +139,15 @@ async function settleMicrotasks(): Promise<void> {
 	await Promise.resolve();
 }
 
+function commitWebRTCTransport(socket: FakeControlSocket): void {
+	socket.triggerMessage({
+		type: 'transport_committed_v1',
+		protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+		matchId: ticket.roomId,
+		kind: 'webrtc',
+	});
+}
+
 afterEach(() => {
 	vi.useRealTimers();
 	vi.unstubAllGlobals();
@@ -182,6 +191,8 @@ describe('WebRTC transport boundary', () => {
 			iceServers: [{ urls: 'stun:testnetdev.ragnaroknft.quest:3478' }],
 			connectTimeoutMs: 1_000,
 		});
+		const messages: string[] = [];
+		transport.onMessage(message => messages.push(message.type));
 		const pending = transport.connect();
 		socket.triggerOpen();
 		socket.triggerMessage({
@@ -194,7 +205,15 @@ describe('WebRTC transport boundary', () => {
 		});
 		await settleMicrotasks();
 		connection.dataChannel?.open();
+		await settleMicrotasks();
+		expect(transport.state).toBe('connecting');
+		connection.dataChannel?.onmessage?.({ data: JSON.stringify({ type: 'ping' }) } as MessageEvent<unknown>);
+		expect(messages).toEqual([]);
+		expect(() => transport.send({ type: 'ping' })).toThrow('not committed');
+		commitWebRTCTransport(socket);
 		await pending;
+		connection.dataChannel?.onmessage?.({ data: JSON.stringify({ type: 'ping' }) } as MessageEvent<unknown>);
+		expect(messages).toEqual(['ping']);
 		await vi.advanceTimersByTimeAsync(2_000);
 		connection.getStats.mockResolvedValue(new Map([
 			['pair-1', {
@@ -258,10 +277,56 @@ describe('WebRTC transport boundary', () => {
 		});
 		await settleMicrotasks();
 		connection.dataChannel?.open();
+		commitWebRTCTransport(socket);
 		await pending;
 
 		expect(socket.sent.map(payload => JSON.parse(payload))).toContainEqual(expect.objectContaining({ type: 'transport_ready_v1' }));
 		expect(observedStates).toEqual(['connecting', 'connected']);
+	});
+
+	it('forwards Poker time-gate acknowledgements through the control listener', async () => {
+		const socket = createFakeControlSocket();
+		const connection = createFakePeerConnection();
+		const WebSocketConstructor = vi.fn(function WebSocketMock() { return socket; });
+		Object.assign(WebSocketConstructor, { OPEN: 1 });
+		vi.stubGlobal('WebSocket', WebSocketConstructor);
+		vi.stubGlobal('RTCPeerConnection', vi.fn(function RTCPeerConnectionMock() { return connection; }));
+
+		const transport = createWebRTCTransport({
+			controlUrl: 'wss://game.example/ws/control',
+			roomId: ticket.roomId,
+			peerId: ticket.peerId,
+			matchTicket: ticket,
+		});
+		const controlMessages: string[] = [];
+		transport.onControlMessage(message => controlMessages.push(message.type));
+		const pending = transport.connect();
+		socket.triggerOpen();
+		socket.triggerMessage({
+			type: 'control_open_v1',
+			protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+			matchId: ticket.roomId,
+			peerId: ticket.peerId,
+			opponentPeerId: 'peer-b',
+			role: 'offerer',
+		});
+		await settleMicrotasks();
+		connection.dataChannel?.open();
+		commitWebRTCTransport(socket);
+		await pending;
+
+		socket.triggerMessage({
+			type: 'poker_action_time_gate_ack_v1',
+			protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+			matchId: ticket.roomId,
+			turnId: 'combat-1:faith:peer-a:0',
+			decisionId: 'decision-1',
+			seq: 0,
+			allowed: true,
+		});
+
+		expect(controlMessages).toEqual(['poker_action_time_gate_ack_v1']);
+		transport.close();
 	});
 
 	it('notifies the opponent before failing a pre-connect timeout', async () => {
@@ -368,6 +433,7 @@ describe('WebRTC transport boundary', () => {
 		});
 		await settleMicrotasks();
 		connection.dataChannel?.open();
+		commitWebRTCTransport(socket);
 		await pending;
 
 		socket.triggerMessage({
@@ -414,6 +480,7 @@ describe('WebRTC transport boundary', () => {
 		});
 		await settleMicrotasks();
 		connection.dataChannel?.open();
+		commitWebRTCTransport(socket);
 		await pending;
 
 		socket.triggerMessage({
@@ -466,6 +533,23 @@ describe('WebRTC transport boundary', () => {
 		expect(() => transport.send({ type: 'ping' })).toThrow('WebRTC DataChannel is not open');
 	});
 
+	it('surfaces a failed control send to gameplay callers', () => {
+		const transport = createWebRTCTransport({
+			controlUrl: 'wss://game.example/ws/control',
+			roomId: ticket.roomId,
+			peerId: ticket.peerId,
+			matchTicket: ticket,
+		});
+
+		expect(() => transport.sendControlMessage({
+			type: 'transport_ready_v1',
+			protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+			matchId: ticket.roomId,
+			kind: 'webrtc',
+		})).toThrow('Control WebSocket send failed');
+		expect(transport.state).toBe('failed');
+	});
+
 	it('rethrows a DataChannel send failure after marking the game transport failed', async () => {
 		const socket = createFakeControlSocket();
 		const connection = createFakePeerConnection();
@@ -492,6 +576,7 @@ describe('WebRTC transport boundary', () => {
 		});
 		await settleMicrotasks();
 		connection.dataChannel?.open();
+		commitWebRTCTransport(socket);
 		await pending;
 		connection.dataChannel?.send.mockImplementation(() => { throw new Error('send exploded'); });
 

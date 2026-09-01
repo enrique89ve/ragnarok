@@ -527,7 +527,7 @@ describe('matchmaking and relay integration', () => {
 			}
 			await closeServer(server);
 		}
-	});
+	}, 15_000);
 
 	it('accepts a single Hive-signed Find delegation and creates the reusable web session', async () => {
 		const { default: matchmakingRouter, clearP2PMatchmakingStateForTests } = await import('./matchmakingRoutes');

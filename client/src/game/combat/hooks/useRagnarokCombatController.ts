@@ -50,6 +50,12 @@ import { getPokerActionPresentation } from '../decision/pokerActionPresentation'
 import { emitBettingAction } from '../vfx/events';
 import { MAX_MANA } from '../../constants/gameConstants';
 import { emitHeroPowerUsed } from '../../actions/gameActions';
+import { computePokerCombatStateHash } from '../../p2p/phaseBoundaryRoot';
+import { commitNextP2PCanonicalAction } from '../../p2p/canonicalActionOrder';
+import { recordMove } from '../../../data/blockchain/transcriptBuilder';
+import { localPlayerId } from '../../../data/blockchain/playerIdentity';
+import { getNFTBridge } from '../../nft';
+import { getCanonicalPokerActionNowMs } from '../../../../../shared/p2p-wire/pokerTurnClock';
 import {
 	HERO_DEATH_PRESENTATION_BUDGET_MS,
 	SHOWDOWN_BACKUP_MS,
@@ -357,25 +363,29 @@ export function useRagnarokCombatController(
     const targetType = target?.isHero === true ? 'hero' : targetId ? 'minion' : undefined;
     const actionId = crypto.randomUUID();
 
-    p2pActions.dispatchGameCommand({
-      type: GAME_COMMAND_TYPES.norseHeroPower,
-      norseHeroId: norseHero.id,
-      targetId,
-      targetType,
-      actionId,
-    });
-
-    const targetName = target?.isHero === true
-      ? (target.isOpponent === true ? ' on enemy hero' : ' on your hero')
-      : target?.card?.name ? ` on ${target.card.name}` : '';
-    fireAnnouncement('spell', `${norseHero.name} uses ${heroPower.name}${targetName}!`, { duration: 2000 });
-    emitHeroPowerUsed({
-      player: 'player',
-      heroPowerName: typeof heroPower?.name === 'string' ? heroPower.name : 'Hero Power',
-      cost: typeof heroPower?.cost === 'number' ? heroPower.cost : 0,
-    });
-    setHeroPowerUsedThisTurn(true);
-    setHeroPowerTargeting(null);
+		p2pActions.dispatchGameCommand({
+			type: GAME_COMMAND_TYPES.norseHeroPower,
+			norseHeroId: norseHero.id,
+			targetId,
+			targetType,
+			actionId,
+		}, () => {
+			// The P2P wrapper invokes this only after the signed command has been
+			// accepted for local application. Keeping the presentation here avoids
+			// claiming an ability was used while a VPN reconnect or signer failure
+			// held the command.
+			const targetName = target?.isHero === true
+				? (target.isOpponent === true ? ' on enemy hero' : ' on your hero')
+				: target?.card?.name ? ` on ${target.card.name}` : '';
+			fireAnnouncement('spell', `${norseHero.name} uses ${heroPower.name}${targetName}!`, { duration: 2000 });
+			emitHeroPowerUsed({
+				player: 'player',
+				heroPowerName: typeof heroPower?.name === 'string' ? heroPower.name : 'Hero Power',
+				cost: typeof heroPower?.cost === 'number' ? heroPower.cost : 0,
+			});
+			setHeroPowerUsedThisTurn(true);
+			setHeroPowerTargeting(null);
+		});
   }, [combatState, isPlayerTurn, p2pActions, setHeroPowerTargeting]);
   
   const handleHeroPower = useCallback(() => {
@@ -519,13 +529,16 @@ export function useRagnarokCombatController(
       return;
     }
 
-    p2pActions.dispatchGameCommand({
-      type: GAME_COMMAND_TYPES.weaponUpgrade,
-      norseHeroId,
-      actionId: crypto.randomUUID(),
-    });
-    fireAnnouncement('spell', `${norseHero.name} equips ${norseHero.weaponUpgrade.name}!`, { duration: 2500 });
-    setWeaponUpgraded(true);
+		p2pActions.dispatchGameCommand({
+			type: GAME_COMMAND_TYPES.weaponUpgrade,
+			norseHeroId,
+			actionId: crypto.randomUUID(),
+		}, () => {
+			// Do not lock the upgrade button or announce success until the
+			// canonical P2P command has crossed the signing/apply boundary.
+			fireAnnouncement('spell', `${norseHero.name} equips ${norseHero.weaponUpgrade.name}!`, { duration: 2500 });
+			setWeaponUpgraded(true);
+		});
 
     weaponUpgradeProcessingRef.current = false;
   }, [combatState, isPlayerTurn, weaponUpgraded, p2pActions, playerMana]);
@@ -705,9 +718,13 @@ export function useRagnarokCombatController(
   
   const grantPokerHandRewards = useGameStore(state => state.grantPokerHandRewards);
   
-  const handleAction = useCallback((action: CombatAction, hp?: number) => {
+  const handleAction = useCallback(async (action: CombatAction, hp?: number) => {
     if (combatState && !isPlayerTurn) return;
-    if (isP2PActionLocked) {
+    // Read the transport store again at the action boundary. React's render
+    // value can lag a socket close/open by one tick; a stale "connected=false"
+    // must never make a peer battle fall through to the local reducer.
+    const liveP2PConnected = usePeerStore.getState().connectionState === 'connected';
+    if (isP2PActionLocked || (isP2PCombat && !liveP2PConnected)) {
       fireAnnouncement('warning', 'P2P reconnecting', {
         subtitle: 'Actions resume when the peer connection recovers.',
         duration: 1800,
@@ -718,11 +735,22 @@ export function useRagnarokCombatController(
     if (!freshState || freshState.player.isReady) {
       return;
     }
+    // In a P2P match the authenticated referee, not either browser's wall
+    // clock, decides whether the signed action arrived before the deadline.
+    // Use the canonical pre-deadline instant for the local preflight; a late
+    // action is still rejected by the server gate before the reducer commits.
+    const actionNowMs = isP2PCombat
+      ? getCanonicalPokerActionNowMs({
+          origin: 'player',
+          deadlineAtMs: freshState.turnDeadlineAtMs,
+        })
+      : undefined;
     const validation = validatePokerActionIntent({
       combatState: freshState,
       playerId: freshState.player.playerId,
       action,
       hpCommitment: hp,
+      nowMs: actionNowMs,
     });
     if (!validation.ok) {
       debug.combat('[CombatController] poker action rejected before send', {
@@ -734,6 +762,45 @@ export function useRagnarokCombatController(
     if (isP2PCombat && !freshState.turnId) {
       debug.combat('[CombatController] poker action rejected before send: missing turnId');
       return;
+    }
+
+    // In P2P multiplayer, both peers apply the same deterministic poker action.
+    // The P2P protocol layer owns the wire shape; this controller only commits
+    // the player's decision against the shared poker rules. Signing must
+    // resolve before the local reducer runs; otherwise a failed signer leaves
+    // a local-only poker result that the peer can never reproduce.
+    const connectedP2P = isP2PCombat && liveP2PConnected;
+    const previousStateHash = connectedP2P ? computePokerCombatStateHash(freshState) : null;
+    const decisionId = connectedP2P
+      ? `${freshState.turnId}:${freshState.player.playerId}:${Date.now()}`
+      : null;
+    if (connectedP2P) {
+      let sent = false;
+      try {
+        sent = await p2pActions.sendPokerAction({
+          playerId: freshState.player.playerId,
+          action,
+          origin: 'player',
+          hpCommitment: hp,
+          turnId: freshState.turnId,
+          prevStateHash: previousStateHash ?? undefined,
+          decisionId: decisionId ?? undefined,
+        });
+      } catch (error) {
+        debug.warn('[CombatController] poker action send rejected before local commit', error);
+      }
+      if (!sent) return;
+      const latestState = getPokerCombatAdapterState().combatState;
+      if (
+        !latestState
+        || latestState.turnId !== freshState.turnId
+        || !previousStateHash
+        || computePokerCombatStateHash(latestState) !== previousStateHash
+        || usePeerStore.getState().p2pIntegrityError !== null
+      ) {
+        debug.warn('[CombatController] poker action became stale while signing; local reducer not applied');
+        return;
+      }
     }
 
     const feedback = getPokerActionPresentation({
@@ -749,22 +816,38 @@ export function useRagnarokCombatController(
         subtitle: feedback.subtitle,
       });
     }
-
-    // In P2P multiplayer, both peers apply the same deterministic poker action.
-    // The P2P protocol layer owns the wire shape; this controller only commits
-    // the player's decision against the shared poker rules.
-    const connectedP2P = isP2PCombat && p2pTransportConnected;
-    if (connectedP2P) {
-      p2pActions.sendPokerAction({
-        playerId: freshState.player.playerId,
-        action,
-				origin: 'player',
-        hpCommitment: hp,
-        turnId: freshState.turnId,
-      });
-    }
-    performAction(freshState.player.playerId, action, hp);
+    const committedActionNowMs = connectedP2P
+      ? getCanonicalPokerActionNowMs({
+          origin: 'player',
+          deadlineAtMs: getPokerCombatAdapterState().combatState?.turnDeadlineAtMs ?? null,
+        })
+      : undefined;
+    performAction(freshState.player.playerId, action, hp, 'player', committedActionNowMs);
     maybeCloseBettingRound();
+	if (connectedP2P) {
+		const actorId = usePeerStore.getState().myPeerId ?? '';
+		const canonicalOrder = decisionId
+			? commitNextP2PCanonicalAction({ actionId: decisionId, actorId })
+			: null;
+		if (canonicalOrder === null) {
+			usePeerStore.getState().setP2pIntegrityError('Game integrity diverged. Actions are paused until the match is left. (local_poker_canonical_order_unavailable)');
+			return;
+		}
+		const recorded = recordMove('poker_action', {
+			action,
+			origin: 'player',
+			hpCommitment: hp,
+			turnId: freshState.turnId,
+			decisionId,
+		}, localPlayerId({
+			hiveUsername: getNFTBridge().getUsername(),
+			myPeerId: actorId,
+		}), canonicalOrder);
+		if (!recorded) {
+			usePeerStore.getState().setP2pIntegrityError('Game integrity diverged. Actions are paused until the match is left. (local_poker_transcript_unavailable)');
+			return;
+		}
+	}
 
     // Trigger poker drama VFX for the betting action (post-commit)
     emitBettingAction({ phase: freshState.phase, action, side: 'player' });
@@ -871,6 +954,11 @@ export function useRagnarokCombatController(
   // RESOLUTION phase escape timer — safety net for rare freezes where showdown never triggers
   const resolutionEscapeRef = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
+    // A peer match must never recover a missing presentation by mutating the
+    // Poker reducer locally. The signed action + canonical resolution path is
+    // the only authority; if it is unavailable, stay frozen and let the
+    // integrity/reconnect surface explain the state instead of diverging.
+    if (isP2PCombat) return;
     const phase = combatState?.phase;
     if (phase === CombatPhase.RESOLUTION && !showdownCelebration && !heroDeathState && isActive) {
       if (resolutionEscapeRef.current) clearTimeout(resolutionEscapeRef.current);
@@ -900,7 +988,7 @@ export function useRagnarokCombatController(
         resolutionEscapeRef.current = null;
       }
     };
-  }, [combatState?.phase, showdownCelebration, heroDeathState, isActive, advanceTurnPhase, grantPokerHandRewards]);
+  }, [combatState?.phase, showdownCelebration, heroDeathState, isActive, isP2PCombat, advanceTurnPhase, grantPokerHandRewards]);
 
   const heroDeathFinishedRef = useRef(false);
   useEffect(() => {
@@ -951,13 +1039,22 @@ export function useRagnarokCombatController(
       return;
     }
 
-    if (!combatState.player.isReady) {
-      performAction(combatState.player.playerId, CombatAction.DEFEND);
-    }
-    
-    endTurn();
-    
-  }, [combatState, endTurn, isP2PActionLocked, isPlayerTurn, performAction]);
+    // Poker actions must use the same canonical intent boundary as the
+    // betting controls.  In particular, never mutate the local reducer first
+    // and then try to notify the peer: a failed signer/transport would leave a
+    // battle state that the other browser can never reproduce.  The keyboard
+    // and animation callbacks reach this shortcut, so route it through
+    // handleAction as well.
+    const freshState = getPokerCombatAdapterState().combatState;
+    if (!freshState || freshState.player.isReady) return;
+    const permissions = getActionPermissions(freshState, true);
+    if (!permissions) return;
+    const shortcutAction = permissions.hasBetToCall
+      ? CombatAction.BRACE
+      : CombatAction.DEFEND;
+    void handleAction(shortcutAction);
+
+  }, [combatState, handleAction, isP2PActionLocked, isPlayerTurn]);
 
   return {
     combatState,

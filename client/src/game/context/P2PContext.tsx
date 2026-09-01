@@ -2,6 +2,7 @@ import React, { useRef, ReactNode } from 'react';
 import { dispatchGameCommand } from '../actions/gameCommandDispatcher';
 import type { GameCommand, HeroPowerTargetType } from '../core/commands';
 import { useWireSync } from '../match/modes/p2p/wireSync/useWireSync';
+import { useMatchStore } from '../match/store';
 import { useGameStore } from '../stores/gameStore';
 import { P2PContext, type P2PActions } from './p2pContextValue';
 
@@ -17,7 +18,9 @@ export const P2PProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 	const gsToggleMulliganCard = useGameStore(s => s.toggleMulliganCard);
 	const gsConfirmMulligan = useGameStore(s => s.confirmMulligan);
 	const gsSkipMulligan = useGameStore(s => s.skipMulligan);
+	const gsSelectDiscoveryOption = useGameStore(s => s.selectDiscoveryOption);
 	const gameState = useGameStore(s => s.gameState);
+	const isP2PMatch = useMatchStore(s => s.activeMatch?.opponent.kind === 'peer');
 
 	// Single ref object — mutated in place so the context value never changes identity
 	const ref = useRef<P2PActions>({
@@ -28,8 +31,9 @@ export const P2PProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 		frontlineAttack: gsFrontlineAttack,
 		performNorseHeroPower: gsPerformNorseHeroPower,
 		weaponUpgrade: gsWeaponUpgrade,
+		selectDiscoveryOption: () => undefined,
 		dispatchGameCommand: () => undefined,
-		sendPokerAction: () => undefined,
+		sendPokerAction: async () => false,
 		sendPokerTurnStarted: () => false,
 		requestPhaseCheckpoint: async () => ({ status: 'unavailable', reason: 'not_connected' }),
 		downloadSessionLog: () => undefined,
@@ -38,32 +42,88 @@ export const P2PProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 		isHost: false,
 	});
 
-	const activePlayCard = p2pSync.isConnected ? p2pSync.playCard : gsPlayCard;
-	const activeAttackWithCard = p2pSync.isConnected
-		? (attackerId: string, defenderId?: string) => p2pSync.attackWithCard(attackerId, defenderId ?? 'opponent-hero')
-		: gsAttackWithCard;
-	const activeEndTurn = p2pSync.isConnected ? p2pSync.endTurn : gsEndTurn;
-	const activePerformHeroPower = p2pSync.isConnected
-		? (targetId?: string, _targetType?: HeroPowerTargetType) => p2pSync.performHeroPower(targetId)
-		: gsPerformHeroPower;
-	const activeFrontlineAttack = p2pSync.isConnected ? p2pSync.frontlineAttack : gsFrontlineAttack;
-	const activePerformNorseHeroPower = p2pSync.isConnected
-		? p2pSync.performNorseHeroPower
-		: gsPerformNorseHeroPower;
-	const activeWeaponUpgrade = p2pSync.isConnected ? p2pSync.weaponUpgrade : gsWeaponUpgrade;
-	const activeToggleMulliganCard = p2pSync.isConnected ? p2pSync.toggleMulliganCard : gsToggleMulliganCard;
-	const activeConfirmMulligan = p2pSync.isConnected ? p2pSync.confirmMulligan : gsConfirmMulligan;
-	const activeSkipMulligan = p2pSync.isConnected ? p2pSync.skipMulligan : gsSkipMulligan;
+	// Keep the P2P wrappers active for the whole match lifetime, including a
+	// reconnect/grace window. Falling back to raw Zustand actions while the
+	// socket is down would mutate cards locally without a signed envelope and
+	// make the two browsers irreconcilable after a VPN/IP change.
+	const useP2PHandlers = isP2PMatch;
+	const activePlayCard = useP2PHandlers
+		? p2pSync.playCard
+		: (cardId: string, targetId?: string, targetType?: 'minion' | 'hero', insertionIndex?: number, payWithBlood?: boolean, onCommitted?: () => void) => {
+			gsPlayCard(cardId, targetId, targetType, insertionIndex, payWithBlood);
+			onCommitted?.();
+		};
+	const activeAttackWithCard = useP2PHandlers
+		? (attackerId: string, defenderId?: string, onCommitted?: () => void) => p2pSync.attackWithCard(attackerId, defenderId ?? 'opponent-hero', onCommitted)
+		: (attackerId: string, defenderId?: string, onCommitted?: () => void) => {
+			gsAttackWithCard(attackerId, defenderId);
+			onCommitted?.();
+		};
+	const activeEndTurn = useP2PHandlers
+		? p2pSync.endTurn
+		: (onCommitted?: () => void) => {
+			gsEndTurn();
+			onCommitted?.();
+		};
+	const activePerformHeroPower = useP2PHandlers
+		? (targetId?: string, targetType?: HeroPowerTargetType, onCommitted?: () => void) => p2pSync.performHeroPower(targetId, targetType, onCommitted)
+		: (targetId?: string, targetType?: HeroPowerTargetType, onCommitted?: () => void) => {
+			gsPerformHeroPower(targetId, targetType);
+			onCommitted?.();
+		};
+	const activeFrontlineAttack = useP2PHandlers
+		? (mode: 'minion' | 'hero', actionId?: string, onCommitted?: () => void) => p2pSync.frontlineAttack(mode, actionId, onCommitted)
+		: (mode: 'minion' | 'hero', actionId?: string, onCommitted?: () => void) => {
+			gsFrontlineAttack(mode, actionId);
+			onCommitted?.();
+		};
+	const activePerformNorseHeroPower = useP2PHandlers
+		? (norseHeroId: string, targetId?: string, targetType?: 'minion' | 'hero', actionId?: string, onCommitted?: () => void) => p2pSync.performNorseHeroPower(norseHeroId, targetId, targetType, actionId, onCommitted)
+		: (norseHeroId: string, targetId?: string, targetType?: 'minion' | 'hero', actionId?: string, onCommitted?: () => void) => {
+			gsPerformNorseHeroPower(norseHeroId, targetId, targetType, actionId);
+			onCommitted?.();
+		};
+	const activeWeaponUpgrade = useP2PHandlers
+		? (norseHeroId: string, actionId?: string, onCommitted?: () => void) => p2pSync.weaponUpgrade(norseHeroId, actionId, onCommitted)
+		: (norseHeroId: string, actionId?: string, onCommitted?: () => void) => {
+			gsWeaponUpgrade(norseHeroId, actionId);
+			onCommitted?.();
+		};
+	const activeToggleMulliganCard = useP2PHandlers
+		? p2pSync.toggleMulliganCard
+		: (cardId: string, onCommitted?: () => void) => {
+			gsToggleMulliganCard(cardId);
+			onCommitted?.();
+		};
+	const activeConfirmMulligan = useP2PHandlers
+		? p2pSync.confirmMulligan
+		: (onCommitted?: () => void) => {
+			gsConfirmMulligan();
+			onCommitted?.();
+		};
+	const activeSkipMulligan = useP2PHandlers
+		? p2pSync.skipMulligan
+		: (onCommitted?: () => void) => {
+			gsSkipMulligan();
+			onCommitted?.();
+		};
+	const activeSelectDiscoveryOption = useP2PHandlers
+		? p2pSync.selectDiscoveryOption
+		: (card: Parameters<typeof gsSelectDiscoveryOption>[0], onCommitted?: () => void) => {
+			const result = gsSelectDiscoveryOption(card);
+			if (result.status === 'applied') onCommitted?.();
+		};
 
 	// Mutate ref fields — zero allocations, zero new object identity
 	ref.current.playCard = activePlayCard;
 	ref.current.attackWithCard = activeAttackWithCard;
 	ref.current.endTurn = activeEndTurn;
-	ref.current.performHeroPower = (targetId?: string) => activePerformHeroPower(targetId);
+	ref.current.performHeroPower = (targetId?: string, targetType?: HeroPowerTargetType, onCommitted?: () => void) => activePerformHeroPower(targetId, targetType, onCommitted);
 	ref.current.frontlineAttack = activeFrontlineAttack;
 	ref.current.performNorseHeroPower = activePerformNorseHeroPower;
 	ref.current.weaponUpgrade = activeWeaponUpgrade;
-	ref.current.dispatchGameCommand = (command: GameCommand) => {
+	ref.current.selectDiscoveryOption = activeSelectDiscoveryOption;
+	ref.current.dispatchGameCommand = (command: GameCommand, onCommitted?: () => void) => {
 		dispatchGameCommand(command, {
 			playCard: activePlayCard,
 			attackWithCard: activeAttackWithCard,
@@ -75,8 +135,8 @@ export const P2PProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 			toggleMulliganCard: activeToggleMulliganCard,
 			confirmMulligan: activeConfirmMulligan,
 			skipMulligan: activeSkipMulligan,
-			selectDiscoveryOption: useGameStore.getState().selectDiscoveryOption,
-		});
+			selectDiscoveryOption: activeSelectDiscoveryOption,
+		}, onCommitted);
 	};
 	ref.current.sendPokerAction = p2pSync.sendPokerAction;
 	ref.current.sendPokerTurnStarted = p2pSync.sendPokerTurnStarted;

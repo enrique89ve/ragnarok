@@ -12,6 +12,8 @@
 
 export interface GameMove {
 	moveNumber: number;
+	/** Deterministic cross-mode order assigned after P2P lifecycle acceptance. */
+	canonicalOrder?: number;
 	action: string;
 	payload: Record<string, unknown>;
 	playerId: string;

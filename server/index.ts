@@ -1,10 +1,10 @@
 import { config as loadDotenv } from 'dotenv';
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
 import { registerRoutes } from "./routes";
 import { serveStatic, log } from "./static";
 import { getStunService } from './network/stun';
+import { createRateLimiter, resolveTrustProxySetting } from './services/httpRateLimitPolicy';
 
 function resolveCliMode(): string {
   const modeIndex = process.argv.indexOf('--mode');
@@ -20,6 +20,8 @@ if (envMode !== 'development' && envMode !== 'production') {
 
 const app = express();
 const isDev = process.env.NODE_ENV !== 'production';
+const trustProxySetting = resolveTrustProxySetting();
+app.set('trust proxy', trustProxySetting);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -106,7 +108,7 @@ app.use(helmet({
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: false }));
 
-const apiLimiter = rateLimit({
+const apiLimiter = createRateLimiter({
   windowMs: 60_000,
   limit: 120,
   standardHeaders: 'draft-7',
@@ -115,7 +117,7 @@ const apiLimiter = rateLimit({
 });
 app.use('/api', apiLimiter);
 
-const adminBroadcastLimiter = rateLimit({
+const adminBroadcastLimiter = createRateLimiter({
   windowMs: 60_000,
   limit: isDev ? 20 : 5,
   standardHeaders: 'draft-7',
@@ -125,7 +127,7 @@ const adminBroadcastLimiter = rateLimit({
 app.use('/api/admin/broadcast', adminBroadcastLimiter);
 app.use('/api/admin/multisig', adminBroadcastLimiter);
 
-const adminSessionLimiter = rateLimit({
+const adminSessionLimiter = createRateLimiter({
   windowMs: 60_000,
   limit: isDev ? 30 : 8,
   standardHeaders: 'draft-7',
@@ -135,7 +137,7 @@ const adminSessionLimiter = rateLimit({
 app.use('/api/admin/session', adminSessionLimiter);
 
 // Status and health checks should be frequent but not abused.
-const statusLimiter = rateLimit({
+const statusLimiter = createRateLimiter({
   windowMs: 60_000,
   limit: isDev ? 120 : 60,
   standardHeaders: 'draft-7',
@@ -147,7 +149,7 @@ app.use('/api/chain/status', statusLimiter);
 
 // Chain reads are public, but some routes can trigger a bounded Hive scan when
 // the account is unknown. Keep those below normal UI retry/refresh rates.
-const chainOnDemandSyncLimiter = rateLimit({
+const chainOnDemandSyncLimiter = createRateLimiter({
   windowMs: 60_000,
   limit: isDev ? 90 : 24,
   standardHeaders: 'draft-7',
@@ -161,7 +163,7 @@ app.post('/api/chain/verify-deck', chainOnDemandSyncLimiter);
 app.post('/api/chain/register', chainOnDemandSyncLimiter);
 
 // ELO lookup is used during P2P flow and only registers unknown accounts.
-const chainLookupLimiter = rateLimit({
+const chainLookupLimiter = createRateLimiter({
   windowMs: 60_000,
   limit: isDev ? 180 : 60,
   standardHeaders: 'draft-7',
@@ -173,7 +175,7 @@ app.get('/api/explorer/users/:username', chainLookupLimiter);
 
 // RUNE reads are in-memory, but state/ledger views scan or sort replay-derived
 // data. Wallet/dashboard refresh should stay comfortably below this.
-const runeReadLimiter = rateLimit({
+const runeReadLimiter = createRateLimiter({
   windowMs: 60_000,
   limit: isDev ? 180 : 60,
   standardHeaders: 'draft-7',
@@ -198,7 +200,7 @@ app.get('/api/chain/rune/balances', runeReadLimiter);
 //   (>500 req/min would trip easily).
 // - Dev 120/min: smoke testing involves browser refresh + reconnect loops
 //   that legitimately exceed 30/min. `isDev` already declared at module scope.
-const sensitiveLimiter = rateLimit({
+const sensitiveLimiter = createRateLimiter({
   windowMs: 60_000,
   limit: isDev ? 120 : 30,
   standardHeaders: 'draft-7',
@@ -210,7 +212,7 @@ app.use('/api/matchmaking/leave', sensitiveLimiter);
 app.use('/api/tournaments/:id/register', sensitiveLimiter);
 app.use('/api/tournaments/:id/result', sensitiveLimiter);
 
-const packOpenLimiter = rateLimit({
+const packOpenLimiter = createRateLimiter({
   windowMs: 60_000,
   limit: 10,
   standardHeaders: 'draft-7',
@@ -219,7 +221,7 @@ const packOpenLimiter = rateLimit({
 });
 app.use('/api/packs/open', packOpenLimiter);
 
-const challengeLimiter = rateLimit({
+const challengeLimiter = createRateLimiter({
   windowMs: 60_000,
   limit: 12,
   standardHeaders: 'draft-7',

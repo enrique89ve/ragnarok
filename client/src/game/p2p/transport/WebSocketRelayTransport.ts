@@ -17,6 +17,7 @@ import type {
 import { createP2PControlChannel, type P2PControlChannel } from './P2PControlChannel';
 import {
 	P2P_CONTROL_PROTOCOL_VERSION,
+	parseP2PControlServerMessage,
 	type P2PControlClientMessage,
 	type P2PControlServerMessage,
 } from '@shared/p2p-wire/control';
@@ -55,11 +56,15 @@ export function createWebSocketRelayTransport(
 	let connectPromise: Promise<void> | null = null;
 	let relayReady = false;
 	let controlReady = control === null;
+	// Relay gameplay is not exposed until the authenticated control plane has
+	// committed the same transport for both peers. Legacy/direct rooms have no
+	// control plane and retain their existing relay-only readiness semantics.
+	let transportCommitted = control === null;
 	let transportReadySent = false;
 	let cancelRelayConnect: (() => void) | null = null;
 
 	const sendTransportReady = (): void => {
-		if (!control || transportReadySent) return;
+		if (!control || transportReadySent || !relayReady || !controlReady) return;
 		control.send({
 			type: 'transport_ready_v1',
 			protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
@@ -70,7 +75,8 @@ export function createWebSocketRelayTransport(
 	};
 
 	const maybeSetConnected = (): void => {
-		if (!relayReady || !controlReady || state !== 'connecting') return;
+		if (state !== 'connecting') return;
+		if (!relayReady || !controlReady) return;
 		try {
 			sendTransportReady();
 		} catch (error) {
@@ -80,6 +86,7 @@ export function createWebSocketRelayTransport(
 			relay.close();
 			return;
 		}
+		if (control && !transportCommitted) return;
 		setState('connected');
 	};
 
@@ -109,7 +116,31 @@ export function createWebSocketRelayTransport(
 	relay.on('error', () => {
 		if (state !== 'closed') setState('failed');
 	});
-	control?.onMessage(emitControlMessage);
+	// Relay-only compatibility rooms receive server referee acknowledgements
+	// through a reserved `__sys` frame. Route those through the same typed
+	// control listener as an authenticated Control WS, never through the
+	// untrusted gameplay-data parser.
+	relay.on('control', (value: unknown) => {
+		const message = parseP2PControlServerMessage(value);
+		if (message) emitControlMessage(message);
+	});
+	control?.onMessage(message => {
+		if (message.type === 'transport_committed_v1') {
+			if (message.matchId !== options.roomId || message.kind !== 'websocket-relay') {
+				debug.error('[WebSocketRelayTransport] transport commitment mismatch');
+				setState('failed');
+				cancelRelayConnect?.();
+				cancelRelayConnect = null;
+				control.close();
+				relay.close();
+				return;
+			}
+			transportCommitted = true;
+			maybeSetConnected();
+			return;
+		}
+		emitControlMessage(message);
+	});
 	control?.onStateChange(next => {
 		controlReady = next === 'connected';
 		if (next === 'degraded') {
@@ -134,6 +165,17 @@ export function createWebSocketRelayTransport(
 		if (state === 'closed') return Promise.reject(new Error('WebSocket relay is closed'));
 
 		setState('connecting');
+		const connectedState = new Promise<void>((resolve, reject) => {
+			const remove = onStateChange(next => {
+				if (next === 'connected') {
+					remove();
+					resolve();
+				} else if (next === 'failed' || next === 'closed') {
+					remove();
+					reject(new Error(`WebSocket relay ${next} before connecting`));
+				}
+			});
+		});
 		const relayConnect = new Promise<void>((resolve, reject) => {
 			let settled = false;
 			let cancel: (() => void) | null = null;
@@ -172,7 +214,7 @@ export function createWebSocketRelayTransport(
 			relay.connect();
 		});
 		const controlConnect = control?.connect() ?? Promise.resolve();
-		connectPromise = Promise.all([relayConnect, controlConnect])
+		connectPromise = Promise.all([relayConnect, controlConnect, connectedState])
 			.then(() => undefined)
 			.catch(error => {
 				cancelRelayConnect?.();
@@ -189,7 +231,17 @@ export function createWebSocketRelayTransport(
 	const onMessage = (callback: TransportMessageListener): (() => void) => {
 		const listener: TransportListener = (value: unknown): void => {
 			const message = parseWireMessage(value);
-			if (message) callback(message);
+			if (!message) return;
+			// The relay socket can open before the authenticated Control WS has
+			// received bilateral `transport_committed_v1`. Never queue gameplay
+			// from that window: TransportManager retains early frames until its
+			// listener attaches, which would otherwise make a pre-commit frame look
+			// valid after the transport becomes connected.
+			if (control && !transportCommitted) {
+				debug.warn('[WebSocketRelayTransport] dropped gameplay frame before transport commitment', { type: message.type });
+				return;
+			}
+			callback(message);
 		};
 		relay.on('data', listener);
 		return () => relay.off('data', listener);
@@ -211,6 +263,10 @@ export function createWebSocketRelayTransport(
 		},
 		onMessage,
 		onStateChange,
+		onControlMessage: (listener: (message: P2PControlServerMessage) => void) => {
+			controlMessageListeners.add(listener);
+			return () => controlMessageListeners.delete(listener);
+		},
 		close: (): void => {
 			if (state === 'closed') return;
 			setState('closed');

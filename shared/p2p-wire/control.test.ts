@@ -61,6 +61,27 @@ describe('P2P control wire contract', () => {
 			turnId: 'combat-1:pre_flop:player:0',
 			decisionId: 'decision-1',
 		})).toMatchObject({ type: 'poker_action_time_gate_v1' });
+		expect(parseP2PControlServerMessage({
+			type: 'poker_action_time_gate_ack_v1',
+			protocolVersion: 1,
+			matchId: 'match-1',
+			turnId: 'combat-1:pre_flop:player:0',
+			decisionId: 'decision-1',
+			seq: 0,
+			allowed: true,
+		})).toMatchObject({ type: 'poker_action_time_gate_ack_v1', allowed: true });
+		expect(parseP2PControlServerMessage({
+			type: 'transport_committed_v1',
+			protocolVersion: 1,
+			matchId: 'match-1',
+			kind: 'websocket-relay',
+		})).toMatchObject({ type: 'transport_committed_v1', kind: 'websocket-relay' });
+		expect(parseP2PControlClientMessage({
+			type: 'transport_committed_v1',
+			protocolVersion: 1,
+			matchId: 'match-1',
+			kind: 'websocket-relay',
+		})).toBeNull();
 	});
 
 	it('rejects unknown fields, wrong versions, invalid roles, and oversized SDP', () => {

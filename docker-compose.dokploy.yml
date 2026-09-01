@@ -14,6 +14,7 @@
 #   WITNESS_HIVE_ACCOUNT
 #   WITNESS_HIVE_POSTING_KEY
 #   P2P_RELAY_ALLOWED_ORIGINS
+#   RAGNAROK_TRUST_PROXY_HOPS (or RAGNAROK_TRUST_PROXY_CIDRS, never both)
 
 services:
   app:
@@ -31,6 +32,10 @@ services:
       WITNESS_HIVE_ACCOUNT: ${WITNESS_HIVE_ACCOUNT:-}
       WITNESS_HIVE_POSTING_KEY: ${WITNESS_HIVE_POSTING_KEY:-}
       P2P_RELAY_ALLOWED_ORIGINS: ${P2P_RELAY_ALLOWED_ORIGINS:-}
+      # Leave both blank for direct Dokploy exposure. Set exactly one only
+      # when the reverse proxy is known to overwrite forwarded headers.
+      RAGNAROK_TRUST_PROXY_HOPS: ${RAGNAROK_TRUST_PROXY_HOPS:-}
+      RAGNAROK_TRUST_PROXY_CIDRS: ${RAGNAROK_TRUST_PROXY_CIDRS:-}
       P2P_WEBRTC_ENABLED: ${P2P_WEBRTC_ENABLED:-false}
       P2P_WS_FALLBACK_ENABLED: ${P2P_WS_FALLBACK_ENABLED:-true}
       P2P_WEBRTC_NORMAL_MS: ${P2P_WEBRTC_NORMAL_MS:-8000}
@@ -67,6 +72,8 @@ services:
       - dokploy-network
     volumes:
       - ragnarok-data:/app/data
+    # Relay rooms, referee state, and active-match registries are process-local.
+    # Keep Alfa on one app instance until shared state + sticky routing exist.
 
 volumes:
   ragnarok-data:

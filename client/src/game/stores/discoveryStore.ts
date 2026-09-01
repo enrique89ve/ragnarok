@@ -13,7 +13,7 @@ export const useDiscoveryStore = create<DiscoveryStore>()(() => ({
 		debug.log(`[DiscoveryStore] Selecting discovery option: ${card?.name || 'Skip'}`);
 
 		if (!gameState.discovery.callback) return null;
-		const newState = gameState.discovery.callback(card);
+		const newState = gameState.discovery.callback(card, gameState);
 
 		if (newState) {
 			newState.discovery = {

@@ -142,6 +142,21 @@ describe('resolveAIAttackEvent', () => {
     expect(appliedAttackIds.has(event.id)).toBe(true);
   });
 
+  it('fails closed when a stale legacy event is observed in a peer match', () => {
+    const event = createEvent();
+    const { deps, appliedAttackIds, applyDamageToGameState } = createDeps({
+      isPeerMatch: () => true,
+    });
+
+    const result = resolveAIAttackEvent(event, deps);
+
+    expect(result).toEqual({ status: 'skipped', reason: 'peer_match' });
+    expect(deps.emitImpactPhase).not.toHaveBeenCalled();
+    expect(applyDamageToGameState).not.toHaveBeenCalled();
+    expect(deps.commitGameState).not.toHaveBeenCalled();
+    expect(appliedAttackIds.has(event.id)).toBe(true);
+  });
+
   it('is idempotent when a fallback path repeats the same attack event', () => {
     const event = createEvent();
     const { deps, applyDamageToGameState } = createDeps();

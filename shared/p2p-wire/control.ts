@@ -14,6 +14,7 @@ import {
 	PokerTurnClockProposalSchema,
 	PokerTurnNotaryCommitSchema,
 	PokerTurnNotaryDisputeSchema,
+	PokerActionTimeGateAckSchema,
 } from './pokerTimeNotary';
 
 export const P2P_CONTROL_WS_PROTOCOL = 'ragnarok-p2p-control-v1';
@@ -82,6 +83,17 @@ const TransportFallbackSchema = z.object({
 	reason: z.enum(P2P_TRANSPORT_FALLBACK_REASONS),
 }).strict();
 
+// A single `transport_ready_v1` is only a local advertisement.  Gameplay may
+// open after both peers have selected the same transport and the control plane
+// has emitted this bilateral commitment.  Keeping this as a server-only
+// envelope prevents either peer from forging a commitment for the other.
+const TransportCommittedSchema = z.object({
+	type: z.literal('transport_committed_v1'),
+	protocolVersion: z.literal(P2P_CONTROL_PROTOCOL_VERSION),
+	matchId: MatchIdSchema,
+	kind: TransportKindSchema,
+}).strict();
+
 const PokerActionControlSchema = z.object({
 	type: z.literal('poker_action_time_gate_v1'),
 	protocolVersion: z.literal(P2P_CONTROL_PROTOCOL_VERSION),
@@ -147,11 +159,13 @@ export const P2PControlServerMessageSchema = z.discriminatedUnion('type', [
 	IceCandidateSchemaEnvelope,
 	TransportReadySchema,
 	TransportFallbackSchema,
+	TransportCommittedSchema,
 	PokerActionControlSchema,
 	PhaseCheckpointCommitSchema,
 	PhaseCheckpointDisputeSchema,
 	PokerTurnNotaryCommitSchema,
 	PokerTurnNotaryDisputeSchema,
+	PokerActionTimeGateAckSchema,
 ]);
 
 export type P2PControlServerMessage = z.infer<typeof P2PControlServerMessageSchema>;

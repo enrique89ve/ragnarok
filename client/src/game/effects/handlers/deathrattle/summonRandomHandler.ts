@@ -10,7 +10,7 @@ import { GameContext } from '../../../GameContext';
 import { CardData, CardInstance, DeathrattleEffect } from '../../../types';
 import { EffectResult } from '../../../types/EffectTypes';
 import { getCardsByPredicate, getAllCards } from '../../../data/cardManagement/cardRegistry';
-import { v4 as uuidv4 } from 'uuid';
+import { cryptoIdGen } from '../../../utils/seededRng';
 import { MAX_BATTLEFIELD_SIZE } from '../../../constants/gameConstants';
 import { cardsRng } from '../../../utils/cardsCommandRng';
 
@@ -70,7 +70,7 @@ export default function executeSummonRandomSummonRandom(
       const selectedCard = eligibleMinions[randomIndex];
       
       const newMinion: CardInstance = {
-        instanceId: uuidv4(),
+        instanceId: cryptoIdGen(),
         card: { ...selectedCard },
         currentHealth: 'health' in selectedCard ? (selectedCard.health ?? 0) : 0,
         canAttack: false,

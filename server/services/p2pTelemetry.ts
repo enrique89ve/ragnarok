@@ -8,6 +8,7 @@ export type P2PRelayErrorReason =
 	| 'malformed_envelope'
 	| 'reserved_type'
 	| 'unknown_type'
+	| 'opponent_unavailable'
 	| 'send_failed'
 	| 'socket_error'
 	| 'keepalive_timeout'

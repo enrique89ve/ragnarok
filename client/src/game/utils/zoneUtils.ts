@@ -14,7 +14,7 @@ import { removeKeyword } from './cards/keywordUtils';
 import { recalculateAuras } from './mechanics/auraUtils';
 import { GameEventBus } from '@/core/events/GameEventBus';
 import { cryptoIdGen } from './seededRng';
-import { cardsRng } from './cardsCommandRng';
+import { cardsRng, getCardsIdGen } from './cardsCommandRng';
 
 /**
  * Moves a card from one zone to another
@@ -170,7 +170,7 @@ export function drawCardFromDeck(
   player.deck.splice(0, 1);
 
   // Create a card instance for the hand
-  const cardInstance = createCardInstance(cardData, cryptoIdGen());
+  const cardInstance = createCardInstance(cardData, getCardsIdGen()());
 
   // Add the card to the hand if there's room
   player.hand.push(cardInstance);
@@ -258,7 +258,7 @@ export function destroyCard(
                       (cardToDestroy as any)?.hasReborn;
 
     if (hadReborn && newState.players[playerId].battlefield.length < MAX_BATTLEFIELD_SIZE) {
-      const rebornCopy = createCardInstance(cardToDestroy!.card, cryptoIdGen());
+      const rebornCopy = createCardInstance(cardToDestroy!.card, getCardsIdGen()());
       rebornCopy.currentHealth = 1;
       rebornCopy.hasReborn = false;
       removeKeyword(rebornCopy, 'reborn');
@@ -293,7 +293,7 @@ export function destroyCard(
     if (hadBloodEcho) {
       const hand = newState.players[playerId].hand;
       if (hand.length < MAX_HAND_SIZE) {
-        const echoCopy = createCardInstance({ ...cardToDestroy!.card } as any, cryptoIdGen());
+        const echoCopy = createCardInstance({ ...cardToDestroy!.card } as any, getCardsIdGen()());
         (echoCopy.card as any).manaCost = 0;
         echoCopy.isSummoningSick = false;
         hand.push(echoCopy);
@@ -316,7 +316,7 @@ export function destroyCard(
           description: 'Summoned by Valhalla\'s Call.',
           collectible: false,
         };
-        const valkyrieInstance = createCardInstance(valkyrieCard as any, cryptoIdGen());
+        const valkyrieInstance = createCardInstance(valkyrieCard as any, getCardsIdGen()());
         valkyrieInstance.isTaunt = true;
         valkyrieInstance.isSummoningSick = true;
         valkyrieInstance.canAttack = false;

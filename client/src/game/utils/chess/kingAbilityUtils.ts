@@ -341,7 +341,8 @@ export function isValidMinePlacement(
   existingMines: ActiveMine[],
   ownPiecePositions: ChessBoardPosition[],
   owner: 'player' | 'opponent',
-  direction?: MineDirection
+  direction?: MineDirection,
+  resolvedAffectedTiles?: readonly ChessBoardPosition[],
 ): { valid: boolean; reason?: string } {
   if (!isWithinBounds(position)) {
     return { valid: false, reason: 'Position is outside the board' };
@@ -352,10 +353,44 @@ export function isValidMinePlacement(
     return { valid: false, reason: 'Invalid king configuration' };
   }
 
-  const tiles = getMineShapeTiles(kingId, position, direction);
+  const enemySide = owner === 'player' ? 'opponent' : 'player';
+  const tiles = resolvedAffectedTiles
+    ? [...resolvedAffectedTiles]
+    : getMineShapeTiles(kingId, position, direction, enemySide);
 
   if (tiles.length === 0) {
     return { valid: false, reason: 'No valid tiles in shape' };
+  }
+
+  // A P2P placement carries the already-resolved tile list. Validate it
+  // against the configured shape before touching the store. Non-random
+  // shapes must match exactly; random Void Rift tiles are checked for board
+  // bounds/uniqueness and enemy-half confinement here, while the receiver
+  // separately recomputes the seed-scoped selection.
+  const isRandomShape = config.shape.isRandom === true;
+  if (resolvedAffectedTiles && !isRandomShape) {
+    const expected = getMineShapeTiles(kingId, position, direction, enemySide);
+    if (expected.length !== tiles.length || expected.some((tile, index) => (
+      tile.row !== tiles[index]?.row || tile.col !== tiles[index]?.col
+    ))) {
+      return { valid: false, reason: 'Resolved tiles do not match king ability shape' };
+    }
+  }
+
+  const uniqueTiles = new Set<string>();
+  const enemyRows = enemySide === 'player' ? (tile: ChessBoardPosition) => tile.row <= 3 : (tile: ChessBoardPosition) => tile.row >= 4;
+  for (const tile of tiles) {
+    if (!isWithinBounds(tile)) return { valid: false, reason: 'Resolved tile is outside the board' };
+    const key = `${tile.row}:${tile.col}`;
+    if (uniqueTiles.has(key)) return { valid: false, reason: 'Resolved tiles contain duplicates' };
+    uniqueTiles.add(key);
+    if (isRandomShape && !enemyRows(tile)) {
+      return { valid: false, reason: 'Random mine tile is outside the enemy half' };
+    }
+  }
+
+  if (isRandomShape && tiles.length !== 3) {
+    return { valid: false, reason: 'Random mine must resolve exactly three tiles' };
   }
 
   const ownMines = existingMines.filter(m => m.owner === owner && !m.triggered);
@@ -475,10 +510,9 @@ export function generateMineId(idGen: () => string): string {
 
 /**
  * Create a new active mine. `idGen` and `rng` are explicit dependencies of
- * the write-path: the mine id (entered into state) must be reproducible by
- * both peers, and ginnungagap's random tile selection must agree across
- * peers. SP callers pass `cryptoIdGen` / `cryptoRng`; P2P callers thread
- * the seeded sources from `useUnifiedCombatStore._chessIdGen` / `_chessRng`.
+ * the write-path. SP callers pass `cryptoIdGen` / `cryptoRng`. P2P callers
+ * normally pass explicit `overrides` from the signed command; the seeded
+ * sources remain available for legacy/replay callers.
  */
 export function createMine(
   kingId: string,
@@ -488,16 +522,22 @@ export function createMine(
   idGen: () => string,
   direction?: MineDirection,
   enemySide?: 'player' | 'opponent',
-  rng?: () => number
+  rng?: () => number,
+  overrides?: Readonly<{
+    readonly mineId?: string;
+    readonly affectedTiles?: readonly ChessBoardPosition[];
+  }>,
 ): ActiveMine | null {
   const config = getKingAbilityConfig(kingId);
   if (!config) return null;
 
-  const affectedTiles = getMineShapeTiles(kingId, centerPosition, direction, enemySide, rng);
+  const affectedTiles = overrides?.affectedTiles
+    ? [...overrides.affectedTiles]
+    : getMineShapeTiles(kingId, centerPosition, direction, enemySide, rng);
   if (affectedTiles.length === 0) return null;
 
   return {
-    id: generateMineId(idGen),
+    id: overrides?.mineId ?? generateMineId(idGen),
     owner,
     kingId,
     centerPosition,

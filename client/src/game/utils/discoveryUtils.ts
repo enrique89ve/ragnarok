@@ -159,15 +159,15 @@ export function createDiscoveryFromSpell(
       manaCostRange: discoveryManaCostRange,
       heroClass: discoveryClass as HeroClass | 'any'
     },
-    callback: (selectedCard: CardData | null) => {
+    callback: (selectedCard: CardData | null, suppliedState?: GameState, idGen?: () => string) => {
       try {
         // Get the CURRENT game state from the store, not the stale captured state
-        const { gameState: currentState } = useGameStore.getState();
+        const currentState = suppliedState ?? useGameStore.getState().gameState;
         const updatedState = JSON.parse(JSON.stringify(currentState));
         
         if (selectedCard) {
           // Create a unique instance ID for the discovered card
-          const instanceId = `discovered_${Date.now()}`;
+          const instanceId = idGen?.() ?? `discovered_${Date.now()}`;
           
           // Build the card instance
           const cardInstance = {

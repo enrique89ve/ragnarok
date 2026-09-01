@@ -71,15 +71,9 @@ const MissionIntroPhase: React.FC<MissionIntroPhaseProps> = ({
 				'--realm-color': realmColor,
 				'--realm-text': realmText,
 			} as React.CSSProperties}
-			role="button"
-			tabIndex={0}
-			onClick={onComplete}
-			onKeyDown={(e) => {
-				if (e.key === 'Enter' || e.key === ' ') {
-					e.preventDefault();
-					onComplete();
-				}
-			}}
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="mission-intro-title"
 		>
 			<div className="mission-intro-bg" />
 			<div className="mission-intro-vignette" />
@@ -126,6 +120,7 @@ const MissionIntroPhase: React.FC<MissionIntroPhaseProps> = ({
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ delay: 0.6, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
 					className="mission-intro-title"
+					id="mission-intro-title"
 				>
 					{mission.name}
 				</motion.h2>
@@ -158,14 +153,17 @@ const MissionIntroPhase: React.FC<MissionIntroPhaseProps> = ({
 						))}
 					</motion.div>
 				)}
-				<motion.p
+				<motion.button
+					type="button"
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					transition={{ delay: 3 }}
-					className="mission-intro-prompt"
+					className="mission-intro-action"
+					onClick={onComplete}
+					aria-label="Begin battle"
 				>
-					Click anywhere to begin battle
-				</motion.p>
+					Begin Battle
+				</motion.button>
 			</motion.div>
 		</div>
 	);

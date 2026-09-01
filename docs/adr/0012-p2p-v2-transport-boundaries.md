@@ -68,9 +68,14 @@ ticket, peer identity, seed, army, and initial-state gates stay in force.
   Cellular selects the aggressive WebRTC budget. On shared networks, missing
   ICE servers selects relay-only; local development may still try host-only
   WebRTC candidates.
-- A pre-connect WebRTC failure sends `transport_fallback_v1` once. After
-  `transport_ready_v1`, fallback messages are ignored and no live switch is
-  performed. A successful relay fallback locks relay for the match session.
+- A pre-connect WebRTC failure sends `transport_fallback_v1` once. A
+  `transport_ready_v1` message is only an advertisement; the server commits a
+  transport after both authenticated peers advertise the same kind. Before
+  that bilateral commitment, a WebRTC/relay race is resolved by forcing the
+  WebRTC member back to relay; the same authenticated room membership (or its
+  exact-ticket replacement) may advertise relay again. After
+  `transport_committed_v1`, transport switching is forbidden for that match
+  session and a failure requires the normal authenticated reconnect.
 - For a signed Quick Match, Control WS is part of the active transport
   contract: loss, errors, malformed frames, and `control_error_v1` fail the
   connection so reconnect restores both gameplay and referee channels. Direct

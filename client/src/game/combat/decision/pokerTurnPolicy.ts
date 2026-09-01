@@ -20,6 +20,16 @@ export type PokerTurnPolicy = {
 	readonly turnClockPolicy: TurnClockPolicy;
 };
 
+/**
+ * Automatic all-in phase advancement is a local presentation/AI fallback.
+ * Peer matches must advance from the signed action that closes the betting
+ * round; a timer-owned reducer write could otherwise race a reconnect or a
+ * late remote action and create a different battle transcript.
+ */
+export function shouldAutoAdvanceAllIn(processMode: PokerTurnProcessMode): boolean {
+	return processMode === 'local_ai';
+}
+
 export function getPokerTurnProcessMode(isP2PCombat: boolean): PokerTurnProcessMode {
 	return isP2PCombat ? 'p2p' : 'local_ai';
 }

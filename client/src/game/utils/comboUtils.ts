@@ -5,13 +5,13 @@
 import { GameState, CardInstance, CardData } from '../types';
 import { MAX_BATTLEFIELD_SIZE } from '../constants/gameConstants';
 import { ComboEffect } from '../types/CardTypes';
-import { v4 as uuidv4 } from 'uuid';
 import { createGameLogEvent } from './gameLogUtils';
 import { dealDamage, getValidTargets } from './effects/damageUtils';
 import { isMinion, getAttack, getHealth } from './cards/typeGuards';
 import { drawCardFromDeck } from './drawUtils';
 import { addKeyword } from './cards/keywordUtils';
 import { cardsRng } from './cardsCommandRng';
+import { cryptoIdGen } from './seededRng';
 
 /**
  * Check if a combo is active for the player
@@ -331,7 +331,7 @@ function handleComboSummon(
   
   // Create the minion instance
   const summonedMinion: CardInstance = {
-    instanceId: uuidv4(),
+    instanceId: cryptoIdGen(),
     card: cardToSummon,
     isPlayed: false,
     isSummoningSick: true,

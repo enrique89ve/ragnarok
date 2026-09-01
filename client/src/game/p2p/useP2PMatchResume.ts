@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { debug } from '../config/debugConfig';
+import { GameEventBus } from '../../core/events/GameEventBus';
 import { usePeerStore } from '../stores/peerStore';
 import { useGameStore } from '../stores/gameStore';
 import {
@@ -9,6 +10,7 @@ import {
 	saveP2PMatchResume,
 } from './p2pMatchResume';
 import { applyP2PMatchResume, collectP2PMatchResume } from './p2pMatchResumeBridge';
+import { resolveP2PResumeAuthPolicy } from './p2pResumeAuthPolicy';
 
 export type P2PResumeBoot = 'checking' | 'none' | 'applied';
 
@@ -31,6 +33,26 @@ export function useP2PMatchResume(account: string | null): P2PResumeBoot {
 				return;
 			}
 			try {
+				const resumeAuthPolicy = resolveP2PResumeAuthPolicy({
+					hardReloadResume: true,
+					// Alfa gameplay does not expose the visible Keychain
+					// session-renewal ceremony. Do not reopen the relay only to
+					// discover that the ephemeral key is gone.
+					renewalAvailable: false,
+				});
+				if (resumeAuthPolicy.kind === 'blocked') {
+					debug.warn('[p2pResume] Saved match blocked before relay rejoin', {
+						matchId: record.matchId,
+					});
+					void clearP2PMatchResume();
+					GameEventBus.emitNotification({
+						level: 'error',
+						message: resumeAuthPolicy.reason,
+						duration: 10_000,
+					});
+					setBoot('none');
+					return;
+				}
 				if (!applyP2PMatchResume(record)) {
 					debug.warn('[p2pResume] Refused snapshot that failed seal or rewind checks');
 					void clearP2PMatchResume();

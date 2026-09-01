@@ -8,6 +8,8 @@ import { toSimpleCardData } from './card/cardDataAdapter';
 import { debug } from '../config/debugConfig';
 import './card/CardMotion.css';
 import { applyCardMotion } from './card/applyCardMotion';
+import { GAME_COMMAND_TYPES } from '../core/commands';
+import { useP2PActions } from '../context/useP2PActions';
 
 interface DirectCardDragProps {
   cardInstance: CardInstanceWithCardData;
@@ -43,7 +45,7 @@ export const DirectCardDrag: React.FC<DirectCardDragProps> = ({
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
   
   const gameState = useGameStore(s => s.gameState);
-  const playCard = useGameStore(s => s.playCard);
+  const { dispatchGameCommand } = useP2PActions();
   // Fix: GameState.players is { player, opponent } not an array
   const currentPlayer = gameState.players?.player;
   const isCurrentPlayerTurn = gameState.currentTurn === 'player';
@@ -136,14 +138,17 @@ export const DirectCardDrag: React.FC<DirectCardDragProps> = ({
         
         // Play the card immediately  
         try {
-          playCard(cardInstance.instanceId);
-          debug.drag('Card played successfully!');
+          dispatchGameCommand({
+            type: GAME_COMMAND_TYPES.playCard,
+            cardId: cardInstance.instanceId,
+          });
+          debug.drag('Card play submitted through the command dispatcher');
         } catch (error) {
           debug.error('[drag] DIRECT DRAG: Failed to play card:', error);
         }
       }
     }
-  }, [isDragging, scale, cardInstance, playCard]);
+  }, [isDragging, scale, cardInstance, dispatchGameCommand]);
 
   // Mouse event listeners
   React.useEffect(() => {

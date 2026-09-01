@@ -2,10 +2,14 @@ import { useEffect, useRef } from 'react';
 import { CombatPhase, CombatAction, PokerCombatState } from '../../types/PokerCombatTypes';
 import { getPokerCombatAdapterState } from '../../hooks/usePokerCombatAdapter';
 import { useGameStore } from '../../stores/gameStore';
+import { usePeerStore } from '../../stores/peerStore';
 import { debug } from '../../config/debugConfig';
 import { proceduralAudio } from '../../audio/proceduralAudio';
 import type { BattlePopupAction, BattlePopupTarget } from '../components/HeroBattlePopup';
-import { getPokerTurnRemainingSeconds } from '../../../../../shared/p2p-wire/pokerTurnClock';
+import {
+  getCanonicalPokerActionNowMs,
+  getPokerTurnRemainingSeconds,
+} from '../../../../../shared/p2p-wire/pokerTurnClock';
 import { derivePokerDecisionView } from '../decision/pokerDecisionView';
 import { getPokerActionDefinition } from '../decision/pokerActionCatalog';
 import { derivePokerTurnPolicy, type PokerOpponentKind } from '../decision/pokerTurnPolicy';
@@ -13,6 +17,10 @@ import { derivePokerTimeoutIntent } from '../rules/pokerActionRules';
 import { resolvePokerTurnAnnouncement } from '../decision/pokerTurnAnnouncement';
 import type { PokerActionOrigin } from '../../../../../shared/p2p-wire/combat';
 import { computePokerCombatStateHash } from '../../p2p/phaseBoundaryRoot';
+import { commitNextP2PCanonicalAction } from '../../p2p/canonicalActionOrder';
+import { recordMove } from '../../../data/blockchain/transcriptBuilder';
+import { localPlayerId } from '../../../data/blockchain/playerIdentity';
+import { getNFTBridge } from '../../nft';
 
 interface UseCombatTimerOptions {
   combatState: PokerCombatState | null;
@@ -27,7 +35,8 @@ interface UseCombatTimerOptions {
     hpCommitment?: number;
     turnId?: string | null;
     prevStateHash?: string;
-  }) => void;
+    decisionId?: string;
+  }) => Promise<boolean>;
   sendPokerTurnStarted?: (input: {
     combatId: string;
     turnId: string;
@@ -46,6 +55,11 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
   const { combatState, isActive, updateTimer, isP2PCombat = false, opponentKind = null, sendPokerAction, sendPokerTurnStarted, p2pTransportConnected = true, confirmMulligan, addHeroBattlePopup } = options;
   const announcedTurnIdRef = useRef<string | null>(null);
   const expiredTurnIdRef = useRef<string | null>(null);
+  // A timeout decision is asynchronous in P2P (it must be signed before the
+  // local reducer runs). Keep an in-flight reservation separate from the
+  // terminal `expired` marker so a rejected/stale send can be retried on the
+  // next tick or after transport recovery.
+  const timeoutSendPendingTurnIdRef = useRef<string | null>(null);
   const mulliganDeadlineRef = useRef<{ readonly key: string; readonly deadlineAtMs: number } | null>(null);
   // The adapter API is recreated when its selected combat state changes.
   // Keep the timer loop attached to the logical turn instead of restarting it
@@ -172,43 +186,129 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
         if (expiredTurnIdRef.current === freshState.turnId) {
           return;
         }
+        if (timeoutSendPendingTurnIdRef.current === freshState.turnId) {
+          return;
+        }
         const timeoutIntent = derivePokerTimeoutIntent(freshState);
         if (!timeoutIntent) return;
         const isLocalActor = timeoutIntent.actorId === freshState.player.playerId;
+        // Only the actor's browser may author the timeout. The other peer waits
+        // for that signed decision instead of resolving the same turn locally;
+        // otherwise the arriving envelope would see a post-timeout pre-hash.
+        if (!isLocalActor) return;
         const actorId = timeoutIntent.actorId;
-        const autoAction = timeoutIntent.action;
-        if (autoAction === CombatAction.BRACE) {
-          addHeroBattlePopupRef.current?.({
-            action: CombatAction.BRACE,
-            target: isLocalActor ? 'player' : 'opponent',
-            text: getPokerActionDefinition(CombatAction.BRACE).label,
-            subtitle: 'Time expired',
-          });
-        } else {
-          addHeroBattlePopupRef.current?.({
-            action: CombatAction.DEFEND,
-            target: isLocalActor ? 'player' : 'opponent',
-            text: getPokerActionDefinition(CombatAction.DEFEND).label,
-            subtitle: 'Time expired',
-          });
-        }
-
+          const autoAction = timeoutIntent.action;
+          const decisionId = `${freshState.turnId}:${actorId}:${Date.now()}`;
         const previousState = freshState;
         const previousStateHash = isP2PCombat ? computePokerCombatStateHash(previousState) ?? undefined : undefined;
+        if (isP2PCombat) {
+          // Keep the absolute deadline live while disconnected, but wait for
+          // transport recovery before authoring the timeout. The next tick can
+          // then retry with the same pre-state hash.
+          if (!p2pTransportConnected || !previousStateHash) return;
+          if (usePeerStore.getState().p2pIntegrityError !== null) {
+            expiredTurnIdRef.current = freshState.turnId;
+            return;
+          }
+          timeoutSendPendingTurnIdRef.current = freshState.turnId;
+          let sendPromise: Promise<boolean> | undefined;
+          try {
+            sendPromise = sendPokerActionRef.current?.({
+              playerId: actorId,
+              action: autoAction,
+              origin: 'timeout',
+              turnId: freshState.turnId,
+              prevStateHash: previousStateHash,
+              decisionId,
+            });
+          } catch (error) {
+            debug.warn('[Timer] P2P timeout send threw before signing', error);
+            sendPromise = undefined;
+          }
+          if (!sendPromise) {
+            timeoutSendPendingTurnIdRef.current = null;
+            return;
+          }
+          void sendPromise.then((sent) => {
+            // A false result means no canonical decision was sent (for
+            // example, the session was still authorizing). Leave the turn
+            // unexpired so the next tick can retry with the same deadline.
+            if (!sent) return;
+            const latestState = getPokerCombatAdapterState().combatState;
+            if (
+              !latestState
+              || latestState.turnId !== previousState.turnId
+              || computePokerCombatStateHash(latestState) !== previousStateHash
+              || usePeerStore.getState().p2pIntegrityError !== null
+            ) {
+              debug.warn('[Timer] P2P timeout became stale while signing; local reducer not applied');
+              expiredTurnIdRef.current = freshState.turnId;
+              return;
+            }
+            const committedTimeoutState = getPokerCombatAdapterState().combatState;
+            getPokerCombatAdapterState().performAction(
+              actorId,
+              autoAction,
+              undefined,
+              'timeout',
+              getCanonicalPokerActionNowMs({
+                origin: 'timeout',
+                deadlineAtMs: committedTimeoutState?.turnDeadlineAtMs ?? null,
+              }),
+            );
+            const appliedState = getPokerCombatAdapterState().combatState;
+            if (!appliedState || appliedState === previousState) {
+              expiredTurnIdRef.current = freshState.turnId;
+              return;
+            }
+            const canonicalOrder = commitNextP2PCanonicalAction({
+              actionId: decisionId,
+              actorId: usePeerStore.getState().myPeerId ?? '',
+            });
+            if (canonicalOrder === null) {
+              usePeerStore.getState().setP2pIntegrityError('Game integrity diverged. Actions are paused until the match is left. (local_poker_canonical_order_unavailable)');
+              return;
+            }
+            const recorded = recordMove('poker_action', {
+              action: autoAction,
+              origin: 'timeout',
+              turnId: previousState.turnId,
+              decisionId,
+            }, localPlayerId({
+              hiveUsername: getNFTBridge().getUsername(),
+              myPeerId: usePeerStore.getState().myPeerId,
+            }), canonicalOrder);
+            if (!recorded) {
+              usePeerStore.getState().setP2pIntegrityError('Game integrity diverged. Actions are paused until the match is left. (local_poker_transcript_unavailable)');
+              return;
+            }
+            expiredTurnIdRef.current = freshState.turnId;
+            addHeroBattlePopupRef.current?.({
+              action: autoAction,
+              target: 'player',
+              text: getPokerActionDefinition(autoAction).label,
+              subtitle: 'Time expired',
+            });
+            getPokerCombatAdapterState().maybeCloseBettingRound();
+          }).catch((error) => {
+            debug.warn('[Timer] P2P timeout signing/send rejected; retrying', error);
+          }).finally(() => {
+            if (timeoutSendPendingTurnIdRef.current === freshState.turnId) {
+              timeoutSendPendingTurnIdRef.current = null;
+            }
+          });
+          return;
+        }
+
         getPokerCombatAdapterState().performAction(actorId, autoAction, undefined, 'timeout');
         const appliedState = getPokerCombatAdapterState().combatState;
         if (!appliedState || appliedState === previousState) return;
-
-        expiredTurnIdRef.current = freshState.turnId;
-        if (isP2PCombat && isLocalActor) {
-          sendPokerActionRef.current?.({
-            playerId: actorId,
-            action: autoAction,
-            origin: 'timeout',
-            turnId: freshState.turnId,
-            prevStateHash: previousStateHash,
-          });
-        }
+        addHeroBattlePopupRef.current?.({
+          action: autoAction,
+          target: 'player',
+          text: getPokerActionDefinition(autoAction).label,
+          subtitle: 'Time expired',
+        });
         getPokerCombatAdapterState().maybeCloseBettingRound();
       }
     }, 1000);

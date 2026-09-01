@@ -962,7 +962,12 @@ export interface DiscoveryState {
     manaCostRange?: [number, number] | 'any';
     heroClass?: string | 'any';
   };
-  callback?: (card: CardData | null) => any;
+  /**
+   * Resolve a selection against the supplied state. The optional arguments
+   * keep legacy UI callers source-compatible while allowing the signed P2P
+   * command path to stay pure and deterministic across both perspectives.
+   */
+  callback?: (card: CardData | null, state?: GameState, idGen?: () => string) => GameState | null | undefined;
 }
 
 /**

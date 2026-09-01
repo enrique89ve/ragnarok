@@ -5,7 +5,7 @@
  *  - Single-player / local-AI paths are crypto-grade (no Math.random bias)
  *  - P2P paths can later swap in a SeededRng without touching callers
  */
-import { cryptoRng } from './seededRng';
+import { getCardsRng } from './cardsCommandRng';
 
 /**
  * Get a random integer between min and max (inclusive).
@@ -13,7 +13,7 @@ import { cryptoRng } from './seededRng';
 export function getRandomInt(min: number, max: number): number {
   min = Math.ceil(min);
   max = Math.floor(max);
-  return Math.floor(cryptoRng() * (max - min + 1)) + min;
+  return Math.floor(getCardsRng()() * (max - min + 1)) + min;
 }
 
 /**

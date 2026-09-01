@@ -17,9 +17,12 @@
  *     poker/combat phase. Receiver runs `beginChessAttack` with
  *     isInstantKill=false; mechanics stage `pendingCombat` immediately,
  *     and the coordinator boots poker after the visual marker clears.
+ *   - `chess_mine_placement`: signed King Divine Command. The command carries
+ *     the resolved affected tiles; both peers validate the seed-scoped list
+ *     and mirror the hidden mine before the next chess action.
  *
  * Future surface (deferred): `chess_concede`, `chess_draw_offer`,
- * `chess_draw_accept`, `chess_mine_placement`. Each adds a member to
+ * `chess_draw_accept`. Each adds a member to
  * the discriminated union — receiver's exhaustive switch will break
  * the typecheck if a case is forgotten, which is the entire point of
  * keeping `ChessCommandSchema` discriminated rather than flag-bagged.
@@ -141,6 +144,27 @@ export const ChessCombatInitiatedCommandSchema = z
 export type ChessCombatInitiatedCommand = z.infer<typeof ChessCombatInitiatedCommandSchema>;
 
 /**
+ * A King Divine Command placement. The sender includes the resolved tile
+ * list instead of asking the receiver to consume a mutable RNG stream. The
+ * receiver still recomputes the list from the match seed + mineId and checks
+ * the supplied list before applying it, so a peer cannot choose an arbitrary
+ * random rift or create a mine for the wrong canonical side.
+ */
+export const ChessMinePlacementCommandSchema = z
+	.object({
+		type: z.literal('chess_mine_placement'),
+		owner: z.enum(['player', 'opponent']),
+		kingId: z.string().min(1).max(128),
+		position: ChessBoardPositionSchema,
+		direction: z.enum(['horizontal', 'vertical', 'diagonal_up', 'diagonal_down']).optional(),
+		mineId: z.string().min(1).max(128),
+		affectedTiles: z.array(ChessBoardPositionSchema).min(1).max(35),
+	})
+	.strict();
+
+export type ChessMinePlacementCommand = z.infer<typeof ChessMinePlacementCommandSchema>;
+
+/**
  * Sum type for chess commands. Discriminated on `type` so consumers'
  * switch over `command.type` gets exhaustive checking from TypeScript —
  * forgetting a new variant breaks the typecheck instead of silently
@@ -159,6 +183,7 @@ export const ChessCommandSchema = z.discriminatedUnion('type', [
 	ChessMoveCommandSchema,
 	ChessAttackCommandSchema,
 	ChessCombatInitiatedCommandSchema,
+	ChessMinePlacementCommandSchema,
 ]);
 
 export type ChessCommand = z.infer<typeof ChessCommandSchema>;
@@ -189,7 +214,7 @@ export const ChessCommandEnvelopeSchema = z
 		// for downstream consumers. The envelope is the wire boundary;
 		// every legitimate variant flows through here.
 		const cmd = env.command;
-		if (cmd.from.row === cmd.to.row && cmd.from.col === cmd.to.col) {
+		if ('from' in cmd && 'to' in cmd && cmd.from.row === cmd.to.row && cmd.from.col === cmd.to.col) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
 				message: `${cmd.type}: from and to must differ`,

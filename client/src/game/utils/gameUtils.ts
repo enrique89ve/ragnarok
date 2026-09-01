@@ -67,7 +67,7 @@ import { recalculateAuras } from './mechanics/auraUtils';
 import { processSpellburst } from './mechanics/spellburstUtils';
 import { GameEventBus } from '@/core/events/GameEventBus';
 import { cryptoIdGen, cryptoRng } from './seededRng';
-import { getCardsRng, withCardsRng } from './cardsCommandRng';
+import { getCardsRng, withCardsIdGen, withCardsRng } from './cardsCommandRng';
 import { canMinionAct, getEffectiveAttack, processOnAttackEffects } from './effects/statusEffectUtils';
 
 function attemptPetEvolution(
@@ -2960,8 +2960,9 @@ export function processAttack(
   attackerInstanceId: string,
   defenderInstanceId?: string, // If undefined, attack is directed at the opponent's hero
   rng: () => number = getCardsRng(),
+  idGen: () => string = cryptoIdGen,
 ): GameState {
-  return withCardsRng(rng, () => processAttackUnbound(state, attackerInstanceId, defenderInstanceId, rng));
+	return withCardsRng(rng, () => withCardsIdGen(idGen, () => processAttackUnbound(state, attackerInstanceId, defenderInstanceId, rng, idGen)));
 }
 
 function processAttackUnbound(
@@ -2969,6 +2970,7 @@ function processAttackUnbound(
   attackerInstanceId: string,
   defenderInstanceId: string | undefined,
   rng: () => number,
+  idGen: () => string,
 ): GameState {
   // Add comprehensive logging
 
@@ -3211,7 +3213,7 @@ function processAttackUnbound(
       } else if (desc.includes('summon a 5/5')) {
         if (newState.players.player.battlefield.length < MAX_BATTLEFIELD_SIZE) {
           const tokenCard = { id: 9071, name: 'Fire Elemental', type: 'minion', manaCost: 5, attack: 5, health: 5, rarity: 'common', race: 'Elemental', keywords: [], collectible: false };
-          const token = createCardInstance(tokenCard as any, cryptoIdGen());
+          const token = createCardInstance(tokenCard as any, idGen());
           token.isSummoningSick = true;
           token.canAttack = false;
           newState.players.player.battlefield.push(token);
@@ -3222,7 +3224,7 @@ function processAttackUnbound(
         newState.players.player.heroArmor = Math.min(MAX_ARMOR, (newState.players.player.heroArmor || 0) + 3);
       } else if (desc.includes('summon a copy')) {
         if (newState.players.player.battlefield.length < MAX_BATTLEFIELD_SIZE) {
-          const copyInstance = createCardInstance(attacker.card, cryptoIdGen());
+          const copyInstance = createCardInstance(attacker.card, idGen());
           copyInstance.isSummoningSick = true;
           copyInstance.canAttack = false;
           newState.players.player.battlefield.push(copyInstance);
@@ -3679,6 +3681,7 @@ export function autoAttackWithAllCards(
   state: GameState,
   mode: 'minion' | 'hero' = 'minion',
   rng: () => number = cryptoRng,
+  idGen: () => string = cryptoIdGen,
 ): GameState {
   try {
     if (state.currentTurn !== 'player') {
@@ -3707,18 +3710,18 @@ export function autoAttackWithAllCards(
         const target = tauntMinions.reduce((low, cur) =>
           (cur.currentHealth || 999) < (low.currentHealth || 999) ? cur : low
         );
-			newState = processAttack(newState, card.instanceId, target.instanceId, rng);
+			newState = processAttack(newState, card.instanceId, target.instanceId, rng, idGen);
       } else if (mode === 'hero' || opponentField.length === 0) {
         // Hero mode or no minions — go face
         if (isValidRushTarget(attacker, 'hero')) {
-			newState = processAttack(newState, card.instanceId, undefined, rng);
+			newState = processAttack(newState, card.instanceId, undefined, rng, idGen);
         }
       } else {
         // Minion mode — attack lowest HP enemy minion
         const target = opponentField.reduce((low, cur) =>
           (cur.currentHealth || 999) < (low.currentHealth || 999) ? cur : low
         );
-			newState = processAttack(newState, card.instanceId, target.instanceId, rng);
+			newState = processAttack(newState, card.instanceId, target.instanceId, rng, idGen);
       }
     }
 

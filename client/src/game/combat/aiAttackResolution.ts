@@ -9,11 +9,14 @@ import { CombatEventBus, type ImpactPhaseEvent } from '../services/CombatEventBu
 import type { GameState } from '../types';
 import { debug } from '../config/debugConfig';
 import { buildCombatPresentationFromResolvedAttack } from '@/game/effects/presentation/CombatPresentation';
+import { useMatchStore } from '../match/store';
 
 export type AIAttackImpactPayload = Omit<ImpactPhaseEvent, 'type' | 'id' | 'timestamp' | 'turn'>;
 
 export interface AIAttackResolutionDeps {
   getDeferDamage: () => boolean;
+  /** Peer matches resolve combat only through signed protocol commands. */
+  isPeerMatch?: () => boolean;
   hasDamageBeenApplied?: (event: AIAttackEvent) => boolean;
   markDamageApplied: (event: AIAttackEvent) => void;
   getGameState: () => GameState;
@@ -23,13 +26,14 @@ export interface AIAttackResolutionDeps {
 }
 
 export interface AIAttackResolutionStoreDepsOptions {
+  isPeerMatch?: () => boolean;
   hasDamageBeenApplied?: (event: AIAttackEvent) => boolean;
   onDamageApplied?: (event: AIAttackEvent) => void;
 }
 
 export type AIAttackResolutionResult =
   | { status: 'applied'; step: CombatStep; impactTargetId: string | null }
-  | { status: 'skipped'; reason: 'legacy_mode' | 'already_applied' };
+  | { status: 'skipped'; reason: 'legacy_mode' | 'already_applied' | 'peer_match' };
 
 export function createAIAttackCombatStep(event: AIAttackEvent): CombatStep {
   return {
@@ -64,6 +68,7 @@ export function createAIAttackResolutionStoreDeps(
 ): AIAttackResolutionDeps {
   return {
     getDeferDamage: () => useAIAttackAnimationStore.getState().deferDamage,
+    isPeerMatch: options.isPeerMatch ?? (() => useMatchStore.getState().activeMatch?.opponent.kind === 'peer'),
     hasDamageBeenApplied: (event) => {
       if (options.hasDamageBeenApplied?.(event)) {
         return true;
@@ -91,6 +96,15 @@ export function resolveAIAttackEvent(
 ): AIAttackResolutionResult {
   const currentDeferDamage = deps.getDeferDamage();
   debug.animation(`[AI-ATTACK-ANIM] resolveAIAttackEvent called: deferDamage=${currentDeferDamage}, damageApplied=${event.damageApplied}`);
+
+  // A stale animation event must never become a second authority in a peer
+  // match. P2P combat is resolved by the signed command transcript; this
+  // presentation-only legacy queue is local-AI/legacy mode only.
+  if (deps.isPeerMatch?.()) {
+    debug.warn('[AI-ATTACK-ANIM] Skipping legacy event during peer match');
+    deps.markDamageApplied(event);
+    return { status: 'skipped', reason: 'peer_match' };
+  }
 
   if (!currentDeferDamage) {
     debug.animation('[AI-ATTACK-ANIM] Skipping - damage not deferred (legacy mode)');

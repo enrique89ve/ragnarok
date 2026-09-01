@@ -155,7 +155,7 @@ export function getPokerDecisionView(input: {
 			remainingSeconds,
 			label: 'Reconnecting',
 			title: 'Poker input paused',
-			detail: 'Waiting for peer connection',
+			detail: 'Connection interrupted — actions locked. Turn timer continues.',
 			protocol,
 		};
 	}
@@ -291,7 +291,7 @@ export function derivePokerDecisionView(input: {
 			inputPaused: true,
 			statusLabel: 'Reconnecting',
 			statusTitle: 'Poker input paused',
-			statusDetail: 'Waiting for peer connection',
+			statusDetail: 'Connection interrupted — actions locked. Turn timer continues.',
 			windowLabel: 'Reconnecting',
 		};
 	}

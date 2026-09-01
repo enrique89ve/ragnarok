@@ -131,6 +131,21 @@ const SkipMulliganSchema = z.object({
 	type: z.literal('skip_mulligan'),
 }).strict();
 
+// Discovery options are resolved against the receiver's already-synchronised
+// option list. The card payload is carried for backwards-compatible local
+// dispatch, but it is never trusted as gameplay authority; the canonical
+// engine matches only its `id` against `state.discovery.options`.
+const DiscoveryCardSchema = z.object({
+	id: z.union([z.string().min(1).max(128), z.number().finite()]),
+	name: z.string().min(1).max(256),
+	type: z.string().min(1).max(32),
+}).passthrough();
+
+const SelectDiscoveryOptionSchema = z.object({
+	type: z.literal('select_discovery_option'),
+	card: z.union([DiscoveryCardSchema, z.null()]),
+}).strict();
+
 const WireGameCommandSchema = z.discriminatedUnion('type', [
 	PlayCardSchema,
 	AttackSchema,
@@ -142,6 +157,7 @@ const WireGameCommandSchema = z.discriminatedUnion('type', [
 	ToggleMulliganCardSchema,
 	ConfirmMulliganSchema,
 	SkipMulliganSchema,
+	SelectDiscoveryOptionSchema,
 ]);
 
 const GameCommandEnvelopeSchema = z.object({
@@ -289,6 +305,11 @@ const HashCheckSchema = z.object({
 	// pre-WASM); receiver treats same as empty hash.
 	chessMoveCount: z.number().int().min(-1),
 	turnNumber: NonNegativeInt,
+	// Optional for backwards-compatible direct rooms. When present these
+	// counters let the receiver ignore a beacon that crossed a game_command
+	// application window even when both peers are still on the same turn.
+	sentCommandSeq: z.number().int().min(-1).optional(),
+	receivedCommandSeq: z.number().int().min(-1).optional(),
 }).strict();
 
 const HashMismatchSchema = z.object({

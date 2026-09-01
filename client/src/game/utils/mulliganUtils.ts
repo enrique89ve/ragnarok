@@ -1,4 +1,4 @@
-import { GameState, CardInstance, CardData } from '../types';
+import { GameState, CardData } from '../types';
 import { drawCards } from './cards/cardUtils';
 import { getManaCost } from './cards/typeGuards';
 import { shuffleInPlace, cryptoIdGen } from './seededRng';
@@ -12,6 +12,8 @@ export interface MulliganState {
 }
 
 export type MulliganActor = 'player' | 'opponent';
+
+export type MulliganActorOrder = readonly [MulliganActor, MulliganActor];
 
 /**
  * Initialize the mulligan phase at the start of the game
@@ -55,11 +57,15 @@ export function toggleCardSelection(
 /**
  * Mark player as ready to finish the mulligan phase
  */
-export function confirmMulligan(state: GameState): GameState {
-  return confirmMulliganForActor(state, 'player');
+export function confirmMulligan(state: GameState, actorOrder?: MulliganActorOrder): GameState {
+  return confirmMulliganForActor(state, 'player', actorOrder);
 }
 
-export function confirmMulliganForActor(state: GameState, actor: MulliganActor): GameState {
+export function confirmMulliganForActor(
+  state: GameState,
+  actor: MulliganActor,
+  actorOrder?: MulliganActorOrder,
+): GameState {
   if (!state.mulligan || !state.mulligan.active) return state;
 
   const readyKey = actor === 'player' ? 'playerReady' : 'opponentReady';
@@ -78,7 +84,7 @@ export function confirmMulliganForActor(state: GameState, actor: MulliganActor):
   // Both actors must explicitly confirm. This remains idempotent when a
   // duplicate local or remote command is replayed after the ready bit is set.
   if (mulligan.playerReady && mulligan.opponentReady) {
-    return completeMulligan(updatedState);
+    return completeMulligan(updatedState, actorOrder);
   }
 
   return updatedState;
@@ -87,20 +93,8 @@ export function confirmMulliganForActor(state: GameState, actor: MulliganActor):
 /**
  * Complete the mulligan phase by replacing selected cards
  */
-export function completeMulligan(state: GameState): GameState {
+export function completeMulligan(state: GameState, actorOrder: MulliganActorOrder = ['player', 'opponent']): GameState {
   if (!state.mulligan || !state.mulligan.active) return state;
-
-  // Get selected cards for player
-  const playerSelectedCards = state.players.player.hand.filter(
-    card => state.mulligan?.playerSelections[card.instanceId]
-  );
-
-  // The opponent selection is supplied by the AI controller or the remote
-  // peer. A missing selection map means keep all cards; never invent AI
-  // choices in this core transition because P2P uses the same function.
-  const opponentSelectedCards = state.players.opponent.hand.filter(
-    card => state.mulligan?.opponentSelections?.[card.instanceId] === true
-  );
 
   const playerDeck = [...state.players.player.deck];
   const opponentDeck = [...state.players.opponent.deck];
@@ -116,58 +110,25 @@ export function completeMulligan(state: GameState): GameState {
     opponentSelections: { ...state.mulligan.opponentSelections },
   };
   
-  // Replace player's selected cards
-  if (playerSelectedCards.length > 0) {
-    const playerHand = nextPlayers.player.hand.filter(
-      card => !nextMulligan.playerSelections[card.instanceId]
-    );
-    const playerReturnCards = playerSelectedCards.map(card => card.card as CardData);
+  // Consume the shared command RNG in canonical seat order. `applyOpponentCommand`
+  // swaps the viewer perspective before invoking this reducer; passing the
+  // inverted order there keeps p1/p2 draw and id streams identical on both peers.
+  for (const actor of actorOrder) {
+    const selectedCards = actor === 'player'
+      ? nextPlayers.player.hand.filter(card => nextMulligan.playerSelections[card.instanceId])
+      : nextPlayers.opponent.hand.filter(card => nextMulligan.opponentSelections?.[card.instanceId] === true);
+    if (selectedCards.length === 0) continue;
 
-    const updatedDeck = [...playerDeck, ...playerReturnCards];
+    const player = nextPlayers[actor];
+    const deck = actor === 'player' ? playerDeck : opponentDeck;
+    const selections = actor === 'player' ? nextMulligan.playerSelections : nextMulligan.opponentSelections;
+    const hand = player.hand.filter(card => !selections[card.instanceId]);
+    const updatedDeck = [...deck, ...selectedCards.map(card => card.card as CardData)];
     shuffleInPlace(updatedDeck);
-
-    // Draw new cards equal to the number of replaced cards. Mulligan is
-    // mid-match (post-init) — the host is authoritative, so cryptoIdGen
-    // is fine here. Plan B replay-symmetric will plumb an EffectContext
-    // SeededIdGen through this path.
-    const { drawnCards, remainingDeck } = drawCards(
-      updatedDeck,
-      playerSelectedCards.length,
-      cryptoIdGen,
-    );
-
-    // Update hand and deck — cap at 7
-    const combined = [...playerHand, ...drawnCards];
-    nextPlayers.player = {
-      ...nextPlayers.player,
-      hand: combined.slice(0, 7),
-      deck: remainingDeck,
-    };
-  }
-
-  // Replace the opponent's selected cards. The map is populated by the AI
-  // policy in local modes or by the remote command in P2P mode.
-  if (opponentSelectedCards.length > 0) {
-    const opponentHand = nextPlayers.opponent.hand.filter(
-      card => !nextMulligan.opponentSelections[card.instanceId]
-    );
-    const opponentReturnCards = opponentSelectedCards.map(card => card.card as CardData);
-
-    const updatedDeck = [...opponentDeck, ...opponentReturnCards];
-    shuffleInPlace(updatedDeck);
-
-    // Draw new cards equal to the number of replaced cards
-    const { drawnCards, remainingDeck } = drawCards(
-      updatedDeck,
-      opponentSelectedCards.length,
-      cryptoIdGen,
-    );
-
-    // Update hand and deck — cap at 7
-    const combined = [...opponentHand, ...drawnCards];
-    nextPlayers.opponent = {
-      ...nextPlayers.opponent,
-      hand: combined.slice(0, 7),
+    const { drawnCards, remainingDeck } = drawCards(updatedDeck, selectedCards.length, cryptoIdGen);
+    nextPlayers[actor] = {
+      ...player,
+      hand: [...hand, ...drawnCards].slice(0, 7),
       deck: remainingDeck,
     };
   }
@@ -219,7 +180,7 @@ export function confirmAiMulligan(state: GameState): GameState {
 /**
  * Skip mulligan phase and keep current hand
  */
-export function skipMulligan(state: GameState): GameState {
+export function skipMulligan(state: GameState, actorOrder?: MulliganActorOrder): GameState {
   if (!state.mulligan || !state.mulligan.active) return state;
   
   // Clear all selections
@@ -229,5 +190,5 @@ export function skipMulligan(state: GameState): GameState {
         ...state.mulligan,
       playerSelections: {},
       }
-  });
+  }, actorOrder);
 }
