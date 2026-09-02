@@ -492,8 +492,8 @@ describe('P2P control websocket', () => {
 		const replacementOpen = new Promise<void>((resolve, reject) => { replacement.once('open', () => resolve()); replacement.once('error', reject); });
 		sockets.push(replacement);
 		await replacementOpen;
-		await expect(firstAlicePeerLeft).resolves.toMatchObject({ opponentPeerId: 'peer-a' });
 		replacement.send(JSON.stringify({ type: 'control_hello_v1', protocolVersion: 2, matchId: roomId, peerId: 'peer-a' }));
+		await expect(firstAlicePeerLeft).resolves.toMatchObject({ opponentPeerId: 'peer-a' });
 
 		const bob = new WebSocket(`${wsUrl}&peer=peer-b`, controlProtocols(bobTicket.token), { headers: { Cookie: bobCookie } });
 		const bobOpen = new Promise<void>((resolve, reject) => { bob.once('open', () => resolve()); bob.once('error', reject); });
@@ -547,6 +547,13 @@ describe('P2P control websocket', () => {
 		const replacement = new WebSocket(`${wsUrl}&peer=peer-a`, controlProtocols(aliceTicket.token), { headers: { Cookie: aliceCookie, 'x-forwarded-for': '198.51.100.42' } });
 		sockets.push(replacement);
 		await new Promise<void>((resolve, reject) => { replacement.once('open', () => resolve()); replacement.once('error', reject); });
+		expect(bob.readyState).toBe(WebSocket.OPEN);
+		await new Promise(resolve => setTimeout(resolve, 50));
+		expect(bob.readyState).toBe(WebSocket.OPEN);
+
+		const replacementOpen = waitForType(replacement, 'control_open_v1');
+		const bobReopen = waitForType(bob, 'control_open_v1');
+		replacement.send(hello('peer-a'));
 		await expect(bobReset).resolves.toMatchObject({
 			opponentPeerId: 'peer-a',
 			reason: 'peer_reconnected',
@@ -569,9 +576,6 @@ describe('P2P control websocket', () => {
 			candidate: 'stale-from-bob',
 		}));
 
-		const replacementOpen = waitForType(replacement, 'control_open_v1');
-		const bobReopen = waitForType(bob, 'control_open_v1');
-		replacement.send(hello('peer-a'));
 		const [openedReplacement, openedBob] = await Promise.all([replacementOpen, bobReopen]);
 		expect(openedReplacement).toMatchObject({ transportEpoch: 2, peerId: 'peer-a' });
 		expect(openedBob).toMatchObject({ transportEpoch: 2, peerId: 'peer-b' });
@@ -584,6 +588,42 @@ describe('P2P control websocket', () => {
 		await expect(relayCommitOnReplacement).resolves.toMatchObject({ kind: 'websocket-relay', transportEpoch: 2 });
 		await expect(relayCommitOnBob).resolves.toMatchObject({ kind: 'websocket-relay', transportEpoch: 2 });
 		expect(bob.readyState).toBe(WebSocket.OPEN);
+	});
+
+	it('rate-limits control socket replacements for the same match peer', async () => {
+		const app = express();
+		app.get('/login/:username', (req, res) => {
+			issueHiveWebSession(res, req.params.username);
+			res.end('ok');
+		});
+		server = createServer(app);
+		attachP2PControl(server);
+		const port = await listen(server);
+		const baseUrl = `http://127.0.0.1:${port}`;
+		const aliceCookie = await loginCookie(baseUrl, 'alice');
+		const roomId = 'control-replacement-rate-1';
+		const aliceTicket = buildP2PMatchTicket({ roomId, peerId: 'peer-a', role: 'offerer', account: 'alice' });
+		const wsUrl = `ws://127.0.0.1:${port}/ws/control?match=${roomId}&peer=peer-a`;
+		const hello = JSON.stringify({ type: 'control_hello_v1', protocolVersion: 2, matchId: roomId, peerId: 'peer-a' });
+		let current = new WebSocket(wsUrl, controlProtocols(aliceTicket.token), { headers: { Cookie: aliceCookie } });
+		sockets.push(current);
+		await new Promise<void>((resolve, reject) => { current.once('open', () => resolve()); current.once('error', reject); });
+		current.send(hello);
+
+		for (let index = 0; index < 4; index += 1) {
+			const next = new WebSocket(wsUrl, controlProtocols(aliceTicket.token), { headers: { Cookie: aliceCookie } });
+			sockets.push(next);
+			await new Promise<void>((resolve, reject) => { next.once('open', () => resolve()); next.once('error', reject); });
+			const previousClosed = new Promise<void>(resolve => { current.once('close', () => resolve()); });
+			next.send(hello);
+			await previousClosed;
+			current = next;
+		}
+
+		const blocked = new WebSocket(wsUrl, controlProtocols(aliceTicket.token), { headers: { Cookie: aliceCookie } });
+		sockets.push(blocked);
+		const blockedError = waitForType(blocked, 'control_error_v1');
+		await expect(blockedError).resolves.toMatchObject({ code: 'rate_limited' });
 	});
 });
 

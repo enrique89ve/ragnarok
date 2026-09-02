@@ -124,6 +124,32 @@ describe('TransportManager', () => {
 		});
 	});
 
+	it('propagates reconnecting and reconnects the same transport without a second open event', async () => {
+		const webRtc = fakeTransport('webrtc', async () => { webRtc.setState('connected'); });
+		const open = vi.fn();
+		const states: TransportState[] = [];
+		const manager = createTransportManager(managerOptions(), {
+			createWebRTC: () => webRtc.transport,
+			createRelay: () => fakeTransport('websocket-relay', async () => undefined).transport,
+		});
+		manager.on('open', open);
+		manager.onStateChange(state => states.push(state));
+		await manager.connect();
+		expect(manager.state).toBe('connected');
+		expect(() => manager.send({ type: 'ping' })).not.toThrow();
+
+		webRtc.setState('reconnecting');
+		expect(manager.state).toBe('reconnecting');
+		expect(() => manager.send({ type: 'ping' })).toThrow('No committed gameplay transport');
+
+		webRtc.setState('connected');
+		expect(manager.state).toBe('connected');
+		expect(open).toHaveBeenCalledTimes(1);
+		expect(states).toEqual(['connecting', 'connected', 'reconnecting', 'connected']);
+		expect(() => manager.send({ type: 'ping' })).not.toThrow();
+		manager.close();
+	});
+
 	it('does not derive gameplay perspective from the WebRTC offerer role', async () => {
 		const webRtc = fakeTransport('webrtc', async () => { webRtc.setState('connected'); });
 		const manager = createTransportManager(managerOptions({ isHostHint: true }), {

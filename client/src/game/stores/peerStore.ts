@@ -707,6 +707,32 @@ async function openTransport(
 			reject(error);
 		};
 
+		transport.onStateChange(next => {
+			if (!isActiveAttempt()) return;
+			if (next === 'reconnecting' || next === 'connecting') {
+				if (get().connection !== transport) return;
+				if (get().connectionState === 'connected' || get().connectionState === 'reconnecting') {
+					set({
+						connection: transport,
+						connectionState: 'reconnecting',
+					});
+				}
+				return;
+			}
+			if (next === 'connected' && settled && get().connection === transport) {
+				clearReconnectWindow();
+				set({
+					connection: transport,
+					connectionState: 'connected',
+					reconnectCountdown: 0,
+					error: null,
+				});
+				flushBuffer(transport);
+				set({ bufferedMessageCount: messageBuffer.length });
+				startHeartbeat(get, set);
+			}
+		});
+
 		transport.on('open', (...args: unknown[]) => {
 			if (settled) return;
 			if (!isActiveAttempt()) {

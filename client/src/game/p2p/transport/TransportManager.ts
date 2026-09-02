@@ -228,17 +228,25 @@ export function createTransportManager(
 		});
 		const removeState = transport.onStateChange(next => {
 			if (selected !== transport || closed || !options.session.isCurrent(attemptId)) return;
+			if (next === 'reconnecting' || next === 'connecting') {
+				if (state === 'connected' || state === 'reconnecting') {
+					open = false;
+					setState('reconnecting');
+				}
+				return;
+			}
 			if (next === 'connected') {
 				if (!options.session.selectTransport(attemptId, transport.kind)) return;
+				const wasReconnecting = state === 'reconnecting';
 				open = true;
 				remotePeer = 'peer' in transport && typeof transport.peer === 'string' ? transport.peer : '';
 				hostHint = options.isHostHint;
 				setState('connected');
-				emit('open', { isHost: hostHint, remotePeerId: remotePeer });
+				if (!wasReconnecting) emit('open', { isHost: hostHint, remotePeerId: remotePeer });
 				return;
 			}
 			if (next === 'failed' || next === 'closed') {
-				if (open) emit('close', (transport.closeReason ?? 'unknown') satisfies TransportCloseReason);
+				if (open || state === 'reconnecting') emit('close', (transport.closeReason ?? 'unknown') satisfies TransportCloseReason);
 				open = false;
 				setState(next);
 			}
@@ -396,7 +404,9 @@ export function createTransportManager(
 		get state(): TransportState { return state; },
 		connect,
 		send: message => {
-			if (!selected) throw new Error('No active transport');
+			if (!selected || state !== 'connected' || !open) {
+				throw new Error('No committed gameplay transport');
+			}
 			selected.send(message);
 		},
 		onMessage: listener => {

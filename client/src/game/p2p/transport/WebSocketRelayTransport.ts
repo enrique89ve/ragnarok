@@ -76,7 +76,7 @@ export function createWebSocketRelayTransport(
 	};
 
 	const maybeSetConnected = (): void => {
-		if (state !== 'connecting') return;
+		if (state !== 'connecting' && state !== 'reconnecting') return;
 		if (!relayReady || !controlReady) return;
 		try {
 			sendTransportReady();
@@ -129,6 +129,7 @@ export function createWebSocketRelayTransport(
 		if (message.type === 'transport_reset_v2') {
 			transportCommitted = false;
 			transportReadySent = false;
+			if (state === 'connected' || state === 'connecting') setState('reconnecting');
 			sendTransportReady();
 			return;
 		}
@@ -151,7 +152,7 @@ export function createWebSocketRelayTransport(
 	control?.onStateChange(next => {
 		controlReady = next === 'connected';
 		if (next === 'degraded') {
-			if (state === 'connecting' || state === 'connected') {
+			if (state === 'connecting' || state === 'connected' || state === 'reconnecting') {
 				setState('failed');
 				// A degraded control plane invalidates the authenticated relay
 				// session too. Abort both pending connects so neither side can
@@ -265,7 +266,9 @@ export function createWebSocketRelayTransport(
 		get closeReason(): TransportCloseReason { return relay.closeReason; },
 		connect,
 		send: (message: P2PMessage): void => {
-			if (state !== 'connected' || !relay.open) throw new Error('WebSocket relay is not open');
+			if (state !== 'connected' || !relay.open || !transportCommitted) {
+				throw new Error('WebSocket relay is not committed for gameplay');
+			}
 			relay.send(message);
 		},
 		onMessage,

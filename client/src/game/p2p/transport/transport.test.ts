@@ -209,6 +209,27 @@ describe('GameTransport relay adapter', () => {
 		const sentTypes = controlSocket.sent.map(value => JSON.parse(value).type);
 		expect(sentTypes.filter(type => type === 'transport_ready_v1')).toHaveLength(1);
 		expect(transport.state).toBe('connected');
+
+		controlSocket.receive({
+			type: 'transport_reset_v2',
+			protocolVersion: 2,
+			matchId: 'room-1',
+			transportEpoch: 2,
+			reason: 'peer_reconnected',
+			opponentPeerId: 'peer-a',
+		});
+		expect(transport.state).toBe('reconnecting');
+		expect(() => transport.send({ type: 'ping' })).toThrow('WebSocket relay is not committed for gameplay');
+		controlSocket.receive({
+			type: 'transport_committed_v1',
+			protocolVersion: 2,
+			matchId: 'room-1',
+			transportEpoch: 2,
+			kind: 'websocket-relay',
+		});
+		expect(transport.state).toBe('connected');
+		transport.send({ type: 'ping' });
+		expect(relaySocket.sent.some(value => value.includes('"type":"ping"'))).toBe(true);
 		transport.close();
 	});
 

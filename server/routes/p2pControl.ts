@@ -61,18 +61,31 @@ type ControlMember = {
 
 type ControlRoom = {
 	members: ControlMember[];
+	pendingReplacements: Map<string, ControlMember>;
 	transportEpoch: number;
 	createdAt: number;
 };
 const rooms = new Map<string, ControlRoom>();
 
 function createControlRoom(): ControlRoom {
-	return { members: [], transportEpoch: INITIAL_TRANSPORT_EPOCH, createdAt: Date.now() };
+	return {
+		members: [],
+		pendingReplacements: new Map(),
+		transportEpoch: INITIAL_TRANSPORT_EPOCH,
+		createdAt: Date.now(),
+	};
 }
 const MESSAGE_RATE_LIMIT: RateLimitBucket = new Map();
+const REPLACEMENT_RATE_LIMIT: RateLimitBucket = new Map();
 const ROOM_MAX_PEERS = 2;
 const CONTROL_MESSAGE_LIMIT = 40;
 const CONTROL_MESSAGE_WINDOW_MS = 10_000;
+export const P2P_CONTROL_REPLACEMENT_LIMIT = 4;
+export const P2P_CONTROL_REPLACEMENT_WINDOW_MS = 30_000;
+
+function isAttachedControlMember(room: ControlRoom, member: ControlMember): boolean {
+	return room.members.includes(member) || room.pendingReplacements.get(member.peerId) === member;
+}
 export const P2P_CONTROL_KEEPALIVE_INTERVAL_MS = 15_000;
 
 export type P2PControlServerOptions = Readonly<{
@@ -380,29 +393,7 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 			markP2PRefereePlaneConnected(roomId, 'control');
 		}
 		const existingMember = room.members.find(member => member.peerId === peerId);
-		if (existingMember) {
-			// A React retry, tab restore, or transport reconnect can open the same
-			// signed session before the old socket has delivered `close`. Replace
-			// only the exact authenticated ticket/account; a different credential
-			// must never evict a live peer from the room.
-			if (!isSameAuthenticatedSession(existingMember, ticket)) {
-				sendError(ws, 'protocol');
-				ws.close();
-				return;
-			}
-			const existingIndex = room.members.indexOf(existingMember);
-			const survivingPeer = room.members.find(candidate => candidate !== existingMember && candidate.hello);
-			beginTransportEpoch(roomId, room, peerId, survivingPeer);
-			resetTransportNegotiation(existingMember);
-			if (existingIndex >= 0) room.members.splice(existingIndex, 1);
-			MESSAGE_RATE_LIMIT.delete(existingMember.connectionId);
-			sendMessage(existingMember.ws, {
-				type: 'control_peer_left_v1', protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
-				matchId: roomId, opponentPeerId: peerId,
-			});
-			try { existingMember.ws.close(); } catch { /* already closed */ }
-		}
-		if (room.members.length >= ROOM_MAX_PEERS) {
+		if (existingMember && !isSameAuthenticatedSession(existingMember, ticket)) {
 			sendError(ws, 'protocol');
 			ws.close();
 			return;
@@ -420,7 +411,33 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 			transportCommitted: false,
 			transportFallback: false,
 		};
-		room.members.push(member);
+		if (existingMember) {
+			const replacementBudget = consumeWindowRateLimit({
+				bucket: REPLACEMENT_RATE_LIMIT,
+				key: `${roomId}:${peerId}`,
+				limit: P2P_CONTROL_REPLACEMENT_LIMIT,
+				windowMs: P2P_CONTROL_REPLACEMENT_WINDOW_MS,
+			});
+			if (!replacementBudget.allowed) {
+				recordP2PControlDrop('replacement_rate_limited');
+				sendError(ws, 'rate_limited');
+				ws.close();
+				return;
+			}
+			const previousCandidate = room.pendingReplacements.get(peerId);
+			if (previousCandidate && previousCandidate !== existingMember) {
+				MESSAGE_RATE_LIMIT.delete(previousCandidate.connectionId);
+				try { previousCandidate.ws.close(); } catch { /* already closed */ }
+			}
+			room.pendingReplacements.set(peerId, member);
+		} else {
+			if (room.members.length >= ROOM_MAX_PEERS) {
+				sendError(ws, 'protocol');
+				ws.close();
+				return;
+			}
+			room.members.push(member);
+		}
 		recordP2PControlConnection();
 		const helloTimeout = setTimeout(() => {
 			if (!member.hello && ws.readyState === WebSocket.OPEN) {
@@ -431,7 +448,7 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 
 		ws.on('message', (raw: RawData) => {
 			const currentRoom = rooms.get(roomId);
-			if (!currentRoom?.members.includes(member)) return;
+			if (!currentRoom || !isAttachedControlMember(currentRoom, member)) return;
 			const rate = consumeWindowRateLimit({
 				bucket: MESSAGE_RATE_LIMIT,
 				key: member.connectionId,
@@ -462,6 +479,38 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 					sendError(ws, 'match_mismatch');
 					ws.close();
 					return;
+				}
+				const incumbent = currentRoom.members.find(candidate => candidate.peerId === peerId && candidate !== member);
+				if (incumbent) {
+					if (!isSameAuthenticatedSession(incumbent, ticket)) {
+						sendError(ws, 'protocol');
+						ws.close();
+						return;
+					}
+					const survivingPeer = currentRoom.members.find(candidate => candidate !== incumbent && candidate.hello);
+					beginTransportEpoch(roomId, currentRoom, peerId, survivingPeer);
+					const incumbentIndex = currentRoom.members.indexOf(incumbent);
+					if (incumbentIndex >= 0) currentRoom.members.splice(incumbentIndex, 1);
+					MESSAGE_RATE_LIMIT.delete(incumbent.connectionId);
+					sendMessage(incumbent.ws, {
+						type: 'control_peer_left_v1', protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+						matchId: roomId, opponentPeerId: peerId,
+					});
+					try { incumbent.ws.close(); } catch { /* already closed */ }
+					currentRoom.pendingReplacements.delete(peerId);
+					member.hello = true;
+					currentRoom.members.push(member);
+					notifyRoomOpen(roomId, currentRoom);
+					return;
+				}
+				if (currentRoom.pendingReplacements.get(peerId) === member) {
+					if (currentRoom.members.length >= ROOM_MAX_PEERS) {
+						sendError(ws, 'protocol');
+						ws.close();
+						return;
+					}
+					currentRoom.pendingReplacements.delete(peerId);
+					currentRoom.members.push(member);
 				}
 				member.hello = true;
 				notifyRoomOpen(roomId, currentRoom);
@@ -611,18 +660,24 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 			clearTimeout(helloTimeout);
 			const currentRoom = rooms.get(roomId);
 			if (!currentRoom) return;
+			if (currentRoom.pendingReplacements.get(peerId) === member) {
+				currentRoom.pendingReplacements.delete(peerId);
+				MESSAGE_RATE_LIMIT.delete(member.connectionId);
+				return;
+			}
 			const index = currentRoom.members.indexOf(member);
 			if (index < 0) return;
 			currentRoom.members.splice(index, 1);
 			MESSAGE_RATE_LIMIT.delete(member.connectionId);
+			const pendingReplacement = currentRoom.pendingReplacements.get(peerId);
 			const opponent = currentRoom.members.find(candidate => candidate.hello);
-			if (opponent) {
+			if (opponent && !pendingReplacement) {
 				sendMessage(opponent.ws, {
 					type: 'control_peer_left_v1', protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
 					matchId: roomId, opponentPeerId: peerId,
 				});
 			}
-			if (currentRoom.members.length === 0) {
+			if (currentRoom.members.length === 0 && currentRoom.pendingReplacements.size === 0) {
 				rooms.delete(roomId);
 				markP2PRefereePlaneDisconnected(roomId, 'control');
 			}
