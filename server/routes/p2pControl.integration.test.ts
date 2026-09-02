@@ -625,6 +625,154 @@ describe('P2P control websocket', () => {
 		const blockedError = waitForType(blocked, 'control_error_v1');
 		await expect(blockedError).resolves.toMatchObject({ code: 'rate_limited' });
 	});
+
+	it('promotes a pending replacement with a new epoch when the incumbent dies before hello', async () => {
+		const app = express();
+		app.get('/login/:username', (req, res) => {
+			issueHiveWebSession(res, req.params.username);
+			res.end('ok');
+		});
+		server = createServer(app);
+		attachP2PControl(server);
+		const port = await listen(server);
+		const baseUrl = `http://127.0.0.1:${port}`;
+		const aliceCookie = await loginCookie(baseUrl, 'alice');
+		const bobCookie = await loginCookie(baseUrl, 'bob');
+		const roomId = 'control-pending-incumbent-die-1';
+		const aliceTicket = buildP2PMatchTicket({ roomId, peerId: 'peer-a', role: 'offerer', account: 'alice' });
+		const bobTicket = buildP2PMatchTicket({ roomId, peerId: 'peer-b', role: 'answerer', account: 'bob' });
+		const wsUrl = `ws://127.0.0.1:${port}/ws/control?match=${roomId}`;
+		const alice = new WebSocket(`${wsUrl}&peer=peer-a`, controlProtocols(aliceTicket.token), { headers: { Cookie: aliceCookie } });
+		const bob = new WebSocket(`${wsUrl}&peer=peer-b`, controlProtocols(bobTicket.token), { headers: { Cookie: bobCookie } });
+		sockets.push(alice, bob);
+		await Promise.all([
+			new Promise<void>((resolve, reject) => { alice.once('open', () => resolve()); alice.once('error', reject); }),
+			new Promise<void>((resolve, reject) => { bob.once('open', () => resolve()); bob.once('error', reject); }),
+		]);
+		const hello = (peerId: string): string => JSON.stringify({ type: 'control_hello_v1', protocolVersion: 2, matchId: roomId, peerId });
+		const aliceOpen = waitForType(alice, 'control_open_v1');
+		const bobOpen = waitForType(bob, 'control_open_v1');
+		alice.send(hello('peer-a'));
+		bob.send(hello('peer-b'));
+		await Promise.all([aliceOpen, bobOpen]);
+
+		const bobReset = waitForType(bob, 'transport_reset_v2');
+		const replacement = new WebSocket(`${wsUrl}&peer=peer-a`, controlProtocols(aliceTicket.token), { headers: { Cookie: aliceCookie } });
+		sockets.push(replacement);
+		await new Promise<void>((resolve, reject) => { replacement.once('open', () => resolve()); replacement.once('error', reject); });
+		const replacementOpen = waitForType(replacement, 'control_open_v1');
+		const bobReopen = waitForType(bob, 'control_open_v1');
+		const aliceClosed = new Promise<void>(resolve => { alice.once('close', () => resolve()); });
+		alice.close();
+		await aliceClosed;
+		expect(bob.readyState).toBe(WebSocket.OPEN);
+		replacement.send(hello('peer-a'));
+		await expect(bobReset).resolves.toMatchObject({
+			reason: 'peer_reconnected',
+			transportEpoch: 2,
+			opponentPeerId: 'peer-a',
+		});
+		const [openedReplacement, openedBob] = await Promise.all([replacementOpen, bobReopen]);
+		expect(openedReplacement).toMatchObject({ transportEpoch: 2, peerId: 'peer-a' });
+		expect(openedBob).toMatchObject({ transportEpoch: 2, peerId: 'peer-b' });
+		expect(bob.readyState).toBe(WebSocket.OPEN);
+	});
+
+	it('notifies the survivor when both incumbent and pending replacement disappear', async () => {
+		const app = express();
+		app.get('/login/:username', (req, res) => {
+			issueHiveWebSession(res, req.params.username);
+			res.end('ok');
+		});
+		server = createServer(app);
+		attachP2PControl(server);
+		const port = await listen(server);
+		const baseUrl = `http://127.0.0.1:${port}`;
+		const aliceCookie = await loginCookie(baseUrl, 'alice');
+		const bobCookie = await loginCookie(baseUrl, 'bob');
+		const roomId = 'control-pending-orphan-1';
+		const aliceTicket = buildP2PMatchTicket({ roomId, peerId: 'peer-a', role: 'offerer', account: 'alice' });
+		const bobTicket = buildP2PMatchTicket({ roomId, peerId: 'peer-b', role: 'answerer', account: 'bob' });
+		const wsUrl = `ws://127.0.0.1:${port}/ws/control?match=${roomId}`;
+		const alice = new WebSocket(`${wsUrl}&peer=peer-a`, controlProtocols(aliceTicket.token), { headers: { Cookie: aliceCookie } });
+		const bob = new WebSocket(`${wsUrl}&peer=peer-b`, controlProtocols(bobTicket.token), { headers: { Cookie: bobCookie } });
+		sockets.push(alice, bob);
+		await Promise.all([
+			new Promise<void>((resolve, reject) => { alice.once('open', () => resolve()); alice.once('error', reject); }),
+			new Promise<void>((resolve, reject) => { bob.once('open', () => resolve()); bob.once('error', reject); }),
+		]);
+		const hello = (peerId: string): string => JSON.stringify({ type: 'control_hello_v1', protocolVersion: 2, matchId: roomId, peerId });
+		const aliceOpen = waitForType(alice, 'control_open_v1');
+		const bobOpen = waitForType(bob, 'control_open_v1');
+		alice.send(hello('peer-a'));
+		bob.send(hello('peer-b'));
+		await Promise.all([aliceOpen, bobOpen]);
+
+		const bobPeerLeft = waitForType(bob, 'control_peer_left_v1');
+		const replacement = new WebSocket(`${wsUrl}&peer=peer-a`, controlProtocols(aliceTicket.token), { headers: { Cookie: aliceCookie } });
+		sockets.push(replacement);
+		await new Promise<void>((resolve, reject) => { replacement.once('open', () => resolve()); replacement.once('error', reject); });
+		const aliceClosed = new Promise<void>(resolve => { alice.once('close', () => resolve()); });
+		alice.close();
+		await aliceClosed;
+		replacement.close();
+		await expect(bobPeerLeft).resolves.toMatchObject({ opponentPeerId: 'peer-a' });
+		expect(bob.readyState).toBe(WebSocket.OPEN);
+	});
+
+	it('never allows a newer socket to bypass an existing pending replacement', async () => {
+		const app = express();
+		app.get('/login/:username', (req, res) => {
+			issueHiveWebSession(res, req.params.username);
+			res.end('ok');
+		});
+		server = createServer(app);
+		attachP2PControl(server);
+		const port = await listen(server);
+		const baseUrl = `http://127.0.0.1:${port}`;
+		const aliceCookie = await loginCookie(baseUrl, 'alice');
+		const bobCookie = await loginCookie(baseUrl, 'bob');
+		const roomId = 'control-pending-coalesce-1';
+		const aliceTicket = buildP2PMatchTicket({ roomId, peerId: 'peer-a', role: 'offerer', account: 'alice' });
+		const bobTicket = buildP2PMatchTicket({ roomId, peerId: 'peer-b', role: 'answerer', account: 'bob' });
+		const wsUrl = `ws://127.0.0.1:${port}/ws/control?match=${roomId}`;
+		const alice = new WebSocket(`${wsUrl}&peer=peer-a`, controlProtocols(aliceTicket.token), { headers: { Cookie: aliceCookie } });
+		const bob = new WebSocket(`${wsUrl}&peer=peer-b`, controlProtocols(bobTicket.token), { headers: { Cookie: bobCookie } });
+		sockets.push(alice, bob);
+		await Promise.all([
+			new Promise<void>((resolve, reject) => { alice.once('open', () => resolve()); alice.once('error', reject); }),
+			new Promise<void>((resolve, reject) => { bob.once('open', () => resolve()); bob.once('error', reject); }),
+		]);
+		const hello = (peerId: string): string => JSON.stringify({ type: 'control_hello_v1', protocolVersion: 2, matchId: roomId, peerId });
+		const aliceOpen = waitForType(alice, 'control_open_v1');
+		const bobOpen = waitForType(bob, 'control_open_v1');
+		alice.send(hello('peer-a'));
+		bob.send(hello('peer-b'));
+		await Promise.all([aliceOpen, bobOpen]);
+
+		const firstCandidate = new WebSocket(`${wsUrl}&peer=peer-a`, controlProtocols(aliceTicket.token), { headers: { Cookie: aliceCookie } });
+		sockets.push(firstCandidate);
+		const firstCandidateClosed = new Promise<void>(resolve => { firstCandidate.once('close', () => resolve()); });
+		await new Promise<void>((resolve, reject) => { firstCandidate.once('open', () => resolve()); firstCandidate.once('error', reject); });
+		const aliceClosed = new Promise<void>(resolve => { alice.once('close', () => resolve()); });
+		alice.close();
+		await aliceClosed;
+
+		const secondCandidate = new WebSocket(`${wsUrl}&peer=peer-a`, controlProtocols(aliceTicket.token), { headers: { Cookie: aliceCookie } });
+		sockets.push(secondCandidate);
+		await new Promise<void>((resolve, reject) => { secondCandidate.once('open', () => resolve()); secondCandidate.once('error', reject); });
+		await firstCandidateClosed;
+		expect(firstCandidate.readyState).toBe(WebSocket.CLOSED);
+		expect(bob.readyState).toBe(WebSocket.OPEN);
+
+		const bobReset = waitForType(bob, 'transport_reset_v2');
+		const secondOpen = waitForType(secondCandidate, 'control_open_v1');
+		const bobReopen = waitForType(bob, 'control_open_v1');
+		secondCandidate.send(hello('peer-a'));
+		await expect(bobReset).resolves.toMatchObject({ transportEpoch: 2 });
+		await Promise.all([secondOpen, bobReopen]);
+		expect(bob.readyState).toBe(WebSocket.OPEN);
+	});
 });
 
 function timeoutReject(reject: (error: Error) => void): void {

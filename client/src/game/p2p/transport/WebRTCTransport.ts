@@ -422,7 +422,8 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 			|| message.type === 'poker_turn_notary_commit_v1'
 			|| message.type === 'poker_turn_notary_dispute_v1'
 			|| message.type === 'poker_action_time_gate_v1'
-			|| message.type === 'poker_action_time_gate_ack_v1') {
+			|| message.type === 'poker_action_time_gate_ack_v1'
+			|| message.type === 'action_applied_v1') {
 			emitControlMessage(message);
 			return;
 		}
@@ -577,6 +578,7 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 	return {
 		kind: 'webrtc',
 		get state(): TransportState { return state; },
+		get transportEpoch(): number { return transportEpoch; },
 		get controlState(): WebRTCControlState { return controlState; },
 		connect,
 		send: (message: P2PMessage): void => {

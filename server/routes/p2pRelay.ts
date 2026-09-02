@@ -125,6 +125,7 @@ const RELAY_ALLOWED_MESSAGE_TYPES: ReadonlySet<string> = new Set([
 	'poker_hash_check',
 	'hash_mismatch',
 	'poker_action',
+	'action_applied_v1',
 	'poker_turn_started',
 	'session_authorize',
 	'session_renewal',

@@ -46,6 +46,7 @@ export type ManagedTransport = GameTransport & {
 	readonly peer: string;
 	readonly open: boolean;
 	readonly isHostHint: boolean;
+	readonly transportEpoch?: number;
 	on: (event: TransportEvent, listener: TransportListener) => void;
 	off: (event: TransportEvent, listener: TransportListener) => void;
 	/** Optional authenticated control-plane referee channel. */
@@ -108,6 +109,7 @@ function isBufferedControlMessage(message: P2PControlServerMessage): boolean {
 	|| message.type === 'poker_turn_notary_dispute_v1'
 	|| message.type === 'poker_action_time_gate_v1'
 	|| message.type === 'poker_action_time_gate_ack_v1'
+	|| message.type === 'action_applied_v1'
 	|| message.type === 'transport_committed_v1';
 }
 
@@ -427,6 +429,13 @@ export function createTransportManager(
 		get peer(): string { return remotePeer; },
 		get open(): boolean { return open; },
 		get isHostHint(): boolean { return hostHint; },
+		get transportEpoch(): number {
+			const transport = selected;
+			if (transport && 'transportEpoch' in transport && typeof transport.transportEpoch === 'number') {
+				return transport.transportEpoch;
+			}
+			return 1;
+		},
 		get controlAvailable(): boolean { return Boolean(selected && hasControlChannel(selected)); },
 		getStats: async (): Promise<TransportStatsSnapshot | null> => {
 			const transport = selected;

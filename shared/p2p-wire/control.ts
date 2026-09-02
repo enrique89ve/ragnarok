@@ -10,6 +10,7 @@ import {
 	PhaseCheckpointProposalSchema,
 } from './phaseCheckpoint';
 import { CompactPokerActionSchema } from './combat';
+import { ActionAppliedSchema } from './delivery';
 import {
 	PokerTurnClockProposalSchema,
 	PokerTurnNotaryCommitSchema,
@@ -144,6 +145,7 @@ export const P2PControlClientMessageSchema = z.discriminatedUnion('type', [
 	TransportReadySchema,
 	TransportFallbackSchema,
 	PokerActionControlSchema,
+	ActionAppliedSchema,
 	// Referee proposals use the same authenticated Control WS as signaling.
 	// They never enter the gameplay DataChannel.
 	PhaseCheckpointProposalSchema,
@@ -187,6 +189,7 @@ export const P2PControlServerMessageSchema = z.discriminatedUnion('type', [
 	TransportFallbackSchema,
 	TransportCommittedSchema,
 	PokerActionControlSchema,
+	ActionAppliedSchema,
 	PhaseCheckpointCommitSchema,
 	PhaseCheckpointDisputeSchema,
 	PokerTurnNotaryCommitSchema,

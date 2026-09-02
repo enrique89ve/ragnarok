@@ -86,6 +86,15 @@ describe('P2P control wire contract', () => {
 			transportEpoch: 1,
 			kind: 'websocket-relay',
 		})).toBeNull();
+		expect(parseP2PControlClientMessage({
+			type: 'action_applied_v1',
+			protocolVersion: 1,
+			matchId: 'match-1',
+			transportEpoch: 2,
+			decisionId: 'decision-1',
+			seq: 3,
+			resultingStateHash: 'a'.repeat(64),
+		})).toMatchObject({ type: 'action_applied_v1', seq: 3 });
 		expect(parseP2PControlServerMessage({
 			type: 'transport_reset_v2',
 			protocolVersion: 2,

@@ -288,6 +288,7 @@ export function createWebSocketRelayTransport(
 		get peer(): string { return relay.peer; },
 		get open(): boolean { return relay.open; },
 		get isHostHint(): boolean { return relay.isHostHint; },
+		get transportEpoch(): number { return control?.transportEpoch ?? 1; },
 		on: (event, listener) => relay.on(event, listener),
 		off: (event, listener) => relay.off(event, listener),
 	};
@@ -299,6 +300,7 @@ export function createWebSocketRelayTransport(
 		get peer(): string { return relay.peer; },
 		get open(): boolean { return relay.open; },
 		get isHostHint(): boolean { return relay.isHostHint; },
+		get transportEpoch(): number { return control.transportEpoch; },
 		controlAvailable: true,
 		sendControlMessage: (message: P2PControlClientMessage) => control.send(message),
 		onControlMessage: (listener: (message: P2PControlServerMessage) => void) => {

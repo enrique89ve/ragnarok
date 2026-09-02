@@ -126,10 +126,15 @@ import { useMatchmakingStore } from '../../../../stores/matchmakingStore';
 import { buildBattleReadyLoadoutCommitmentPayload, compareBattleReadyProofs, type P2PBattleReadyProof } from '../../../../p2p/battleReady';
 import { createSeededIdGen } from '../../../../utils/seededRng';
 import {
+	INITIAL_TRANSPORT_EPOCH,
 	P2P_CONTROL_PROTOCOL_VERSION,
 	type P2PControlClientMessage,
 	type P2PControlServerMessage,
 } from '@shared/p2p-wire/control';
+import {
+	buildActionAppliedMessage,
+	type ActionAppliedMessage,
+} from '@shared/p2p-wire/delivery';
 import { enqueueWireMessage, MAX_INBOUND_WIRE_QUEUE_SIZE } from './wireMessageQueue';
 import { resolveP2PResumeAuthPolicy } from '../../../../p2p/p2pResumeAuthPolicy';
 import { replayTranscriptLeaves } from './transcriptReplay';
@@ -178,7 +183,15 @@ type PendingPokerActionGate = {
 	readonly resolve: (allowed: boolean) => void;
 	timeout: ReturnType<typeof setTimeout> | null;
 	retrying: boolean;
+	gateAllowed: boolean | null;
+	applied: boolean;
 };
+
+function readConnectionTransportEpoch(connection: { readonly transportEpoch?: number } | null): number {
+	return typeof connection?.transportEpoch === 'number' && Number.isInteger(connection.transportEpoch) && connection.transportEpoch >= 1
+		? connection.transportEpoch
+		: INITIAL_TRANSPORT_EPOCH;
+}
 
 function isGameplayWireMessage(data: P2PMessage): boolean {
 	return data.type === 'game_command'
@@ -595,7 +608,6 @@ export function useWireSync() {
 		}
 		if (pending.timeout) clearTimeout(pending.timeout);
 		pending.timeout = null;
-		pendingPokerActionGateRef.current.delete(ack.decisionId);
 		if (!ack.allowed) {
 			debug.warn('[wireSync] Poker action rejected by time gate', {
 				decisionId: ack.decisionId.slice(0, 24),
@@ -608,8 +620,38 @@ export function useWireSync() {
 					duration: 3500,
 				});
 			}
+			pendingPokerActionGateRef.current.delete(ack.decisionId);
+			pending.resolve(false);
+			return;
 		}
-		pending.resolve(ack.allowed);
+		pending.gateAllowed = true;
+		if (pending.applied) {
+			pendingPokerActionGateRef.current.delete(ack.decisionId);
+			pending.resolve(true);
+		}
+	}, []);
+
+	const settlePokerActionApplied = useCallback((receipt: ActionAppliedMessage): void => {
+		const pending = pendingPokerActionGateRef.current.get(receipt.decisionId);
+		if (!pending) return;
+		if (pending.matchId !== receipt.matchId || pending.seq !== receipt.seq) {
+			debug.warn('[wireSync] Poker application receipt identity mismatch', {
+				decisionId: receipt.decisionId.slice(0, 24),
+			});
+			if (pending.timeout) clearTimeout(pending.timeout);
+			pending.timeout = null;
+			pendingPokerActionGateRef.current.delete(receipt.decisionId);
+			pending.resolve(false);
+			quarantineP2PSession('poker_action_applied_mismatch');
+			return;
+		}
+		pending.applied = true;
+		if (pending.gateAllowed === true) {
+			if (pending.timeout) clearTimeout(pending.timeout);
+			pending.timeout = null;
+			pendingPokerActionGateRef.current.delete(receipt.decisionId);
+			pending.resolve(true);
+		}
 	}, []);
 
 	const rejectPendingPokerActionGates = useCallback((): void => {
@@ -2808,6 +2850,11 @@ export function useWireSync() {
 						break;
 					}
 
+				case 'action_applied_v1': {
+					settlePokerActionApplied(data);
+					break;
+				}
+
 				case 'poker_action': {
 					const nowP = Date.now();
 					actionTimestampsRef.current = actionTimestampsRef.current.filter(t => nowP - t < 1000);
@@ -2933,6 +2980,23 @@ export function useWireSync() {
 								return;
 							}
 							pokerAdapter.maybeCloseBettingRound();
+							const resultingStateHash = computePokerCombatStateHash(pokerAdapter.getPokerState());
+							if (resultingStateHash && data.seq !== undefined) {
+								const receipt = buildActionAppliedMessage({
+									matchId: pokerMatchId,
+									transportEpoch: readConnectionTransportEpoch(usePeerStore.getState().connection),
+									decisionId: data.decisionId,
+									seq: data.seq,
+									resultingStateHash,
+								});
+								const active = usePeerStore.getState().connection;
+								if (active?.controlAvailable && active.sendControlMessage) {
+									try { active.sendControlMessage(receipt); }
+									catch (error) { debug.warn('[wireSync] failed to send poker action applied receipt', error); }
+								} else {
+									send(receipt);
+								}
+							}
 						},
 					});
 					break;
@@ -3613,6 +3677,10 @@ export function useWireSync() {
 				settlePokerActionGateAck(data);
 				return;
 			}
+			if (data.type === 'action_applied_v1') {
+				settlePokerActionApplied(data);
+				return;
+			}
 			if (data.type === 'poker_action_time_gate_v1') {
 				const { protocolVersion: _protocolVersion, matchId: _matchId, type: _controlType, ...wirePayload } = data;
 				const message = parseWireMessage({ type: 'poker_action', ...wirePayload });
@@ -3645,7 +3713,7 @@ export function useWireSync() {
 				pendingSyncRef.current = null;
 			}
 		};
-	}, [connection, connectionState, send, sendPhaseCheckpointProposal, sendPokerTurnProposal, playCard, attackWithCard, endTurn, performHeroPower, toggleMulliganCard, confirmMulligan, skipMulligan, applyOpponentCommandToStore, isCurrentConnectedMatch, settlePokerActionGateAck]);
+	}, [connection, connectionState, send, sendPhaseCheckpointProposal, sendPokerTurnProposal, playCard, attackWithCard, endTurn, performHeroPower, toggleMulliganCard, confirmMulligan, skipMulligan, applyOpponentCommandToStore, isCurrentConnectedMatch, settlePokerActionGateAck, settlePokerActionApplied]);
 
 	const syncGameState = useCallback(() => {
 		// Full-state frames are intentionally disabled. A peer-authored snapshot
@@ -4328,6 +4396,8 @@ export function useWireSync() {
 				resolve: resolveGate,
 				timeout: null,
 				retrying: false,
+				gateAllowed: null,
+				applied: false,
 			};
 			pendingPokerActionGateRef.current.set(pokerAction.decisionId, pendingGate);
 			armPokerActionGateTimeout(pokerAction.decisionId);

@@ -24,6 +24,7 @@ import { z } from 'zod';
 
 import { ChessCommandEnvelopeSchema } from '@shared/p2p-wire/chess';
 import { CompactPokerActionSchema, isPokerActionCompactConsistent } from '@shared/p2p-wire/combat';
+import { ActionAppliedSchema } from '@shared/p2p-wire/delivery';
 import { TransitionReceiptMessageSchema } from '@shared/p2p-wire/integrity';
 import {
 	PhaseCheckpointCommitSchema,
@@ -529,6 +530,7 @@ const SCHEMA_BY_TYPE = {
 	poker_hash_check: PokerHashCheckSchema,
 	hash_mismatch: HashMismatchSchema,
 	poker_action: PokerActionSchema,
+	action_applied_v1: ActionAppliedSchema,
 	poker_turn_started: PokerTurnStartedSchema,
 	poker_turn_notary_commit_v1: PokerTurnNotaryCommitSchema,
 	poker_turn_notary_dispute_v1: PokerTurnNotaryDisputeSchema,

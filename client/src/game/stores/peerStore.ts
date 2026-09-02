@@ -808,8 +808,10 @@ async function openTransport(
 				});
 				return;
 			}
-			if (connectionState === 'connected') {
-				debug.warn(`[PeerStore] transport closed — entering grace period side=${side}`);
+			const recoveringActiveTransport = connectionState === 'reconnecting'
+				&& get().connection === transport;
+			if (connectionState === 'connected' || recoveringActiveTransport) {
+				debug.warn(`[PeerStore] active transport lost — entering grace period side=${side}`);
 				startGracePeriod(side, get, set);
 				set({
 					connection: null,

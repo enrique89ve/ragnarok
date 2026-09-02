@@ -1,5 +1,6 @@
 import type { ChessCommandEnvelope } from '../../../../shared/p2p-wire/chess';
 import type { CompactPokerAction, PokerActionOrigin } from '../../../../shared/p2p-wire/combat';
+import type { ActionAppliedMessage } from '../../../../shared/p2p-wire/delivery';
 import type { TransitionReceiptMessage } from '../../../../shared/p2p-wire/integrity';
 import type {
 	PhaseCheckpointProposal,
@@ -77,6 +78,7 @@ export type WireMessage =
 	| { type: 'poker_hash_check'; pokerStateHash: string; phase: 'pre_flop' | 'faith' | 'foresight' | 'destiny'; turnId: string; actionsThisRound: number }
 	| { type: 'hash_mismatch'; turnNumber: number; myHash: string }
 	| { type: 'poker_action'; playerId: string; action: string; origin: PokerActionOrigin; hpCommitment?: number; compact?: CompactPokerAction; turnId: string; decisionId: string; seq?: number; prevStateHash?: string; signerPubkey?: string; signature?: string; sentAtMs?: number }
+	| ActionAppliedMessage
 	| { type: 'poker_turn_started'; combatId: string; turnId: string; phase: string; activePlayerId: string; actionsThisRound: number; durationMs: number; remainingMs?: number; sentAtMs: number }
 	| ChessCommandEnvelope
 	| TransitionReceiptMessage

@@ -86,6 +86,52 @@ export const P2P_CONTROL_REPLACEMENT_WINDOW_MS = 30_000;
 function isAttachedControlMember(room: ControlRoom, member: ControlMember): boolean {
 	return room.members.includes(member) || room.pendingReplacements.get(member.peerId) === member;
 }
+
+function findPeerControlOwnership(room: ControlRoom, peerId: string): {
+	readonly incumbent: ControlMember | null;
+	readonly candidate: ControlMember | null;
+} {
+	return {
+		incumbent: room.members.find(member => member.peerId === peerId) ?? null,
+		candidate: room.pendingReplacements.get(peerId) ?? null,
+	};
+}
+
+function replacementRateLimitKey(roomId: string, peerId: string): string {
+	return `${roomId}:${peerId}`;
+}
+
+function forgetControlRoomRateLimits(roomId: string, room: ControlRoom): void {
+	const peerIds = new Set<string>();
+	for (const member of room.members) peerIds.add(member.peerId);
+	for (const peerId of room.pendingReplacements.keys()) peerIds.add(peerId);
+	for (const peerId of peerIds) REPLACEMENT_RATE_LIMIT.delete(replacementRateLimitKey(roomId, peerId));
+}
+
+function notifyOpponentPeerLeft(room: ControlRoom, roomId: string, departedPeerId: string): void {
+	const opponent = room.members.find(candidate => candidate.hello && candidate.peerId !== departedPeerId);
+	if (!opponent) return;
+	sendMessage(opponent.ws, {
+		type: 'control_peer_left_v1', protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+		matchId: roomId, opponentPeerId: departedPeerId,
+	});
+}
+
+function fenceControlMember(member: ControlMember, roomId: string, departedPeerId: string): void {
+	MESSAGE_RATE_LIMIT.delete(member.connectionId);
+	sendMessage(member.ws, {
+		type: 'control_peer_left_v1', protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+		matchId: roomId, opponentPeerId: departedPeerId,
+	});
+	try { member.ws.close(); } catch { /* already closed */ }
+}
+
+function maybeDeleteEmptyControlRoom(roomId: string, room: ControlRoom): void {
+	if (room.members.length > 0 || room.pendingReplacements.size > 0) return;
+	forgetControlRoomRateLimits(roomId, room);
+	rooms.delete(roomId);
+	markP2PRefereePlaneDisconnected(roomId, 'control');
+}
 export const P2P_CONTROL_KEEPALIVE_INTERVAL_MS = 15_000;
 
 export type P2PControlServerOptions = Readonly<{
@@ -154,6 +200,10 @@ function isSignalingMessage(message: P2PControlClientMessage): boolean {
 
 function isTransportControlMessage(message: P2PControlClientMessage): boolean {
 	return message.type === 'transport_ready_v1' || message.type === 'transport_fallback_v1';
+}
+
+function isDeliveryReceiptMessage(message: P2PControlClientMessage): boolean {
+	return message.type === 'action_applied_v1';
 }
 
 function sendRefereeResult(
@@ -243,7 +293,7 @@ function forcePreCommitRelayFallback(roomId: string, room: ControlRoom, member: 
 }
 
 function fenceTransportEpoch(room: ControlRoom, message: P2PControlClientMessage): 'ok' | 'stale' | 'future' | 'missing' {
-	if (!isSignalingMessage(message) && !isTransportControlMessage(message)) return 'ok';
+	if (!isSignalingMessage(message) && !isTransportControlMessage(message) && !isDeliveryReceiptMessage(message)) return 'ok';
 	const epoch = readControlTransportEpoch(message);
 	if (epoch === null) return 'missing';
 	if (epoch < room.transportEpoch) return 'stale';
@@ -392,8 +442,9 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 			rooms.set(roomId, room);
 			markP2PRefereePlaneConnected(roomId, 'control');
 		}
-		const existingMember = room.members.find(member => member.peerId === peerId);
-		if (existingMember && !isSameAuthenticatedSession(existingMember, ticket)) {
+		const ownership = findPeerControlOwnership(room, peerId);
+		const currentOwner = ownership.incumbent ?? ownership.candidate;
+		if (currentOwner && !isSameAuthenticatedSession(currentOwner, ticket)) {
 			sendError(ws, 'protocol');
 			ws.close();
 			return;
@@ -411,10 +462,10 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 			transportCommitted: false,
 			transportFallback: false,
 		};
-		if (existingMember) {
+		if (currentOwner) {
 			const replacementBudget = consumeWindowRateLimit({
 				bucket: REPLACEMENT_RATE_LIMIT,
-				key: `${roomId}:${peerId}`,
+				key: replacementRateLimitKey(roomId, peerId),
 				limit: P2P_CONTROL_REPLACEMENT_LIMIT,
 				windowMs: P2P_CONTROL_REPLACEMENT_WINDOW_MS,
 			});
@@ -424,12 +475,12 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 				ws.close();
 				return;
 			}
-			const previousCandidate = room.pendingReplacements.get(peerId);
-			if (previousCandidate && previousCandidate !== existingMember) {
+			const previousCandidate = ownership.candidate;
+			room.pendingReplacements.set(peerId, member);
+			if (previousCandidate && previousCandidate !== member) {
 				MESSAGE_RATE_LIMIT.delete(previousCandidate.connectionId);
 				try { previousCandidate.ws.close(); } catch { /* already closed */ }
 			}
-			room.pendingReplacements.set(peerId, member);
 		} else {
 			if (room.members.length >= ROOM_MAX_PEERS) {
 				sendError(ws, 'protocol');
@@ -480,37 +531,25 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 					ws.close();
 					return;
 				}
-				const incumbent = currentRoom.members.find(candidate => candidate.peerId === peerId && candidate !== member);
-				if (incumbent) {
-					if (!isSameAuthenticatedSession(incumbent, ticket)) {
+				if (currentRoom.pendingReplacements.get(peerId) === member) {
+					const { incumbent } = findPeerControlOwnership(currentRoom, peerId);
+					if (incumbent && !isSameAuthenticatedSession(incumbent, ticket)) {
 						sendError(ws, 'protocol');
 						ws.close();
 						return;
 					}
-					const survivingPeer = currentRoom.members.find(candidate => candidate !== incumbent && candidate.hello);
+					const survivingPeer = currentRoom.members.find(candidate => candidate.peerId !== peerId && candidate.hello);
 					beginTransportEpoch(roomId, currentRoom, peerId, survivingPeer);
-					const incumbentIndex = currentRoom.members.indexOf(incumbent);
-					if (incumbentIndex >= 0) currentRoom.members.splice(incumbentIndex, 1);
-					MESSAGE_RATE_LIMIT.delete(incumbent.connectionId);
-					sendMessage(incumbent.ws, {
-						type: 'control_peer_left_v1', protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
-						matchId: roomId, opponentPeerId: peerId,
-					});
-					try { incumbent.ws.close(); } catch { /* already closed */ }
+					if (incumbent) {
+						const incumbentIndex = currentRoom.members.indexOf(incumbent);
+						if (incumbentIndex >= 0) currentRoom.members.splice(incumbentIndex, 1);
+						fenceControlMember(incumbent, roomId, peerId);
+					}
 					currentRoom.pendingReplacements.delete(peerId);
 					member.hello = true;
 					currentRoom.members.push(member);
 					notifyRoomOpen(roomId, currentRoom);
 					return;
-				}
-				if (currentRoom.pendingReplacements.get(peerId) === member) {
-					if (currentRoom.members.length >= ROOM_MAX_PEERS) {
-						sendError(ws, 'protocol');
-						ws.close();
-						return;
-					}
-					currentRoom.pendingReplacements.delete(peerId);
-					currentRoom.members.push(member);
 				}
 				member.hello = true;
 				notifyRoomOpen(roomId, currentRoom);
@@ -649,7 +688,7 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 				if (result.status === 'message') recordP2PControlMessage();
 				return;
 			}
-			if (!isSignalingMessage(message) && !isTransportControlMessage(message)) return;
+			if (!isSignalingMessage(message) && !isTransportControlMessage(message) && !isDeliveryReceiptMessage(message)) return;
 			const opponent = currentRoom.members.find(candidate => candidate !== member && candidate.hello);
 			if (!opponent || opponent.ws.readyState !== WebSocket.OPEN) return;
 			sendMessage(opponent.ws, message);
@@ -663,6 +702,9 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 			if (currentRoom.pendingReplacements.get(peerId) === member) {
 				currentRoom.pendingReplacements.delete(peerId);
 				MESSAGE_RATE_LIMIT.delete(member.connectionId);
+				const incumbentStillExists = currentRoom.members.some(candidate => candidate.peerId === peerId);
+				if (!incumbentStillExists) notifyOpponentPeerLeft(currentRoom, roomId, peerId);
+				maybeDeleteEmptyControlRoom(roomId, currentRoom);
 				return;
 			}
 			const index = currentRoom.members.indexOf(member);
@@ -670,17 +712,8 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 			currentRoom.members.splice(index, 1);
 			MESSAGE_RATE_LIMIT.delete(member.connectionId);
 			const pendingReplacement = currentRoom.pendingReplacements.get(peerId);
-			const opponent = currentRoom.members.find(candidate => candidate.hello);
-			if (opponent && !pendingReplacement) {
-				sendMessage(opponent.ws, {
-					type: 'control_peer_left_v1', protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
-					matchId: roomId, opponentPeerId: peerId,
-				});
-			}
-			if (currentRoom.members.length === 0 && currentRoom.pendingReplacements.size === 0) {
-				rooms.delete(roomId);
-				markP2PRefereePlaneDisconnected(roomId, 'control');
-			}
+			if (!pendingReplacement) notifyOpponentPeerLeft(currentRoom, roomId, peerId);
+			maybeDeleteEmptyControlRoom(roomId, currentRoom);
 		};
 		ws.on('close', handleDeparture);
 		ws.on('error', () => recordP2PControlError('socket_error'));
