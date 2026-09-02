@@ -601,6 +601,13 @@ export function useWireSync() {
 				decisionId: ack.decisionId.slice(0, 24),
 				reason: ack.reason,
 			});
+			if (ack.reason === 'notary_pending' || ack.reason === 'missing_notary') {
+				GameEventBus.emitNotification({
+					level: 'warning',
+					message: 'Poker turn is syncing with the opponent. Controls will unlock when both clocks agree.',
+					duration: 3500,
+				});
+			}
 		}
 		pending.resolve(ack.allowed);
 	}, []);

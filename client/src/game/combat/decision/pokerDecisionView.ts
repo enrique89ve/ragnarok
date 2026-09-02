@@ -1,5 +1,6 @@
 import { CombatPhase, type PokerCombatState } from '../../types/PokerCombatTypes';
 import type { P2PConnectionState } from '../../stores/peerStore';
+import { POKER_TURN_CLOCK_NOTARY_OWNER_ID } from '../../../../../shared/p2p-wire/pokerTurnClock';
 import type { ActionPermissions } from '../rules/pokerActionRules';
 import {
 	getPokerTurnRemainingSeconds,
@@ -44,6 +45,7 @@ export interface PokerDecisionStateInput {
 	readonly turnTimer?: number | null;
 	readonly turnStartedAtMs?: number | null;
 	readonly turnDeadlineAtMs?: number | null;
+	readonly turnClockOwnerId?: string | null;
 	readonly maxTurnTime?: number;
 	readonly actionsThisRound?: number;
 	readonly foldWinner?: string | null;
@@ -110,11 +112,13 @@ const PHASE_LABELS: Partial<Record<CombatPhase, string>> = {
 export function getPokerDecisionView(input: {
 	readonly combatState: PokerDecisionStateInput | null;
 	readonly connectionState?: P2PConnectionState;
+	readonly requireNotaryCommit?: boolean;
 	readonly nowMs?: number;
 }): PokerDecisionProtocolView {
 	const {
 		combatState,
 		connectionState = 'connected',
+		requireNotaryCommit = false,
 		nowMs = Date.now(),
 	} = input;
 
@@ -192,6 +196,26 @@ export function getPokerDecisionView(input: {
 		};
 	}
 
+	if (
+		requireNotaryCommit
+		&& timedPhase
+		&& combatState.turnClockOwnerId !== POKER_TURN_CLOCK_NOTARY_OWNER_ID
+	) {
+		return {
+			status: 'syncing',
+			decisionSide: 'none',
+			canAct: false,
+			phaseLabel,
+			turnLabel,
+			clockLabel,
+			remainingSeconds,
+			label: 'Syncing',
+			title: 'Waiting for poker referee',
+			detail: 'Turn clock is being confirmed by both players',
+			protocol,
+		};
+	}
+
 	if (remainingSeconds !== null && remainingSeconds <= 0) {
 		return {
 			status: 'expired',
@@ -261,6 +285,7 @@ export function derivePokerDecisionView(input: {
 	const protocolView = getPokerDecisionView({
 		combatState,
 		connectionState: isP2PCombat ? connectionState : 'connected',
+		requireNotaryCommit: isP2PCombat,
 		nowMs,
 	});
 	const durationSeconds = Math.max(1, Math.ceil(combatState.maxTurnTime || 1));
@@ -352,9 +377,9 @@ export function derivePokerDecisionView(input: {
 				hasClock,
 			}),
 			status: 'syncing',
-			statusLabel: 'Syncing',
-			statusTitle: 'Waiting for poker clock',
-			statusDetail: 'Decision window not open',
+			statusLabel: protocolView.label,
+			statusTitle: protocolView.title,
+			statusDetail: protocolView.detail,
 			windowLabel: 'Syncing',
 		};
 	}

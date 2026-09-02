@@ -14,8 +14,12 @@ import { derivePokerDecisionView } from '../decision/pokerDecisionView';
 import { getPokerActionDefinition } from '../decision/pokerActionCatalog';
 import { derivePokerTurnPolicy, type PokerOpponentKind } from '../decision/pokerTurnPolicy';
 import { derivePokerTimeoutIntent } from '../rules/pokerActionRules';
-import { resolvePokerTurnAnnouncement } from '../decision/pokerTurnAnnouncement';
+import {
+  resolvePokerTurnAnnouncement,
+  shouldRetryPokerTurnProposal,
+} from '../decision/pokerTurnAnnouncement';
 import type { PokerActionOrigin } from '../../../../../shared/p2p-wire/combat';
+import { POKER_TURN_CLOCK_NOTARY_OWNER_ID } from '../../../../../shared/p2p-wire/pokerTurnClock';
 import { computePokerCombatStateHash } from '../../p2p/phaseBoundaryRoot';
 import { commitNextP2PCanonicalAction } from '../../p2p/canonicalActionOrder';
 import { recordMove } from '../../../data/blockchain/transcriptBuilder';
@@ -54,6 +58,7 @@ interface UseCombatTimerOptions {
 export function useCombatTimer(options: UseCombatTimerOptions): void {
   const { combatState, isActive, updateTimer, isP2PCombat = false, opponentKind = null, sendPokerAction, sendPokerTurnStarted, p2pTransportConnected = true, confirmMulligan, addHeroBattlePopup } = options;
   const announcedTurnIdRef = useRef<string | null>(null);
+  const lastTurnProposalRef = useRef<{ readonly turnId: string; readonly sentAtMs: number } | null>(null);
   const expiredTurnIdRef = useRef<string | null>(null);
   // A timeout decision is asynchronous in P2P (it must be signed before the
   // local reducer runs). Keep an in-flight reservation separate from the
@@ -121,29 +126,36 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
         })
       : null;
     if (announcement) announcedTurnIdRef.current = announcement.nextAnnouncedTurnId;
+    const sendTurnProposal = (state: PokerCombatState, nowMs: number): boolean => {
+      if (!state.turnId || !state.activePlayerId || !turnPolicy.shouldBroadcastTurnStart) return false;
+      const decisionView = derivePokerDecisionView({
+        combatState: state,
+        isP2PCombat,
+        nowMs,
+      });
+      const remainingMs = state.turnDeadlineAtMs === null
+        ? decisionView.remainingSeconds * 1_000
+        : Math.max(0, state.turnDeadlineAtMs - nowMs);
+      const sent = sendPokerTurnStartedRef.current?.({
+        combatId: state.combatId,
+        turnId: state.turnId,
+        phase: state.phase,
+        activePlayerId: state.activePlayerId,
+        actionsThisRound: state.actionsThisRound,
+        durationMs: turnPolicy.turnClockPolicy.durationMs,
+        remainingMs,
+      }) ?? false;
+      if (sent) {
+        announcedTurnIdRef.current = state.turnId;
+        lastTurnProposalRef.current = { turnId: state.turnId, sentAtMs: nowMs };
+      }
+      return sent;
+    };
+
     if (isP2PCombat && announcement?.shouldSend && combatState.turnId) {
       if (combatState.activePlayerId) {
         const nowMs = Date.now();
-        const decisionView = derivePokerDecisionView({
-          combatState,
-          isP2PCombat,
-          nowMs,
-        });
-        const remainingMs = combatState.turnDeadlineAtMs === null
-          ? decisionView.remainingSeconds * 1_000
-          : Math.max(0, combatState.turnDeadlineAtMs - nowMs);
-        if (turnPolicy.shouldBroadcastTurnStart) {
-          const sent = sendPokerTurnStartedRef.current?.({
-            combatId: combatState.combatId,
-            turnId: combatState.turnId,
-            phase: combatState.phase,
-					activePlayerId: combatState.activePlayerId,
-					actionsThisRound: combatState.actionsThisRound,
-					durationMs: turnPolicy.turnClockPolicy.durationMs,
-            remainingMs,
-          }) ?? false;
-          if (sent) announcedTurnIdRef.current = combatState.turnId;
-        }
+        sendTurnProposal(combatState, nowMs);
       }
     }
 
@@ -168,6 +180,31 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
         isP2PCombat,
         opponentKind,
       });
+
+      // The local reducer creates a presentation clock immediately, while the
+      // referee only authorizes actions after both peers have proposed the same
+      // identity. Retry the idempotent proposal until that server-owned clock
+      // arrives; this covers a missed frame without ever allowing local-only
+      // gameplay.
+      if (
+        isP2PCombat
+        && freshTurnPolicy.shouldBroadcastTurnStart
+        && freshState.turnId
+        && freshState.turnClockOwnerId !== POKER_TURN_CLOCK_NOTARY_OWNER_ID
+      ) {
+        const nowMs = Date.now();
+        const lastProposal = lastTurnProposalRef.current;
+        if (shouldRetryPokerTurnProposal({
+          transportConnected: p2pTransportConnected,
+          turnId: freshState.turnId,
+          notaryCommitted: freshState.turnClockOwnerId === POKER_TURN_CLOCK_NOTARY_OWNER_ID,
+          lastSentTurnId: lastProposal?.turnId ?? null,
+          lastSentAtMs: lastProposal?.sentAtMs ?? null,
+          nowMs,
+        })) {
+          sendTurnProposal(freshState, nowMs);
+        }
+      }
 
       if (!freshTurnPolicy.shouldTickTimer) return;
 

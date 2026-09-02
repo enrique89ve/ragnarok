@@ -3,6 +3,7 @@ import { CombatPhase, type PokerCombatState } from '../../types/PokerCombatTypes
 import { getPokerP2PTurnStatusView } from './PokerP2PTurnStatus';
 import { derivePokerDecisionView } from '../decision/pokerDecisionView';
 import { derivePokerTurnPolicy } from '../decision/pokerTurnPolicy';
+import { POKER_TURN_CLOCK_NOTARY_OWNER_ID } from '../../../../../shared/p2p-wire/pokerTurnClock';
 
 function makeState(overrides: Partial<PokerCombatState> = {}): PokerCombatState {
 	return {
@@ -15,6 +16,7 @@ function makeState(overrides: Partial<PokerCombatState> = {}): PokerCombatState 
 		opponent: { playerId: 'opponent-1' },
 		foldWinner: undefined,
 		isAllInShowdown: false,
+		turnClockOwnerId: POKER_TURN_CLOCK_NOTARY_OWNER_ID,
 		...overrides,
 	} as unknown as PokerCombatState;
 }
@@ -51,6 +53,17 @@ describe('getPokerP2PTurnStatusView', () => {
 		expect(view.variant).toBe('reconnecting');
 		expect(view.title).toBe('Poker input paused');
 		expect(view.detail).toContain('Turn timer continues');
+	});
+
+	it('parks controls until the shared turn clock is notarized', () => {
+		const view = getPokerP2PTurnStatusView({
+			combatState: makeState({ turnClockOwnerId: null }),
+			connectionState: 'connected',
+		});
+
+		expect(view.variant).toBe('syncing');
+		expect(view.title).toBe('Waiting for poker referee');
+		expect(view.detail).toContain('both players');
 	});
 
 	it('shows showdown when wager actions are no longer valid', () => {

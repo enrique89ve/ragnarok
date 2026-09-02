@@ -1099,7 +1099,18 @@ export const createPokerCombatSlice: StateCreator<
         blindAllIn
       });
     }
-    
+
+		// Wager effects can also debit the available HP while a phase is being
+		// opened (before blinds are posted). Treat that deterministic zero-health
+		// result exactly like a committed all-in; otherwise a peer can render 0 HP
+		// while still waiting for a turn that no longer has a legal action.
+		if (
+			phasedCombat.player.pet.stats.currentHealth <= 0
+			|| phasedCombat.opponent.pet.stats.currentHealth <= 0
+		) {
+			phasedCombat = { ...phasedCombat, isAllInShowdown: true };
+		}
+
     // Use centralized utility for activePlayerId
     const ctx: ActivePlayerContext = {
       playerPosition: combatState.playerPosition,
@@ -1128,12 +1139,12 @@ export const createPokerCombatSlice: StateCreator<
         currentBet: blindsJustPosted ? newCurrentBet : 0,
         blindsPosted: blindsJustPosted || combatState.blindsPosted,
         preflopBetMade: blindsJustPosted || combatState.preflopBetMade,
-        isAllInShowdown: blindAllIn || combatState.isAllInShowdown,
+        isAllInShowdown: blindAllIn || combatState.isAllInShowdown || phasedCombat.isAllInShowdown,
         activePlayerId: newActivePlayerId,
         actionsThisRound: 0
       })
     });
-    
+
     const phaseTick = get()._nextLogTick();
     get().addLogEntry({
       id: `phase_${phaseTick}`,
@@ -1155,6 +1166,20 @@ export const createPokerCombatSlice: StateCreator<
     } else if (newPhase === PokerCombatPhase.DESTINY && newCommunityCards.destiny) {
       emitCommunityCardRevealed({ phase: newPhase, slotIndex: 4, card: newCommunityCards.destiny });
     }
+
+		// In peer matches the AI-only all-in timer is intentionally disabled: a
+		// signed action must be the trigger for every gameplay transition. Once a
+		// player is all-in, however, there is no legal action left that could fire
+		// another transition. Fast-forward the deterministic reveal sequence here
+		// so both peers reach RESOLUTION from the same committed action. Emit the
+		// current phase first so the presentation order remains FAITH -> FORESIGHT
+		// -> DESTINY even though the reducer closes the sequence synchronously.
+		if (phasedCombat.isAllInShowdown && newPhase !== PokerCombatPhase.RESOLUTION) {
+			const afterPhase = get().pokerCombatState;
+			if (afterPhase?.phase === newPhase && afterPhase.isAllInShowdown) {
+				get().advancePokerPhase();
+			}
+		}
   },
 
   resolvePokerCombat: (): CombatResolution | null => {
@@ -1950,6 +1975,10 @@ export const createPokerCombatSlice: StateCreator<
     if (combatState.phase === PokerCombatPhase.RESOLUTION) {
       return;
     }
+
+    if (!isTimedPokerDecisionPhase(combatState.phase)) {
+      return;
+    }
     
     // Auto-advance if fold occurred
     if (combatState.foldWinner) {
@@ -1957,22 +1986,45 @@ export const createPokerCombatSlice: StateCreator<
       return;
     }
     
-    if (!combatState.player.isReady || !combatState.opponent.isReady) {
-      return;
-    }
-    
-    const currentBet = combatState.currentBet;
-    const playerHP = combatState.player.hpCommitted;
-    const opponentHP = combatState.opponent.hpCommitted;
     const playerAvailableHP = combatState.player.pet.stats.currentHealth;
     const opponentAvailableHP = combatState.opponent.pet.stats.currentHealth;
     const playerAllIn = playerAvailableHP <= 0;
     const opponentAllIn = opponentAvailableHP <= 0;
-    
+
+    // An all-in action is terminal for betting: the other peer must not be
+    // asked to author another action because the action validator correctly
+    // rejects every intent once showdown mode is active. Promote both sides
+    // to the phase barrier before the normal readiness/bet checks so an actor
+    // reaching zero HP cannot leave the hand parked with the opponent waiting.
+    if (combatState.isAllInShowdown || playerAllIn || opponentAllIn) {
+      const allInState = combatState.isAllInShowdown
+        && combatState.activePlayerId === null
+        && combatState.player.isReady
+        && combatState.opponent.isReady
+        ? combatState
+        : {
+            ...combatState,
+            isAllInShowdown: true,
+            activePlayerId: null,
+            player: { ...combatState.player, isReady: true },
+            opponent: { ...combatState.opponent, isReady: true },
+          };
+      if (allInState !== combatState) {
+        set({ pokerCombatState: allInState });
+      }
+      get().advancePokerPhase();
+      return;
+    }
+
+    if (!combatState.player.isReady || !combatState.opponent.isReady) {
+      return;
+    }
+
+    const currentBet = combatState.currentBet;
+    const playerHP = combatState.player.hpCommitted;
+    const opponentHP = combatState.opponent.hpCommitted;
+
     const bothCheckedThisRound = currentBet === 0;
-    
-    const playerMatchedBet = playerHP >= currentBet || playerAllIn;
-    const opponentMatchedBet = opponentHP >= currentBet || opponentAllIn;
     
     const betsMatched = currentBet > 0 
       ? (playerHP >= currentBet || playerAllIn) && (opponentHP >= currentBet || opponentAllIn)
@@ -1984,18 +2036,10 @@ export const createPokerCombatSlice: StateCreator<
       return;
     }
     
-    const eitherAllIn = playerAllIn || opponentAllIn;
-    if (eitherAllIn && !combatState.isAllInShowdown) {
-      debug.combat('[maybeCloseBettingRound] All-in detected, enabling showdown mode');
-      set({
-        pokerCombatState: {
-          ...combatState,
-          isAllInShowdown: true
-        }
-      });
-    }
-    
-    get().advancePokerPhase();
+		// An all-in hand has no next betting action. `advancePokerPhase` consumes
+		// the remaining community-card phases recursively (with the guard above)
+		// and lands on RESOLUTION immediately on both peers.
+		get().advancePokerPhase();
   },
 
   applyDirectDamage: (targetPlayerId: 'player' | 'opponent', damage: number, sourceDescription?: string) => {
@@ -2015,7 +2059,24 @@ export const createPokerCombatSlice: StateCreator<
       message: `${sourceDescription || 'Attack'} dealt ${damage} damage to ${target.playerName}`
     });
 
-    set({ pokerCombatState: struck.state });
+    const targetIsLethal = target.pet.stats.currentHealth <= 0;
+    const nextState = targetIsLethal && isTimedPokerDecisionPhase(struck.state.phase)
+      ? {
+          ...struck.state,
+          isAllInShowdown: true,
+          activePlayerId: null,
+          player: { ...struck.state.player, isReady: true },
+          opponent: { ...struck.state.opponent, isReady: true },
+        }
+      : struck.state;
+    set({ pokerCombatState: nextState });
+
+    // Auxiliary damage is itself a committed command in P2P. Once it makes a
+    // hero lethal, close the same deterministic showdown barrier used by a
+    // wager action instead of waiting for a now-impossible betting response.
+    if (targetIsLethal && isTimedPokerDecisionPhase(nextState.phase)) {
+      get().advancePokerPhase();
+    }
   },
   };
 };

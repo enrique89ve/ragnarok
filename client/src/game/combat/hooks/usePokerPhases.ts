@@ -52,9 +52,15 @@ export function usePokerPhases(options: UsePokerPhasesOptions): void {
     if (combatState.phase === CombatPhase.MULLIGAN) return;
     if (cardGameMulliganActive) return;
 
-    if (!combatState.player.isReady || !combatState.opponent.isReady) {
-      return;
-    }
+	// An opening low-health hand can enter showdown mode before either side
+	// has authored a betting action. Let the store promote that deterministic
+	// barrier; waiting for readiness here would strand the hand in PRE_FLOP.
+	if (
+		(!combatState.player.isReady || !combatState.opponent.isReady)
+		&& !combatState.isAllInShowdown
+	) {
+		return;
+	}
 
     if (combatState.phase === CombatPhase.RESOLUTION) {
       return;

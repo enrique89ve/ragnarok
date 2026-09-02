@@ -789,7 +789,19 @@ export function useRagnarokCombatController(
       } catch (error) {
         debug.warn('[CombatController] poker action send rejected before local commit', error);
       }
-      if (!sent) return;
+	      if (!sent) {
+			const peerState = usePeerStore.getState();
+			const subtitle = peerState.connectionState !== 'connected'
+				? 'Connection interrupted — the match remains unchanged.'
+				: peerState.p2pSessionAuthError
+					? 'Session authorization is incomplete — wait for the referee.'
+					: 'The referee did not authorize this action — try again when the turn is synced.';
+			fireAnnouncement('warning', 'Poker action not committed', {
+				subtitle,
+				duration: 2500,
+			});
+			return;
+		}
       const latestState = getPokerCombatAdapterState().combatState;
       if (
         !latestState
