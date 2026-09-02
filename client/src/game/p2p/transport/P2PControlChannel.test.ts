@@ -78,12 +78,13 @@ describe('P2P control channel', () => {
 			peerId: ticket.peerId,
 			opponentPeerId: 'peer-b',
 			role: 'offerer',
+			transportEpoch: 1,
 		});
 		await pending;
 
 		socket.triggerMessage({
 			type: 'phase_checkpoint_dispute_v1',
-			protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+			protocolVersion: 1,
 			scope: 'round-boundary',
 			roomId: ticket.roomId,
 			matchId: ticket.roomId,
@@ -109,6 +110,7 @@ describe('P2P control channel', () => {
 			peerId: ticket.peerId,
 			opponentPeerId: 'peer-b',
 			role: 'offerer',
+			transportEpoch: 1,
 		});
 		expect(channel.state).toBe('closed');
 	});
@@ -134,6 +136,7 @@ describe('P2P control channel', () => {
 			peerId: 'peer-forged',
 			opponentPeerId: 'peer-b',
 			role: 'offerer',
+			transportEpoch: 1,
 		});
 
 		await expect(pending).rejects.toThrow('identity mismatch');

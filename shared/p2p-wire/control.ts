@@ -19,14 +19,16 @@ import {
 
 export const P2P_CONTROL_WS_PROTOCOL = 'ragnarok-p2p-control-v1';
 export const P2P_CONTROL_WS_PROTOCOL_PREFIX = `${P2P_MATCH_TICKET_WS_PROTOCOL_PREFIX}control.`;
-export const P2P_CONTROL_PROTOCOL_VERSION = 1 as const;
+export const P2P_CONTROL_PROTOCOL_VERSION = 2 as const;
 export const P2P_CONTROL_MAX_PAYLOAD_BYTES = 16 * 1024;
+export const INITIAL_TRANSPORT_EPOCH = 1 as const;
 
 const MatchIdSchema = z.string().min(1).max(256);
 const PeerIdSchema = z.string().min(1).max(64);
 const SdpSchema = z.string().min(1).max(12 * 1024);
 const IceCandidateSchema = z.string().min(1).max(4 * 1024);
 const SdpMidSchema = z.string().min(1).max(256);
+const TransportEpochSchema = z.number().int().min(1).max(0xffff_ffff);
 
 const ControlHelloSchema = z.object({
 	type: z.literal('control_hello_v1'),
@@ -39,6 +41,7 @@ const WebRtcOfferSchema = z.object({
 	type: z.literal('webrtc_offer_v1'),
 	protocolVersion: z.literal(P2P_CONTROL_PROTOCOL_VERSION),
 	matchId: MatchIdSchema,
+	transportEpoch: TransportEpochSchema,
 	sdp: SdpSchema,
 }).strict();
 
@@ -46,6 +49,7 @@ const WebRtcAnswerSchema = z.object({
 	type: z.literal('webrtc_answer_v1'),
 	protocolVersion: z.literal(P2P_CONTROL_PROTOCOL_VERSION),
 	matchId: MatchIdSchema,
+	transportEpoch: TransportEpochSchema,
 	sdp: SdpSchema,
 }).strict();
 
@@ -53,6 +57,7 @@ const IceCandidateSchemaEnvelope = z.object({
 	type: z.literal('ice_candidate_v1'),
 	protocolVersion: z.literal(P2P_CONTROL_PROTOCOL_VERSION),
 	matchId: MatchIdSchema,
+	transportEpoch: TransportEpochSchema,
 	candidate: IceCandidateSchema,
 	sdpMid: SdpMidSchema.nullable().optional(),
 	sdpMLineIndex: z.number().int().min(0).max(1024).nullable().optional(),
@@ -69,10 +74,18 @@ export const P2P_TRANSPORT_FALLBACK_REASONS = [
 ] as const;
 export type P2PTransportFallbackReason = typeof P2P_TRANSPORT_FALLBACK_REASONS[number];
 
+export const P2P_TRANSPORT_RESET_REASONS = [
+	'peer_reconnected',
+	'transport_failed',
+	'server_recovery',
+] as const;
+export type P2PTransportResetReason = typeof P2P_TRANSPORT_RESET_REASONS[number];
+
 const TransportReadySchema = z.object({
 	type: z.literal('transport_ready_v1'),
 	protocolVersion: z.literal(P2P_CONTROL_PROTOCOL_VERSION),
 	matchId: MatchIdSchema,
+	transportEpoch: TransportEpochSchema,
 	kind: TransportKindSchema,
 }).strict();
 
@@ -80,6 +93,7 @@ const TransportFallbackSchema = z.object({
 	type: z.literal('transport_fallback_v1'),
 	protocolVersion: z.literal(P2P_CONTROL_PROTOCOL_VERSION),
 	matchId: MatchIdSchema,
+	transportEpoch: TransportEpochSchema,
 	reason: z.enum(P2P_TRANSPORT_FALLBACK_REASONS),
 }).strict();
 
@@ -91,7 +105,17 @@ const TransportCommittedSchema = z.object({
 	type: z.literal('transport_committed_v1'),
 	protocolVersion: z.literal(P2P_CONTROL_PROTOCOL_VERSION),
 	matchId: MatchIdSchema,
+	transportEpoch: TransportEpochSchema,
 	kind: TransportKindSchema,
+}).strict();
+
+const TransportResetSchema = z.object({
+	type: z.literal('transport_reset_v2'),
+	protocolVersion: z.literal(P2P_CONTROL_PROTOCOL_VERSION),
+	matchId: MatchIdSchema,
+	transportEpoch: TransportEpochSchema,
+	reason: z.enum(P2P_TRANSPORT_RESET_REASONS),
+	opponentPeerId: PeerIdSchema,
 }).strict();
 
 const PokerActionControlSchema = z.object({
@@ -135,6 +159,7 @@ const ControlOpenSchema = z.object({
 	peerId: PeerIdSchema,
 	opponentPeerId: PeerIdSchema,
 	role: z.enum(['offerer', 'answerer']),
+	transportEpoch: TransportEpochSchema,
 }).strict();
 
 const ControlPeerLeftSchema = z.object({
@@ -154,6 +179,7 @@ export const P2PControlServerMessageSchema = z.discriminatedUnion('type', [
 	ControlOpenSchema,
 	ControlPeerLeftSchema,
 	ControlErrorSchema,
+	TransportResetSchema,
 	WebRtcOfferSchema,
 	WebRtcAnswerSchema,
 	IceCandidateSchemaEnvelope,
@@ -167,6 +193,12 @@ export const P2PControlServerMessageSchema = z.discriminatedUnion('type', [
 	PokerTurnNotaryDisputeSchema,
 	PokerActionTimeGateAckSchema,
 ]);
+
+export function readControlTransportEpoch(message: { readonly transportEpoch?: number }): number | null {
+	return typeof message.transportEpoch === 'number' && Number.isInteger(message.transportEpoch)
+		? message.transportEpoch
+		: null;
+}
 
 export type P2PControlServerMessage = z.infer<typeof P2PControlServerMessageSchema>;
 

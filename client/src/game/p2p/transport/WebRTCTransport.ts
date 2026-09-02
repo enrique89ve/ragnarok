@@ -2,6 +2,7 @@ import { debug } from '../../config/debugConfig';
 import { parseWireMessage } from '../messageSchemas';
 import type { P2PMessage } from '../messages';
 import {
+	INITIAL_TRANSPORT_EPOCH,
 	P2P_CONTROL_PROTOCOL_VERSION,
 	parseP2PControlServerMessage,
 	type P2PControlClientMessage,
@@ -98,6 +99,8 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 	let fallbackSent = false;
 	let transportReadySent = false;
 	let transportCommitted = false;
+	let transportEpoch = INITIAL_TRANSPORT_EPOCH;
+	let disposingGameplay = false;
 	let connectStartedAtMs: number | null = null;
 	let connectedAtMs: number | null = null;
 	const pendingIceCandidates: WebRTCIceCandidateInit[] = [];
@@ -134,10 +137,22 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 		if (resolve) resolve();
 	};
 
-	const disposeResources = (): void => {
+	const disposeGameplayTransport = (): void => {
+		disposingGameplay = true;
 		try { dataChannel?.close(); } catch { /* already closed */ }
 		try { peerConnection?.close(); } catch { /* already closed */ }
+		dataChannel = null;
+		peerConnection = null;
+		disposingGameplay = false;
+	};
+
+	const disposeControlPlane = (): void => {
 		try { socket?.close(); } catch { /* already closed */ }
+	};
+
+	const disposeAllResources = (): void => {
+		disposeGameplayTransport();
+		disposeControlPlane();
 	};
 
 	const sendFallback = (reason: P2PTransportFallbackReason): void => {
@@ -148,6 +163,7 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 				type: 'transport_fallback_v1',
 				protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
 				matchId: options.roomId,
+				transportEpoch,
 				reason,
 			}));
 		} catch { /* the control socket is already closing */ }
@@ -168,7 +184,7 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 		controlState = 'closed';
 		setState('failed');
 		rejectPending(error);
-		disposeResources();
+		disposeAllResources();
 	};
 
 	const failControl = (message: string, reason: P2PTransportFallbackReason = 'ice_failed'): void => {
@@ -207,6 +223,7 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 				type: 'transport_ready_v1',
 				protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
 				matchId: options.roomId,
+				transportEpoch,
 				kind: 'webrtc',
 			}));
 		} catch (error) {
@@ -341,7 +358,8 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 		};
 		activeChannel.onerror = () => fail('WebRTC DataChannel error', 'data_channel_failed');
 		activeChannel.onclose = () => {
-			if (!closed && state !== 'failed') fail('WebRTC DataChannel closed', 'data_channel_failed');
+			if (disposingGameplay || closed || state === 'failed' || state === 'reconnecting') return;
+			fail('WebRTC DataChannel closed', 'data_channel_failed');
 		};
 		if (activeChannel.readyState === 'open') maybeResolveDataChannel();
 	};
@@ -361,6 +379,7 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 				type: 'ice_candidate_v1',
 				protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
 				matchId: options.roomId,
+				transportEpoch,
 				candidate: candidate.candidate,
 				sdpMid: candidate.sdpMid,
 				sdpMLineIndex: candidate.sdpMLineIndex,
@@ -368,6 +387,7 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 		};
 		connection.ondatachannel = (event: RTCDataChannelEvent) => attachDataChannel(event.channel);
 		connection.onconnectionstatechange = () => {
+			if (disposingGameplay || closed || state === 'failed' || state === 'reconnecting') return;
 			if (connection.connectionState === 'failed' || connection.connectionState === 'closed') fail('WebRTC peer connection failed', 'ice_failed');
 		};
 		return connection;
@@ -382,6 +402,7 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 			type: 'webrtc_offer_v1',
 			protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
 			matchId: options.roomId,
+			transportEpoch,
 			sdp: connection.localDescription.sdp,
 		});
 	};
@@ -405,8 +426,28 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 			emitControlMessage(message);
 			return;
 		}
+		if (message.type === 'transport_reset_v2') {
+			if (message.matchId !== options.roomId) {
+				failControl('Transport reset match mismatch');
+				return;
+			}
+			transportEpoch = message.transportEpoch;
+			transportCommitted = false;
+			transportReadySent = false;
+			fallbackSent = false;
+			remoteDescriptionSet = false;
+			pendingIceCandidates.length = 0;
+			disposeGameplayTransport();
+			if (state === 'connected') setState('reconnecting');
+			return;
+		}
+		if ('transportEpoch' in message && message.transportEpoch !== transportEpoch) {
+			if (message.transportEpoch < transportEpoch) return;
+			failControl('Future transport epoch on control plane');
+			return;
+		}
 		if (message.type === 'transport_fallback_v1') {
-			if (state !== 'connected') fail('Opponent selected relay transport', message.reason, false);
+			if (state !== 'connected' && state !== 'reconnecting') fail('Opponent selected relay transport', message.reason, false);
 			return;
 		}
 		if (message.type === 'transport_ready_v1') {
@@ -443,8 +484,10 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 				failControl('Control WebSocket identity mismatch');
 				return;
 			}
+			transportEpoch = message.transportEpoch;
 			controlState = 'connected';
 			remotePeer = message.opponentPeerId;
+			if (state === 'reconnecting') setState('connecting');
 			const connection = setupPeerConnection();
 			if (connection && message.role === 'offerer') void createOffer(connection).catch(() => failControl('WebRTC offer failed'));
 			return;
@@ -457,7 +500,13 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 			const answer = await peerConnection.createAnswer();
 			await peerConnection.setLocalDescription(answer);
 			if (peerConnection.localDescription?.type !== 'answer' || !peerConnection.localDescription.sdp) throw new Error('WebRTC answer missing SDP');
-			sendControl({ type: 'webrtc_answer_v1', protocolVersion: P2P_CONTROL_PROTOCOL_VERSION, matchId: options.roomId, sdp: peerConnection.localDescription.sdp });
+			sendControl({
+				type: 'webrtc_answer_v1',
+				protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+				matchId: options.roomId,
+				transportEpoch,
+				sdp: peerConnection.localDescription.sdp,
+			});
 			return;
 		}
 		if (message.type === 'webrtc_answer_v1') {
@@ -521,7 +570,7 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 		closed = true;
 		controlState = 'closed';
 		if (state !== 'connected') rejectPending(new Error('WebRTC transport closed before connecting'));
-		disposeResources();
+		disposeAllResources();
 		setState('closed');
 	};
 

@@ -144,6 +144,7 @@ function commitWebRTCTransport(socket: FakeControlSocket): void {
 		type: 'transport_committed_v1',
 		protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
 		matchId: ticket.roomId,
+		transportEpoch: 1,
 		kind: 'webrtc',
 	});
 }
@@ -202,6 +203,7 @@ describe('WebRTC transport boundary', () => {
 			peerId: ticket.peerId,
 			opponentPeerId: 'peer-b',
 			role: 'offerer',
+			transportEpoch: 1,
 		});
 		await settleMicrotasks();
 		connection.dataChannel?.open();
@@ -274,6 +276,7 @@ describe('WebRTC transport boundary', () => {
 			peerId: ticket.peerId,
 			opponentPeerId: 'peer-b',
 			role: 'offerer',
+			transportEpoch: 1,
 		});
 		await settleMicrotasks();
 		connection.dataChannel?.open();
@@ -309,6 +312,7 @@ describe('WebRTC transport boundary', () => {
 			peerId: ticket.peerId,
 			opponentPeerId: 'peer-b',
 			role: 'offerer',
+			transportEpoch: 1,
 		});
 		await settleMicrotasks();
 		connection.dataChannel?.open();
@@ -317,7 +321,7 @@ describe('WebRTC transport boundary', () => {
 
 		socket.triggerMessage({
 			type: 'poker_action_time_gate_ack_v1',
-			protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+			protocolVersion: 1,
 			matchId: ticket.roomId,
 			turnId: 'combat-1:faith:peer-a:0',
 			decisionId: 'decision-1',
@@ -376,6 +380,7 @@ describe('WebRTC transport boundary', () => {
 			type: 'transport_fallback_v1',
 			protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
 			matchId: ticket.roomId,
+			transportEpoch: 1,
 			reason: 'ice_failed',
 		});
 
@@ -430,6 +435,7 @@ describe('WebRTC transport boundary', () => {
 			peerId: ticket.peerId,
 			opponentPeerId: 'peer-b',
 			role: 'offerer',
+			transportEpoch: 1,
 		});
 		await settleMicrotasks();
 		connection.dataChannel?.open();
@@ -477,6 +483,7 @@ describe('WebRTC transport boundary', () => {
 			peerId: ticket.peerId,
 			opponentPeerId: 'peer-b',
 			role: 'offerer',
+			transportEpoch: 1,
 		});
 		await settleMicrotasks();
 		connection.dataChannel?.open();
@@ -494,6 +501,52 @@ describe('WebRTC transport boundary', () => {
 		expect(transport.controlState).toBe('closed');
 		expect(connection.dataChannel?.close).toHaveBeenCalled();
 		expect(connection.close).toHaveBeenCalled();
+	});
+
+	it('keeps the Control WebSocket and destroys gameplay transport on transport_reset_v2', async () => {
+		const socket = createFakeControlSocket();
+		const connection = createFakePeerConnection();
+		const WebSocketConstructor = vi.fn(function WebSocketMock() { return socket; });
+		Object.assign(WebSocketConstructor, { OPEN: 1 });
+		vi.stubGlobal('WebSocket', WebSocketConstructor);
+		vi.stubGlobal('RTCPeerConnection', vi.fn(function RTCPeerConnectionMock() { return connection; }));
+
+		const transport = createWebRTCTransport({
+			controlUrl: 'wss://game.example/ws/control',
+			roomId: ticket.roomId,
+			peerId: ticket.peerId,
+			matchTicket: ticket,
+		});
+		const pending = transport.connect();
+		socket.triggerOpen();
+		socket.triggerMessage({
+			type: 'control_open_v1',
+			protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+			matchId: ticket.roomId,
+			peerId: ticket.peerId,
+			opponentPeerId: 'peer-b',
+			role: 'offerer',
+			transportEpoch: 1,
+		});
+		await settleMicrotasks();
+		connection.dataChannel?.open();
+		commitWebRTCTransport(socket);
+		await pending;
+
+		socket.triggerMessage({
+			type: 'transport_reset_v2',
+			protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+			matchId: ticket.roomId,
+			transportEpoch: 2,
+			reason: 'peer_reconnected',
+			opponentPeerId: 'peer-a',
+		});
+
+		expect(transport.state).toBe('reconnecting');
+		expect(transport.controlState).toBe('connected');
+		expect(connection.dataChannel?.close).toHaveBeenCalled();
+		expect(connection.close).toHaveBeenCalled();
+		expect(socket.close).not.toHaveBeenCalled();
 	});
 
 	it('fails WebRTC when control_peer_left arrives before connection', async () => {
@@ -545,6 +598,7 @@ describe('WebRTC transport boundary', () => {
 			type: 'transport_ready_v1',
 			protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
 			matchId: ticket.roomId,
+			transportEpoch: 1,
 			kind: 'webrtc',
 		})).toThrow('Control WebSocket send failed');
 		expect(transport.state).toBe('failed');
@@ -573,6 +627,7 @@ describe('WebRTC transport boundary', () => {
 			peerId: ticket.peerId,
 			opponentPeerId: 'peer-b',
 			role: 'offerer',
+			transportEpoch: 1,
 		});
 		await settleMicrotasks();
 		connection.dataChannel?.open();
@@ -608,6 +663,7 @@ describe('WebRTC transport boundary', () => {
 			peerId: answererTicket.peerId,
 			opponentPeerId: 'peer-b',
 			role: 'answerer',
+			transportEpoch: 1,
 		});
 		await settleMicrotasks();
 

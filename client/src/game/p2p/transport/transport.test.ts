@@ -181,11 +181,12 @@ describe('GameTransport relay adapter', () => {
 		controlSocket.open();
 		controlSocket.receive({
 			type: 'control_open_v1',
-			protocolVersion: 1,
+			protocolVersion: 2,
 			matchId: 'room-1',
 			peerId: 'peer-a',
 			opponentPeerId: 'peer-b',
 			role: 'offerer',
+			transportEpoch: 1,
 		});
 		await Promise.resolve();
 		expect(controlSocket.sent.map(value => JSON.parse(value).type)).not.toContain('transport_ready_v1');
@@ -196,8 +197,9 @@ describe('GameTransport relay adapter', () => {
 		expect(dataMessages).toEqual([]);
 		controlSocket.receive({
 			type: 'transport_committed_v1',
-			protocolVersion: 1,
+			protocolVersion: 2,
 			matchId: 'room-1',
+			transportEpoch: 1,
 			kind: 'websocket-relay',
 		});
 		await connected;
@@ -234,11 +236,12 @@ describe('GameTransport relay adapter', () => {
 		controlSocket.open();
 		controlSocket.receive({
 			type: 'control_open_v1',
-			protocolVersion: 1,
+			protocolVersion: 2,
 			matchId: 'room-1',
 			peerId: 'peer-a',
 			opponentPeerId: 'peer-b',
 			role: 'offerer',
+			transportEpoch: 1,
 		});
 		controlSocket.close();
 

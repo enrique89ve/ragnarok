@@ -172,30 +172,30 @@ describe('P2P control websocket', () => {
 
 		const aliceOpen = waitForType(alice, 'control_open_v1');
 		const bobOpen = waitForType(bob, 'control_open_v1');
-		const hello = (peerId: string): string => JSON.stringify({ type: 'control_hello_v1', protocolVersion: 1, matchId: roomId, peerId });
+		const hello = (peerId: string): string => JSON.stringify({ type: 'control_hello_v1', protocolVersion: 2, matchId: roomId, peerId });
 		alice.send(hello('peer-a'));
 		bob.send(hello('peer-b'));
 		await expect(aliceOpen).resolves.toMatchObject({ peerId: 'peer-a', opponentPeerId: 'peer-b', role: 'offerer' });
 		await expect(bobOpen).resolves.toMatchObject({ peerId: 'peer-b', opponentPeerId: 'peer-a', role: 'answerer' });
 
 		const offerOnBob = waitForType(bob, 'webrtc_offer_v1');
-		alice.send(JSON.stringify({ type: 'webrtc_offer_v1', protocolVersion: 1, matchId: roomId, sdp: 'offer-sdp' }));
+		alice.send(JSON.stringify({ type: 'webrtc_offer_v1', protocolVersion: 2, matchId: roomId, transportEpoch: 1, sdp: 'offer-sdp' }));
 		await expect(offerOnBob).resolves.toMatchObject({ sdp: 'offer-sdp' });
 		const answerOnAlice = waitForType(alice, 'webrtc_answer_v1');
-		bob.send(JSON.stringify({ type: 'webrtc_answer_v1', protocolVersion: 1, matchId: roomId, sdp: 'answer-sdp' }));
+		bob.send(JSON.stringify({ type: 'webrtc_answer_v1', protocolVersion: 2, matchId: roomId, transportEpoch: 1, sdp: 'answer-sdp' }));
 		await expect(answerOnAlice).resolves.toMatchObject({ sdp: 'answer-sdp' });
 		const iceOnBob = waitForType(bob, 'ice_candidate_v1');
-		alice.send(JSON.stringify({ type: 'ice_candidate_v1', protocolVersion: 1, matchId: roomId, candidate: 'candidate:test' }));
+		alice.send(JSON.stringify({ type: 'ice_candidate_v1', protocolVersion: 2, matchId: roomId, transportEpoch: 1, candidate: 'candidate:test' }));
 		await expect(iceOnBob).resolves.toMatchObject({ candidate: 'candidate:test' });
 
 		const fallbackOnBob = waitForType(bob, 'transport_fallback_v1');
-		alice.send(JSON.stringify({ type: 'transport_fallback_v1', protocolVersion: 1, matchId: roomId, reason: 'ice_failed' }));
+		alice.send(JSON.stringify({ type: 'transport_fallback_v1', protocolVersion: 2, matchId: roomId, transportEpoch: 1, reason: 'ice_failed' }));
 		await expect(fallbackOnBob).resolves.toMatchObject({ reason: 'ice_failed' });
 
 		const readyOnAlice = waitForType(alice, 'transport_ready_v1');
-		bob.send(JSON.stringify({ type: 'transport_ready_v1', protocolVersion: 1, matchId: roomId, kind: 'websocket-relay' }));
+		bob.send(JSON.stringify({ type: 'transport_ready_v1', protocolVersion: 2, matchId: roomId, transportEpoch: 1, kind: 'websocket-relay' }));
 		await expect(readyOnAlice).resolves.toMatchObject({ kind: 'websocket-relay' });
-		bob.send(JSON.stringify({ type: 'transport_fallback_v1', protocolVersion: 1, matchId: roomId, reason: 'timeout' }));
+		bob.send(JSON.stringify({ type: 'transport_fallback_v1', protocolVersion: 2, matchId: roomId, transportEpoch: 1, reason: 'timeout' }));
 
 		const checkpointOnAlice = waitForType(alice, 'phase_checkpoint_commit_v1');
 		const checkpointOnBob = waitForType(bob, 'phase_checkpoint_commit_v1');
@@ -238,7 +238,7 @@ describe('P2P control websocket', () => {
 		const actionOnBob = waitForType(bob, 'poker_action_time_gate_v1');
 		alice.send(JSON.stringify({
 			type: 'poker_action_time_gate_v1',
-			protocolVersion: 1,
+			protocolVersion: 2,
 			matchId: roomId,
 			playerId: 'player',
 			action: 'defend',
@@ -258,7 +258,7 @@ describe('P2P control websocket', () => {
 		});
 		expect(actionForwarded).toMatchObject({ type: 'poker_action_time_gate_v1', decisionId: 'decision-1' });
 
-		bob.send(JSON.stringify({ type: 'webrtc_offer_v1', protocolVersion: 1, matchId: roomId, sdp: 'forbidden-glare' }));
+		bob.send(JSON.stringify({ type: 'webrtc_offer_v1', protocolVersion: 2, matchId: roomId, transportEpoch: 1, sdp: 'forbidden-glare' }));
 		await new Promise(resolve => setTimeout(resolve, 100));
 
 		const closeAndWait = (socket: WebSocket): Promise<void> => new Promise(resolve => {
@@ -337,8 +337,8 @@ describe('P2P control websocket', () => {
 			]);
 			const aliceOpen = waitForType(alice, 'control_open_v1');
 			const bobOpen = waitForType(bob, 'control_open_v1');
-			alice.send(JSON.stringify({ type: 'control_hello_v1', protocolVersion: 1, matchId: roomId, peerId: 'peer-a' }));
-			bob.send(JSON.stringify({ type: 'control_hello_v1', protocolVersion: 1, matchId: roomId, peerId: 'peer-b' }));
+			alice.send(JSON.stringify({ type: 'control_hello_v1', protocolVersion: 2, matchId: roomId, peerId: 'peer-a' }));
+			bob.send(JSON.stringify({ type: 'control_hello_v1', protocolVersion: 2, matchId: roomId, peerId: 'peer-b' }));
 			await Promise.all([aliceOpen, bobOpen]);
 			return { alice, bob };
 		};
@@ -351,25 +351,25 @@ describe('P2P control websocket', () => {
 		};
 		sameKindRoom.alice.on('message', observeUnilateralCommit);
 		const readyOnBob = waitForType(sameKindRoom.bob, 'transport_ready_v1');
-		sameKindRoom.alice.send(JSON.stringify({ type: 'transport_ready_v1', protocolVersion: 1, matchId: 'control-transport-commit-1', kind: 'webrtc' }));
+		sameKindRoom.alice.send(JSON.stringify({ type: 'transport_ready_v1', protocolVersion: 2, matchId: 'control-transport-commit-1', transportEpoch: 1, kind: 'webrtc' }));
 		await expect(readyOnBob).resolves.toMatchObject({ kind: 'webrtc' });
 		expect(unilateralCommitMessages).toHaveLength(0);
 		sameKindRoom.alice.off('message', observeUnilateralCommit);
 		const sameKindCommitOnAlice = waitForType(sameKindRoom.alice, 'transport_committed_v1');
 		const sameKindCommitOnBob = waitForType(sameKindRoom.bob, 'transport_committed_v1');
-		sameKindRoom.bob.send(JSON.stringify({ type: 'transport_ready_v1', protocolVersion: 1, matchId: 'control-transport-commit-1', kind: 'webrtc' }));
+		sameKindRoom.bob.send(JSON.stringify({ type: 'transport_ready_v1', protocolVersion: 2, matchId: 'control-transport-commit-1', transportEpoch: 1, kind: 'webrtc' }));
 		await expect(sameKindCommitOnAlice).resolves.toMatchObject({ kind: 'webrtc' });
 		await expect(sameKindCommitOnBob).resolves.toMatchObject({ kind: 'webrtc' });
 
 		const mixedRoom = await openPair('control-transport-commit-2');
 		const fallbackOnAlice = waitForType(mixedRoom.alice, 'transport_fallback_v1');
-		mixedRoom.alice.send(JSON.stringify({ type: 'transport_ready_v1', protocolVersion: 1, matchId: 'control-transport-commit-2', kind: 'webrtc' }));
-		mixedRoom.bob.send(JSON.stringify({ type: 'transport_ready_v1', protocolVersion: 1, matchId: 'control-transport-commit-2', kind: 'websocket-relay' }));
+		mixedRoom.alice.send(JSON.stringify({ type: 'transport_ready_v1', protocolVersion: 2, matchId: 'control-transport-commit-2', transportEpoch: 1, kind: 'webrtc' }));
+		mixedRoom.bob.send(JSON.stringify({ type: 'transport_ready_v1', protocolVersion: 2, matchId: 'control-transport-commit-2', transportEpoch: 1, kind: 'websocket-relay' }));
 		await expect(fallbackOnAlice).resolves.toMatchObject({ reason: 'manual' });
 
 		const relayCommitOnAlice = waitForType(mixedRoom.alice, 'transport_committed_v1');
 		const relayCommitOnBob = waitForType(mixedRoom.bob, 'transport_committed_v1');
-		mixedRoom.alice.send(JSON.stringify({ type: 'transport_ready_v1', protocolVersion: 1, matchId: 'control-transport-commit-2', kind: 'websocket-relay' }));
+		mixedRoom.alice.send(JSON.stringify({ type: 'transport_ready_v1', protocolVersion: 2, matchId: 'control-transport-commit-2', transportEpoch: 1, kind: 'websocket-relay' }));
 		await expect(relayCommitOnAlice).resolves.toMatchObject({ kind: 'websocket-relay' });
 		await expect(relayCommitOnBob).resolves.toMatchObject({ kind: 'websocket-relay' });
 	});
@@ -399,7 +399,7 @@ describe('P2P control websocket', () => {
 		});
 		alice.send(JSON.stringify({
 			type: 'control_hello_v1',
-			protocolVersion: 1,
+			protocolVersion: 2,
 			matchId: roomId,
 			peerId: 'peer-a',
 		}));
@@ -481,7 +481,7 @@ describe('P2P control websocket', () => {
 		const firstAliceOpen = new Promise<void>((resolve, reject) => { firstAlice.once('open', () => resolve()); firstAlice.once('error', reject); });
 		sockets.push(firstAlice);
 		await firstAliceOpen;
-		firstAlice.send(JSON.stringify({ type: 'control_hello_v1', protocolVersion: 1, matchId: roomId, peerId: 'peer-a' }));
+		firstAlice.send(JSON.stringify({ type: 'control_hello_v1', protocolVersion: 2, matchId: roomId, peerId: 'peer-a' }));
 
 		// A VPN/NIC change can leave the old control socket half-open. Identity is
 		// ticket/session-bound, never source-IP-bound, so the replacement must keep
@@ -493,7 +493,7 @@ describe('P2P control websocket', () => {
 		sockets.push(replacement);
 		await replacementOpen;
 		await expect(firstAlicePeerLeft).resolves.toMatchObject({ opponentPeerId: 'peer-a' });
-		replacement.send(JSON.stringify({ type: 'control_hello_v1', protocolVersion: 1, matchId: roomId, peerId: 'peer-a' }));
+		replacement.send(JSON.stringify({ type: 'control_hello_v1', protocolVersion: 2, matchId: roomId, peerId: 'peer-a' }));
 
 		const bob = new WebSocket(`${wsUrl}&peer=peer-b`, controlProtocols(bobTicket.token), { headers: { Cookie: bobCookie } });
 		const bobOpen = new Promise<void>((resolve, reject) => { bob.once('open', () => resolve()); bob.once('error', reject); });
@@ -501,7 +501,7 @@ describe('P2P control websocket', () => {
 		await bobOpen;
 		const replacementControlOpen = waitForType(replacement, 'control_open_v1');
 		const bobControlOpen = waitForType(bob, 'control_open_v1');
-		bob.send(JSON.stringify({ type: 'control_hello_v1', protocolVersion: 1, matchId: roomId, peerId: 'peer-b' }));
+		bob.send(JSON.stringify({ type: 'control_hello_v1', protocolVersion: 2, matchId: roomId, peerId: 'peer-b' }));
 		await expect(replacementControlOpen).resolves.toMatchObject({ peerId: 'peer-a', opponentPeerId: 'peer-b' });
 		await expect(bobControlOpen).resolves.toMatchObject({ peerId: 'peer-b', opponentPeerId: 'peer-a' });
 	});
@@ -529,7 +529,7 @@ describe('P2P control websocket', () => {
 			new Promise<void>((resolve, reject) => { alice.once('open', () => resolve()); alice.once('error', reject); }),
 			new Promise<void>((resolve, reject) => { bob.once('open', () => resolve()); bob.once('error', reject); }),
 		]);
-		const hello = (peerId: string): string => JSON.stringify({ type: 'control_hello_v1', protocolVersion: 1, matchId: roomId, peerId });
+		const hello = (peerId: string): string => JSON.stringify({ type: 'control_hello_v1', protocolVersion: 2, matchId: roomId, peerId });
 		const aliceOpen = waitForType(alice, 'control_open_v1');
 		const bobOpen = waitForType(bob, 'control_open_v1');
 		alice.send(hello('peer-a'));
@@ -538,42 +538,52 @@ describe('P2P control websocket', () => {
 
 		const commitOnAlice = waitForType(alice, 'transport_committed_v1');
 		const commitOnBob = waitForType(bob, 'transport_committed_v1');
-		const webrtcReady = JSON.stringify({ type: 'transport_ready_v1', protocolVersion: 1, matchId: roomId, kind: 'webrtc' });
+		const webrtcReady = JSON.stringify({ type: 'transport_ready_v1', protocolVersion: 2, matchId: roomId, transportEpoch: 1, kind: 'webrtc' });
 		alice.send(webrtcReady);
 		bob.send(webrtcReady);
 		await Promise.all([commitOnAlice, commitOnBob]);
 
-		const bobPeerLeft = waitForType(bob, 'control_peer_left_v1');
+		const bobReset = waitForType(bob, 'transport_reset_v2');
 		const replacement = new WebSocket(`${wsUrl}&peer=peer-a`, controlProtocols(aliceTicket.token), { headers: { Cookie: aliceCookie, 'x-forwarded-for': '198.51.100.42' } });
 		sockets.push(replacement);
 		await new Promise<void>((resolve, reject) => { replacement.once('open', () => resolve()); replacement.once('error', reject); });
-		await expect(bobPeerLeft).resolves.toMatchObject({ opponentPeerId: 'peer-a' });
-		await new Promise<void>((resolve, reject) => {
-			if (bob.readyState === WebSocket.CLOSED) {
-				resolve();
-				return;
-			}
-			bob.once('close', () => resolve());
-			bob.once('error', reject);
+		await expect(bobReset).resolves.toMatchObject({
+			opponentPeerId: 'peer-a',
+			reason: 'peer_reconnected',
+			transportEpoch: 2,
 		});
+		expect(bob.readyState).toBe(WebSocket.OPEN);
+
+		alice.send(JSON.stringify({
+			type: 'ice_candidate_v1',
+			protocolVersion: 2,
+			matchId: roomId,
+			transportEpoch: 1,
+			candidate: 'stale-from-alice-old',
+		}));
+		bob.send(JSON.stringify({
+			type: 'ice_candidate_v1',
+			protocolVersion: 2,
+			matchId: roomId,
+			transportEpoch: 1,
+			candidate: 'stale-from-bob',
+		}));
 
 		const replacementOpen = waitForType(replacement, 'control_open_v1');
+		const bobReopen = waitForType(bob, 'control_open_v1');
 		replacement.send(hello('peer-a'));
-
-		const resumedBob = new WebSocket(`${wsUrl}&peer=peer-b`, controlProtocols(bobTicket.token), { headers: { Cookie: bobCookie, 'x-forwarded-for': '203.0.113.77' } });
-		sockets.push(resumedBob);
-		await new Promise<void>((resolve, reject) => { resumedBob.once('open', () => resolve()); resumedBob.once('error', reject); });
-		const resumedBobOpen = waitForType(resumedBob, 'control_open_v1');
-		resumedBob.send(hello('peer-b'));
-		await Promise.all([replacementOpen, resumedBobOpen]);
+		const [openedReplacement, openedBob] = await Promise.all([replacementOpen, bobReopen]);
+		expect(openedReplacement).toMatchObject({ transportEpoch: 2, peerId: 'peer-a' });
+		expect(openedBob).toMatchObject({ transportEpoch: 2, peerId: 'peer-b' });
 
 		const relayCommitOnReplacement = waitForType(replacement, 'transport_committed_v1');
-		const relayCommitOnBob = waitForType(resumedBob, 'transport_committed_v1');
-		const relayReady = JSON.stringify({ type: 'transport_ready_v1', protocolVersion: 1, matchId: roomId, kind: 'websocket-relay' });
+		const relayCommitOnBob = waitForType(bob, 'transport_committed_v1');
+		const relayReady = JSON.stringify({ type: 'transport_ready_v1', protocolVersion: 2, matchId: roomId, transportEpoch: 2, kind: 'websocket-relay' });
 		replacement.send(relayReady);
-		resumedBob.send(relayReady);
-		await expect(relayCommitOnReplacement).resolves.toMatchObject({ kind: 'websocket-relay' });
-		await expect(relayCommitOnBob).resolves.toMatchObject({ kind: 'websocket-relay' });
+		bob.send(relayReady);
+		await expect(relayCommitOnReplacement).resolves.toMatchObject({ kind: 'websocket-relay', transportEpoch: 2 });
+		await expect(relayCommitOnBob).resolves.toMatchObject({ kind: 'websocket-relay', transportEpoch: 2 });
+		expect(bob.readyState).toBe(WebSocket.OPEN);
 	});
 });
 

@@ -69,6 +69,7 @@ export function createWebSocketRelayTransport(
 			type: 'transport_ready_v1',
 			protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
 			matchId: options.roomId,
+			transportEpoch: control.transportEpoch,
 			kind: 'websocket-relay',
 		});
 		transportReadySent = true;
@@ -125,6 +126,12 @@ export function createWebSocketRelayTransport(
 		if (message) emitControlMessage(message);
 	});
 	control?.onMessage(message => {
+		if (message.type === 'transport_reset_v2') {
+			transportCommitted = false;
+			transportReadySent = false;
+			sendTransportReady();
+			return;
+		}
 		if (message.type === 'transport_committed_v1') {
 			if (message.matchId !== options.roomId || message.kind !== 'websocket-relay') {
 				debug.error('[WebSocketRelayTransport] transport commitment mismatch');

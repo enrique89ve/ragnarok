@@ -1,5 +1,6 @@
 import { debug } from '../../config/debugConfig';
 import {
+	INITIAL_TRANSPORT_EPOCH,
 	P2P_CONTROL_PROTOCOL_VERSION,
 	P2P_CONTROL_WS_PROTOCOL,
 	P2P_CONTROL_WS_PROTOCOL_PREFIX,
@@ -14,6 +15,7 @@ export type P2PControlChannelState = 'idle' | 'connecting' | 'connected' | 'degr
 export type P2PControlChannel = Readonly<{
 	readonly state: P2PControlChannelState;
 	readonly peer: string;
+	readonly transportEpoch: number;
 	connect: () => Promise<void>;
 	send: (message: P2PControlClientMessage) => void;
 	onMessage: (listener: (message: P2PControlServerMessage) => void) => () => void;
@@ -58,6 +60,7 @@ export function createP2PControlChannel(options: Readonly<{
 	let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
 	let remotePeer = '';
 	let closed = false;
+	let transportEpoch = INITIAL_TRANSPORT_EPOCH;
 
 	const setState = (next: P2PControlChannelState): void => {
 		if (state === next) return;
@@ -144,9 +147,19 @@ export function createP2PControlChannel(options: Readonly<{
 				fail('P2P control identity mismatch');
 				return;
 			}
+			transportEpoch = message.transportEpoch;
 			remotePeer = message.opponentPeerId;
 			setState('connected');
 			settleConnect();
+			return;
+		}
+		if (message.type === 'transport_reset_v2') {
+			if (message.matchId !== options.roomId) {
+				fail('P2P control reset match mismatch');
+				return;
+			}
+			transportEpoch = message.transportEpoch;
+			emitMessage(message);
 			return;
 		}
 		if (message.type === 'control_peer_left_v1') {
@@ -208,6 +221,7 @@ export function createP2PControlChannel(options: Readonly<{
 	return {
 		get state(): P2PControlChannelState { return state; },
 		get peer(): string { return remotePeer; },
+		get transportEpoch(): number { return transportEpoch; },
 		connect,
 		send,
 		onMessage: listener => {

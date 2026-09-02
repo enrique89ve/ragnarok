@@ -4,12 +4,15 @@ import { randomUUID } from 'node:crypto';
 import { WebSocketServer, WebSocket, type RawData } from 'ws';
 
 import {
+	INITIAL_TRANSPORT_EPOCH,
 	P2P_CONTROL_MAX_PAYLOAD_BYTES,
 	P2P_CONTROL_PROTOCOL_VERSION,
 	P2P_CONTROL_WS_PROTOCOL,
 	isP2PTransportRole,
 	parseP2PControlClientMessage,
+	readControlTransportEpoch,
 	type P2PControlClientMessage,
+	type P2PControlServerMessage,
 	type P2PTransportFallbackReason,
 } from '../../shared/p2p-wire/control';
 import { buildPokerActionTimeGateAck } from '../../shared/p2p-wire/pokerTimeNotary';
@@ -56,8 +59,16 @@ type ControlMember = {
 	transportFallback: boolean;
 };
 
-type ControlRoom = ControlMember[];
+type ControlRoom = {
+	members: ControlMember[];
+	transportEpoch: number;
+	createdAt: number;
+};
 const rooms = new Map<string, ControlRoom>();
+
+function createControlRoom(): ControlRoom {
+	return { members: [], transportEpoch: INITIAL_TRANSPORT_EPOCH, createdAt: Date.now() };
+}
 const MESSAGE_RATE_LIMIT: RateLimitBucket = new Map();
 const ROOM_MAX_PEERS = 2;
 const CONTROL_MESSAGE_LIMIT = 40;
@@ -100,7 +111,7 @@ function rejectUpgrade(socket: { write: (chunk: string) => unknown; destroy: () 
 	try { socket.destroy(); } catch { /* already closed */ }
 }
 
-function sendMessage(ws: WebSocket, message: Record<string, unknown>): boolean {
+function sendMessage(ws: WebSocket, message: P2PControlServerMessage | Record<string, unknown>): boolean {
 	if (ws.readyState !== WebSocket.OPEN) return false;
 	try {
 		ws.send(JSON.stringify(message));
@@ -146,31 +157,33 @@ function sendRefereeResult(
 		sendMessage(sender.ws, result.message);
 		return;
 	}
-	for (const member of room) {
+	for (const member of room.members) {
 		if (member.hello) sendMessage(member.ws, result.message);
 	}
 }
 
 function notifyRoomOpen(roomId: string, room: ControlRoom): void {
-	if (room.length !== ROOM_MAX_PEERS || room.some(member => !member.hello)) return;
-	const [first, second] = room;
+	if (room.members.length !== ROOM_MAX_PEERS || room.members.some(member => !member.hello)) return;
+	const [first, second] = room.members;
 	if (!first || !second || first.role === second.role) {
-		for (const member of room) sendError(member.ws, 'role_conflict');
+		for (const member of room.members) sendError(member.ws, 'role_conflict');
 		return;
 	}
 	sendMessage(first.ws, {
 		type: 'control_open_v1', protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
 		matchId: roomId, peerId: first.peerId, opponentPeerId: second.peerId, role: first.role,
+		transportEpoch: room.transportEpoch,
 	});
 	sendMessage(second.ws, {
 		type: 'control_open_v1', protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
 		matchId: roomId, peerId: second.peerId, opponentPeerId: first.peerId, role: second.role,
+		transportEpoch: room.transportEpoch,
 	});
 }
 
 function commitTransportIfBilateral(roomId: string, room: ControlRoom): void {
-	if (room.length !== ROOM_MAX_PEERS || room.some(member => !member.hello)) return;
-	const [first, second] = room;
+	if (room.members.length !== ROOM_MAX_PEERS || room.members.some(member => !member.hello)) return;
+	const [first, second] = room.members;
 	if (!first || !second
 		|| !first.transportReady
 		|| !second.transportReady
@@ -183,6 +196,7 @@ function commitTransportIfBilateral(roomId: string, room: ControlRoom): void {
 		type: 'transport_committed_v1' as const,
 		protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
 		matchId: roomId,
+		transportEpoch: room.transportEpoch,
 		kind: first.transportKind,
 	};
 	sendMessage(first.ws, message);
@@ -190,17 +204,18 @@ function commitTransportIfBilateral(roomId: string, room: ControlRoom): void {
 }
 
 function notifyPeerOfTransportFallback(roomId: string, room: ControlRoom, sender: ControlMember, reason: P2PTransportFallbackReason): void {
-	const opponent = room.find(candidate => candidate !== sender && candidate.hello);
+	const opponent = room.members.find(candidate => candidate !== sender && candidate.hello);
 	if (!opponent || opponent.ws.readyState !== WebSocket.OPEN || opponent.transportCommitted) return;
 	sendMessage(opponent.ws, {
 		type: 'transport_fallback_v1',
 		protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
 		matchId: roomId,
+		transportEpoch: room.transportEpoch,
 		reason,
 	});
 }
 
-function forcePreCommitRelayFallback(roomId: string, member: ControlMember, reason: P2PTransportFallbackReason): void {
+function forcePreCommitRelayFallback(roomId: string, room: ControlRoom, member: ControlMember, reason: P2PTransportFallbackReason): void {
 	if (member.transportCommitted || member.transportFallback) return;
 	member.transportReady = false;
 	member.transportKind = null;
@@ -209,7 +224,31 @@ function forcePreCommitRelayFallback(roomId: string, member: ControlMember, reas
 		type: 'transport_fallback_v1',
 		protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
 		matchId: roomId,
+		transportEpoch: room.transportEpoch,
 		reason,
+	});
+}
+
+function fenceTransportEpoch(room: ControlRoom, message: P2PControlClientMessage): 'ok' | 'stale' | 'future' | 'missing' {
+	if (!isSignalingMessage(message) && !isTransportControlMessage(message)) return 'ok';
+	const epoch = readControlTransportEpoch(message);
+	if (epoch === null) return 'missing';
+	if (epoch < room.transportEpoch) return 'stale';
+	if (epoch > room.transportEpoch) return 'future';
+	return 'ok';
+}
+
+function beginTransportEpoch(roomId: string, room: ControlRoom, reconnectingPeerId: string, survivingPeer: ControlMember | undefined): void {
+	room.transportEpoch += 1;
+	if (!survivingPeer) return;
+	resetTransportNegotiation(survivingPeer);
+	sendMessage(survivingPeer.ws, {
+		type: 'transport_reset_v2',
+		protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+		matchId: roomId,
+		transportEpoch: room.transportEpoch,
+		reason: 'peer_reconnected',
+		opponentPeerId: reconnectingPeerId,
 	});
 }
 
@@ -272,7 +311,7 @@ function validateUpgrade(req: IncomingMessage, roomId: string, peerId: string): 
 
 export function getP2PControlStats(): P2PControlTelemetrySnapshot {
 	let activeConnections = 0;
-	for (const room of rooms.values()) activeConnections += room.length;
+	for (const room of rooms.values()) activeConnections += room.members.length;
 	return getP2PControlTelemetrySnapshot({ activeRooms: rooms.size, activeConnections });
 }
 
@@ -336,11 +375,11 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 		}
 		let room = rooms.get(roomId);
 		if (!room) {
-			room = [];
+			room = createControlRoom();
 			rooms.set(roomId, room);
 			markP2PRefereePlaneConnected(roomId, 'control');
 		}
-		const existingMember = room.find(member => member.peerId === peerId);
+		const existingMember = room.members.find(member => member.peerId === peerId);
 		if (existingMember) {
 			// A React retry, tab restore, or transport reconnect can open the same
 			// signed session before the old socket has delivered `close`. Replace
@@ -351,26 +390,11 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 				ws.close();
 				return;
 			}
-			const existingIndex = room.indexOf(existingMember);
-			const survivingPeer = room.find(candidate => candidate !== existingMember && candidate.hello);
-			if (survivingPeer) {
-				// The old control socket may be half-open while the replacement is
-				// already negotiating. Force the surviving client to abandon its old
-				// transport commitment and rejoin the same bilateral epoch. Remove it
-				// synchronously before closing so a delayed readiness frame from the old
-				// socket cannot be accepted into the replacement epoch.
-				resetTransportNegotiation(survivingPeer);
-				sendMessage(survivingPeer.ws, {
-					type: 'control_peer_left_v1', protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
-					matchId: roomId, opponentPeerId: peerId,
-				});
-				const survivingIndex = room.indexOf(survivingPeer);
-				if (survivingIndex >= 0) room.splice(survivingIndex, 1);
-				MESSAGE_RATE_LIMIT.delete(survivingPeer.connectionId);
-				try { survivingPeer.ws.close(); } catch { /* already closed */ }
-			}
+			const existingIndex = room.members.indexOf(existingMember);
+			const survivingPeer = room.members.find(candidate => candidate !== existingMember && candidate.hello);
+			beginTransportEpoch(roomId, room, peerId, survivingPeer);
 			resetTransportNegotiation(existingMember);
-			if (existingIndex >= 0) room.splice(existingIndex, 1);
+			if (existingIndex >= 0) room.members.splice(existingIndex, 1);
 			MESSAGE_RATE_LIMIT.delete(existingMember.connectionId);
 			sendMessage(existingMember.ws, {
 				type: 'control_peer_left_v1', protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
@@ -378,7 +402,7 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 			});
 			try { existingMember.ws.close(); } catch { /* already closed */ }
 		}
-		if (room.length >= ROOM_MAX_PEERS) {
+		if (room.members.length >= ROOM_MAX_PEERS) {
 			sendError(ws, 'protocol');
 			ws.close();
 			return;
@@ -396,7 +420,7 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 			transportCommitted: false,
 			transportFallback: false,
 		};
-		room.push(member);
+		room.members.push(member);
 		recordP2PControlConnection();
 		const helloTimeout = setTimeout(() => {
 			if (!member.hello && ws.readyState === WebSocket.OPEN) {
@@ -407,7 +431,7 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 
 		ws.on('message', (raw: RawData) => {
 			const currentRoom = rooms.get(roomId);
-			if (!currentRoom?.includes(member)) return;
+			if (!currentRoom?.members.includes(member)) return;
 			const rate = consumeWindowRateLimit({
 				bucket: MESSAGE_RATE_LIMIT,
 				key: member.connectionId,
@@ -453,6 +477,16 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 				sendError(ws, 'match_mismatch');
 				return;
 			}
+			const epochFence = fenceTransportEpoch(currentRoom, message);
+			if (epochFence === 'stale') {
+				recordP2PControlDrop('stale_transport_epoch');
+				return;
+			}
+			if (epochFence === 'future' || epochFence === 'missing') {
+				recordP2PControlDrop(epochFence === 'future' ? 'future_transport_epoch' : 'missing_transport_epoch');
+				sendError(ws, 'protocol');
+				return;
+			}
 			if (message.type === 'webrtc_offer_v1' && member.role !== 'offerer') {
 				recordP2PControlDrop('offer_from_answerer');
 				return;
@@ -470,7 +504,7 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 					if (member.transportKind === message.kind) commitTransportIfBilateral(roomId, currentRoom);
 					return;
 				}
-				const opponent = currentRoom.find(candidate => candidate !== member && candidate.hello);
+				const opponent = currentRoom.members.find(candidate => candidate !== member && candidate.hello);
 				if (opponent?.transportReady && opponent.transportKind !== null && opponent.transportKind !== message.kind) {
 					// A WebRTC-first/relay-first race is resolved by the relay. The
 					// WebRTC member must abandon its unilateral advertisement before
@@ -479,7 +513,7 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 						? member
 						: opponent.transportKind === 'webrtc' ? opponent : null;
 					if (webRtcMember) {
-						forcePreCommitRelayFallback(roomId, webRtcMember, 'manual');
+						forcePreCommitRelayFallback(roomId, currentRoom, webRtcMember, 'manual');
 						if (webRtcMember === member) return;
 					}
 				}
@@ -520,7 +554,7 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 					recordP2PControlDrop(`poker_action_${gate.reason}`);
 					return;
 				}
-				const opponent = currentRoom.find(candidate => candidate !== member && candidate.hello);
+				const opponent = currentRoom.members.find(candidate => candidate !== member && candidate.hello);
 				if (!opponent || opponent.ws.readyState !== WebSocket.OPEN) {
 					recordP2PControlDrop('opponent_unavailable');
 					return;
@@ -567,7 +601,7 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 				return;
 			}
 			if (!isSignalingMessage(message) && !isTransportControlMessage(message)) return;
-			const opponent = currentRoom.find(candidate => candidate !== member && candidate.hello);
+			const opponent = currentRoom.members.find(candidate => candidate !== member && candidate.hello);
 			if (!opponent || opponent.ws.readyState !== WebSocket.OPEN) return;
 			sendMessage(opponent.ws, message);
 			recordP2PControlMessage();
@@ -577,18 +611,18 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 			clearTimeout(helloTimeout);
 			const currentRoom = rooms.get(roomId);
 			if (!currentRoom) return;
-			const index = currentRoom.indexOf(member);
+			const index = currentRoom.members.indexOf(member);
 			if (index < 0) return;
-			currentRoom.splice(index, 1);
+			currentRoom.members.splice(index, 1);
 			MESSAGE_RATE_LIMIT.delete(member.connectionId);
-			const opponent = currentRoom.find(candidate => candidate.hello);
+			const opponent = currentRoom.members.find(candidate => candidate.hello);
 			if (opponent) {
 				sendMessage(opponent.ws, {
 					type: 'control_peer_left_v1', protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
 					matchId: roomId, opponentPeerId: peerId,
 				});
 			}
-			if (currentRoom.length === 0) {
+			if (currentRoom.members.length === 0) {
 				rooms.delete(roomId);
 				markP2PRefereePlaneDisconnected(roomId, 'control');
 			}
