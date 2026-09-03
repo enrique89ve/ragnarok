@@ -108,6 +108,7 @@ export const createChessCombatSlice: StateCreator<
   playerArmy: null,
   opponentArmy: null,
   sharedDeckCardIds: [],
+  p2pBoardBinding: null,
   playerTurnCount: 0,
   _chessRng: null,
   _chessIdGen: null,
@@ -243,9 +244,20 @@ export const createChessCombatSlice: StateCreator<
       },
       playerArmy,
       opponentArmy,
-      pendingCombat: null
+      pendingCombat: null,
+      p2pBoardBinding: null,
     });
     get().clearChessAnimations();
+  },
+
+  bindP2PBoard: (binding) => {
+    if (!binding.matchId || !binding.matchSeed) return;
+    set({
+      p2pBoardBinding: {
+        matchId: binding.matchId,
+        matchSeed: binding.matchSeed,
+      },
+    });
   },
 
   selectPiece: (piece: ChessPiece | null) => {

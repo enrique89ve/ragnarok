@@ -36,6 +36,10 @@ import { loadP2PTransportConfig } from '../p2p/transport/transportConfigClient';
 import { detectBrowserTransportCapabilities } from '../p2p/transport/transportCapabilities';
 import { resolveTransportPlan } from '../p2p/transport/transportPolicy';
 import { createTransportSession, type TransportSession } from '../p2p/transport/transportSession';
+import {
+	p2pConnectionSupervisor,
+	resetP2PConnectionSupervisor,
+} from '../p2p/core/p2pConnectionSupervisor';
 import { isSharedNetworkEnvironment } from '../config/featureFlags';
 import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from '../../data/HiveSessionIdentity';
 import type { ArmySelection } from '../types/ChessTypes';
@@ -356,6 +360,7 @@ function clearAllTimers(): void {
 	if (heartbeatIntervalId) { clearInterval(heartbeatIntervalId); heartbeatIntervalId = null; }
 	reconnectAttempt = 0;
 	reconnectDeadlineAt = 0;
+	if (lastRoomId) p2pConnectionSupervisor.clearMatch(lastRoomId, usePeerStore.getState().myPeerId ?? '');
 }
 
 function clearReconnectWindow(): void {
@@ -364,6 +369,10 @@ function clearReconnectWindow(): void {
 	if (graceCountdownIntervalId) { clearInterval(graceCountdownIntervalId); graceCountdownIntervalId = null; }
 	reconnectAttempt = 0;
 	reconnectDeadlineAt = 0;
+	const peer = usePeerStore.getState();
+	if (lastRoomId && peer.myPeerId) {
+		p2pConnectionSupervisor.reportSignal(lastRoomId, peer.myPeerId, 'OPEN');
+	}
 }
 
 function parseDisconnectSide(value: unknown): P2PDisconnectSide {
@@ -590,6 +599,15 @@ function attemptReconnect(roomId: string, get: () => PeerStore, set: (state: Par
 		return;
 	}
 
+	const localPeerId = current.myPeerId;
+	if (localPeerId && !p2pConnectionSupervisor.requestReconnect({
+		matchId: roomId,
+		peerId: localPeerId,
+		generation: transportOpenGeneration,
+		attempts: reconnectAttempt,
+		deadlineAt: reconnectDeadlineAt || Date.now() + DISCONNECT_GRACE_MS,
+	})) return;
+
 	const delay = RECONNECT_DELAYS[reconnectAttempt] ?? 10_000;
 	reconnectAttempt++;
 
@@ -623,6 +641,9 @@ function attemptReconnect(roomId: string, get: () => PeerStore, set: (state: Par
 			});
 		}).catch(() => {
 			const current = get();
+			if (current.myPeerId) {
+				p2pConnectionSupervisor.reportSignal(roomId, current.myPeerId, 'FAILED');
+			}
 			if (!shouldContinueP2PReconnect({
 				connectionState: current.connectionState,
 				activeConnection: current.connection,
@@ -644,6 +665,29 @@ function attemptReconnect(roomId: string, get: () => PeerStore, set: (state: Par
  * present; rejects on timeout or transport error before then.
  */
 async function openTransport(
+	roomId: string,
+	peerId: string,
+	get: () => PeerStore,
+	set: (state: Partial<PeerStore>) => void,
+	preserveSession: boolean,
+): Promise<void> {
+	await p2pConnectionSupervisor.requestDial({
+		matchId: roomId,
+		peerId,
+		getActive: () => {
+			if (!activeTransport || lastRoomId !== roomId) return null;
+			if (activeTransport.open || activeTransport.state === 'connected') return activeTransport;
+			return null;
+		},
+		actuallyDial: async () => {
+			await openTransportAttempt(roomId, peerId, get, set, preserveSession);
+			if (!activeTransport) throw new Error('P2P dial completed without a transport');
+			return activeTransport;
+		},
+	});
+}
+
+async function openTransportAttempt(
 	roomId: string,
 	peerId: string,
 	get: () => PeerStore,
@@ -1258,6 +1302,8 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 
 	disconnect: () => {
 	transportOpenGeneration += 1;
+		if (lastRoomId) p2pConnectionSupervisor.clearMatch(lastRoomId, get().myPeerId ?? '');
+		resetP2PConnectionSupervisor();
 		clearAllTimers();
 		messageBuffer.length = 0;
 		if (activeTransport) {

@@ -310,6 +310,10 @@ export function applyP2PMatchResume(record: P2PMatchResumeRecord): boolean {
 		parsed.opponentArmy,
 		slotsSwapped,
 	);
+	useUnifiedCombatStore.getState().bindP2PBoard({
+		matchId: parsed.matchId,
+		matchSeed: parsed.matchSeed,
+	});
 	if (binding.kind === 'bound') {
 		const pendingCombat = reboundResumePendingCombat(
 			parsed.combat.pendingCombat,

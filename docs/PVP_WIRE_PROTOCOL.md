@@ -98,6 +98,15 @@ owns four bounded responsibilities plus future settlement:
    Dual-signed `match_result`, Hive broadcast and slash processing remain
    deferred ranked settlement work and are not executed in the current testnet.
 
+Networking identity is split the same way: **MATCH ≠ PEER ≠ CONNECTION ≠
+TRANSPORT ≠ PROTOCOL**. A socket is not a playable match. Connection stages
+live in `shared/p2p-wire/connectionStages.ts`
+(`transport_connected → authenticating → control_ready → transport_committed
+→ match_ready → gameplay`). Dial coalescing and reconnect ownership live in
+`client/src/game/p2p/core/`. Identify (`engineHash`/`rulesetHash`) answers
+“can we speak”; BattleReady still answers “did we build the same initial
+state”.
+
 The server does not have a database of game state and cannot adjudicate moves.
 It holds only constant-sized phase agreement and poker-turn deadline metadata
 and is **not a source of truth about gameplay**. Referee messages use the
@@ -458,17 +467,21 @@ handshakes complete, each peer sends exactly one `battle_ready_v1` proof for
 the active match:
 
 ```text
-{ matchId, engineHash, rulesetHash, loadoutHash, initialStateRoot }
+{ matchId, engineHash, rulesetHash, loadoutHash, initialStateRoot, debug? }
 ```
 
 The receiver validates the match binding and compares the engine, ruleset, and
-canonical initial-state root. `loadoutHash` must be present on both proofs;
-the two players may legitimately have different loadouts. Quick Match also
-requires bilateral Accept authorization and its active peer-specific ticket.
-Direct challenges preserve their existing ticket/session compatibility path,
-but both paths remain blocked until local and remote BattleReady proofs agree.
-This proof is transport-independent and is never added to canonical gameplay
-state.
+canonical initial-state root. Optional `debug` component hashes are diagnostic
+only and never enter the compared proof. `loadoutHash` must be present on both
+proofs; the two players may legitimately have different loadouts. A proof
+mismatch during `pre_battle` is `setup_state_mismatch`: cancel with no winner,
+no loser, and no slash evidence. Quick Match also requires bilateral Accept
+authorization and its active peer-specific ticket. Direct challenges preserve
+their existing ticket/session compatibility path, but both paths remain blocked
+until local and remote BattleReady proofs agree. This proof is
+transport-independent and is never added to canonical gameplay state.
+Periodic `hash_check` beacons stay disabled until both proofs agree and the
+lifecycle is `battle`.
 
 ### Phase 3 — Move Loop
 
@@ -565,8 +578,8 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `poker_turn_started` | peer → Control WS referee | both | Timed-poker turn identity proposal; legacy direct rooms may submit it through the relay compatibility path. Client `durationMs` / `remainingMs` / `sentAtMs` are ignored. |
 | `poker_turn_notary_commit_v1` / `poker_turn_notary_dispute_v1` | Control WS referee → peers | server referee only | Commit if both peers proposed the same `turnId`. The first proposal stamps the start; the deadline is always 60s. Mismatch retries; freeze after 3 strikes. The referee never picks a winner. |
 | `poker_action` / `poker_action_time_gate_v1` | both | both (symmetric) | Phase 3 poker: the referee gates delivery and returns `poker_action_time_gate_ack_v1` bound to `matchId`, `turnId`, `decisionId` and `seq`; the sender applies locally only after `allowed=true`. Quick Match sends the control wrapper through Control WS, while legacy direct rooms may use the relay. Required `origin` and `turnId`; compact tuple remains optional. |
-| `poker_hash_check` | host → client | host | Turn-scoped Poker integrity probe; compared only when phase, turn id and action count match locally |
-| `hash_check` | host → client | host | Periodic state-hash sanity check; optional sent/received `game_command` sequence stamps make the receiver ignore in-flight or reconnect-stale beacons instead of treating a same-turn action as divergence |
+| `poker_hash_check` | host → client | host | Turn-scoped Poker integrity probe after BattleReady; compared only in `battle` when phase, turn id and action count match locally |
+| `hash_check` | host → client | host | Periodic state-hash sanity check after bilateral BattleReady; ignored during `pre_battle`. Optional sent/received `game_command` sequence stamps make the receiver ignore in-flight or reconnect-stale beacons instead of treating a same-turn action as divergence |
 | `hash_mismatch` | client → host | client | Reports a divergent state hash |
 | `result_propose` | winner → relay/indexer path | winner | **Obsolete as loser handshake.** ADR 0008: winner posts `match_result` to Hive. Alfa never initiates it. |
 | `result_countersign` | — | — | **Obsolete.** Loser does not countersign game_over (ADR 0008). |
@@ -1086,7 +1099,8 @@ the `tc` CID; the chain only carries enough to verify integrity.
 | WASM-engine version mismatch | `wasm_hash_check` envelope | Disconnect immediately (both peers know) |
 | Build-hash mismatch | `version_check` envelope | Toast warning, continue (not a slash) |
 | Seed commitment mismatch | `seed_reveal` validation | Disconnect; possible cheating |
-| State hash mismatch (cards) | `hash_check` from host | Session quarantine + `slash_evidence_deferred` record; all local/remote gameplay actions are dropped |
+| Pre-battle BattleReady mismatch | `battle_ready_v1` proof compare | `setup_state_mismatch`: cancel, no winner/loser, no slash |
+| State hash mismatch (cards) | `hash_check` from host after `battle` | Session quarantine + `slash_evidence_deferred` record; all local/remote gameplay actions are dropped. Ignored during `pre_battle`. |
 | Poker state hash mismatch | `poker_hash_check` with matching turn identity | Session quarantine + integrity event; no relay-side winner selection |
 | Chess transition root/rejection mismatch | `transition_receipt_v1` | Quarantine local chess actions; retain session evidence; no automatic settlement |
 | Mid-match disconnect | WS close handler | No auto-broadcast; future evidence flow required |

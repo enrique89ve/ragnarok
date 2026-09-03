@@ -34,6 +34,7 @@ import { HiveKeychainLogin } from '../HiveKeychainLogin';
 import { useNFTUsername } from '../../nft/hooks';
 import { resolveProtectedFlowAccess } from '../../auth/protectedFlowAccess';
 import { useGameStore } from '../../stores/gameStore';
+import { useUnifiedCombatStore } from '../../stores/unifiedCombatStore';
 import { useGameFlowStore, selectFlowTag } from '../../stores/gameFlowStore';
 import { recordSessionEvent } from '../../../data/blockchain/transcriptBuilder';
 import { useMatchReloadGuard } from '../../coordinator/hooks/useMatchReloadGuard';
@@ -299,6 +300,7 @@ export const MultiplayerGame: React.FC = () => {
 		setShowVS(false);
 		setGameStarted(false);
 		useGameStore.getState().resetGameState();
+		useUnifiedCombatStore.getState().reset();
 		usePeerStore.getState().disconnect();
 		leaveQueue().catch(() => { /* best effort after a pre-battle cancel */ });
 	}, [battleLifecycle, leaveQueue]);

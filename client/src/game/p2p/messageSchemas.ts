@@ -458,6 +458,14 @@ const SessionAuthorizeSchema = z.object({
 	}
 });
 
+const BattleReadyDebugSchema = z.object({
+	chessHash: NonEmptyString(256),
+	cardsHash: NonEmptyString(256),
+	matchSeedHash: NonEmptyString(256),
+	localLoadoutHash: NonEmptyString(256),
+	remoteLoadoutHash: NonEmptyString(256),
+}).strict();
+
 const BattleReadySchema = z.object({
 	type: z.literal('battle_ready_v1'),
 	matchId: MatchIdString,
@@ -465,6 +473,7 @@ const BattleReadySchema = z.object({
 	rulesetHash: NonEmptyString(256),
 	loadoutHash: NonEmptyString(256),
 	initialStateRoot: NonEmptyString(256),
+	debug: BattleReadyDebugSchema.optional(),
 }).strict();
 
 const SessionRenewalSchema = z.object({

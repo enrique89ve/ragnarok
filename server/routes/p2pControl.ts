@@ -41,6 +41,8 @@ import { verifyP2PMatchTicketForRoom, type P2PMatchTicketPayload } from '../serv
 import { isP2PRelayOriginAllowed } from '../services/p2pRelayOrigin';
 import { hasP2PControlProtocol, readP2PControlTicketToken } from '../services/p2pControlProtocol';
 import { verifyP2PActiveMatchTicket } from '../services/p2pActiveMatchRegistry';
+import { decideControlAdmission } from '../services/p2pAdmissionGate';
+import { claimControlSlot } from '../services/p2pConnectionRegistry';
 import {
 	markP2PActiveMatchTerminalFromCheckpoint,
 	markP2PRefereePlaneConnected,
@@ -462,38 +464,36 @@ function resetTransportNegotiation(member: ControlMember): void {
 }
 
 function validateUpgrade(req: IncomingMessage, roomId: string, peerId: string): UpgradeAccess {
-	if (!hasP2PControlProtocol(req.headers['sec-websocket-protocol'])) {
-		return { ok: false, status: 400, reason: 'Missing control protocol' };
-	}
 	const token = readP2PControlTicketToken(req.headers['sec-websocket-protocol']);
 	const ticket = verifyP2PMatchTicketForRoom({
 		token,
 		roomId,
 		peerId,
 	});
+	const requireActiveMatch = shouldRequireActiveMatchTicket()
+		&& ticket.ok
+		&& ticket.payload.scope === 'matchmaking'
+		&& Boolean(token);
+	const activeMatchOk = requireActiveMatch && token
+		? verifyP2PActiveMatchTicket({ token, roomId, peerId }).ok
+		: true;
+	const admission = decideControlAdmission({
+		protocolPresent: hasP2PControlProtocol(req.headers['sec-websocket-protocol']),
+		ticketOk: ticket.ok,
+		ticketUnconfigured: !ticket.ok && ticket.reason === 'server_unconfigured',
+		ticketHasRole: ticket.ok ? isP2PTransportRole(ticket.payload.role) : false,
+		ticketAccount: ticket.ok ? ticket.payload.account ?? null : null,
+		ticketScope: ticket.ok ? ticket.payload.scope : null,
+		requireActiveMatch,
+		activeMatchOk,
+		requireSession: shouldRequireControlSession(),
+		sessionUsername: getHiveWebSessionUsernameFromCookie(req.headers.cookie) ?? null,
+	});
+	if (!admission.ok) {
+		return { ok: false, status: admission.status, reason: admission.reason };
+	}
 	if (!ticket.ok) {
-		return { ok: false, status: ticket.reason === 'server_unconfigured' ? 503 : 403, reason: 'Forbidden' };
-	}
-	if (shouldRequireActiveMatchTicket() && ticket.payload.scope === 'matchmaking' && token) {
-		const activeMatch = verifyP2PActiveMatchTicket({ token, roomId, peerId });
-		if (!activeMatch.ok) return { ok: false, status: 403, reason: 'Match is not active' };
-	}
-	if (!isP2PTransportRole(ticket.payload.role)) {
-		return { ok: false, status: 403, reason: 'Control role missing' };
-	}
-	const sessionUsername = getHiveWebSessionUsernameFromCookie(req.headers.cookie);
-	if (shouldRequireControlSession() && !sessionUsername) {
-		return { ok: false, status: 401, reason: 'Hive session required' };
-	}
-	// Local matchmaking intentionally allows unsigned/local identities without
-	// creating the reusable Hive HTTP session used by shared-network stages.
-	// Only bind the ticket account to that cookie when the runtime actually
-	// requires the authenticated control session.
-	if (shouldRequireControlSession() && ticket.payload.account && sessionUsername !== ticket.payload.account) {
 		return { ok: false, status: 403, reason: 'Forbidden' };
-	}
-	if (shouldRequireControlSession() && !ticket.payload.account) {
-		return { ok: false, status: 403, reason: 'Ticket account missing' };
 	}
 	return { ok: true, ticket: ticket.payload };
 }
@@ -592,7 +592,18 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 			transportCommitted: false,
 			transportFallback: false,
 		};
-		if (currentOwner) {
+		const slot = claimControlSlot({
+			hasIncumbent: Boolean(ownership.incumbent),
+			hasCandidate: Boolean(ownership.candidate),
+			roomMemberCount: room.members.length,
+			roomMaxPeers: ROOM_MAX_PEERS,
+		});
+		if (slot.kind === 'reject') {
+			sendError(ws, 'protocol');
+			ws.close();
+			return;
+		}
+		if (slot.kind === 'candidate') {
 			const replacementBudget = consumeWindowRateLimit({
 				bucket: REPLACEMENT_RATE_LIMIT,
 				key: replacementRateLimitKey(roomId, peerId),
@@ -612,11 +623,6 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 				try { previousCandidate.ws.close(); } catch { /* already closed */ }
 			}
 		} else {
-			if (room.members.length >= ROOM_MAX_PEERS) {
-				sendError(ws, 'protocol');
-				ws.close();
-				return;
-			}
 			room.members.push(member);
 		}
 		recordP2PControlConnection();

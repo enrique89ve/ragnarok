@@ -21,7 +21,7 @@ import { getWasmHash, loadWasmEngine } from '../../../../engine/wasmLoader';
 import { computeStateHash } from '../../../../engine/engineBridge';
 import { flipGameState, computeCardsPrevStateHash } from '../../../../engine/wireHash';
 import { computeChessPrevStateHash } from '../../../../engine/chessHash';
-import { computeInitialMatchRoot, computePokerCombatStateHash } from '../../../../p2p/phaseBoundaryRoot';
+import { computeInitialMatchRoot, computeInitialMatchRootDebug, computePokerCombatStateHash } from '../../../../p2p/phaseBoundaryRoot';
 import { isSharedNetworkEnvironment } from '../../../../config/featureFlags';
 import { findExistingMatchResult, type SlashEvidenceParams } from '../../../../../data/blockchain/slashEvidence';
 import { GAME_COMMAND_TYPES } from '../../../../core/commands';
@@ -40,7 +40,14 @@ import {
 	setChessSendObserver,
 	setChessGameplaySigner,
 } from '../../../../p2p/chessWireSender';
-import { getP2PProcessFlags, getP2PTransportRole, createP2PViewerPerspective, mapViewerValuesToCanonical } from '../../../../p2p/p2pPerspective';
+import { getP2PProcessFlags, getP2PTransportRole } from '../../../../p2p/p2pPerspective';
+import { ensureCanonicalP2PChessBoard, isP2PBoardBoundTo } from '../../../../p2p/p2pChessBoardBinding';
+import {
+	SETUP_STATE_MISMATCH_REASON,
+	shouldCompareHashBeacon,
+	shouldDeferSlashForHashMismatch,
+	shouldEmitHashBeacon,
+} from '../../../../p2p/p2pIntegrityPolicy';
 import {
 	snapshotLocalCardsDeck,
 	savedDecksStorageKey,
@@ -127,8 +134,13 @@ import { isCurrentMatchmakingDelegation, readMatchmakingDelegationProof, buildMa
 import { verifyEnvelope } from '../../../../protocol/sessionKey';
 import { signGameplayEnvelope, verifyGameplayEnvelope } from '../../../../protocol/signedGameplayEnvelope';
 import { useMatchmakingStore } from '../../../../stores/matchmakingStore';
-import { buildBattleReadyLoadoutCommitmentPayload, compareBattleReadyProofs, type P2PBattleReadyProof } from '../../../../p2p/battleReady';
-import { createSeededIdGen } from '../../../../utils/seededRng';
+import {
+	buildBattleReadyLoadoutCommitmentPayload,
+	compareBattleReadyProofs,
+	describeBattleReadyDebugMismatch,
+	type BattleReadyDebug,
+	type P2PBattleReadyProof,
+} from '../../../../p2p/battleReady';
 import {
 	INITIAL_TRANSPORT_EPOCH,
 	P2P_CONTROL_PROTOCOL_VERSION,
@@ -438,7 +450,14 @@ export function useWireSync() {
 	const p2pSessionLocalAuthorized = usePeerStore(state => state.p2pSessionLocalAuthorized);
 	const p2pSessionRemoteAuthorized = usePeerStore(state => state.p2pSessionRemoteAuthorized);
 	const matchSeed = useGameStore(state => state.matchSeed);
-	const initialCombatPieceCount = useUnifiedCombatStore(state => state.boardState.pieces.length);
+	const matchId = useGameStore(state => state.matchId);
+	const p2pBoardBinding = useUnifiedCombatStore(state => state.p2pBoardBinding);
+	const boardBoundToCurrentMatch = Boolean(
+		matchId
+		&& matchSeed
+		&& isP2PBoardBoundTo(p2pBoardBinding, matchId, matchSeed),
+	);
+	const competitionPhase = usePeerStore(state => state.battleLifecycle?.phase ?? null);
 
 	/**
 	 * A WebRTC DataChannel is the gameplay plane, not a server-observable
@@ -507,6 +526,7 @@ export function useWireSync() {
 	const sessionKeyRef = useRef<SessionKey | null>(null);
 	const sessionAuthorizeSentRef = useRef(false);
 	const battleReadySentMatchRef = useRef<string | null>(null);
+	const battleReadyDebugRef = useRef<BattleReadyDebug | null>(null);
 	const opponentSessionPubkeyRef = useRef<string | null>(null);
 	const opponentSessionHiveSigRef = useRef<string | null>(null);
 	// ADR 0004 §Decision.4 — per-action signed transcript (issue 03). Both
@@ -984,6 +1004,7 @@ export function useWireSync() {
 			opponentSessionPubkeyRef.current = null;
 			opponentSessionHiveSigRef.current = null;
 			battleReadySentMatchRef.current = null;
+			battleReadyDebugRef.current = null;
 			usePeerStore.getState().setP2pSessionAuthorization({
 				localAuthorized: false,
 				remoteAuthorized: false,
@@ -1010,6 +1031,7 @@ export function useWireSync() {
 		// resolved seed, and hard-reload resume explicitly retains the sealed one.
 		if (!seedResolvedRef.current && !isHardReloadResume) {
 			useGameStore.getState().resetGameState();
+			useUnifiedCombatStore.getState().reset();
 		}
 		if (isHardReloadResume) {
 			seedResolvedRef.current = true;
@@ -1205,6 +1227,7 @@ export function useWireSync() {
 			remoteDeckClaimsRef.current = null;
 			remoteDeckVerificationRef.current = 'pending';
 			battleReadySentMatchRef.current = null;
+			battleReadyDebugRef.current = null;
 			usePeerStore.getState().clearP2pBattleReady();
 			return undefined;
 		}
@@ -1227,30 +1250,26 @@ export function useWireSync() {
 	// coordinator is intentionally still unmounted at this point, so the
 	// readiness proof cannot rely on a UI component having initialized the board.
 	useEffect(() => {
-		if (connectionState !== 'connected' || !p2pInitApplied || !matchSeed || !myCanonicalSide || !opponentArmy) return;
-		if (initialCombatPieceCount > 0) return;
+		if (connectionState !== 'connected' || !p2pInitApplied || !matchId || !matchSeed || !myCanonicalSide || !opponentArmy) return;
 		const localArmy = selectArmy(useWarbandStore.getState());
 		if (!localArmy) return;
-		const perspective = createP2PViewerPerspective(myCanonicalSide);
-		const canonicalArmies = mapViewerValuesToCanonical({
-			perspective,
-			localValue: localArmy,
-			remoteValue: opponentArmy,
+		ensureCanonicalP2PChessBoard({
+			matchId,
+			matchSeed,
+			myCanonicalSide,
+			localArmy,
+			remoteArmy: opponentArmy,
 		});
-		useUnifiedCombatStore.getState().initializeBoard(
-			canonicalArmies.player,
-			canonicalArmies.opponent,
-			createSeededIdGen(matchSeed, 'chess-pieces'),
-		);
-	}, [connectionState, initialCombatPieceCount, matchSeed, myCanonicalSide, opponentArmy, p2pInitApplied]);
+	}, [connectionState, matchId, matchSeed, myCanonicalSide, opponentArmy, p2pInitApplied]);
 
 	// Battle readiness is a bilateral protocol fact, not an inference from the
 	// transport being open. Both peers publish the same engine/ruleset/root
 	// contract and the setup gate only opens after both proofs agree.
 	const hasInitialGameState = useGameStore(state => state.gameState !== null);
 	useEffect(() => {
-		if (!connection || connectionState !== 'connected' || !p2pInitApplied || !hasInitialGameState || initialCombatPieceCount === 0) {
+		if (!connection || connectionState !== 'connected' || !p2pInitApplied || !hasInitialGameState || !boardBoundToCurrentMatch) {
 			battleReadySentMatchRef.current = null;
+			battleReadyDebugRef.current = null;
 			return undefined;
 		}
 		const matchId = matchIdRef.current;
@@ -1287,7 +1306,7 @@ export function useWireSync() {
 				if (!gameState) throw new Error('Initial game state is not available for battle readiness');
 				const cardsHash = parseHash256(computeCardsPrevStateHash(gameState, isCardsCanonicalPlayerFrame));
 				if (!cardsHash) throw new Error('Initial cards state root is empty');
-				const initialStateRoot = computeInitialMatchRoot({
+				const rootInput = {
 					matchId,
 					matchSeed: useGameStore.getState().matchSeed ?? '',
 					engineHash,
@@ -1296,7 +1315,8 @@ export function useWireSync() {
 					localLoadoutHash: loadoutHash,
 					remoteLoadoutHash: expectedRemoteLoadoutHash,
 					combatStore: useUnifiedCombatStore.getState(),
-				});
+				};
+				const initialStateRoot = computeInitialMatchRoot(rootInput);
 				if (!initialStateRoot) throw new Error('Initial game state root is empty');
 				if (cancelled || !isCurrentConnectedMatch(matchId)) return;
 
@@ -1307,7 +1327,9 @@ export function useWireSync() {
 					loadoutHash,
 					initialStateRoot,
 				};
+				const debugProof = computeInitialMatchRootDebug(rootInput);
 				battleReadySentMatchRef.current = matchId;
+				battleReadyDebugRef.current = debugProof;
 				const remoteProof = usePeerStore.getState().p2pBattleReadyRemote;
 				const comparison = remoteProof ? compareBattleReadyProofs(proof, remoteProof, {
 					expectedRemoteLoadoutHash,
@@ -1317,7 +1339,14 @@ export function useWireSync() {
 					expectedRemoteLoadoutHash,
 					...(comparison && !comparison.ok ? { error: comparison.reason } : { error: null }),
 				});
-				send({ type: 'battle_ready_v1', ...proof });
+				send({
+					type: 'battle_ready_v1',
+					...proof,
+					...(debugProof ? { debug: debugProof } : {}),
+				});
+				if (comparison && !comparison.ok) {
+					quarantineP2PSession(SETUP_STATE_MISMATCH_REASON);
+				}
 			} catch (error) {
 				if (cancelled) return;
 				debug.error('[wireSync] battle readiness failed:', error);
@@ -1331,7 +1360,7 @@ export function useWireSync() {
 		return () => {
 			cancelled = true;
 		};
-	}, [connection, connectionState, hasInitialGameState, initialCombatPieceCount, isCardsCanonicalPlayerFrame, isCurrentConnectedMatch, p2pInitApplied, p2pSessionLocalAuthorized, p2pSessionRemoteAuthorized, send]);
+	}, [boardBoundToCurrentMatch, connection, connectionState, hasInitialGameState, isCardsCanonicalPlayerFrame, isCurrentConnectedMatch, p2pInitApplied, p2pSessionLocalAuthorized, p2pSessionRemoteAuthorized, send]);
 
 	// Detect when connection closes and notify the player
 	useEffect(() => {
@@ -1601,16 +1630,21 @@ export function useWireSync() {
 						expectedRemoteLoadoutHash: usePeerStore.getState().p2pBattleReadyExpectedRemoteLoadoutHash,
 					}) : null;
 					if (comparison && !comparison.ok) {
-						debug.error('[wireSync] battle-ready proof mismatch:', comparison.reason);
+						const diagnosis = describeBattleReadyDebugMismatch(
+							battleReadyDebugRef.current,
+							data.debug,
+						);
+						debug.error('[wireSync] battle-ready proof mismatch:', comparison.reason, '\n', diagnosis);
 						usePeerStore.getState().setP2pBattleReady({
 							remote: null,
 							error: comparison.reason,
 						});
-						GameEventBus.emitNotification({
-							level: 'error',
-							message: `${comparison.reason}. Match start is paused until both clients use the same build.`,
-							duration: 8000,
+						recordSessionEvent('p2p_pre_battle_failed', {
+							reason: SETUP_STATE_MISMATCH_REASON,
+							detail: comparison.reason,
+							diagnosis,
 						});
+						quarantineP2PSession(SETUP_STATE_MISMATCH_REASON);
 						break;
 					}
 					usePeerStore.getState().setP2pBattleReady({ remote: remoteProof, error: null });
@@ -1653,6 +1687,10 @@ export function useWireSync() {
 				}
 
 				case 'hash_check': {
+					if (!shouldCompareHashBeacon(usePeerStore.getState().battleLifecycle?.phase)) {
+						debug.log('[wireSync] Ignored hash_check before battle commitment');
+						break;
+					}
 					const gs = useGameStore.getState().gameState;
 					if (!gs) break;
 					// A beacon can cross an in-flight turn or reconnect replay. Do not
@@ -1707,7 +1745,7 @@ export function useWireSync() {
 						send({ type: 'hash_mismatch', turnNumber: data.turnNumber, myHash });
 						quarantineP2PSession(`cards_hash_mismatch_turn_${data.turnNumber}`);
 
-						if (isSharedNetworkEnvironment() && data.turnNumber !== lastSlashTurnRef.current) {
+						if (shouldDeferSlashForHashMismatch(usePeerStore.getState().battleLifecycle?.phase) && isSharedNetworkEnvironment() && data.turnNumber !== lastSlashTurnRef.current) {
 							lastSlashTurnRef.current = data.turnNumber;
 							const matchSeed = useGameStore.getState().matchSeed;
 							const opponentName = usePeerStore.getState().remotePeerId ?? 'unknown';
@@ -1746,7 +1784,7 @@ export function useWireSync() {
 							debug.error(`[wireSync] Chess state hash mismatch at turn ${data.turnNumber}: local=${myChessHash.slice(0, 16)}, remote=${data.chessStateHash.slice(0, 16)}`);
 							quarantineP2PSession(`chess_hash_mismatch_turn_${data.turnNumber}`);
 
-							if (isSharedNetworkEnvironment() && data.turnNumber !== lastChessSlashTurnRef.current) {
+							if (shouldDeferSlashForHashMismatch(usePeerStore.getState().battleLifecycle?.phase) && isSharedNetworkEnvironment() && data.turnNumber !== lastChessSlashTurnRef.current) {
 								lastChessSlashTurnRef.current = data.turnNumber;
 								const matchSeed = useGameStore.getState().matchSeed;
 								const opponentName = usePeerStore.getState().remotePeerId ?? 'unknown';
@@ -1767,6 +1805,9 @@ export function useWireSync() {
 				}
 
 				case 'poker_hash_check': {
+					if (!shouldCompareHashBeacon(usePeerStore.getState().battleLifecycle?.phase)) {
+						break;
+					}
 					const pokerState = getP2PPokerCombatAdapter().getPokerState();
 					if (!pokerState
 						|| pokerState.phase !== data.phase
@@ -1794,13 +1835,17 @@ export function useWireSync() {
 				}
 
 				case 'hash_mismatch':
+					if (!shouldCompareHashBeacon(usePeerStore.getState().battleLifecycle?.phase)) {
+						debug.log('[wireSync] Ignored hash_mismatch before battle commitment');
+						break;
+					}
 					debug.error(`[wireSync] Opponent reports hash mismatch at turn ${data.turnNumber}: theirHash=${data.myHash.slice(0, 16)}`);
 					quarantineP2PSession(`opponent_reported_hash_mismatch_turn_${data.turnNumber}`);
 					// Do not answer a divergence report with a peer-authored full state.
 					// The receiver deliberately rejects gameState frames; recovery must
 					// use the signed transcript from the agreed root or terminate.
 
-					if (isSharedNetworkEnvironment()) {
+					if (shouldDeferSlashForHashMismatch(usePeerStore.getState().battleLifecycle?.phase) && isSharedNetworkEnvironment()) {
 						const matchSeed = useGameStore.getState().matchSeed;
 						const opponentName = usePeerStore.getState().remotePeerId ?? 'unknown';
 							if (matchSeed) {
@@ -4526,7 +4571,11 @@ export function useWireSync() {
 
 	// Host sends state hash check every 2s for anti-cheat verification
 	useEffect(() => {
-		if (connectionState !== 'connected' || !sendsHashBeacon) return;
+		if (!shouldEmitHashBeacon({
+			connectionState,
+			sendsHashBeacon,
+			competitionPhase,
+		})) return;
 		let cancelled = false;
 		let timerId: ReturnType<typeof setTimeout> | null = null;
 		const scheduleCheck = () => {
@@ -4584,7 +4633,7 @@ export function useWireSync() {
 			cancelled = true;
 			if (timerId) clearTimeout(timerId);
 		};
-	}, [connectionState, sendsHashBeacon, send]);
+	}, [competitionPhase, connectionState, sendsHashBeacon, send]);
 
 	// Send source-aware deck claims to the opponent for ownership verification.
 	const sendDeckVerification = useCallback((hiveAccount: string, claims: readonly DeckCardClaim[]) => {

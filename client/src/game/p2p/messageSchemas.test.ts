@@ -539,6 +539,29 @@ describe('parseWireMessage — integrity probes', () => {
 		expect(parseWireMessage({ type: 'version_check', buildHash: 'abc' })).not.toBeNull();
 		expect(parseWireMessage({ type: 'wasm_hash_check', wasmHash: 'def' })).not.toBeNull();
 	});
+
+	it('accepts battle_ready_v1 with optional testnet debug and still rejects extra fields', () => {
+		const proof = {
+			type: 'battle_ready_v1' as const,
+			matchId: 'match-1',
+			engineHash: 'engine-v1',
+			rulesetHash: 'rules-v1',
+			loadoutHash: 'loadout-a',
+			initialStateRoot: 'a'.repeat(64),
+		};
+		expect(parseWireMessage(proof)).not.toBeNull();
+		expect(parseWireMessage({
+			...proof,
+			debug: {
+				chessHash: 'b'.repeat(64),
+				cardsHash: 'c'.repeat(64),
+				matchSeedHash: 'd'.repeat(64),
+				localLoadoutHash: 'e'.repeat(64),
+				remoteLoadoutHash: 'f'.repeat(64),
+			},
+		})).not.toBeNull();
+		expect(parseWireMessage({ ...proof, extra: true })).toBeNull();
+	});
 });
 
 describe('parseWireMessage — poker action and clock variants', () => {

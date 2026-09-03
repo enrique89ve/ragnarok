@@ -210,6 +210,11 @@ export interface PokerCombatSliceActions {
 
 export type PokerCombatSlice = PokerCombatSliceState & PokerCombatSliceActions;
 
+export type P2PBoardBinding = {
+  readonly matchId: string;
+  readonly matchSeed: string;
+};
+
 export interface ChessCombatSliceState {
   chessPieces: ChessPieceState[];
   boardState: ChessBoardState;
@@ -217,6 +222,9 @@ export interface ChessCombatSliceState {
   playerArmy: ArmySelection | null;
   opponentArmy: ArmySelection | null;
   sharedDeckCardIds: number[];
+  // P2P chess boards are identity-bound to the live match. Piece count is
+  // not proof that the board belongs to the current matchId/matchSeed.
+  p2pBoardBinding: P2PBoardBinding | null;
   // Counts player turns (increments when currentTurn becomes 'player').
   // Distinct from boardState.moveCount which counts every ply (each side's
   // moves). Used for mission completion telemetry and per-turn boss rules.
@@ -247,6 +255,7 @@ export interface ChessCombatSliceActions {
   movePiece: (pieceIdOrPosition: string | ChessBoardPosition, newPosition?: { row: number; col: number }) => ChessCollision | null | void;
   capturePiece: (attackerId: string, targetId: string) => void;
   initializeBoard: (playerArmy: ArmySelection, opponentArmy: ArmySelection, idGen: () => string, playerDeckLoadout?: HeroDeckLoadout) => void;
+  bindP2PBoard: (binding: P2PBoardBinding) => void;
   selectPiece: (piece: ChessPiece | null) => void;
   executeMove: (from: ChessBoardPosition, to: ChessBoardPosition) => ChessMutationResult;
   executeInstantKill: (attacker: ChessPiece, defender: ChessPiece, targetPosition: ChessBoardPosition) => ChessMutationResult;

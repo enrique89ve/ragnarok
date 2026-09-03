@@ -119,7 +119,7 @@ function canonicalPokerSpells(store: UnifiedCombatStore, playerRole: CanonicalRo
  * chess board and both independently announced loadouts.  The two loadout
  * hashes are sorted because viewer-local order is not canonical.
  */
-export function computeInitialMatchRoot(input: Readonly<{
+type InitialMatchRootInput = Readonly<{
 	readonly matchId: string;
 	readonly matchSeed: string;
 	readonly engineHash: string;
@@ -128,7 +128,35 @@ export function computeInitialMatchRoot(input: Readonly<{
 	readonly localLoadoutHash: string;
 	readonly remoteLoadoutHash: string;
 	readonly combatStore: UnifiedCombatStore;
-}>): Hash256 | null {
+}>;
+
+export type InitialMatchRootDebug = Readonly<{
+	readonly chessHash: Hash256;
+	readonly cardsHash: Hash256;
+	readonly matchSeedHash: Hash256;
+	readonly localLoadoutHash: string;
+	readonly remoteLoadoutHash: string;
+}>;
+
+function hashCanonical(value: unknown): Hash256 {
+	const digest = bytesToHex(sha256(ENCODER.encode(canonicalStringify(value))));
+	return Hash256Schema.parse(digest);
+}
+
+export function computeInitialMatchRootDebug(
+	input: InitialMatchRootInput,
+): InitialMatchRootDebug | null {
+	if (input.combatStore.boardState.pieces.length === 0) return null;
+	return {
+		chessHash: hashCanonical(canonicalChess(input.combatStore)),
+		cardsHash: input.cardsHash,
+		matchSeedHash: hashCanonical(input.matchSeed),
+		localLoadoutHash: input.localLoadoutHash,
+		remoteLoadoutHash: input.remoteLoadoutHash,
+	};
+}
+
+export function computeInitialMatchRoot(input: InitialMatchRootInput): Hash256 | null {
 	if (input.combatStore.boardState.pieces.length === 0) return null;
 	const projection = {
 		version: INITIAL_MATCH_ROOT_VERSION,
@@ -140,11 +168,10 @@ export function computeInitialMatchRoot(input: Readonly<{
 		loadoutHashes: [input.localLoadoutHash, input.remoteLoadoutHash].sort(),
 		chess: canonicalChess(input.combatStore),
 	};
-	const digest = bytesToHex(sha256(ENCODER.encode(canonicalStringify([
+	return hashCanonical([
 		'ragnarok-initial-match-root',
 		projection,
-	]))));
-	return Hash256Schema.parse(digest);
+	]);
 }
 
 export function computePhaseBoundaryStateRoot(input: Readonly<{

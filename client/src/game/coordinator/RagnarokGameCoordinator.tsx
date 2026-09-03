@@ -27,13 +27,11 @@ import {
 } from '../../lib/stores/useWarbandStore';
 import { useGameStore } from '../stores/gameStore';
 import { useSettingsStore } from '../stores/settingsStore';
-import {
-  createP2PViewerPerspective,
-  mapViewerValuesToCanonical,
-} from '../p2p/p2pPerspective';
+import { createP2PViewerPerspective } from '../p2p/p2pPerspective';
+import { ensureCanonicalP2PChessBoard } from '../p2p/p2pChessBoardBinding';
 import { clearP2PMatchResume } from '../p2p/p2pMatchResume';
 import { buildPokerEntryCombatId, usePokerEntryApproval } from '../p2p/usePokerEntryApproval';
-import { createSeededIdGen, cryptoIdGen, cryptoRng } from '../utils/seededRng';
+import { cryptoIdGen, cryptoRng } from '../utils/seededRng';
 import { getNoLegalMovesStatus } from '@shared/protocol-core/chess';
 import type { PhaseCheckpointPhase } from '@shared/p2p-wire/phaseCheckpoint';
 import { resolveHeroPortrait } from '../utils/art/artMapping';
@@ -514,31 +512,18 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     status: boardState.gameStatus,
     myWinStatus,
   });
-  const p2pBoardInitRef = useRef(false);
   useEffect(() => {
-    if (p2pBoardInitRef.current) return;
     if (!isP2PConnected) return;
-    if (!matchSeed) return;
+    if (!matchSeed || !ctx?.matchId) return;
     if (!initialArmy || !opponentArmy) return;
-    if (boardState.pieces.length > 0) {
-      p2pBoardInitRef.current = true;
-      return;
-    }
-    p2pBoardInitRef.current = true;
-    const idGen = createSeededIdGen(matchSeed, 'chess-pieces');
-    // Canonical-frame init: the first-mover's army goes into the canonical
-    // 'player' positions globally. Both peers must agree on which physical
-    // army is the first-mover's. Map local `initialArmy`/`opponentArmy`
-    // (viewer-relative props) to canonical (whiteArmy=first-mover) before
-    // calling `initializeBoard`. Same idGen sequence on identical canonical
-    // layout → identical piece ids on both peers.
-    const canonicalArmies = mapViewerValuesToCanonical({
-      perspective: p2pPerspective,
-      localValue: initialArmy,
-      remoteValue: opponentArmy,
+    ensureCanonicalP2PChessBoard({
+      matchId: ctx.matchId,
+      matchSeed,
+      myCanonicalSide,
+      localArmy: initialArmy,
+      remoteArmy: opponentArmy,
     });
-    initializeBoard(canonicalArmies.player, canonicalArmies.opponent, idGen);
-  }, [isP2PConnected, matchSeed, initialArmy, opponentArmy, initializeBoard, p2pPerspective, boardState.pieces.length]);
+  }, [isP2PConnected, matchSeed, ctx?.matchId, initialArmy, opponentArmy, myCanonicalSide]);
 
   useCampaignGameBootstrap({
     missionRealm,
@@ -1009,6 +994,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       usePeerStore.getState().disconnect();
       useMatchStore.getState().clearMatch();
       useGameStore.getState().resetGameState();
+      useUnifiedCombatStore.getState().reset();
     }
 
     resetBoard();
@@ -1070,6 +1056,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
 				peer.disconnect();
 				useMatchStore.getState().clearMatch();
 				useGameStore.getState().resetGameState();
+				useUnifiedCombatStore.getState().reset();
 				GameEventBus.emitNotification({
 					level: 'info',
 					message: 'Match canceled before the first valid move. No result recorded.',
