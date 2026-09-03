@@ -100,6 +100,32 @@ function waitForType(socket: WebSocket, type: string): Promise<Record<string, un
 	});
 }
 
+function waitForMessage(
+	socket: WebSocket,
+	predicate: (message: Record<string, unknown>) => boolean,
+): Promise<Record<string, unknown>> {
+	return new Promise((resolve, reject) => {
+		const timeout = setTimeout(() => {
+			cleanup();
+			reject(new Error('Timed out waiting for matching control message'));
+		}, 3_000);
+		const cleanup = (): void => {
+			clearTimeout(timeout);
+			socket.off('message', onMessage);
+			socket.off('error', onError);
+		};
+		const onError = (error: Error): void => { cleanup(); reject(error); };
+		const onMessage = (raw: RawData): void => {
+			const message = parseRecord(raw);
+			if (!message || !predicate(message)) return;
+			cleanup();
+			resolve(message);
+		};
+		socket.on('message', onMessage);
+		socket.once('error', onError);
+	});
+}
+
 function waitForPing(socket: WebSocket): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const timeout = setTimeout(() => {
@@ -309,6 +335,74 @@ describe('P2P control websocket', () => {
 		const [resumedAliceCheckpoint, resumedBobCheckpoint] = await Promise.all([resumedCheckpointOnAlice, resumedCheckpointOnBob]);
 		expect(resumedAliceCheckpoint).toMatchObject({ epoch: 2, previousCheckpointId: firstCheckpointOnAlice.checkpointId, stateRoot: '2'.repeat(64) });
 		expect(resumedBobCheckpoint).toMatchObject({ epoch: 2, previousCheckpointId: firstCheckpointOnBob.checkpointId, stateRoot: '2'.repeat(64) });
+	});
+
+	it('publishes a server-timed Poker ready check and commits only after both peers approve', async () => {
+		const app = express();
+		app.get('/login/:username', (req, res) => {
+			issueHiveWebSession(res, req.params.username);
+			res.end('ok');
+		});
+		server = createServer(app);
+		attachP2PControl(server, { pokerEntryApprovalTimeoutMs: 80 });
+		const port = await listen(server);
+		const baseUrl = `http://127.0.0.1:${port}`;
+		const aliceCookie = await loginCookie(baseUrl, 'alice');
+		const bobCookie = await loginCookie(baseUrl, 'bob');
+		const roomId = 'control-poker-ready-1';
+		const aliceTicket = buildP2PMatchTicket({ roomId, peerId: 'peer-a', role: 'offerer', account: 'alice' });
+		const bobTicket = buildP2PMatchTicket({ roomId, peerId: 'peer-b', role: 'answerer', account: 'bob' });
+		const wsUrl = `ws://127.0.0.1:${port}/ws/control?match=${roomId}`;
+		const alice = new WebSocket(`${wsUrl}&peer=peer-a`, controlProtocols(aliceTicket.token), { headers: { Cookie: aliceCookie } });
+		const bob = new WebSocket(`${wsUrl}&peer=peer-b`, controlProtocols(bobTicket.token), { headers: { Cookie: bobCookie } });
+		sockets.push(alice, bob);
+		await Promise.all([
+			new Promise<void>((resolve, reject) => { alice.once('open', resolve); alice.once('error', reject); }),
+			new Promise<void>((resolve, reject) => { bob.once('open', resolve); bob.once('error', reject); }),
+		]);
+		const hello = (peerId: string): string => JSON.stringify({ type: 'control_hello_v1', protocolVersion: 2, matchId: roomId, peerId });
+		const aliceOpen = waitForType(alice, 'control_open_v1');
+		const bobOpen = waitForType(bob, 'control_open_v1');
+		alice.send(hello('peer-a'));
+		bob.send(hello('peer-b'));
+		await Promise.all([aliceOpen, bobOpen]);
+		const aliceTransport = waitForType(alice, 'transport_committed_v1');
+		const bobTransport = waitForType(bob, 'transport_committed_v1');
+		const readyTransport = JSON.stringify({ type: 'transport_ready_v1', protocolVersion: 2, matchId: roomId, transportEpoch: 1, kind: 'websocket-relay' });
+		alice.send(readyTransport);
+		bob.send(readyTransport);
+		await Promise.all([aliceTransport, bobTransport]);
+
+		const combatId = `${roomId}:4:piece-a:piece-b`;
+		const pendingAlice = waitForMessage(alice, message => message.type === 'poker_entry_approval_state_v1' && message.status === 'pending');
+		const pendingBob = waitForMessage(bob, message => message.type === 'poker_entry_approval_state_v1' && message.status === 'pending');
+		alice.send(JSON.stringify({ type: 'poker_entry_open_v1', protocolVersion: 2, matchId: roomId, transportEpoch: 1, combatId }));
+		const [alicePending, bobPending] = await Promise.all([pendingAlice, pendingBob]);
+		expect(alicePending).toMatchObject({ deadlineAtMs: expect.any(Number), remainingMs: expect.any(Number), readyPeerIds: [] });
+		expect(bobPending).toMatchObject({ combatId, status: 'pending' });
+
+		alice.send(JSON.stringify({ type: 'poker_entry_ready_v1', protocolVersion: 2, matchId: roomId, transportEpoch: 1, combatId }));
+		const committedAlice = waitForMessage(alice, message => message.type === 'poker_entry_approval_state_v1' && message.status === 'committed');
+		const committedBob = waitForMessage(bob, message => message.type === 'poker_entry_approval_state_v1' && message.status === 'committed');
+		bob.send(JSON.stringify({ type: 'poker_entry_ready_v1', protocolVersion: 2, matchId: roomId, transportEpoch: 1, combatId }));
+		await expect(Promise.all([committedAlice, committedBob])).resolves.toEqual([
+			expect.objectContaining({ readyPeerIds: ['peer-a', 'peer-b'], deadlineAtMs: null }),
+			expect.objectContaining({ readyPeerIds: ['peer-a', 'peer-b'], deadlineAtMs: null }),
+		]);
+
+		const secondCombatId = `${roomId}:5:piece-c:piece-d`;
+		const expiredAlice = waitForMessage(alice, message => message.type === 'poker_entry_approval_state_v1'
+			&& message.combatId === secondCombatId
+			&& message.status === 'expired');
+		const expiredBob = waitForMessage(bob, message => message.type === 'poker_entry_approval_state_v1'
+			&& message.combatId === secondCombatId
+			&& message.status === 'expired');
+		alice.send(JSON.stringify({ type: 'poker_entry_open_v1', protocolVersion: 2, matchId: roomId, transportEpoch: 1, combatId: secondCombatId }));
+		alice.send(JSON.stringify({ type: 'poker_entry_ready_v1', protocolVersion: 2, matchId: roomId, transportEpoch: 1, combatId: secondCombatId }));
+		await expect(Promise.all([expiredAlice, expiredBob])).resolves.toEqual([
+			expect.objectContaining({ remainingMs: 0, readyPeerIds: ['peer-a'] }),
+			expect.objectContaining({ remainingMs: 0, readyPeerIds: ['peer-a'] }),
+		]);
 	});
 
 	it('commits a transport only after both peers select the same kind and permits relay recovery', async () => {

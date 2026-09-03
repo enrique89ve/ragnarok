@@ -557,6 +557,8 @@ Antes de decir "listo para testers", adjuntar o registrar:
 - salida de `pnpm run build:alfa-testnet`;
 - `/api/health`, `/api/admin/config`, `/api/admin/p2p/status`;
 - session log JSON del smoke humano P2P;
+- captura de ambos navegadores en el VS ready check, incluyendo contador de
+  30 s, estados Ready/Pending, espera bilateral y pausa/reanudacion al reconectar;
 - capturas o reporte visual del tablero poker en los viewports objetivo;
 - practica: evidencia del script chess↔poker→`game_over`;
 - campana: 1 mision Norse, evidence JSON (account, epoch, mission,

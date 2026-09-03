@@ -17,6 +17,11 @@ import {
 	PokerTurnNotaryDisputeSchema,
 	PokerActionTimeGateAckSchema,
 } from './pokerTimeNotary';
+import {
+	PokerEntryApprovalStateSchema,
+	PokerEntryOpenSchema,
+	PokerEntryReadySchema,
+} from './pokerEntryApproval';
 
 export const P2P_CONTROL_WS_PROTOCOL = 'ragnarok-p2p-control-v1';
 export const P2P_CONTROL_WS_PROTOCOL_PREFIX = `${P2P_MATCH_TICKET_WS_PROTOCOL_PREFIX}control.`;
@@ -145,6 +150,8 @@ export const P2PControlClientMessageSchema = z.discriminatedUnion('type', [
 	TransportReadySchema,
 	TransportFallbackSchema,
 	PokerActionControlSchema,
+	PokerEntryOpenSchema,
+	PokerEntryReadySchema,
 	ActionAppliedSchema,
 	// Referee proposals use the same authenticated Control WS as signaling.
 	// They never enter the gameplay DataChannel.
@@ -195,6 +202,7 @@ export const P2PControlServerMessageSchema = z.discriminatedUnion('type', [
 	PokerTurnNotaryCommitSchema,
 	PokerTurnNotaryDisputeSchema,
 	PokerActionTimeGateAckSchema,
+	PokerEntryApprovalStateSchema,
 ]);
 
 export function readControlTransportEpoch(message: unknown): number | null {

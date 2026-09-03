@@ -32,6 +32,7 @@ import {
   mapViewerValuesToCanonical,
 } from '../p2p/p2pPerspective';
 import { clearP2PMatchResume } from '../p2p/p2pMatchResume';
+import { buildPokerEntryCombatId, usePokerEntryApproval } from '../p2p/usePokerEntryApproval';
 import { createSeededIdGen, cryptoIdGen, cryptoRng } from '../utils/seededRng';
 import { getNoLegalMovesStatus } from '@shared/protocol-core/chess';
 import type { PhaseCheckpointPhase } from '@shared/p2p-wire/phaseCheckpoint';
@@ -263,6 +264,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   const isP2PConnected = flow?.usesPeerPhaseCheckpoint === true;
   const p2pTechnicalResult = usePeerStore(s => {
 		const result = s.battleLifecycle?.result;
+		if (result?.kind === 'technical_no_contest') return 'draw';
 		if (result?.kind !== 'technical_abandonment' || !s.myPeerId) return null;
 		return result.winnerId === s.myPeerId ? 'victory' : 'defeat';
 	});
@@ -680,6 +682,22 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       },
     });
   }, [flowState, pendingCombat, playerArmy, opponentArmy, boardState.pieces, boardState.moveCount, initializeCombatFromPayload, playAudioCue, stopBackgroundMusic, setPokerSlotsSwapped, dispatchFlow, matchSeed, p2pPerspective, runPhaseTransition]);
+
+  const pokerEntryCombatId = useMemo(() => {
+    if (!ctx?.matchId || flowState?.tag !== 'vs_screen') return null;
+    return buildPokerEntryCombatId({
+      matchId: ctx.matchId,
+      moveCount: boardState.moveCount,
+      attackerId: flowState.pieces.attacker.id,
+      defenderId: flowState.pieces.defender.id,
+    });
+  }, [boardState.moveCount, ctx?.matchId, flowState]);
+  const pokerEntryApproval = usePokerEntryApproval({
+    enabled: isP2PConnected && flowState?.tag === 'vs_screen',
+    matchId: ctx?.matchId ?? null,
+    combatId: pokerEntryCombatId,
+    onCommitted: handleVsScreenComplete,
+  });
 
   const resumeHandoffKeyRef = useRef<string | null>(null);
   useEffect(() => {
@@ -1237,6 +1255,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
               attacker={flowState.pieces.attacker}
               defender={flowState.pieces.defender}
               onTimeout={handleVsScreenComplete}
+              approval={pokerEntryApproval}
             />
           )}
 

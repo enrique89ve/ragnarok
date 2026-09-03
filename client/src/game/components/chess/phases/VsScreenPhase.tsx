@@ -14,6 +14,7 @@
 import React from 'react';
 import type { ChessPiece } from '../../../types/ChessTypes';
 import VSScreen from '../VSScreen';
+import type { PokerEntryApprovalView } from '../../../p2p/usePokerEntryApproval';
 
 const DEFAULT_VS_DURATION_MS = 3800;
 
@@ -22,6 +23,7 @@ export type VsScreenPhaseProps = {
 	readonly defender: ChessPiece;
 	readonly onTimeout: () => void;
 	readonly durationMs?: number;
+	readonly approval?: PokerEntryApprovalView | null;
 };
 
 const VsScreenPhase: React.FC<VsScreenPhaseProps> = ({
@@ -29,6 +31,7 @@ const VsScreenPhase: React.FC<VsScreenPhaseProps> = ({
 	defender,
 	onTimeout,
 	durationMs = DEFAULT_VS_DURATION_MS,
+	approval = null,
 }) => {
 	return (
 		<VSScreen
@@ -37,6 +40,7 @@ const VsScreenPhase: React.FC<VsScreenPhaseProps> = ({
 			defender={defender}
 			onComplete={onTimeout}
 			duration={durationMs}
+			approval={approval}
 		/>
 	);
 };

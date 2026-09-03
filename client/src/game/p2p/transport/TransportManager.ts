@@ -110,7 +110,8 @@ function isBufferedControlMessage(message: P2PControlServerMessage): boolean {
 	|| message.type === 'poker_action_time_gate_v1'
 	|| message.type === 'poker_action_time_gate_ack_v1'
 	|| message.type === 'action_applied_v1'
-	|| message.type === 'transport_committed_v1';
+	|| message.type === 'transport_committed_v1'
+	|| message.type === 'poker_entry_approval_state_v1';
 }
 
 async function connectWithinBudget(

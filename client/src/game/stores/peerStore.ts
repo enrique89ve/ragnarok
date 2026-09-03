@@ -247,6 +247,7 @@ export type PeerStore = {
 	}) => P2PCompetitionState | null;
 	requestP2PLeave: (actorId: string, eventId?: string) => P2PCompetitionState | null;
 	recordRemoteP2PLeave: (participantId: string, eventId: string) => P2PCompetitionState | null;
+	recordPokerEntryApprovalExpired: (readyParticipantIds: readonly string[], eventId: string) => P2PCompetitionState | null;
 	/** Rejoin a persisted room with the existing 2-attempt / 60s window. */
 	rejoinPersistedRoom: (roomId: string) => void;
 
@@ -1061,6 +1062,11 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		}
 		return next;
 	},
+	recordPokerEntryApprovalExpired: (readyParticipantIds, eventId) => applyBattleLifecycleEvent(get, set, {
+		type: 'poker_entry_approval_expired',
+		readyParticipantIds,
+		eventId,
+	}),
 
 	rejoinPersistedRoom: (roomId) => {
 		lastRoomId = roomId;

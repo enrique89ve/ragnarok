@@ -1228,6 +1228,29 @@ operational gate alongside the rest of the testnet readiness checklist.
 
 ---
 
+## §10.1 Poker entry approval
+
+A chess capture that routes to Poker enters the visible VS ready check before
+the existing `chess → poker_combat` Phase Checkpoint. This is a human approval
+gate; it does not replace the checkpoint and never requests Keychain.
+
+- Each peer sends `poker_entry_open_v1` on entering the VS screen and may send
+  one idempotent `poker_entry_ready_v1` from the visible **Ready for Poker**
+  control. Both messages are bound to `matchId`, `transportEpoch` and the exact
+  deterministic `combatId`; the authenticated Control WS supplies peer identity.
+- The server owns the 30,000 ms deadline and broadcasts
+  `poker_entry_approval_state_v1` with `pending | paused | committed | expired`,
+  the ready peer ids and the remaining time. A Control disconnect pauses this
+  deadline; the normal 60-second reconnect lifecycle remains authoritative.
+- Only bilateral `committed` state may request the Phase Checkpoint and enter
+  Poker. One ready peer at expiry wins by technical abandonment of the pending
+  peer. If neither is ready, the terminal result is `technical_no_contest` with
+  no winner and no settlement.
+- Single and campaign keep the 3.8-second presentation transition and do not
+  participate in this Control protocol.
+
+---
+
 ## §11 Glossary
 
 | Term | Meaning |

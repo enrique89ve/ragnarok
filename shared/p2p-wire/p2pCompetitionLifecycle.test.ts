@@ -163,6 +163,30 @@ describe('P2P competition lifecycle', () => {
 		});
 	});
 
+	it('resolves a missed Poker approval without inventing a winner', () => {
+		const oneReady = reduceP2PCompetitionLifecycle(startBattle(), {
+			type: 'poker_entry_approval_expired',
+			readyParticipantIds: ['peer-a'],
+			eventId: 'poker-ready-expiry-1',
+		});
+		const noneReady = reduceP2PCompetitionLifecycle(startBattle(), {
+			type: 'poker_entry_approval_expired',
+			readyParticipantIds: [],
+			eventId: 'poker-ready-expiry-2',
+		});
+
+		expect(oneReady.result).toMatchObject({
+			kind: 'technical_abandonment',
+			winnerId: 'peer-a',
+			loserId: 'peer-b',
+			reason: 'poker_entry_approval_expired',
+		});
+		expect(noneReady.result).toMatchObject({
+			kind: 'technical_no_contest',
+			reason: 'poker_entry_approval_expired',
+		});
+	});
+
 	it('is irreversible and idempotent after normal or technical resolution', () => {
 		const technical = reduceP2PCompetitionLifecycle(startBattle(), {
 			type: 'leave_requested',

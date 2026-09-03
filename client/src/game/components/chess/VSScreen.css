@@ -442,6 +442,163 @@
 	pointer-events: none;
 }
 
+.vs-bottom-bar-approval {
+	bottom: max(0.65rem, env(safe-area-inset-bottom));
+	pointer-events: auto;
+}
+
+.vs-approval {
+	width: min(560px, calc(100vw - 2rem));
+	box-sizing: border-box;
+	padding: 0.75rem 0.9rem 0.65rem;
+	border: 1px solid color-mix(in srgb, var(--gold-300) 64%, transparent);
+	background: linear-gradient(145deg, rgba(13, 20, 29, 0.97), rgba(3, 7, 13, 0.97));
+	box-shadow: 0 0 0 3px rgba(3, 7, 13, 0.7), 0 16px 36px rgba(0, 0, 0, 0.55);
+	clip-path: polygon(0 10px, 10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px));
+}
+
+.vs-approval-heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	text-align: left;
+}
+
+.vs-approval-kicker {
+	display: block;
+	color: var(--gold-300);
+	font-size: 0.62rem;
+	font-weight: 850;
+	letter-spacing: 0.2em;
+}
+
+.vs-approval h2 {
+	margin: 0.15rem 0 0;
+	color: var(--ink-0);
+	font-family: var(--type-display, var(--type-ui));
+	font-size: clamp(0.88rem, 2vw, 1.08rem);
+	line-height: 1.15;
+	text-transform: uppercase;
+}
+
+.vs-approval-clock {
+	display: flex;
+	align-items: baseline;
+	gap: 0.25rem;
+	min-width: 4.25rem;
+	justify-content: flex-end;
+	color: var(--gold-300);
+	font-family: var(--type-numeric);
+}
+
+.vs-approval-clock span {
+	font-size: 1.8rem;
+	font-weight: 900;
+	line-height: 1;
+}
+
+.vs-approval-clock small {
+	font-size: 0.58rem;
+	font-weight: 800;
+	letter-spacing: 0.12em;
+}
+
+.vs-approval-statuses {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0.45rem;
+	margin: 0.55rem 0;
+}
+
+.vs-approval-statuses span {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.38rem;
+	min-height: 1.7rem;
+	border: 1px solid var(--iron-650, #334155);
+	color: var(--ink-100);
+	font-size: 0.64rem;
+	font-weight: 800;
+	letter-spacing: 0.08em;
+}
+
+.vs-approval-statuses i {
+	width: 0.42rem;
+	height: 0.42rem;
+	background: var(--amber-400, #f59e0b);
+	transform: rotate(45deg);
+}
+
+.vs-approval-statuses .is-ready {
+	border-color: color-mix(in srgb, var(--saga-green, #22c55e) 70%, transparent);
+	color: #bbf7d0;
+}
+
+.vs-approval-statuses .is-ready i {
+	background: var(--saga-green, #22c55e);
+}
+
+:is(.vs-approval-button, .vs-approval-waiting) {
+	width: 100%;
+	min-height: 44px;
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid #4ade80;
+	border-radius: 4px;
+	font-family: var(--type-ui);
+	font-size: 0.76rem;
+	font-weight: 900;
+	letter-spacing: 0.14em;
+}
+
+.vs-approval-button {
+	cursor: pointer;
+	color: #03130a;
+	background: var(--saga-green, #22c55e);
+	box-shadow: 0 0 18px rgba(34, 197, 94, 0.24);
+	transition: filter 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+}
+
+.vs-approval button:hover:not(:disabled) {
+	filter: brightness(1.12);
+	box-shadow: 0 0 24px rgba(34, 197, 94, 0.38);
+}
+
+.vs-approval button:active:not(:disabled) {
+	transform: translateY(1px);
+}
+
+.vs-approval button:focus-visible {
+	outline: 3px solid var(--ink-0);
+	outline-offset: 3px;
+}
+
+.vs-approval button:disabled {
+	cursor: not-allowed;
+	border-color: var(--iron-650, #334155);
+	color: color-mix(in srgb, var(--ink-100) 46%, transparent);
+	background: var(--iron-850, #111827);
+	box-shadow: none;
+}
+
+.vs-approval-waiting {
+	border-color: color-mix(in srgb, var(--rune-cyan, #38bdf8) 60%, transparent);
+	color: #bae6fd;
+	background: rgba(14, 116, 144, 0.18);
+}
+
+.vs-approval-rule {
+	margin: 0.42rem 0 0;
+	color: color-mix(in srgb, var(--ink-100) 68%, transparent);
+	font-size: 0.62rem;
+	line-height: 1.3;
+	text-align: center;
+}
+
 .vs-battle-text {
 	position: relative;
 	padding: 0.48rem 1.2rem 0.42rem;
@@ -546,6 +703,23 @@
 		letter-spacing: 0.18em;
 		padding-inline: 0.72rem;
 	}
+
+	.vs-approval {
+		width: min(480px, calc(100vw - 1rem));
+		padding: 0.55rem 0.65rem 0.48rem;
+	}
+
+	.vs-approval-heading {
+		gap: 0.5rem;
+	}
+
+	.vs-approval-clock span {
+		font-size: 1.45rem;
+	}
+
+	.vs-approval-rule {
+		display: none;
+	}
 }
 
 @media (max-height: 500px) {
@@ -568,6 +742,38 @@
 
 	.vs-battle-text {
 		bottom: 0.3rem;
+	}
+
+	.vs-screen-content:has(+ .vs-bottom-bar-approval) {
+		height: 68vh;
+		transform: translateY(-2.4rem);
+	}
+
+	.vs-approval {
+		display: grid;
+		grid-template-columns: 1.25fr 1fr;
+		gap: 0.35rem 0.65rem;
+		align-items: center;
+		width: min(680px, calc(100vw - 1rem));
+		padding: 0.45rem 0.65rem;
+	}
+
+	:is(.vs-approval-heading, .vs-approval-statuses) {
+		margin: 0;
+	}
+
+	.vs-approval-button,
+	.vs-approval-waiting {
+		grid-column: 2;
+		grid-row: 1;
+	}
+
+	.vs-approval-statuses {
+		grid-column: 1;
+	}
+
+	.vs-approval-rule {
+		display: none;
 	}
 }
 

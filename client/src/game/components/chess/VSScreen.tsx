@@ -6,12 +6,14 @@ import { PIECE_COLOR_BY_TYPE } from './pieceVisuals';
 import { PieceGlyph } from './PieceGlyph';
 import { ChessHealthIcon } from './ChessIconsSVG';
 import './VSScreen.css';
+import type { PokerEntryApprovalView } from '../../p2p/usePokerEntryApproval';
 
 interface VSScreenProps {
   attacker: ChessPiece;
   defender: ChessPiece;
   onComplete: () => void;
   duration?: number;
+  approval?: PokerEntryApprovalView | null;
 }
 
 const VS_DEFAULT_DURATION_MS = 3800;
@@ -23,7 +25,8 @@ const VSScreen: React.FC<VSScreenProps> = ({
   attacker, 
   defender, 
   onComplete,
-  duration = VS_DEFAULT_DURATION_MS 
+  duration = VS_DEFAULT_DURATION_MS,
+  approval = null,
 }) => {
   const [phase, setPhase] = useState<'enter' | 'vs' | 'exit'>('enter');
   const reducedMotion = useReducedMotion();
@@ -35,6 +38,7 @@ const VSScreen: React.FC<VSScreenProps> = ({
 
   useEffect(() => {
     const enterTimer = setTimeout(() => setPhase('vs'), VS_ENTER_DELAY_MS);
+    if (approval) return () => clearTimeout(enterTimer);
     const exitTimer = setTimeout(() => setPhase('exit'), exitAt);
     const completeTimer = setTimeout(onComplete, safeDuration);
 
@@ -43,7 +47,7 @@ const VSScreen: React.FC<VSScreenProps> = ({
       clearTimeout(exitTimer);
       clearTimeout(completeTimer);
     };
-  }, [safeDuration, exitAt, onComplete]);
+  }, [approval, safeDuration, exitAt, onComplete]);
 
   const getPieceTitle = (piece: ChessPiece) => {
     return piece.heroName || `${piece.type.charAt(0).toUpperCase()}${piece.type.slice(1)}`;
@@ -169,17 +173,73 @@ const VSScreen: React.FC<VSScreenProps> = ({
           </motion.div>
         </div>
 
-        <motion.div 
-          className="vs-bottom-bar"
+        <motion.div
+          className={`vs-bottom-bar${approval ? ' vs-bottom-bar-approval' : ''}`}
           initial={reducedMotion ? false : { y: 40, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: reducedMotion ? 0 : 0.72, duration: reducedMotion ? 0 : 0.38, ease: 'easeOut' }}
         >
-          <span className="vs-battle-text">PREPARE FOR BATTLE</span>
+          {approval ? <PokerEntryApprovalPanel approval={approval} /> : (
+            <span className="vs-battle-text">PREPARE FOR BATTLE</span>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>
   );
 };
+
+function PokerEntryApprovalPanel({ approval }: Readonly<{ approval: PokerEntryApprovalView }>) {
+  const statusCopy = approval.status === 'paused'
+    ? 'Approval paused while connection recovers'
+    : approval.status === 'committed'
+      ? 'Both warriors are ready'
+      : approval.status === 'expired'
+        ? 'Approval window expired'
+        : approval.status === 'error'
+          ? 'Approval service unavailable'
+          : approval.status === 'connecting'
+            ? 'Synchronizing approval…'
+            : approval.localReady || approval.localApprovalPending
+              ? 'Waiting for opponent'
+              : 'Confirm before entering Poker';
+
+  return (
+    <section className="vs-approval" aria-labelledby="vs-approval-title" aria-live="polite">
+      <div className="vs-approval-heading">
+        <div>
+          <span className="vs-approval-kicker">POKER READY CHECK</span>
+          <h2 id="vs-approval-title">{statusCopy}</h2>
+        </div>
+        <div className="vs-approval-clock" role="timer" aria-label={`${approval.secondsRemaining} seconds remaining`}>
+          <span>{approval.secondsRemaining}</span>
+          <small>SEC</small>
+        </div>
+      </div>
+      <div className="vs-approval-statuses" aria-label="Player approval status">
+        <span className={approval.localReady ? 'is-ready' : 'is-pending'}>
+          <i aria-hidden="true" /> YOU · {approval.localReady ? 'READY' : approval.localApprovalPending ? 'SUBMITTED' : 'PENDING'}
+        </span>
+        <span className={approval.opponentReady ? 'is-ready' : 'is-pending'}>
+          <i aria-hidden="true" /> OPPONENT · {approval.opponentReady ? 'READY' : 'PENDING'}
+        </span>
+      </div>
+      {approval.localReady || approval.localApprovalPending ? (
+		<div className="vs-approval-waiting" role="status">
+			{approval.localReady ? 'READY' : 'SUBMITTED'} · WAITING FOR OPPONENT
+		</div>
+      ) : (
+        <button
+          type="button"
+          className="vs-approval-button"
+          onClick={approval.onApprove}
+          disabled={!approval.canApprove}
+        >
+          READY FOR POKER
+        </button>
+      )}
+      <p className="vs-approval-rule">Both players must approve. Missing the deadline closes the match.</p>
+    </section>
+  );
+}
 
 export default VSScreen;

@@ -218,28 +218,34 @@ export const MultiplayerGame: React.FC = () => {
 	const handledLifecycleEventRef = useRef<string | null>(null);
 	useEffect(() => {
 		const result = battleLifecycle?.result;
-		if (!result || result.kind !== 'technical_abandonment' || !myPeerId) return;
+		if (!result || (result.kind !== 'technical_abandonment' && result.kind !== 'technical_no_contest') || !myPeerId) return;
 		if (handledLifecycleEventRef.current === result.eventId) return;
 		handledLifecycleEventRef.current = result.eventId;
 
-		const localWon = result.winnerId === myPeerId;
+		const noContest = result.kind === 'technical_no_contest';
+		const localWon = result.kind === 'technical_abandonment' && result.winnerId === myPeerId;
 		const now = Date.now();
 		void clearP2PMatchResume();
 		recordSessionEvent('p2p_technical_result', {
 			eventId: result.eventId,
-			winnerId: result.winnerId,
-			loserId: result.loserId,
-			localOutcome: localWon ? 'victory' : 'defeat',
+			...(result.kind === 'technical_abandonment' ? { winnerId: result.winnerId, loserId: result.loserId } : {}),
+			localOutcome: noContest ? 'no_contest' : localWon ? 'victory' : 'defeat',
 			reason: result.reason,
 			runeSettlement: 'not_credited_from_result_only',
 		});
 		GameEventBus.emitNotification({
-			level: localWon ? 'success' : 'error',
-			message: localWon
-				? 'Technical victory: opponent did not return before the reconnect window expired.'
+			level: noContest ? 'info' : localWon ? 'success' : 'error',
+			message: noContest
+				? 'Poker approval expired for both players. Match closed with no result.'
+				: localWon
+				? result.reason === 'poker_entry_approval_expired'
+					? 'Technical victory: opponent did not approve Poker in time.'
+					: 'Technical victory: opponent did not return before the reconnect window expired.'
 				: result.reason === 'explicit_leave'
 					? 'Technical defeat: leaving a committed PvP battle ends the match.'
-					: 'Technical defeat: the reconnect window expired.',
+					: result.reason === 'poker_entry_approval_expired'
+						? 'Technical defeat: Poker was not approved before the deadline.'
+						: 'Technical defeat: the reconnect window expired.',
 			duration: 6_000,
 		});
 		const flow = useGameFlowStore.getState().current;
@@ -253,18 +259,24 @@ export const MultiplayerGame: React.FC = () => {
 			gameState: {
 				...gameState,
 				gamePhase: 'game_over',
-				winner: localWon ? 'player' : 'opponent',
+				winner: noContest ? 'draw' : localWon ? 'player' : 'opponent',
 				gameLog: [
 					...gameState.gameLog,
 					{
 						id: `p2p_forfeit_${result.eventId}`,
 						type: 'effect',
 						player: localWon ? 'opponent' : 'player',
-						text: localWon
-							? 'Technical victory: opponent did not reconnect in time.'
+						text: noContest
+							? 'No contest: neither player approved Poker before the deadline.'
+							: localWon
+							? result.reason === 'poker_entry_approval_expired'
+								? 'Technical victory: opponent did not approve Poker in time.'
+								: 'Technical victory: opponent did not reconnect in time.'
 							: result.reason === 'explicit_leave'
 								? 'Technical defeat: you left the committed PvP battle.'
-								: 'Technical defeat: connection was not restored in time.',
+								: result.reason === 'poker_entry_approval_expired'
+									? 'Technical defeat: Poker approval expired.'
+									: 'Technical defeat: connection was not restored in time.',
 						timestamp: now,
 						turn: gameState.turnNumber,
 					},

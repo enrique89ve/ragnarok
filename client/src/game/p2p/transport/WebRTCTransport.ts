@@ -423,7 +423,8 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 			|| message.type === 'poker_turn_notary_dispute_v1'
 			|| message.type === 'poker_action_time_gate_v1'
 			|| message.type === 'poker_action_time_gate_ack_v1'
-			|| message.type === 'action_applied_v1') {
+			|| message.type === 'action_applied_v1'
+			|| message.type === 'poker_entry_approval_state_v1') {
 			emitControlMessage(message);
 			return;
 		}

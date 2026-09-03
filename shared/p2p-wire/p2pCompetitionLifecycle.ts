@@ -8,7 +8,7 @@
  */
 
 export type P2PCompetitionPhase = 'pre_battle' | 'battle' | 'resolved' | 'cancelled';
-export type P2PCompetitionAbandonmentReason = 'explicit_leave' | 'reconnect_expired';
+export type P2PCompetitionAbandonmentReason = 'explicit_leave' | 'reconnect_expired' | 'poker_entry_approval_expired';
 
 export type P2PCompetitionAcceptedAction = {
 	readonly actionId: string;
@@ -30,6 +30,12 @@ export type P2PCompetitionResult =
 			readonly winnerId: string;
 			readonly loserId: string;
 			readonly reason: P2PCompetitionAbandonmentReason;
+			readonly eventId: string;
+			readonly canonicalOrder: number;
+		}
+	| {
+			readonly kind: 'technical_no_contest';
+			readonly reason: 'poker_entry_approval_expired';
 			readonly eventId: string;
 			readonly canonicalOrder: number;
 		};
@@ -83,6 +89,11 @@ export type P2PCompetitionEvent =
 	| {
 			type: 'leave_requested';
 			participantId: string;
+			eventId: string;
+		}
+	| {
+			type: 'poker_entry_approval_expired';
+			readyParticipantIds: readonly string[];
 			eventId: string;
 		}
 	| {
@@ -264,6 +275,30 @@ export function reduceP2PCompetitionLifecycle(
 				eventId: event.eventId,
 				canonicalOrder: state.lastCanonicalOrder,
 			});
+
+		case 'poker_entry_approval_expired': {
+			if (state.phase !== 'battle' || !isNonEmptyString(event.eventId)) return state;
+			const ready = [...new Set(event.readyParticipantIds)];
+			if (ready.some(participantId => !isParticipant(state, participantId)) || ready.length > 1) return state;
+			if (ready.length === 0) {
+				return terminalResult(state, {
+					kind: 'technical_no_contest',
+					reason: 'poker_entry_approval_expired',
+					eventId: event.eventId,
+					canonicalOrder: state.lastCanonicalOrder,
+				});
+			}
+			const winnerId = ready[0];
+			if (!winnerId) return state;
+			return terminalResult(state, {
+				kind: 'technical_abandonment',
+				winnerId,
+				loserId: otherParticipant(state, winnerId),
+				reason: 'poker_entry_approval_expired',
+				eventId: event.eventId,
+				canonicalOrder: state.lastCanonicalOrder,
+			});
+		}
 
 		case 'normal_result': {
 			if (!isNonEmptyString(event.eventId) || !isPositiveInteger(event.canonicalOrder) || event.canonicalOrder < state.lastCanonicalOrder) return state;

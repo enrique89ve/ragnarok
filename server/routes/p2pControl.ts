@@ -17,6 +17,10 @@ import {
 } from '../../shared/p2p-wire/control';
 import { buildPokerActionTimeGateAck } from '../../shared/p2p-wire/pokerTimeNotary';
 import {
+	POKER_ENTRY_APPROVAL_TIMEOUT_MS,
+	type PokerEntryApprovalState,
+} from '../../shared/p2p-wire/pokerEntryApproval';
+import {
 	isSafePeerId,
 	isSafeRoomOrMatchId,
 	type P2PTransportRole,
@@ -64,6 +68,17 @@ type ControlRoom = {
 	pendingReplacements: Map<string, ControlMember>;
 	transportEpoch: number;
 	createdAt: number;
+	pokerEntryApproval: PokerEntryApprovalGate | null;
+};
+
+type PokerEntryApprovalGate = {
+	combatId: string;
+	transportEpoch: number;
+	status: PokerEntryApprovalState['status'];
+	deadlineAtMs: number | null;
+	remainingMs: number;
+	readyPeerIds: Set<string>;
+	timer: ReturnType<typeof setTimeout> | null;
 };
 const rooms = new Map<string, ControlRoom>();
 
@@ -73,6 +88,7 @@ function createControlRoom(): ControlRoom {
 		pendingReplacements: new Map(),
 		transportEpoch: INITIAL_TRANSPORT_EPOCH,
 		createdAt: Date.now(),
+		pokerEntryApproval: null,
 	};
 }
 const MESSAGE_RATE_LIMIT: RateLimitBucket = new Map();
@@ -128,14 +144,119 @@ function fenceControlMember(member: ControlMember, roomId: string, departedPeerI
 
 function maybeDeleteEmptyControlRoom(roomId: string, room: ControlRoom): void {
 	if (room.members.length > 0 || room.pendingReplacements.size > 0) return;
+	if (room.pokerEntryApproval?.timer) clearTimeout(room.pokerEntryApproval.timer);
 	forgetControlRoomRateLimits(roomId, room);
 	rooms.delete(roomId);
 	markP2PRefereePlaneDisconnected(roomId, 'control');
+}
+
+function broadcastPokerEntryApproval(roomId: string, room: ControlRoom): void {
+	const gate = room.pokerEntryApproval;
+	if (!gate) return;
+	const serverNowMs = Date.now();
+	const message: PokerEntryApprovalState = {
+		type: 'poker_entry_approval_state_v1',
+		protocolVersion: P2P_CONTROL_PROTOCOL_VERSION,
+		matchId: roomId,
+		transportEpoch: gate.transportEpoch,
+		combatId: gate.combatId,
+		status: gate.status,
+		serverNowMs,
+		deadlineAtMs: gate.deadlineAtMs,
+		remainingMs: gate.deadlineAtMs === null
+			? gate.remainingMs
+			: Math.max(0, Math.min(POKER_ENTRY_APPROVAL_TIMEOUT_MS, gate.deadlineAtMs - serverNowMs)),
+		readyPeerIds: [...gate.readyPeerIds].sort(),
+	};
+	for (const member of room.members) {
+		if (member.hello) sendMessage(member.ws, message);
+	}
+}
+
+function armPokerEntryApprovalExpiry(roomId: string, room: ControlRoom): void {
+	const gate = room.pokerEntryApproval;
+	if (!gate || gate.status !== 'pending' || gate.deadlineAtMs === null) return;
+	if (gate.timer) clearTimeout(gate.timer);
+	gate.timer = setTimeout(() => {
+		const currentRoom = rooms.get(roomId);
+		const currentGate = currentRoom?.pokerEntryApproval;
+		if (!currentRoom || currentGate !== gate || currentGate.status !== 'pending') return;
+		if (currentRoom.members.length !== ROOM_MAX_PEERS || currentRoom.members.some(member => !member.hello)) {
+			pausePokerEntryApproval(roomId, currentRoom);
+			return;
+		}
+		currentGate.status = 'expired';
+		currentGate.deadlineAtMs = null;
+		currentGate.remainingMs = 0;
+		currentGate.timer = null;
+		broadcastPokerEntryApproval(roomId, currentRoom);
+	}, Math.max(0, gate.deadlineAtMs - Date.now()));
+	gate.timer.unref?.();
+}
+
+function pausePokerEntryApproval(roomId: string, room: ControlRoom): void {
+	const gate = room.pokerEntryApproval;
+	if (!gate || gate.status !== 'pending') return;
+	gate.remainingMs = gate.deadlineAtMs === null
+		? gate.remainingMs
+		: Math.max(0, gate.deadlineAtMs - Date.now());
+	gate.deadlineAtMs = null;
+	gate.status = 'paused';
+	if (gate.timer) clearTimeout(gate.timer);
+	gate.timer = null;
+	broadcastPokerEntryApproval(roomId, room);
+}
+
+function resumePokerEntryApproval(roomId: string, room: ControlRoom): void {
+	const gate = room.pokerEntryApproval;
+	if (!gate || gate.status !== 'paused') return;
+	if (room.members.length !== ROOM_MAX_PEERS || room.members.some(member => !member.hello)) return;
+	gate.transportEpoch = room.transportEpoch;
+	gate.status = 'pending';
+	gate.deadlineAtMs = Date.now() + gate.remainingMs;
+	broadcastPokerEntryApproval(roomId, room);
+	armPokerEntryApprovalExpiry(roomId, room);
+}
+
+function openPokerEntryApproval(roomId: string, room: ControlRoom, combatId: string, timeoutMs: number): void {
+	const existing = room.pokerEntryApproval;
+	if (existing && existing.combatId === combatId) {
+		broadcastPokerEntryApproval(roomId, room);
+		return;
+	}
+	if (existing && (existing.status === 'pending' || existing.status === 'paused')) return;
+	if (existing?.timer) clearTimeout(existing.timer);
+	room.pokerEntryApproval = {
+		combatId,
+		transportEpoch: room.transportEpoch,
+		status: 'pending',
+		deadlineAtMs: Date.now() + timeoutMs,
+		remainingMs: timeoutMs,
+		readyPeerIds: new Set(),
+		timer: null,
+	};
+	broadcastPokerEntryApproval(roomId, room);
+	armPokerEntryApprovalExpiry(roomId, room);
+}
+
+function markPokerEntryReady(roomId: string, room: ControlRoom, member: ControlMember, combatId: string): void {
+	const gate = room.pokerEntryApproval;
+	if (!gate || gate.combatId !== combatId || gate.status !== 'pending') return;
+	gate.readyPeerIds.add(member.peerId);
+	if (gate.readyPeerIds.size === ROOM_MAX_PEERS) {
+		gate.status = 'committed';
+		gate.remainingMs = gate.deadlineAtMs === null ? gate.remainingMs : Math.max(0, gate.deadlineAtMs - Date.now());
+		gate.deadlineAtMs = null;
+		if (gate.timer) clearTimeout(gate.timer);
+		gate.timer = null;
+	}
+	broadcastPokerEntryApproval(roomId, room);
 }
 export const P2P_CONTROL_KEEPALIVE_INTERVAL_MS = 15_000;
 
 export type P2PControlServerOptions = Readonly<{
 	readonly keepaliveIntervalMs?: number;
+	readonly pokerEntryApprovalTimeoutMs?: number;
 }>;
 
 type UpgradeAccess =
@@ -242,6 +363,7 @@ function notifyRoomOpen(roomId: string, room: ControlRoom): void {
 		matchId: roomId, peerId: second.peerId, opponentPeerId: first.peerId, role: second.role,
 		transportEpoch: room.transportEpoch,
 	});
+	resumePokerEntryApproval(roomId, room);
 }
 
 function commitTransportIfBilateral(roomId: string, room: ControlRoom): void {
@@ -293,7 +415,11 @@ function forcePreCommitRelayFallback(roomId: string, room: ControlRoom, member: 
 }
 
 function fenceTransportEpoch(room: ControlRoom, message: P2PControlClientMessage): 'ok' | 'stale' | 'future' | 'missing' {
-	if (!isSignalingMessage(message) && !isTransportControlMessage(message) && !isDeliveryReceiptMessage(message)) return 'ok';
+	if (!isSignalingMessage(message)
+		&& !isTransportControlMessage(message)
+		&& !isDeliveryReceiptMessage(message)
+		&& message.type !== 'poker_entry_open_v1'
+		&& message.type !== 'poker_entry_ready_v1') return 'ok';
 	const epoch = readControlTransportEpoch(message);
 	if (epoch === null) return 'missing';
 	if (epoch < room.transportEpoch) return 'stale';
@@ -386,6 +512,10 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 	});
 	const aliveSockets = new WeakSet<WebSocket>();
 	const keepaliveIntervalMs = options.keepaliveIntervalMs ?? P2P_CONTROL_KEEPALIVE_INTERVAL_MS;
+	const pokerEntryApprovalTimeoutMs = Math.max(1, Math.min(
+		POKER_ENTRY_APPROVAL_TIMEOUT_MS,
+		options.pokerEntryApprovalTimeoutMs ?? POKER_ENTRY_APPROVAL_TIMEOUT_MS,
+	));
 	const ticketBySocket = new WeakMap<WebSocket, P2PMatchTicketPayload>();
 
 	async function handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): Promise<void> {
@@ -666,6 +796,24 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 				recordP2PControlMessage();
 				return;
 			}
+			if (message.type === 'poker_entry_open_v1') {
+				if (currentRoom.members.length !== ROOM_MAX_PEERS || currentRoom.members.some(candidate => !candidate.transportCommitted)) {
+					recordP2PControlDrop('poker_entry_before_transport_commit');
+					return;
+				}
+				openPokerEntryApproval(roomId, currentRoom, message.combatId, pokerEntryApprovalTimeoutMs);
+				recordP2PControlMessage();
+				return;
+			}
+			if (message.type === 'poker_entry_ready_v1') {
+				if (currentRoom.members.length !== ROOM_MAX_PEERS || currentRoom.members.some(candidate => !candidate.transportCommitted)) {
+					recordP2PControlDrop('poker_entry_before_transport_commit');
+					return;
+				}
+				markPokerEntryReady(roomId, currentRoom, member, message.combatId);
+				recordP2PControlMessage();
+				return;
+			}
 			if (message.type === 'phase_checkpoint_propose_v1') {
 				const result = p2pPhaseCheckpointCoordinator.submit({
 					roomId,
@@ -710,6 +858,7 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 			const index = currentRoom.members.indexOf(member);
 			if (index < 0) return;
 			currentRoom.members.splice(index, 1);
+			pausePokerEntryApproval(roomId, currentRoom);
 			MESSAGE_RATE_LIMIT.delete(member.connectionId);
 			const pendingReplacement = currentRoom.pendingReplacements.get(peerId);
 			if (!pendingReplacement) notifyOpponentPeerLeft(currentRoom, roomId, peerId);
