@@ -61,8 +61,10 @@ import {
 } from './chessIntegrityCheckpoint';
 import { chessIntegrityMonitor } from './chessIntegrityMonitor';
 import {
+	clearQueuedP2PBattleStart,
 	commitNextP2PCanonicalAction,
-	startP2PBattleFromAcceptedChessAction,
+	commitQueuedP2PBattleStart,
+	queueP2PBattleStartFromChessAction,
 } from './canonicalActionOrder';
 import type { GameplaySignatureInput } from '../protocol/signedGameplayEnvelope';
 import { P2P_ACTION_APPLIED_WAIT_TIMEOUT_MS } from '@shared/p2p-wire/delivery';
@@ -211,6 +213,7 @@ function armPendingChessReceiptTimeout(
 		if (pendingChessEnvelope !== envelope) return;
 		if (chessIntegrityMonitor.getState().status !== 'healthy') return;
 		if (usePeerStore.getState().connectionState !== 'connected') return;
+		clearQueuedP2PBattleStart();
 		quarantineChessSession('chess_transition_receipt_timeout');
 		chessIntegrityMonitor.quarantine({
 			reason: 'receipt_timeout',
@@ -487,13 +490,12 @@ function dispatchChessCommand(
 			});
 			return;
 		}
-		if (envelope.command.type !== 'chess_mine_placement' && !startP2PBattleFromAcceptedChessAction({
-			moveId: envelope.commandId,
-			actorId,
-			canonicalOrder: transcriptCanonicalOrder,
-		})) {
-			quarantineChessSession('chess_battle_start_unavailable');
-			return;
+		if (envelope.command.type !== 'chess_mine_placement') {
+			queueP2PBattleStartFromChessAction({
+				moveId: envelope.commandId,
+				actorId,
+				canonicalOrder: transcriptCanonicalOrder,
+			});
 		}
 
 		// Transcript: delegated to the bridge-registered observer (C3). Pre-C3
@@ -539,7 +541,18 @@ export function confirmChessTransitionReceipt(
 		clearPendingChessReceiptTimeout();
 		pendingChessEnvelope = null;
 	}
+	if (confirmation.status === 'confirmed') {
+		if (!commitQueuedP2PBattleStart()) {
+			quarantineChessSession('chess_battle_start_unavailable');
+		}
+	} else if (confirmation.status === 'quarantined') {
+		clearQueuedP2PBattleStart();
+	}
 	return confirmation;
+}
+
+export function isChessTransitionAwaitingReceipt(): boolean {
+	return pendingChessEnvelope !== null;
 }
 
 /**
@@ -682,6 +695,7 @@ export function resetChessWireSender(): void {
 	outgoingChessSeq = 0;
 	clearPendingChessReceiptTimeout();
 	pendingChessEnvelope = null;
+	clearQueuedP2PBattleStart();
 	pendingChessSignature = false;
 	chessGameplaySigner = null;
 	chessIntegrityMonitor.reset();

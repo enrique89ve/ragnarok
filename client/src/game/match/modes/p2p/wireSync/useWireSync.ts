@@ -34,6 +34,7 @@ import { getKingAbilityConfig, getMineShapeTiles, isValidMinePlacement, requires
 import { seededRngFromString } from '../../../../utils/seededRng';
 import {
 	confirmChessTransitionReceipt,
+	isChessTransitionAwaitingReceipt,
 	pausePendingChessReceiptTimeout,
 	resetChessWireSender,
 	retryPendingChessTransition,
@@ -1687,7 +1688,10 @@ export function useWireSync() {
 				}
 
 				case 'hash_check': {
-					if (!shouldCompareHashBeacon(usePeerStore.getState().battleLifecycle?.phase)) {
+					if (!shouldCompareHashBeacon(
+						usePeerStore.getState().battleLifecycle?.phase,
+						isChessTransitionAwaitingReceipt(),
+					)) {
 						debug.log('[wireSync] Ignored hash_check before battle commitment');
 						break;
 					}
@@ -1805,7 +1809,10 @@ export function useWireSync() {
 				}
 
 				case 'poker_hash_check': {
-					if (!shouldCompareHashBeacon(usePeerStore.getState().battleLifecycle?.phase)) {
+					if (!shouldCompareHashBeacon(
+						usePeerStore.getState().battleLifecycle?.phase,
+						isChessTransitionAwaitingReceipt(),
+					)) {
 						break;
 					}
 					const pokerState = getP2PPokerCombatAdapter().getPokerState();
@@ -1835,7 +1842,10 @@ export function useWireSync() {
 				}
 
 				case 'hash_mismatch':
-					if (!shouldCompareHashBeacon(usePeerStore.getState().battleLifecycle?.phase)) {
+					if (!shouldCompareHashBeacon(
+						usePeerStore.getState().battleLifecycle?.phase,
+						isChessTransitionAwaitingReceipt(),
+					)) {
 						debug.log('[wireSync] Ignored hash_mismatch before battle commitment');
 						break;
 					}
@@ -4582,6 +4592,10 @@ export function useWireSync() {
 			if (cancelled) return;
 			timerId = setTimeout(async () => {
 				if (cancelled) return;
+				if (isChessTransitionAwaitingReceipt()) {
+					scheduleCheck();
+					return;
+				}
 				const gs = useGameStore.getState().gameState;
 				if (gs && gs.gamePhase !== 'game_over') {
 					// The beacon must use the same canonical player frame as the

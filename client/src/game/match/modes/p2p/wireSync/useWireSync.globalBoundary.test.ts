@@ -129,7 +129,8 @@ describe('useWireSync global dependency boundary', () => {
 		expect(wire).toContain("cmd.type !== 'chess_mine_placement'");
 		expect(chess).toContain("envelope.command.type !== 'chess_mine_placement'");
 		expect(wire).toContain('startP2PBattleFromAcceptedChessAction');
-		expect(chess).toContain('startP2PBattleFromAcceptedChessAction');
+		expect(chess).toContain('queueP2PBattleStartFromChessAction');
+		expect(chess).toContain('commitQueuedP2PBattleStart');
 	});
 
 	it('reserves the blocking integrity overlay for an established battle', () => {

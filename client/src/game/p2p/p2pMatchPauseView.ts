@@ -12,6 +12,12 @@ export type P2PMatchPauseView = {
 };
 
 export const P2P_SESSION_JSON_EXPORT_LABEL = 'Export diagnostics';
+const INTEGRITY_LOCK_DETAIL = 'Actions are locked until you leave the match. Export diagnostics if you need evidence.';
+
+export function describeIntegrityPauseDetail(integrityError: string): string {
+	const reason = integrityError.match(/\(([^)]+)\)\s*$/)?.[1]?.trim();
+	return reason ? `${reason}. ${INTEGRITY_LOCK_DETAIL}` : INTEGRITY_LOCK_DETAIL;
+}
 
 export function isP2PGameplayInputLocked(input: {
 	readonly connectionState: P2PConnectionState;
@@ -33,7 +39,7 @@ export function resolveP2PMatchPauseView(input: {
 		return {
 			kind: 'integrity',
 			title: 'Game integrity paused',
-			detail: 'Actions are locked until you leave the match. Export diagnostics if you need evidence.',
+			detail: describeIntegrityPauseDetail(input.integrityError),
 			exportLabel: P2P_SESSION_JSON_EXPORT_LABEL,
 			showCountdown: false,
 		};

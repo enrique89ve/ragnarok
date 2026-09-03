@@ -6,16 +6,19 @@ export function shouldEmitHashBeacon(input: Readonly<{
 	readonly connectionState: string;
 	readonly sendsHashBeacon: boolean;
 	readonly competitionPhase: P2PCompetitionPhase | null | undefined;
+	readonly chessTransitionPending?: boolean;
 }>): boolean {
 	return input.connectionState === 'connected'
 		&& input.sendsHashBeacon
-		&& input.competitionPhase === 'battle';
+		&& input.competitionPhase === 'battle'
+		&& input.chessTransitionPending !== true;
 }
 
 export function shouldCompareHashBeacon(
 	competitionPhase: P2PCompetitionPhase | null | undefined,
+	chessTransitionPending = false,
 ): boolean {
-	return competitionPhase === 'battle';
+	return competitionPhase === 'battle' && !chessTransitionPending;
 }
 
 export function shouldDeferSlashForHashMismatch(

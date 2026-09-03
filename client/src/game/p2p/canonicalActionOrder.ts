@@ -35,17 +35,41 @@ export function commitNextP2PCanonicalAction(input: {
 	return canonicalOrder;
 }
 
+export type QueuedChessBattleStart = Readonly<{
+	readonly moveId: string;
+	readonly actorId: string;
+	readonly canonicalOrder: number;
+}>;
+
+let queuedChessBattleStart: QueuedChessBattleStart | null = null;
+
 /**
  * Commit competitive battle only after the chess reducer accepted a legal
  * move. Mulligan/cards actions may precede this move in the transcript, but
  * they never make leaving or reconnect expiry produce a competitive result.
  */
-export function startP2PBattleFromAcceptedChessAction(input: {
-	readonly moveId: string;
-	readonly actorId: string;
-	readonly canonicalOrder: number;
-}): boolean {
+export function startP2PBattleFromAcceptedChessAction(input: QueuedChessBattleStart): boolean {
 	const peer = usePeerStore.getState();
 	const next = peer.recordBattleStarted(input);
 	return next?.phase === 'battle';
+}
+
+/**
+ * Sender-side first move stays pre-battle until the opponent's applied
+ * receipt arrives. Opening battle on local send alone turns a dropped
+ * receipt into an integrity overlay instead of a setup cancel.
+ */
+export function queueP2PBattleStartFromChessAction(input: QueuedChessBattleStart): void {
+	queuedChessBattleStart = input;
+}
+
+export function commitQueuedP2PBattleStart(): boolean {
+	const queued = queuedChessBattleStart;
+	queuedChessBattleStart = null;
+	if (!queued) return true;
+	return startP2PBattleFromAcceptedChessAction(queued);
+}
+
+export function clearQueuedP2PBattleStart(): void {
+	queuedChessBattleStart = null;
 }
