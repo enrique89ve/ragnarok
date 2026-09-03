@@ -98,6 +98,22 @@ describe('useWireSync global dependency boundary', () => {
 		expect(source).toContain('retryPendingPokerActionGates();');
 		expect(source).toContain('poker_action_gate_timeout');
 	});
+
+	it('retries unanswered chess receipts and cards applied gates after a short reconnect', () => {
+		const wirePath = join(dirname(fileURLToPath(import.meta.url)), 'useWireSync.ts');
+		const chessPath = join(dirname(fileURLToPath(import.meta.url)), '../../../../p2p/chessWireSender.ts');
+		const wire = readFileSync(wirePath, 'utf8');
+		const chess = readFileSync(chessPath, 'utf8');
+
+		expect(wire).toContain('pausePendingChessReceiptTimeout');
+		expect(wire).toContain('pausePendingCardsActionGateTimeouts');
+		expect(wire).toContain('retryPendingCardsActionGates();');
+		expect(wire).toContain('cards_action_applied_timeout');
+		expect(wire).toContain('remote_chess_command_sequence_gap');
+		expect(wire).toContain('cardsReceiptByCommandIdRef');
+		expect(chess).toContain('chess_transition_receipt_timeout');
+		expect(chess).toContain('pausePendingChessReceiptTimeout');
+	});
 });
 
 describe('settleRemoteCommand', () => {

@@ -83,6 +83,7 @@ import { resolveHeroPortrait } from '../utils/art/artMapping';
 import { getHeroFeud } from '../pvp/pvpData';
 import type { CardInstance, RealmEffect } from '../types';
 import { derivePokerDecisionView } from './decision/pokerDecisionView';
+import { resolveP2PMatchPauseView } from '../p2p/p2pMatchPauseView';
 import { BattlefieldCardInspector } from './components/BattlefieldCardInspector';
 import type { CardInspectorSource } from './cardInspector/cardInspectorModel';
 import { resolveBattlefieldCardClickIntent, type BattlefieldCardSide } from './cardInspector/battlefieldCardIntent';
@@ -245,6 +246,10 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
 	const p2pActions = useP2PActions();
 	const activeMatch = useMatchStore(s => s.activeMatch);
 	const connectionState = usePeerStore(s => s.connectionState);
+	const disconnectSide = usePeerStore(s => s.disconnectSide);
+	const integrityError = usePeerStore(s => s.p2pIntegrityError);
+	const reconnectCountdown = usePeerStore(s => s.reconnectCountdown);
+	const reconnectAttemptCount = usePeerStore(s => s.reconnectAttemptCount);
 	const showDamageNumbers = useSettingsStore(s => s.showDamageNumbers);
 
 	const cardGameIsPlayerTurn = gameState?.currentTurn === 'player';
@@ -365,8 +370,20 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
     }),
     [combatState, connectionState, isP2PCombat, basePermissions]
   );
+  const pauseView = useMemo(
+    () => isP2PCombat
+      ? resolveP2PMatchPauseView({
+          connectionState,
+          disconnectSide,
+          integrityError,
+          reconnectCountdown,
+          reconnectAttemptCount,
+        })
+      : null,
+    [connectionState, disconnectSide, integrityError, isP2PCombat, reconnectAttemptCount, reconnectCountdown],
+  );
   const isPlayerTurn = combatState
-    ? pokerDecisionView.localCanAct
+    ? pokerDecisionView.localCanAct && !pauseView
     : cardGameIsPlayerTurn;
 
   // Health change detection — triggers floating damage/heal numbers
@@ -694,6 +711,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
           permissions={basePermissions}
           betAmount={betAmount}
           onBetAmountChange={setBetAmount}
+          pauseReason={pauseView?.detail ?? (pokerDecisionView.inputPaused ? pokerDecisionView.statusDetail : null)}
           onAction={wrappedOnAction}
           onAutoAttackFrontline={() => {
             if (isPlayerTurn) {

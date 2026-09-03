@@ -45,6 +45,7 @@ import { useMatchReloadGuard } from './hooks/useMatchReloadGuard';
 import { shouldWarnOnMatchReload } from './matchReloadGuard';
 import { markCampaignRunAbandoned } from '../../data/blockchain/replayDB';
 import { shouldEnableRagnarokSceneFx } from '../components/chess/chessSceneFxModel';
+import { P2PMatchPauseOverlay } from '../components/multiplayer/P2PMatchPauseOverlay';
 import './matchExitControls.css';
 import {
   getChessRealmClass,
@@ -266,7 +267,6 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
 		return result.winnerId === s.myPeerId ? 'victory' : 'defeat';
 	});
   const hasP2PTechnicalResult = p2pTechnicalResult !== null;
-  const isLocalP2PAbandonment = p2pTechnicalResult === 'defeat';
   const effectiveInitialArmy: ArmySelectionType | null = initialArmy ?? warbandArmy;
   /*
     Round-level FSM (G4). The single source of truth for which phase
@@ -1188,7 +1188,8 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   }
 
   return (
-    <div className={`ragnarok-chess-game w-full min-h-dvh h-dvh overflow-hidden ${chessRealmClass} ${finaleClass} ${chessRootMotionClass}`.trim()}>
+    <div className={`ragnarok-chess-game relative w-full min-h-dvh h-dvh overflow-hidden ${chessRealmClass} ${finaleClass} ${chessRootMotionClass}`.trim()}>
+		{isP2PMatch && flowState?.tag !== 'game_over' ? <P2PMatchPauseOverlay /> : null}
 		<MatchExitControls
 			visible={canLeaveActiveMatch}
 			promptOpen={isP2PMatch ? false : exitPromptOpen}
@@ -1262,7 +1263,11 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
               onPrimaryAction={matchAbandoned || hasP2PTechnicalResult ? handleReturnHome : isCampaign ? handleBackToCampaign : handleRestart}
               onHome={handleReturnHome}
               onRetry={handleRetryMission}
-              abandonment={matchAbandoned || isLocalP2PAbandonment ? { autoHomeSeconds: MATCH_EXIT_AUTO_HOME_SECONDS } : null}
+              abandonment={matchAbandoned
+                ? { autoHomeSeconds: MATCH_EXIT_AUTO_HOME_SECONDS, kind: 'left' }
+                : hasP2PTechnicalResult
+                  ? { autoHomeSeconds: MATCH_EXIT_AUTO_HOME_SECONDS, kind: 'technical' }
+                  : null}
             />
           )}
         </AnimatePresence>

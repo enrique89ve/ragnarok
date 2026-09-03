@@ -31,6 +31,7 @@ import { getCurrentHiveUsername } from '@/data/HiveSessionIdentity';
 import { HIVE_USERNAME_RE } from '../../../../shared/protocol-core/types';
 import { isStarterEntitlementCardId } from '@shared/schemas/starterEntitlement';
 import { handleLocalP2PGameEnded, routeP2PGameEnded } from './localP2PGameEndedBoundary';
+import { resolveLocalP2PSettlementCause } from './localP2PSettlement';
 
 type UnsubscribeFn = () => void;
 type RuntimeCardSource =
@@ -193,6 +194,14 @@ export async function handleGameEnded(event: GameEndedEvent): Promise<void> {
 	const runtimeConfig = getRagnarokNetworkConfig();
 	const runtimeEvidence = buildRagnarokRuntimeEvidence(runtimeConfig);
 	const activeMatch = useMatchStore.getState().activeMatch;
+	const settlementCause = resolveLocalP2PSettlementCause({
+		eventReason: event.reason,
+		lifecycleKind: usePeerStore.getState().battleLifecycle?.result?.kind,
+	});
+	if (settlementCause === 'technical_abandonment') {
+		debug.combat('[BlockchainSubscriber] Technical P2P close — no local or external settlement');
+		return;
+	}
 	const route = await routeP2PGameEnded({
 		gameState,
 		activeMatch,
@@ -505,9 +514,10 @@ export function initializeBlockchainSubscriber(): UnsubscribeFn {
 		if (prevPhase !== 'game_over' && currentPhase === 'game_over') {
 			const gs = state.gameState;
 			if (gs) {
+				const technical = usePeerStore.getState().battleLifecycle?.result?.kind === 'technical_abandonment';
 				GameEventBus.emitGameEnded({
 					winner: gs.winner === 'player' || gs.winner === 'opponent' ? gs.winner : null,
-					reason: gs.winner === 'draw' ? 'draw' : 'hero_death',
+					reason: technical ? 'technical' : gs.winner === 'draw' ? 'draw' : 'hero_death',
 					finalTurn: gs.turnNumber,
 				});
 			}

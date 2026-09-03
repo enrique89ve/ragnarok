@@ -41,6 +41,7 @@ function getMatchKey(event: GameEndedEvent): string {
 }
 
 function handleGameEnded(event: GameEndedEvent): void {
+	if (event.reason === 'technical') return;
 	const matchKey = getMatchKey(event);
 	const cardIds = getStarterCardIdsUsedByPlayer();
 	if (cardIds.length === 0) return;

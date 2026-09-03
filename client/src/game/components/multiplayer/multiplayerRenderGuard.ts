@@ -42,20 +42,30 @@ export type P2PRenderGuardDecision =
 	| { readonly kind: 'wait'; readonly reason: string }
 	| { readonly kind: 'render' };
 
+function hasLiveBoard(input: P2PRenderGuardInput): boolean {
+	return Boolean(input.opponentArmyFromPeer && input.p2pInitApplied);
+}
+
+function reconnectWaitReason(input: P2PRenderGuardInput): string {
+	const attempt = input.reconnectAttemptCount > 0 ? ` Attempt ${input.reconnectAttemptCount}/2.` : '';
+	const countdown = input.reconnectCountdown > 0 ? ` ${input.reconnectCountdown}s before technical result.` : '';
+	const prefix = input.hardReloadResume
+		? 'Rejoining your saved match from this device…'
+		: 'Reconnecting with opponent…';
+	return `${prefix}${attempt}${countdown}`;
+}
+
 export function computeP2PRenderGuard(input: P2PRenderGuardInput): P2PRenderGuardDecision {
 	if (input.terminalLifecycle) return { kind: 'render' };
 	if (input.connectionState === 'connecting' || input.connectionState === 'waiting') {
 		return { kind: 'wait', reason: 'Connecting with opponent…' };
 	}
 	if (input.connectionState === 'reconnecting' || input.connectionState === 'grace_period') {
-		const attempt = input.reconnectAttemptCount > 0 ? ` Attempt ${input.reconnectAttemptCount}/2.` : '';
-		const countdown = input.reconnectCountdown > 0 ? ` ${input.reconnectCountdown}s before technical result.` : '';
-		const prefix = input.hardReloadResume
-			? 'Rejoining your saved match from this device…'
-			: 'Reconnecting with opponent…';
-		return { kind: 'wait', reason: `${prefix}${attempt}${countdown}` };
+		if (hasLiveBoard(input)) return { kind: 'render' };
+		return { kind: 'wait', reason: reconnectWaitReason(input) };
 	}
 	if (input.connectionState === 'error') {
+		if (hasLiveBoard(input)) return { kind: 'render' };
 		return { kind: 'wait', reason: 'P2P connection failed. Return to the lobby and try again.' };
 	}
 	if (input.connectionState !== 'connected') {

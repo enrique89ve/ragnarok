@@ -1,0 +1,56 @@
+.p2p-match-pause {
+	position: absolute;
+	inset: 0;
+	z-index: 920;
+	display: grid;
+	place-items: center;
+	padding: 24px;
+	background: color-mix(in srgb, var(--obsidian-950, #05070d) 72%, transparent);
+	pointer-events: auto;
+}
+
+.p2p-match-pause-card {
+	width: min(100%, 28rem);
+	padding: 20px 22px;
+	border: 1px solid var(--iron-650, #334155);
+	background: color-mix(in srgb, var(--iron-850, #111827) 92%, black);
+	color: var(--ink-100, #e5e7eb);
+	text-align: center;
+}
+
+.p2p-match-pause.kind-reconnecting .p2p-match-pause-card {
+	border-color: var(--amber-400, #f59e0b);
+}
+
+.p2p-match-pause.kind-integrity .p2p-match-pause-card,
+.p2p-match-pause.kind-error .p2p-match-pause-card {
+	border-color: var(--blood-500, #dc2626);
+}
+
+.p2p-match-pause-kicker {
+	margin: 0 0 8px;
+	font-size: 11px;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--amber-400, #f59e0b);
+}
+
+.p2p-match-pause-title {
+	margin: 0 0 10px;
+	font-family: Cinzel, serif;
+	font-size: 22px;
+	font-weight: 400;
+	line-height: 1.2;
+}
+
+.p2p-match-pause-detail {
+	margin: 0 0 16px;
+	font-size: 14px;
+	line-height: 1.45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.p2p-match-pause {
+		transition: none;
+	}
+}

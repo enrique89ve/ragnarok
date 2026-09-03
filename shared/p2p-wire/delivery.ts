@@ -13,6 +13,7 @@ import { Hash256Schema } from './integrity';
 
 export const P2P_DELIVERY_PROTOCOL_VERSION = 1 as const;
 export const ACTION_APPLIED_TYPE = 'action_applied_v1' as const;
+export const P2P_ACTION_APPLIED_WAIT_TIMEOUT_MS = 8_000;
 
 const MatchIdSchema = z.string().min(1).max(MAX_MATCH_ID_LENGTH);
 const TransportEpochSchema = z.number().int().min(1).max(0xffff_ffff);

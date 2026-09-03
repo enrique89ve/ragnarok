@@ -24,6 +24,7 @@ export function initializeDailyQuestSubscriber(): UnsubscribeFn {
 
 	unsubscribes.push(
 		GameEventBus.subscribe<GameEndedEvent>('GAME_ENDED', (event) => {
+			if (event.reason === 'technical') return;
 			recordPlayerWin(event.winner, event.finalTurn);
 		}, 5)
 	);

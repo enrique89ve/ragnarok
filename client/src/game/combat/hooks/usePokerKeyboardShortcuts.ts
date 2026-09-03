@@ -1,6 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { getActionPermissions, getPokerCombatAdapterState } from '../../hooks/usePokerCombatAdapter';
 import { CombatAction, CombatPhase } from '../../types/PokerCombatTypes';
+import { useMatchStore } from '../../match';
+import { isP2PGameplayInputLocked } from '../../p2p/p2pMatchPauseView';
+import { usePeerStore } from '../../stores/peerStore';
 
 interface UsePokerKeyboardShortcutsParams {
 	betAmount: number;
@@ -23,6 +26,15 @@ export function usePokerKeyboardShortcuts({
 			if (e.target instanceof HTMLInputElement ||
 				e.target instanceof HTMLTextAreaElement ||
 				(e.target as HTMLElement)?.isContentEditable) return;
+
+			const isPeerMatch = useMatchStore.getState().activeMatch?.opponent.kind === 'peer';
+			if (isPeerMatch) {
+				const peer = usePeerStore.getState();
+				if (isP2PGameplayInputLocked({
+					connectionState: peer.connectionState,
+					integrityError: peer.p2pIntegrityError,
+				})) return;
+			}
 
 			const currentState = getPokerCombatAdapterState().combatState;
 			if (!currentState || currentState.player.isReady || currentState.phase === CombatPhase.MULLIGAN) return;

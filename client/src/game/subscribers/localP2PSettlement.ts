@@ -30,9 +30,21 @@ export type LocalP2PSettlementDependencies = {
 	readonly now: () => number;
 };
 
+export type LocalP2PSettlementCause = 'engine' | 'technical_abandonment';
+
 export type LocalP2PSettlementResult =
-	| { readonly status: 'skipped'; readonly reason: 'not_local_phase' | 'not_peer' | 'not_terminal' | 'missing_account' | 'missing_opponent_account' | 'draw' }
+	| { readonly status: 'skipped'; readonly reason: 'not_local_phase' | 'not_peer' | 'not_terminal' | 'missing_account' | 'missing_opponent_account' | 'draw' | 'technical_abandonment' }
 	| { readonly status: LocalSettlementApplyResult['status']; readonly envelope: LocalSettlementEnvelope };
+
+export function resolveLocalP2PSettlementCause(input: {
+	readonly eventReason: string;
+	readonly lifecycleKind?: string | null;
+}): LocalP2PSettlementCause {
+	if (input.eventReason === 'technical' || input.lifecycleKind === 'technical_abandonment') {
+		return 'technical_abandonment';
+	}
+	return 'engine';
+}
 
 function accountForOpponent(ctx: MatchContext): string | null {
 	if (ctx.opponent.kind !== 'peer') throw new Error('local P2P settlement requires peer opponent');
@@ -43,7 +55,9 @@ export async function settleLocalP2PGameOver(
 	ctx: MatchContext | null,
 	gameState: GameState | null,
 	deps: LocalP2PSettlementDependencies,
+	cause: LocalP2PSettlementCause = 'engine',
 ): Promise<LocalP2PSettlementResult> {
+	if (cause === 'technical_abandonment') return { status: 'skipped', reason: 'technical_abandonment' };
 	if (!deps.runtimeEvidence.phasePolicy.localSettlement) return { status: 'skipped', reason: 'not_local_phase' };
 	if (!ctx || ctx.opponent.kind !== 'peer') return { status: 'skipped', reason: 'not_peer' };
 	if (!gameState || gameState.gamePhase !== 'game_over') return { status: 'skipped', reason: 'not_terminal' };

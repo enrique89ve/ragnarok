@@ -63,6 +63,7 @@ export type {
   // Game state
   GameStartedEvent,
   GameEndedEvent,
+  GameEndedReason,
   
   // Poker events
   PokerHandRevealedEvent,

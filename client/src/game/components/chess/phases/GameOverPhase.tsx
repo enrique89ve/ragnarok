@@ -47,6 +47,7 @@ export type GameOverPhaseProps = {
 	readonly onRetry: () => void;
 	readonly abandonment?: {
 		readonly autoHomeSeconds: number;
+		readonly kind?: 'left' | 'technical';
 	} | null;
 };
 
@@ -95,6 +96,7 @@ const GameOverPhase: React.FC<GameOverPhaseProps> = props => {
 type AbandonmentState = {
 	readonly secondsRemaining: number;
 	readonly onHome: () => void;
+	readonly kind: 'left' | 'technical';
 };
 
 function useAbandonmentCountdown(
@@ -121,6 +123,7 @@ function useAbandonmentCountdown(
 	return {
 		secondsRemaining,
 		onHome,
+		kind: abandonment?.kind ?? 'left',
 	};
 }
 
@@ -190,12 +193,12 @@ function GameOverResultCard({
 			className="cgo-result"
 		>
 			<motion.div
-				className={`cgo-title ${getResultTone(result)}`}
+				className={`cgo-title ${getResultTone(result, abandonmentState?.kind)}`}
 				initial={{ opacity: 0, y: -30 }}
 				animate={{ opacity: 1, y: 0 }}
 				transition={{ delay: 0.3, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
 			>
-				{getResultTitle(result)}
+				{getResultTitle(result, abandonmentState?.kind)}
 			</motion.div>
 
 			{campaign ? (
@@ -218,13 +221,15 @@ function GameOverResultCard({
 	);
 }
 
-function getResultTone(result: GameOverResult): string {
+function getResultTone(result: GameOverResult, abandonmentKind?: 'left' | 'technical'): string {
+	if (abandonmentKind === 'technical') return 'draw';
 	if (result === 'victory') return 'victory';
 	if (result === 'draw') return 'draw';
 	return 'defeat';
 }
 
-function getResultTitle(result: GameOverResult): string {
+function getResultTitle(result: GameOverResult, abandonmentKind?: 'left' | 'technical'): string {
+	if (abandonmentKind === 'technical') return 'MATCH CLOSED';
 	if (result === 'victory') return 'VICTORY';
 	if (result === 'draw') return 'DRAW';
 	return 'DEFEAT';

@@ -2,7 +2,7 @@
  * Browser reload guard for a live match.
  *
  * Single and campaign keep the board in RAM — a reload discards the battle.
- * P2P tries a local snapshot rejoin (see docs/P2P_MATCH_RESUME.md).
+ * P2P Alfa cannot renew the ephemeral session key after a full reload.
  * Browsers own the dialog copy; returnValue only opts into the prompt.
  */
 
@@ -33,7 +33,7 @@ export type MatchReloadGuardTarget = {
 };
 
 const P2P_RELOAD_WARNING =
-	'A live P2P match is in progress. Reloading tries to rejoin from this device (2 attempts).';
+	'A live P2P match is in progress. Reloading cannot resume this match in the current testnet phase. Start a new match instead.';
 
 const LOCAL_RELOAD_WARNING =
 	'A match is in progress. Reloading discards this battle; no result will be recorded.';

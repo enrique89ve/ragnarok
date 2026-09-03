@@ -113,4 +113,18 @@ describe('createChessIntegrityMonitor', () => {
 		monitor.reset();
 		expect(monitor.canStartTransition()).toBe(true);
 	});
+
+	it('quarantines an unanswered transition receipt', () => {
+		const monitor = createChessIntegrityMonitor();
+		monitor.register(EXPECTED);
+		monitor.quarantine({
+			reason: 'receipt_timeout',
+			commandId: EXPECTED.commandId,
+			expectedRoot: EXPECTED.nextRoot,
+			receivedRoot: null,
+			detail: 'the opponent did not confirm the chess transition before the delivery window closed',
+		});
+		expect(monitor.getState().status).toBe('quarantined');
+		expect(monitor.canStartTransition()).toBe(false);
+	});
 });

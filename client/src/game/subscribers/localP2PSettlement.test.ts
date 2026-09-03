@@ -5,7 +5,7 @@ import type { GameState } from '../types';
 import type { MatchContext } from '../match/types';
 import type { EloRating, LocalCardProgressionRecord } from '@/data/blockchain/replayDB';
 import type { LocalSettlementRecord, LocalSettlementStore } from '@shared/protocol-core/localSettlement';
-import { settleLocalP2PGameOver } from './localP2PSettlement';
+import { resolveLocalP2PSettlementCause, settleLocalP2PGameOver } from './localP2PSettlement';
 
 const config = getRagnarokNetworkConfig();
 const evidence = buildRagnarokRuntimeEvidence(config);
@@ -119,6 +119,32 @@ describe('local P2P game-over settlement', () => {
 			now: () => 123,
 		});
 		expect(result).toEqual({ status: 'skipped', reason: 'not_peer' });
+		expect(store.records.size).toBe(0);
+	});
+
+	it('does not credit local RUNE or ELO for a technical abandonment', async () => {
+		expect(resolveLocalP2PSettlementCause({
+			eventReason: 'technical',
+			lifecycleKind: 'technical_abandonment',
+		})).toBe('technical_abandonment');
+		expect(resolveLocalP2PSettlementCause({
+			eventReason: 'hero_death',
+		})).toBe('engine');
+
+		const store = memoryStore();
+		const result = await settleLocalP2PGameOver(context(), state(), {
+			runtimeConfig: config,
+			runtimeEvidence: evidence,
+			getLocalAccount: () => 'alice',
+			getEloRating: async account => ({ account, elo: 1000, wins: 0, losses: 0, lastMatchBlock: 0 }),
+			getTokenBalance: async () => ({ RUNE: 0 }),
+			getLatestCardProgressionByOwner: async () => [],
+			getTranscriptRoot: async () => 'root-technical',
+			clearTranscript: () => undefined,
+			settlementStore: store,
+			now: () => 123,
+		}, 'technical_abandonment');
+		expect(result).toEqual({ status: 'skipped', reason: 'technical_abandonment' });
 		expect(store.records.size).toBe(0);
 	});
 });

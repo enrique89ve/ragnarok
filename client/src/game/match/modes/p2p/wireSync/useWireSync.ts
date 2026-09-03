@@ -34,6 +34,7 @@ import { getKingAbilityConfig, getMineShapeTiles, isValidMinePlacement, requires
 import { seededRngFromString } from '../../../../utils/seededRng';
 import {
 	confirmChessTransitionReceipt,
+	pausePendingChessReceiptTimeout,
 	resetChessWireSender,
 	retryPendingChessTransition,
 	setChessSendObserver,
@@ -133,6 +134,7 @@ import {
 } from '@shared/p2p-wire/control';
 import {
 	buildActionAppliedMessage,
+	P2P_ACTION_APPLIED_WAIT_TIMEOUT_MS,
 	type ActionAppliedMessage,
 } from '@shared/p2p-wire/delivery';
 import { enqueueWireMessage, MAX_INBOUND_WIRE_QUEUE_SIZE } from './wireMessageQueue';
@@ -172,7 +174,6 @@ export type { P2PMessage } from '../../../../p2p/messages';
 declare const __BUILD_HASH__: string;
 
 const P2P_INTEGRITY_PAUSED_MESSAGE = 'Game integrity diverged. Actions are paused until the match is left.';
-const POKER_ACTION_GATE_WAIT_TIMEOUT_MS = 8_000;
 
 type PendingPokerActionGate = {
 	readonly matchId: string;
@@ -185,6 +186,16 @@ type PendingPokerActionGate = {
 	retrying: boolean;
 	gateAllowed: boolean | null;
 	applied: boolean;
+};
+
+type PendingCardsActionGate = {
+	readonly matchId: string;
+	readonly commandId: string;
+	readonly seq: number;
+	readonly gameplayMessage: Extract<P2PMessage, { type: 'game_command' }>;
+	readonly resolve: (receipt: ActionAppliedMessage | null) => void;
+	timeout: ReturnType<typeof setTimeout> | null;
+	retrying: boolean;
 };
 
 function readConnectionTransportEpoch(connection: { readonly transportEpoch?: number } | null): number {
@@ -558,6 +569,9 @@ export function useWireSync() {
 	// gate. WebSocket write success alone is insufficient: the referee may drop
 	// a late action after the bytes were accepted by the browser socket.
 	const pendingPokerActionGateRef = useRef(new Map<string, PendingPokerActionGate>());
+	const pendingCardsActionGateRef = useRef(new Map<string, PendingCardsActionGate>());
+	const cardsReceiptByCommandIdRef = useRef(new Map<string, ActionAppliedMessage>());
+	const cardsReceiptCommandOrderRef = useRef<string[]>([]);
 
 	const armPokerActionGateTimeout = useCallback((decisionId: string): void => {
 		const pending = pendingPokerActionGateRef.current.get(decisionId);
@@ -578,7 +592,7 @@ export function useWireSync() {
 			if (usePeerStore.getState().connectionState === 'connected') {
 				quarantineP2PSession('poker_action_gate_timeout');
 			}
-		}, POKER_ACTION_GATE_WAIT_TIMEOUT_MS);
+		}, P2P_ACTION_APPLIED_WAIT_TIMEOUT_MS);
 	}, []);
 
 	const pausePendingPokerActionGateTimeouts = useCallback((): void => {
@@ -697,6 +711,101 @@ export function useWireSync() {
 		}
 	}, [armPokerActionGateTimeout, send]);
 
+	const sendDeliveryReceipt = useCallback((receipt: ActionAppliedMessage): void => {
+		const active = usePeerStore.getState().connection;
+		if (active?.controlAvailable && active.sendControlMessage) {
+			try {
+				active.sendControlMessage(receipt);
+				return;
+			} catch (error) {
+				debug.warn('[wireSync] failed to send applied receipt on control plane', error);
+			}
+		}
+		send(receipt);
+	}, [send]);
+
+	const cacheCardsAppliedReceipt = useCallback((receipt: ActionAppliedMessage): void => {
+		cardsReceiptByCommandIdRef.current.set(receipt.decisionId, receipt);
+		cardsReceiptCommandOrderRef.current.push(receipt.decisionId);
+		while (cardsReceiptCommandOrderRef.current.length > SEEN_COMMAND_IDS_MAX) {
+			const evicted = cardsReceiptCommandOrderRef.current.shift();
+			if (evicted !== undefined) cardsReceiptByCommandIdRef.current.delete(evicted);
+		}
+	}, []);
+
+	const armCardsActionGateTimeout = useCallback((commandId: string): void => {
+		const pending = pendingCardsActionGateRef.current.get(commandId);
+		if (!pending) return;
+		if (pending.timeout) clearTimeout(pending.timeout);
+		pending.timeout = setTimeout(() => {
+			if (pendingCardsActionGateRef.current.get(commandId) !== pending) return;
+			pendingCardsActionGateRef.current.delete(commandId);
+			pending.timeout = null;
+			pending.resolve(null);
+			if (usePeerStore.getState().connectionState === 'connected') {
+				quarantineP2PSession('cards_action_applied_timeout');
+			}
+		}, P2P_ACTION_APPLIED_WAIT_TIMEOUT_MS);
+	}, []);
+
+	const pausePendingCardsActionGateTimeouts = useCallback((): void => {
+		for (const pending of pendingCardsActionGateRef.current.values()) {
+			if (!pending.timeout) continue;
+			clearTimeout(pending.timeout);
+			pending.timeout = null;
+		}
+	}, []);
+
+	const settleCardsActionApplied = useCallback((receipt: ActionAppliedMessage): void => {
+		const pending = pendingCardsActionGateRef.current.get(receipt.decisionId);
+		if (!pending) return;
+		if (pending.matchId !== receipt.matchId || pending.seq !== receipt.seq) {
+			if (pending.timeout) clearTimeout(pending.timeout);
+			pending.timeout = null;
+			pendingCardsActionGateRef.current.delete(receipt.decisionId);
+			pending.resolve(null);
+			quarantineP2PSession('cards_action_applied_mismatch');
+			return;
+		}
+		if (pending.timeout) clearTimeout(pending.timeout);
+		pending.timeout = null;
+		pendingCardsActionGateRef.current.delete(receipt.decisionId);
+		pending.resolve(receipt);
+	}, []);
+
+	const rejectPendingCardsActionGates = useCallback((): void => {
+		for (const [commandId, pending] of pendingCardsActionGateRef.current) {
+			if (pending.timeout) clearTimeout(pending.timeout);
+			pending.timeout = null;
+			pending.resolve(null);
+			pendingCardsActionGateRef.current.delete(commandId);
+		}
+	}, []);
+
+	const retryPendingCardsActionGates = useCallback((): void => {
+		const peerState = usePeerStore.getState();
+		if (peerState.connectionState !== 'connected' || !peerState.connection || !matchIdRef.current) return;
+		for (const [commandId, pending] of pendingCardsActionGateRef.current) {
+			if (pending.retrying || pending.matchId !== matchIdRef.current) continue;
+			pending.retrying = true;
+			let accepted = false;
+			try {
+				accepted = send(pending.gameplayMessage);
+			} catch (error) {
+				debug.warn('[wireSync] Pending cards command retry rejected by transport', {
+					commandId: commandId.slice(0, 24),
+					error,
+				});
+			} finally {
+				pending.retrying = false;
+			}
+			if (pendingCardsActionGateRef.current.get(commandId) !== pending) continue;
+			if (accepted || usePeerStore.getState().connectionState === 'connected') {
+				armCardsActionGateTimeout(commandId);
+			}
+		}
+	}, [armCardsActionGateTimeout, send]);
+
 	// Last envelope send timestamp — used by `sendCommandEnvelope` to enforce a
 	// short cooldown that avoids the prevStateHash race when the user clicks
 	// faster than the host's gameState sync round-trip. Reset on disconnect via
@@ -770,9 +879,12 @@ export function useWireSync() {
 				// network boundary. Its timeout is paused and the exact decision is
 				// retried after the replacement transport opens.
 				pausePendingPokerActionGateTimeouts();
+				pausePendingCardsActionGateTimeouts();
+				pausePendingChessReceiptTimeout();
 				return undefined;
 			}
 			rejectPendingPokerActionGates();
+			rejectPendingCardsActionGates();
 			transcriptOrderGateRef.current?.reset('connection_lost');
 			mySaltRef.current = null;
 			theirCommitmentRef.current = null;
@@ -787,6 +899,8 @@ export function useWireSync() {
 					seenChessCommandIdsOrderRef.current.length = 0;
 					chessReceiptByCommandIdRef.current.clear();
 					chessReceiptCommandOrderRef.current.length = 0;
+					cardsReceiptByCommandIdRef.current.clear();
+					cardsReceiptCommandOrderRef.current.length = 0;
 					seenPokerDecisionIdsRef.current.clear();
 					seenPokerDecisionIdsOrderRef.current.length = 0;
 					pokerActionSeqRef.current = 0;
@@ -889,6 +1003,7 @@ export function useWireSync() {
 					retryPendingChessTransition();
 					phaseCheckpointClient.retryPending(send);
 					retryPendingPokerActionGates();
+					retryPendingCardsActionGates();
 				}, 0);
 			return () => {
 				cancelled = true;
@@ -1000,15 +1115,16 @@ export function useWireSync() {
 			cancelled = true;
 			clearTimeout(timer);
 		};
-	}, [connection, connectionState, pausePendingPokerActionGateTimeouts, rejectPendingPokerActionGates, retryPendingPokerActionGates, send]);
+	}, [connection, connectionState, pausePendingCardsActionGateTimeouts, pausePendingPokerActionGateTimeouts, rejectPendingCardsActionGates, rejectPendingPokerActionGates, retryPendingCardsActionGates, retryPendingPokerActionGates, send]);
 
 	useEffect(() => () => {
 		rejectPendingPokerActionGates();
+		rejectPendingCardsActionGates();
 		transcriptOrderGateRef.current?.reset('session_reset');
 		clearTranscript();
 		resetChessWireSender();
 		phaseCheckpointClient.reset();
-	}, [rejectPendingPokerActionGates]);
+	}, [rejectPendingCardsActionGates, rejectPendingPokerActionGates]);
 
 	// Timeout after 10s if seed exchange stalls. Both peers init from the
 	// deck handshake; this no longer re-sends host `init`.
@@ -1159,8 +1275,11 @@ export function useWireSync() {
 			if (currentPeerState.connectionState === 'grace_period'
 				|| currentPeerState.connectionState === 'reconnecting') {
 				pausePendingPokerActionGateTimeouts();
+				pausePendingCardsActionGateTimeouts();
+				pausePendingChessReceiptTimeout();
 			} else {
 				rejectPendingPokerActionGates();
+				rejectPendingCardsActionGates();
 			}
 			// Clean up pending result to prevent stale closures
 			if (pendingResultRef.current) {
@@ -1184,7 +1303,7 @@ export function useWireSync() {
 		return () => {
 			connection.off('close', handleClose);
 		};
-	}, [connection, pausePendingPokerActionGateTimeouts, rejectPendingPokerActionGates]);
+	}, [connection, pausePendingCardsActionGateTimeouts, pausePendingPokerActionGateTimeouts, rejectPendingCardsActionGates, rejectPendingPokerActionGates]);
 
 	useEffect(() => {
 		if (!connection || (connectionState !== 'connected' && connectionState !== 'grace_period')) return;
@@ -1990,6 +2109,12 @@ export function useWireSync() {
 							break;
 						}
 
+						const cachedCardsReceipt = cardsReceiptByCommandIdRef.current.get(data.commandId);
+						if (cachedCardsReceipt) {
+							sendDeliveryReceipt(cachedCardsReceipt);
+							break;
+						}
+
 							const expectedSeq = lastIncomingSeqRef.current + 1;
 							if (data.seq !== expectedSeq) {
 								if (data.seq > expectedSeq) {
@@ -2135,6 +2260,23 @@ export function useWireSync() {
 								const evicted = seenCommandIdsOrderRef.current.shift();
 								if (evicted !== undefined) seenCommandIdsRef.current.delete(evicted);
 							}
+							const resultingStateHash = computeCardsPrevStateHash(
+								useGameStore.getState().gameState,
+								isCardsCanonicalPlayerFrameRef.current,
+							);
+							if (!resultingStateHash) {
+								quarantineP2PSession('cards_applied_hash_unavailable');
+								return;
+							}
+							const receipt = buildActionAppliedMessage({
+								matchId: expectedMatchId,
+								transportEpoch: readConnectionTransportEpoch(usePeerStore.getState().connection),
+								decisionId: data.commandId,
+								seq: data.seq,
+								resultingStateHash,
+							});
+							cacheCardsAppliedReceipt(receipt);
+							sendDeliveryReceipt(receipt);
 							if (!requiresSignedActionEnvelope(wireCommand.type)) return;
 							const transcript = signedTranscriptRef.current;
 							const gate = transcriptOrderGateRef.current;
@@ -2479,6 +2621,9 @@ export function useWireSync() {
 					// transition receipt ambiguous during replay.
 					const expectedChessSeq = lastIncomingChessSeqRef.current + 1;
 					if (envelope.seq !== expectedChessSeq) {
+						quarantineP2PSession(envelope.seq > expectedChessSeq
+							? 'remote_chess_command_sequence_gap'
+							: 'remote_chess_command_sequence_replay');
 						reject(`seq_mismatch_expected_${expectedChessSeq}_got_${envelope.seq}`);
 						break;
 					}
@@ -2852,6 +2997,7 @@ export function useWireSync() {
 
 				case 'action_applied_v1': {
 					settlePokerActionApplied(data);
+					settleCardsActionApplied(data);
 					break;
 				}
 
@@ -3679,6 +3825,7 @@ export function useWireSync() {
 			}
 			if (data.type === 'action_applied_v1') {
 				settlePokerActionApplied(data);
+				settleCardsActionApplied(data);
 				return;
 			}
 			if (data.type === 'poker_action_time_gate_v1') {
@@ -3713,7 +3860,7 @@ export function useWireSync() {
 				pendingSyncRef.current = null;
 			}
 		};
-	}, [connection, connectionState, send, sendPhaseCheckpointProposal, sendPokerTurnProposal, playCard, attackWithCard, endTurn, performHeroPower, toggleMulliganCard, confirmMulligan, skipMulligan, applyOpponentCommandToStore, isCurrentConnectedMatch, settlePokerActionGateAck, settlePokerActionApplied]);
+	}, [cacheCardsAppliedReceipt, connection, connectionState, send, sendDeliveryReceipt, sendPhaseCheckpointProposal, sendPokerTurnProposal, playCard, attackWithCard, endTurn, performHeroPower, toggleMulliganCard, confirmMulligan, skipMulligan, applyOpponentCommandToStore, isCurrentConnectedMatch, settleCardsActionApplied, settlePokerActionGateAck, settlePokerActionApplied]);
 
 	const syncGameState = useCallback(() => {
 		// Full-state frames are intentionally disabled. A peer-authored snapshot
@@ -3731,7 +3878,7 @@ export function useWireSync() {
 	}, [syncGameState]);
 	debouncedSyncRef.current = debouncedSync;
 
-	type SentGameCommand = Readonly<{ commandId: string; seq: number }>;
+	type SentGameCommand = Readonly<{ commandId: string; seq: number; resultingStateHash: string }>;
 	const sendCommandEnvelope = useCallback((command: WireGameCommand): Promise<SentGameCommand | null> => {
 		const run = localCommandSignChainRef.current.then(async () => {
 			if (isP2PSessionQuarantined()) {
@@ -3819,17 +3966,43 @@ export function useWireSync() {
 				debug.warn('[wireSync] signed command became stale before send');
 				return null;
 			}
-			const accepted = send({ ...unsignedEnvelope, signerPubkey: key.pubkey, signature });
+			const signedEnvelope: Extract<P2PMessage, { type: 'game_command' }> = {
+				...unsignedEnvelope,
+				signerPubkey: key.pubkey,
+				signature,
+			};
+			const accepted = send(signedEnvelope);
 			if (!accepted) {
 				debug.warn('[wireSync] signed command was not accepted by transport/buffer');
 				return null;
 			}
 			outgoingSeqCounter += 1;
-			return { commandId: unsignedEnvelope.commandId, seq: unsignedEnvelope.seq };
+			let resolveApplied: (receipt: ActionAppliedMessage | null) => void = () => undefined;
+			const appliedPromise = new Promise<ActionAppliedMessage | null>((resolve) => {
+				resolveApplied = resolve;
+			});
+			const pendingGate: PendingCardsActionGate = {
+				matchId,
+				commandId: unsignedEnvelope.commandId,
+				seq: unsignedEnvelope.seq,
+				gameplayMessage: signedEnvelope,
+				resolve: resolveApplied,
+				timeout: null,
+				retrying: false,
+			};
+			pendingCardsActionGateRef.current.set(unsignedEnvelope.commandId, pendingGate);
+			armCardsActionGateTimeout(unsignedEnvelope.commandId);
+			const receipt = await appliedPromise;
+			if (!receipt) return null;
+			return {
+				commandId: unsignedEnvelope.commandId,
+				seq: unsignedEnvelope.seq,
+				resultingStateHash: receipt.resultingStateHash,
+			};
 		});
 		localCommandSignChainRef.current = run.then(() => undefined, () => undefined);
 		return run;
-	}, [send, isCardsCanonicalPlayerFrame]);
+	}, [armCardsActionGateTimeout, send, isCardsCanonicalPlayerFrame]);
 
 	const runCardsLocalAction = useCallback((
 		command: WireGameCommand,
@@ -3865,6 +4038,14 @@ export function useWireSync() {
 								reason: 'reason' in localResult ? localResult.reason : 'not_applied',
 							});
 							quarantineP2PSession(`local_command_rejected_after_send_${command.type}`);
+							return;
+						}
+						const localHash = computeCardsPrevStateHash(
+							useGameStore.getState().gameState,
+							isCardsCanonicalPlayerFrame,
+						);
+						if (!localHash || localHash !== sent.resultingStateHash) {
+							quarantineP2PSession(`cards_applied_hash_mismatch_${command.type}`);
 							return;
 						}
 						onCommitted?.(sent);

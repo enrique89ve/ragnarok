@@ -73,10 +73,6 @@ export const PokerP2PTurnStatus: React.FC<PokerP2PTurnStatusProps> = ({
 	connectionState,
 }) => {
 	const connectionInterrupted = connectionState !== 'connected';
-	const opponentConnectionLost = connectionState === 'reconnecting'
-		|| connectionState === 'grace_period'
-		|| connectionState === 'error'
-		|| connectionState === 'disconnected';
 	const [detailsOpen, setDetailsOpen] = useState(connectionInterrupted);
 	const view = useMemo(() => {
 		if (!isP2PCombat || !combatState) return null;
@@ -91,12 +87,8 @@ export const PokerP2PTurnStatus: React.FC<PokerP2PTurnStatusProps> = ({
 
 	const isExpanded = connectionInterrupted || detailsOpen;
 	const statusLabel = connectionInterrupted ? 'P2P' : 'LIVE';
-	const statusTitle = opponentConnectionLost ? 'Opponent lost connection' : view.title;
-	const statusDetail = opponentConnectionLost
-		? connectionState === 'error'
-			? 'Match paused — leave or wait for recovery'
-			: 'Trying to reconnect to the match…'
-		: view.detail;
+	const statusTitle = view.title;
+	const statusDetail = view.detail;
 
 	return (
 		<aside

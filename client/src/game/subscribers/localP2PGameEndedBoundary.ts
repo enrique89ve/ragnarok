@@ -3,6 +3,7 @@ import type { MatchContext } from '../match/types';
 import type { RagnarokRuntimeEvidence } from '@shared/runtimeConfig';
 import {
 	settleLocalP2PGameOver,
+	type LocalP2PSettlementCause,
 	type LocalP2PSettlementDependencies,
 	type LocalP2PSettlementResult,
 } from './localP2PSettlement';
@@ -12,9 +13,10 @@ export function handleLocalP2PGameEnded(
 	gameState: GameState,
 	activeMatch: MatchContext,
 	deps: LocalP2PSettlementDependencies,
+	cause: LocalP2PSettlementCause = 'engine',
 ): Promise<LocalP2PSettlementResult> {
 	if (activeMatch.opponent.kind !== 'peer') return Promise.resolve({ status: 'skipped', reason: 'not_peer' });
-	return settleLocalP2PGameOver(activeMatch, gameState, deps);
+	return settleLocalP2PGameOver(activeMatch, gameState, deps, cause);
 }
 
 export type P2PGameEndedRouteResult =

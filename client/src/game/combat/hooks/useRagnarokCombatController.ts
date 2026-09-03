@@ -199,11 +199,12 @@ export function useRagnarokCombatController(
   const p2pActions = useP2PActions();
   const activeMatch = useMatchStore(state => state.activeMatch);
   const connectionState = usePeerStore(state => state.connectionState);
+  const integrityError = usePeerStore(state => state.p2pIntegrityError);
   const opponentKind = activeMatch?.opponent.kind ?? null;
   const isP2PCombat = opponentKind === 'peer';
   const pokerTurnProcessMode = getPokerTurnProcessMode(isP2PCombat);
   const p2pTransportConnected = connectionState === 'connected';
-  const isP2PActionLocked = isP2PCombat && !p2pTransportConnected;
+  const isP2PActionLocked = isP2PCombat && (!p2pTransportConnected || Boolean(integrityError));
 
   usePokerAI({
     combatState,
@@ -298,7 +299,9 @@ export function useRagnarokCombatController(
   // During Poker, activePlayerId + deadline are the only local-action
   // authority. currentTurn remains a card-game presentation field outside
   // Poker and must not gate auxiliary Poker actions.
-  const isPlayerTurn = combatState ? pokerDecisionView.localCanAct : currentTurn === 'player';
+  const isPlayerTurn = combatState
+    ? pokerDecisionView.localCanAct && !isP2PActionLocked
+    : currentTurn === 'player';
   const isOpponentTargetable: boolean = !!(isPlayerTurn && (!!attackingCard || !!heroTargetMode ||
     (!!selectedCard && (selectedCard.card.type === 'spell' ||
       (selectedCard.card.type === 'minion' && hasKeyword(selectedCard, 'battlecry'))))));
@@ -723,10 +726,14 @@ export function useRagnarokCombatController(
     // Read the transport store again at the action boundary. React's render
     // value can lag a socket close/open by one tick; a stale "connected=false"
     // must never make a peer battle fall through to the local reducer.
-    const liveP2PConnected = usePeerStore.getState().connectionState === 'connected';
-    if (isP2PActionLocked || (isP2PCombat && !liveP2PConnected)) {
-      fireAnnouncement('warning', 'P2P reconnecting', {
-        subtitle: 'Actions resume when the peer connection recovers.',
+    const livePeer = usePeerStore.getState();
+    const liveP2PConnected = livePeer.connectionState === 'connected';
+    const liveIntegrityLocked = Boolean(livePeer.p2pIntegrityError);
+    if (isP2PActionLocked || (isP2PCombat && (!liveP2PConnected || liveIntegrityLocked))) {
+      fireAnnouncement('warning', liveIntegrityLocked ? 'Game integrity paused' : 'P2P reconnecting', {
+        subtitle: liveIntegrityLocked
+          ? 'Actions are locked until you leave the match.'
+          : 'Actions resume when the peer connection recovers.',
         duration: 1800,
       });
       return;
@@ -1044,8 +1051,10 @@ export function useRagnarokCombatController(
     if (!combatState) return;
     if (!isPlayerTurn) return;
     if (isP2PActionLocked) {
-      fireAnnouncement('warning', 'P2P reconnecting', {
-        subtitle: 'Actions resume when the peer connection recovers.',
+      fireAnnouncement('warning', integrityError ? 'Game integrity paused' : 'P2P reconnecting', {
+        subtitle: integrityError
+          ? 'Actions are locked until you leave the match.'
+          : 'Actions resume when the peer connection recovers.',
         duration: 1800,
       });
       return;
@@ -1066,7 +1075,7 @@ export function useRagnarokCombatController(
       : CombatAction.DEFEND;
     void handleAction(shortcutAction);
 
-  }, [combatState, handleAction, isP2PActionLocked, isPlayerTurn]);
+  }, [combatState, handleAction, integrityError, isP2PActionLocked, isPlayerTurn]);
 
   return {
     combatState,

@@ -11,6 +11,7 @@
  */
 
 import { GameEventBus } from '@/core/events/GameEventBus';
+import type { GameEndedReason } from '@/core/events/GameEvents';
 
 // ============================================
 // Card Action Helpers
@@ -253,7 +254,7 @@ export function emitGameStarted(params: {
  */
 export function emitGameEnded(params: {
 	winner: 'player' | 'opponent' | null;
-	reason: 'hero_death' | 'concede' | 'fatigue' | 'draw';
+	reason: GameEndedReason;
 	finalTurn: number;
 }): void {
 	GameEventBus.emitGameEnded({

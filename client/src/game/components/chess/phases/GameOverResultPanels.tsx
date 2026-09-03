@@ -15,12 +15,15 @@ import {
 	getRagnarokNetworkConfig,
 	type RagnarokNetworkConfig,
 } from '../../../config/networkConfig';
+import { P2PSessionJsonExportButton } from '../../multiplayer/P2PSessionJsonExportButton';
+import { getAbandonmentSubtitle } from './gameOverAbandonmentCopy';
 
 type GameOverResult = 'victory' | 'defeat' | 'draw';
 
 type AbandonmentState = {
 	readonly secondsRemaining: number;
 	readonly onHome: () => void;
+	readonly kind?: 'left' | 'technical';
 };
 
 export type GameOverCampaignContext = {
@@ -60,7 +63,7 @@ export function CampaignResultPanel({
 			<CampaignBossQuip campaign={campaign} isAbandoned={isAbandoned} isDraw={isDraw} isVictory={isVictory} />
 			{isAbandoned ? (
 				<p className="cgo-subtitle">
-					You left the battle. This run is closed locally as an abandoned defeat.
+					{getAbandonmentSubtitle(result, abandonment?.kind)}
 				</p>
 			) : (
 				<>
@@ -333,7 +336,7 @@ export function CasualResultPanel({
 		return (
 			<>
 				<p className="cgo-subtitle">
-					You left the battle. This run is closed locally as an abandoned defeat.
+					{getAbandonmentSubtitle(result, abandonment.kind)}
 				</p>
 				<AbandonedMatchActions abandonment={abandonment} />
 			</>
@@ -352,13 +355,16 @@ export function CasualResultPanel({
 				/>
 			)}
 			<RivalryBadge />
-			<button
-				type="button"
-				onClick={onPrimaryAction}
-				className="cgo-btn-primary hover:brightness-110 focus-visible:outline focus-visible:outline-2 active:translate-y-px"
-			>
-				{primaryLabel}
-			</button>
+			<div className="cgo-buttons cgo-abandon-actions">
+				{isPeerMatch ? <P2PSessionJsonExportButton /> : null}
+				<button
+					type="button"
+					onClick={onPrimaryAction}
+					className="cgo-btn-primary hover:brightness-110 focus-visible:outline focus-visible:outline-2 active:translate-y-px"
+				>
+					{primaryLabel}
+				</button>
+			</div>
 		</>
 	);
 }
@@ -368,6 +374,7 @@ function AbandonedMatchActions({
 }: {
 	readonly abandonment: AbandonmentState;
 }) {
+	const isPeerMatch = useMatchStore(state => state.activeMatch?.opponent.kind === 'peer');
 	return (
 		<motion.div
 			className="cgo-buttons cgo-abandon-actions"
@@ -375,6 +382,7 @@ function AbandonedMatchActions({
 			animate={{ opacity: 1 }}
 			transition={{ delay: 0.8, duration: 0.45 }}
 		>
+			{isPeerMatch ? <P2PSessionJsonExportButton /> : null}
 			<button
 				type="button"
 				onClick={abandonment.onHome}

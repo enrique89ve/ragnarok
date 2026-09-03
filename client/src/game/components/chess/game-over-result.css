@@ -445,6 +445,10 @@
 	align-items: center;
 }
 
+.cgo-abandon-actions .p2p-session-json-export {
+	min-width: 220px;
+}
+
 .cgo-auto-home {
 	margin: 0;
 	color: rgba(231, 222, 199, 0.72);

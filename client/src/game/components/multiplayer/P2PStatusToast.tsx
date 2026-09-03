@@ -5,6 +5,7 @@ import type { P2PConnectionState } from '../../stores/peerStore';
 import { usePeerStore } from '../../stores/peerStore';
 import { clearP2PMatchResume } from '../../p2p/p2pMatchResume';
 import { selectFlowTag, useGameFlowStore } from '../../stores/gameFlowStore';
+import { resolveP2PMatchPauseView } from '../../p2p/p2pMatchPauseView';
 import { getP2PConnectionToastModel, type P2PConnectionToastModel } from './p2pConnectionToastModel';
 
 const CONNECTION_TOAST_ID = 'p2p-connection-state';
@@ -56,9 +57,21 @@ export function P2PStatusToast(): null {
 		disconnect();
 	}, [disconnect, myPeerId, requestP2PLeave]);
 	const previousState = useRef<P2PConnectionState | null>(null);
+	const overlayActive = resolveP2PMatchPauseView({
+		connectionState,
+		disconnectSide,
+		integrityError,
+		reconnectCountdown,
+		reconnectAttemptCount,
+	}) !== null;
 
 	useEffect(() => {
-		if (battleLifecyclePhase === 'resolved' || battleLifecyclePhase === 'cancelled' || flowTag === 'poker_combat') {
+		if (
+			overlayActive
+			|| battleLifecyclePhase === 'resolved'
+			|| battleLifecyclePhase === 'cancelled'
+			|| flowTag === 'poker_combat'
+		) {
 			toast.dismiss(CONNECTION_TOAST_ID);
 			toast.dismiss(READINESS_TOAST_ID);
 			previousState.current = connectionState;
@@ -88,10 +101,14 @@ export function P2PStatusToast(): null {
 		transportKind,
 		leaveMatch,
 		flowTag,
+		overlayActive,
 	]);
 
 	useEffect(() => {
-		if (!integrityError && (battleLifecyclePhase === 'resolved' || battleLifecyclePhase === 'cancelled' || flowTag === 'poker_combat')) {
+		if (
+			overlayActive
+			|| (!integrityError && (battleLifecyclePhase === 'resolved' || battleLifecyclePhase === 'cancelled' || flowTag === 'poker_combat'))
+		) {
 			toast.dismiss(READINESS_TOAST_ID);
 			return;
 		}
@@ -105,7 +122,7 @@ export function P2PStatusToast(): null {
 			duration: Infinity,
 			action: { label: 'Leave match', onClick: leaveMatch },
 		});
-	}, [battleLifecyclePhase, connectionState, flowTag, integrityError, leaveMatch, readinessError]);
+	}, [battleLifecyclePhase, connectionState, flowTag, integrityError, leaveMatch, overlayActive, readinessError]);
 
 	return null;
 }

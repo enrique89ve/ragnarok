@@ -62,9 +62,12 @@ import {
 import { chessIntegrityMonitor } from './chessIntegrityMonitor';
 import { commitNextP2PCanonicalAction } from './canonicalActionOrder';
 import type { GameplaySignatureInput } from '../protocol/signedGameplayEnvelope';
+import { P2P_ACTION_APPLIED_WAIT_TIMEOUT_MS } from '@shared/p2p-wire/delivery';
+import type { Hash256 } from '@shared/p2p-wire/integrity';
 
 let outgoingChessSeq = 0;
 let pendingChessEnvelope: ChessCommandEnvelope | null = null;
+let pendingChessReceiptTimeout: ReturnType<typeof setTimeout> | null = null;
 // Invalidates async signing continuations when a transport/session reset
 // starts a new wire epoch. Without this, a late signature from the old match
 // could mutate the freshly reconnected board or clear its pending reservation.
@@ -176,6 +179,37 @@ function quarantineChessSession(detail: string): void {
 	const peer = usePeerStore.getState();
 	if (peer.p2pIntegrityError !== null) return;
 	peer.setP2pIntegrityError(`Game integrity diverged. Actions are paused until the match is left. (${detail})`);
+}
+
+function clearPendingChessReceiptTimeout(): void {
+	if (!pendingChessReceiptTimeout) return;
+	clearTimeout(pendingChessReceiptTimeout);
+	pendingChessReceiptTimeout = null;
+}
+
+function armPendingChessReceiptTimeout(
+	envelope: ChessCommandEnvelope,
+	nextRoot: Hash256 | null,
+): void {
+	clearPendingChessReceiptTimeout();
+	pendingChessReceiptTimeout = setTimeout(() => {
+		pendingChessReceiptTimeout = null;
+		if (pendingChessEnvelope !== envelope) return;
+		if (chessIntegrityMonitor.getState().status !== 'healthy') return;
+		if (usePeerStore.getState().connectionState !== 'connected') return;
+		quarantineChessSession('chess_transition_receipt_timeout');
+		chessIntegrityMonitor.quarantine({
+			reason: 'receipt_timeout',
+			commandId: envelope.commandId,
+			expectedRoot: nextRoot,
+			receivedRoot: null,
+			detail: 'the opponent did not confirm the chess transition before the delivery window closed',
+		});
+	}, P2P_ACTION_APPLIED_WAIT_TIMEOUT_MS);
+}
+
+export function pausePendingChessReceiptTimeout(): void {
+	clearPendingChessReceiptTimeout();
 }
 
 export interface ChessAttackEmit {
@@ -423,6 +457,7 @@ function dispatchChessCommand(
 			debug.error('[chessWireSender] transition quarantined — transport rejected signed command');
 			return;
 		}
+		armPendingChessReceiptTimeout(envelope, postCheckpoint.root);
 		const actorId = usePeerStore.getState().myPeerId;
 		const transcriptCanonicalOrder = actorId
 			? commitNextP2PCanonicalAction({ actionId: envelope.commandId, actorId })
@@ -479,6 +514,7 @@ export function confirmChessTransitionReceipt(
 ): ReturnType<typeof chessIntegrityMonitor.confirm> {
 	const confirmation = chessIntegrityMonitor.confirm(receipt);
 	if (confirmation.status === 'confirmed' || confirmation.status === 'quarantined') {
+		clearPendingChessReceiptTimeout();
 		pendingChessEnvelope = null;
 	}
 	return confirmation;
@@ -496,7 +532,15 @@ export function retryPendingChessTransition(): boolean {
 	const peer = usePeerStore.getState();
 	if (peer.connectionState !== 'connected') return false;
 	if (peer.p2pIntegrityError) return false;
-	return peer.send(envelope);
+	const accepted = peer.send(envelope);
+	if (accepted) {
+		const pendingRoot = chessIntegrityMonitor.getState();
+		armPendingChessReceiptTimeout(
+			envelope,
+			pendingRoot.status === 'healthy' ? pendingRoot.pending?.nextRoot ?? null : null,
+		);
+	}
+	return accepted;
 }
 
 /** True while a local canonical action is waiting for its gameplay signature. */
@@ -614,6 +658,7 @@ export function sendChessMinePlacement(
 export function resetChessWireSender(): void {
 	chessWireGeneration += 1;
 	outgoingChessSeq = 0;
+	clearPendingChessReceiptTimeout();
 	pendingChessEnvelope = null;
 	pendingChessSignature = false;
 	chessGameplaySigner = null;

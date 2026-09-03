@@ -23,6 +23,7 @@ import { useMatchmakingStore } from '../../stores/matchmakingStore';
 import { useWarbandStore, selectArmy } from '../../../lib/stores/useWarbandStore';
 import { P2PStatusBadge } from './P2PStatusBadge';
 import { P2PStatusToast } from './P2PStatusToast';
+import { P2PSessionJsonExportButton } from './P2PSessionJsonExportButton';
 import { useP2PMatchResume } from '../../p2p/useP2PMatchResume';
 import { clearP2PMatchResume } from '../../p2p/p2pMatchResume';
 import { resolveHeroPortrait } from '../../utils/art/artMapping';
@@ -392,9 +393,10 @@ export const MultiplayerGame: React.FC = () => {
 		});
 		const spinner = (
 			<div className="flex items-center justify-center min-h-screen bg-obsidian-950 p-4">
-				<div className="text-center space-y-3 max-w-md px-4">
+				<div className="p2p-wait-panel text-center space-y-3 max-w-md px-4">
 					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-(--gold-400) mx-auto" />
 					<p className="text-sm text-(--ink-300) break-words">{guard.kind === 'wait' ? guard.reason : 'Syncing match…'}</p>
+					<P2PSessionJsonExportButton />
 				</div>
 			</div>
 		);

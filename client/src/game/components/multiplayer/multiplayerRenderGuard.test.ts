@@ -44,10 +44,7 @@ describe('computeP2PRenderGuard', () => {
 			hardReloadResume: true,
 			...signedSession,
 		});
-		expect(decision).toEqual({
-			kind: 'wait',
-			reason: 'Rejoining your saved match from this device… Attempt 1/2. 40s before technical result.',
-		});
+		expect(decision).toEqual({ kind: 'render' });
 	});
 
 	it('renders when connection, loadout, and init gates pass', () => {
@@ -131,7 +128,31 @@ describe('computeP2PRenderGuard', () => {
 		expect(decision).toEqual({ kind: 'render' });
 	});
 
-	it('surfaces reconnecting before lower-level sync blockers', () => {
+	it('keeps a live board mounted while reconnecting', () => {
+		const decision = computeP2PRenderGuard({
+			opponentArmyFromPeer: fakeArmy,
+			p2pInitApplied: true,
+			connectionState: 'reconnecting',
+			reconnectCountdown: 42,
+			reconnectAttemptCount: 1,
+			...signedSession,
+		});
+		expect(decision).toEqual({ kind: 'render' });
+	});
+
+	it('keeps a live board mounted after a transport error', () => {
+		const decision = computeP2PRenderGuard({
+			opponentArmyFromPeer: fakeArmy,
+			p2pInitApplied: true,
+			connectionState: 'error',
+			reconnectCountdown: 0,
+			reconnectAttemptCount: 2,
+			...signedSession,
+		});
+		expect(decision).toEqual({ kind: 'render' });
+	});
+
+	it('waits on reconnect only before the board has been initialized', () => {
 		const decision = computeP2PRenderGuard({
 			opponentArmyFromPeer: fakeArmy,
 			p2pInitApplied: false,

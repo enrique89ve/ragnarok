@@ -91,6 +91,7 @@ export interface BettingPanelProps {
 	readonly onAction: (action: CombatAction, hp?: number) => void;
 	readonly onAutoAttackFrontline: () => void;
 	readonly showFrontlineButton: boolean;
+	readonly pauseReason?: string | null;
 }
 
 function shouldDisableHpBetting(isDisabled: boolean, sliderMax: number): boolean {
@@ -104,6 +105,7 @@ export const BettingPanel: React.FC<BettingPanelProps> = ({
 	onAction,
 	onAutoAttackFrontline,
 	showFrontlineButton,
+	pauseReason = null,
 }) => {
 	if (!permissions) {
 		return null;
@@ -123,7 +125,7 @@ export const BettingPanel: React.FC<BettingPanelProps> = ({
 		isMyTurnToAct,
 	} = permissions;
 
-	const isDisabled = !isMyTurnToAct;
+	const isDisabled = Boolean(pauseReason) || !isMyTurnToAct;
 	const sliderMax = Math.max(0, maxBetAmount);
 	const sliderMin = sliderMax > 0 ? Math.max(1, minBet) : 0;
 	const clampedBet = sliderMax > 0 ? Math.min(Math.max(sliderMin, betAmount), sliderMax) : 0;
@@ -140,7 +142,7 @@ export const BettingPanel: React.FC<BettingPanelProps> = ({
 	const matchAllowed = hasBetToCall ? canCall : canCheck;
 	const commitHP = hasBetToCall ? toCall + effectiveBet : effectiveBet;
 	const callHP = Math.min(toCall, availableHP);
-	const commitReason = bettingDisabledReason({
+	const commitReason = pauseReason ?? bettingDisabledReason({
 		isMyTurn: isMyTurnToAct,
 		kind: commitKind,
 		allowed: commitAllowed,
@@ -148,7 +150,7 @@ export const BettingPanel: React.FC<BettingPanelProps> = ({
 		toCall,
 		minBet,
 	});
-	const matchReason = bettingDisabledReason({
+	const matchReason = pauseReason ?? bettingDisabledReason({
 		isMyTurn: isMyTurnToAct,
 		kind: matchKind,
 		allowed: matchAllowed,
@@ -156,7 +158,7 @@ export const BettingPanel: React.FC<BettingPanelProps> = ({
 		toCall,
 		minBet,
 	});
-	const foldReason = bettingDisabledReason({
+	const foldReason = pauseReason ?? bettingDisabledReason({
 		isMyTurn: isMyTurnToAct,
 		kind: 'fold',
 		allowed: canFold,
@@ -164,7 +166,7 @@ export const BettingPanel: React.FC<BettingPanelProps> = ({
 		toCall,
 		minBet,
 	});
-	const allInReason = bettingDisabledReason({
+	const allInReason = pauseReason ?? bettingDisabledReason({
 		isMyTurn: isMyTurnToAct,
 		kind: 'all_in',
 		allowed: sliderMax > 0,
@@ -172,7 +174,7 @@ export const BettingPanel: React.FC<BettingPanelProps> = ({
 		toCall,
 		minBet,
 	});
-	const frontlineReason = getFrontlineDisabledReason({
+	const frontlineReason = pauseReason ?? getFrontlineDisabledReason({
 		isMyTurnToAct,
 		isAvailable: showFrontlineButton,
 		availableHP,

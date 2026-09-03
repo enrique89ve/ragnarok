@@ -324,10 +324,12 @@ export interface GameStartedEvent extends GameEventBase {
   startingPlayer: 'player' | 'opponent';
 }
 
+export type GameEndedReason = 'hero_death' | 'concede' | 'fatigue' | 'draw' | 'technical';
+
 export interface GameEndedEvent extends GameEventBase {
   type: 'GAME_ENDED';
   winner: 'player' | 'opponent' | null;
-  reason: 'hero_death' | 'concede' | 'fatigue' | 'draw';
+  reason: GameEndedReason;
   finalTurn: number;
 }
 
