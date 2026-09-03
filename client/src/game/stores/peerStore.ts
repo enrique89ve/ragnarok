@@ -233,6 +233,11 @@ export type PeerStore = {
 		readonly actorId: string;
 		readonly canonicalOrder: number;
 	}) => P2PCompetitionState | null;
+	recordBattleStarted: (input: {
+		readonly moveId: string;
+		readonly actorId: string;
+		readonly canonicalOrder: number;
+	}) => P2PCompetitionState | null;
 	restoreBattleCommitment: (canonicalOrder: number) => P2PCompetitionState | null;
 	recordNormalResult: (input: {
 		readonly winnerId: string | null;
@@ -988,6 +993,12 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	recordCanonicalAction: (input) => applyBattleLifecycleEvent(get, set, {
 		type: 'action_accepted',
 		actionId: input.actionId,
+		actorId: input.actorId,
+		canonicalOrder: input.canonicalOrder,
+	}),
+	recordBattleStarted: (input) => applyBattleLifecycleEvent(get, set, {
+		type: 'battle_started',
+		moveId: input.moveId,
 		actorId: input.actorId,
 		canonicalOrder: input.canonicalOrder,
 	}),

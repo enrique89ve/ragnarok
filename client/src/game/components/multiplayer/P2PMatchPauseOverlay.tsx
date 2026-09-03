@@ -11,7 +11,9 @@ export const P2PMatchPauseOverlay: React.FC = () => {
 	const integrityError = usePeerStore(state => state.p2pIntegrityError);
 	const reconnectCountdown = usePeerStore(state => state.reconnectCountdown);
 	const reconnectAttemptCount = usePeerStore(state => state.reconnectAttemptCount);
+	const competitionPhase = usePeerStore(state => state.battleLifecycle?.phase ?? null);
 	const view = resolveP2PMatchPauseView({
+		competitionPhase,
 		connectionState,
 		disconnectSide,
 		integrityError,

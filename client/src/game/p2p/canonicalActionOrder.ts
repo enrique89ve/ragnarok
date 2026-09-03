@@ -35,3 +35,17 @@ export function commitNextP2PCanonicalAction(input: {
 	return canonicalOrder;
 }
 
+/**
+ * Commit competitive battle only after the chess reducer accepted a legal
+ * move. Mulligan/cards actions may precede this move in the transcript, but
+ * they never make leaving or reconnect expiry produce a competitive result.
+ */
+export function startP2PBattleFromAcceptedChessAction(input: {
+	readonly moveId: string;
+	readonly actorId: string;
+	readonly canonicalOrder: number;
+}): boolean {
+	const peer = usePeerStore.getState();
+	const next = peer.recordBattleStarted(input);
+	return next?.phase === 'battle';
+}

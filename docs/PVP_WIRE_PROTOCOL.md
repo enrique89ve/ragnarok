@@ -483,10 +483,22 @@ player at send time, or by the remote peer at receive time — appends to it
 #### Competitive commitment and abandonment
 
 Transport readiness is not competitive commitment. The pure reducer in
-`shared/p2p-wire/p2pCompetitionLifecycle.ts` starts in `pre_battle` and enters
-`battle` only after the canonical engine accepts a valid action. Until then,
+`shared/p2p-wire/p2pCompetitionLifecycle.ts` starts in `pre_battle`. Canonical
+Mulligan and setup actions advance the transcript without changing that phase.
+The lifecycle enters `battle` only through an explicit local `battle_started`
+event after the Chess reducer accepts the first legal piece move (`chess_move`,
+`chess_attack`, or `chess_combat_initiated`). Mine placement does not start the
+battle. Until then,
 disconnect expiry or explicit `p2p_leave` cancels the session without a winner,
 loser, or economic consequence.
+
+During `pre_battle`, a missing Cards state hash is treated as an initialization
+race and the exact signed command is retried. A missing `action_applied_v1`
+receipt retries the same `commandId + seq` up to three total delivery attempts;
+the receiver returns its cached receipt for an already-applied command. If setup
+still cannot converge, both peers cancel the match without a result. Hard
+integrity quarantine and its blocking overlay are reserved for an established
+`battle`.
 
 After commitment, explicit leave or reconnect expiry produces a technical
 result using absolute peer IDs. Disconnect is first recorded as a transient
@@ -1109,7 +1121,9 @@ actions in a different order, the opponent rejects with
 `transcript_root_mismatch` and the ranked result is not broadcast.
 
 The transcript now orders every P2P Chess, Cards, Poker, and mulligan action by
-the shared lifecycle counter and hashes a normalized projection. Root mismatch
+the shared lifecycle counter and hashes a normalized projection. Ordering an
+action does not itself start competitive battle; only the explicit accepted
+Chess move transition does that. Root mismatch
 still fails closed and keeps the local action log for dispute export.
 
 **Dependency**: OPEN-1 is closed in code because OPEN-2 now has a concrete
@@ -1125,9 +1139,10 @@ local/remote reducer reports `applied`. Both peers execute the same accepted
 wire sequence, so each records the same `(actionId, actorId, canonicalOrder)`.
 The signed cards transcript barrier remains in place for envelope ordering.
 
-**Risk**: a violated lifecycle or missing canonical order now quarantines the
-session and prevents root construction rather than silently accepting an
-arrival-order transcript. The remaining risk is operational (browser,
+**Risk**: a violated lifecycle or missing canonical order cancels setup before
+the first legal Chess move and quarantines only an established battle. Either
+path prevents root construction rather than silently accepting an arrival-order
+transcript. The remaining risk is operational (browser,
 Keychain, reconnect, and real VPN paths), not an implicit ordering policy.
 
 **Decision**: the cross-mode order is the P2P competition lifecycle counter,

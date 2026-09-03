@@ -197,9 +197,11 @@ export const P2PControlServerMessageSchema = z.discriminatedUnion('type', [
 	PokerActionTimeGateAckSchema,
 ]);
 
-export function readControlTransportEpoch(message: { readonly transportEpoch?: number }): number | null {
-	return typeof message.transportEpoch === 'number' && Number.isInteger(message.transportEpoch)
-		? message.transportEpoch
+export function readControlTransportEpoch(message: unknown): number | null {
+	if (typeof message !== 'object' || message === null || !('transportEpoch' in message)) return null;
+	const transportEpoch = message.transportEpoch;
+	return typeof transportEpoch === 'number' && Number.isInteger(transportEpoch) && transportEpoch >= 1
+		? transportEpoch
 		: null;
 }
 

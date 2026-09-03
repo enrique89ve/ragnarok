@@ -250,6 +250,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
 	const integrityError = usePeerStore(s => s.p2pIntegrityError);
 	const reconnectCountdown = usePeerStore(s => s.reconnectCountdown);
 	const reconnectAttemptCount = usePeerStore(s => s.reconnectAttemptCount);
+	const competitionPhase = usePeerStore(s => s.battleLifecycle?.phase ?? null);
 	const showDamageNumbers = useSettingsStore(s => s.showDamageNumbers);
 
 	const cardGameIsPlayerTurn = gameState?.currentTurn === 'player';
@@ -373,6 +374,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
   const pauseView = useMemo(
     () => isP2PCombat
       ? resolveP2PMatchPauseView({
+		  competitionPhase,
           connectionState,
           disconnectSide,
           integrityError,
@@ -380,7 +382,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
           reconnectAttemptCount,
         })
       : null,
-    [connectionState, disconnectSide, integrityError, isP2PCombat, reconnectAttemptCount, reconnectCountdown],
+    [competitionPhase, connectionState, disconnectSide, integrityError, isP2PCombat, reconnectAttemptCount, reconnectCountdown],
   );
   const isPlayerTurn = combatState
     ? pokerDecisionView.localCanAct && !pauseView

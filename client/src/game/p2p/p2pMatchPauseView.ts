@@ -1,4 +1,5 @@
 import type { P2PConnectionState, P2PDisconnectSide } from '../stores/peerStore';
+import type { P2PCompetitionPhase } from '@shared/p2p-wire/p2pCompetitionLifecycle';
 
 export type P2PMatchPauseKind = 'reconnecting' | 'integrity' | 'error';
 
@@ -10,7 +11,7 @@ export type P2PMatchPauseView = {
 	readonly showCountdown: boolean;
 };
 
-export const P2P_SESSION_JSON_EXPORT_LABEL = 'Download session JSON';
+export const P2P_SESSION_JSON_EXPORT_LABEL = 'Export diagnostics';
 
 export function isP2PGameplayInputLocked(input: {
 	readonly connectionState: P2PConnectionState;
@@ -20,17 +21,19 @@ export function isP2PGameplayInputLocked(input: {
 }
 
 export function resolveP2PMatchPauseView(input: {
+	readonly competitionPhase: P2PCompetitionPhase | null;
 	readonly connectionState: P2PConnectionState;
 	readonly disconnectSide: P2PDisconnectSide | null;
 	readonly integrityError: string | null;
 	readonly reconnectCountdown: number;
 	readonly reconnectAttemptCount: number;
 }): P2PMatchPauseView | null {
+	if (input.competitionPhase !== 'battle') return null;
 	if (input.integrityError) {
 		return {
 			kind: 'integrity',
 			title: 'Game integrity paused',
-			detail: 'Actions are locked until you leave the match. Download the session JSON if you need evidence.',
+			detail: 'Actions are locked until you leave the match. Export diagnostics if you need evidence.',
 			exportLabel: P2P_SESSION_JSON_EXPORT_LABEL,
 			showCountdown: false,
 		};
@@ -39,7 +42,7 @@ export function resolveP2PMatchPauseView(input: {
 		return {
 			kind: 'error',
 			title: 'Match connection failed',
-			detail: 'The board is paused. Download the session JSON, then return to the lobby.',
+			detail: 'The board is paused. Export diagnostics, then return to the lobby.',
 			exportLabel: P2P_SESSION_JSON_EXPORT_LABEL,
 			showCountdown: false,
 		};

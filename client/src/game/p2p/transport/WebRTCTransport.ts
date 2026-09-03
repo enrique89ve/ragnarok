@@ -99,7 +99,7 @@ export function createWebRTCTransport(options: WebRTCTransportOptions): GameTran
 	let fallbackSent = false;
 	let transportReadySent = false;
 	let transportCommitted = false;
-	let transportEpoch = INITIAL_TRANSPORT_EPOCH;
+	let transportEpoch: number = INITIAL_TRANSPORT_EPOCH;
 	let disposingGameplay = false;
 	let connectStartedAtMs: number | null = null;
 	let connectedAtMs: number | null = null;

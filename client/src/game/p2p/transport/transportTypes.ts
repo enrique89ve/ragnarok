@@ -72,6 +72,8 @@ export function getTransportFailureReason(value: unknown): P2PTransportFallbackR
 export type GameTransport = {
 	readonly kind: TransportKind;
 	readonly state: TransportState;
+	/** Active control-plane epoch used to fence frames after reconnect. */
+	readonly transportEpoch?: number;
 	readonly closeReason?: TransportCloseReason;
 	connect: () => Promise<void>;
 	send: (message: P2PMessage) => void;

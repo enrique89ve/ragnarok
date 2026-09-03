@@ -60,7 +60,7 @@ export function createP2PControlChannel(options: Readonly<{
 	let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
 	let remotePeer = '';
 	let closed = false;
-	let transportEpoch = INITIAL_TRANSPORT_EPOCH;
+	let transportEpoch: number = INITIAL_TRANSPORT_EPOCH;
 
 	const setState = (next: P2PControlChannelState): void => {
 		if (state === next) return;

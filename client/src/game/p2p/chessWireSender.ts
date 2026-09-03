@@ -60,7 +60,10 @@ import {
 	captureChessIntegrityCheckpoint,
 } from './chessIntegrityCheckpoint';
 import { chessIntegrityMonitor } from './chessIntegrityMonitor';
-import { commitNextP2PCanonicalAction } from './canonicalActionOrder';
+import {
+	commitNextP2PCanonicalAction,
+	startP2PBattleFromAcceptedChessAction,
+} from './canonicalActionOrder';
 import type { GameplaySignatureInput } from '../protocol/signedGameplayEnvelope';
 import { P2P_ACTION_APPLIED_WAIT_TIMEOUT_MS } from '@shared/p2p-wire/delivery';
 import type { Hash256 } from '@shared/p2p-wire/integrity';
@@ -178,6 +181,17 @@ type ApplyLocalChessMutation = () => boolean;
 function quarantineChessSession(detail: string): void {
 	const peer = usePeerStore.getState();
 	if (peer.p2pIntegrityError !== null) return;
+	if (peer.battleLifecycle?.phase !== 'battle') {
+		if (peer.battleLifecycle && peer.myPeerId) {
+			peer.requestP2PLeave(
+				peer.myPeerId,
+				`pre-battle-cancel:${peer.battleLifecycle.matchId}:${detail}`,
+			);
+		} else {
+			peer.setP2pBattleReady({ error: `Match setup could not be verified. (${detail})` });
+		}
+		return;
+	}
 	peer.setP2pIntegrityError(`Game integrity diverged. Actions are paused until the match is left. (${detail})`);
 }
 
@@ -462,7 +476,7 @@ function dispatchChessCommand(
 		const transcriptCanonicalOrder = actorId
 			? commitNextP2PCanonicalAction({ actionId: envelope.commandId, actorId })
 			: null;
-		if (transcriptCanonicalOrder === null) {
+		if (!actorId || transcriptCanonicalOrder === null) {
 			quarantineChessSession('chess_canonical_order_unavailable');
 			chessIntegrityMonitor.quarantine({
 				reason: 'local_checkpoint_unavailable',
@@ -471,6 +485,14 @@ function dispatchChessCommand(
 				receivedRoot: postCheckpoint.root,
 				detail: 'the P2P lifecycle could not commit a canonical transcript order',
 			});
+			return;
+		}
+		if (envelope.command.type !== 'chess_mine_placement' && !startP2PBattleFromAcceptedChessAction({
+			moveId: envelope.commandId,
+			actorId,
+			canonicalOrder: transcriptCanonicalOrder,
+		})) {
+			quarantineChessSession('chess_battle_start_unavailable');
 			return;
 		}
 

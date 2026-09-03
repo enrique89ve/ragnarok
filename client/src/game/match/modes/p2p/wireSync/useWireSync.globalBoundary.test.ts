@@ -31,6 +31,7 @@ import {
 	P2P_COMMAND_STATUS_REJECT_REASON,
 	settleRemoteCommand,
 } from './remoteCommandSettlement';
+import { resolveP2PMatchPauseView } from '../../../../p2p/p2pMatchPauseView';
 
 describe('useWireSync global dependency boundary', () => {
 	it('does not reach the combat store through globalThis', () => {
@@ -111,8 +112,40 @@ describe('useWireSync global dependency boundary', () => {
 		expect(wire).toContain('cards_action_applied_timeout');
 		expect(wire).toContain('remote_chess_command_sequence_gap');
 		expect(wire).toContain('cardsReceiptByCommandIdRef');
+		expect(wire).toContain('PRE_BATTLE_CARDS_DELIVERY_ATTEMPTS = 3');
+		expect(wire).toContain('send(pending.gameplayMessage)');
+		expect(wire).toContain("p2p_pre_battle_action_retry");
+		expect(wire).toContain("cards_action_applied_timeout");
 		expect(chess).toContain('chess_transition_receipt_timeout');
 		expect(chess).toContain('pausePendingChessReceiptTimeout');
+	});
+
+	it('starts competitive battle from an accepted piece move but not mine placement', () => {
+		const wirePath = join(dirname(fileURLToPath(import.meta.url)), 'useWireSync.ts');
+		const chessPath = join(dirname(fileURLToPath(import.meta.url)), '../../../../p2p/chessWireSender.ts');
+		const wire = readFileSync(wirePath, 'utf8');
+		const chess = readFileSync(chessPath, 'utf8');
+
+		expect(wire).toContain("cmd.type !== 'chess_mine_placement'");
+		expect(chess).toContain("envelope.command.type !== 'chess_mine_placement'");
+		expect(wire).toContain('startP2PBattleFromAcceptedChessAction');
+		expect(chess).toContain('startP2PBattleFromAcceptedChessAction');
+	});
+
+	it('reserves the blocking integrity overlay for an established battle', () => {
+		const pauseViewPath = join(dirname(fileURLToPath(import.meta.url)), '../../../../p2p/p2pMatchPauseView.ts');
+		const pauseView = readFileSync(pauseViewPath, 'utf8');
+
+		expect(pauseView).toContain("if (input.competitionPhase !== 'battle') return null");
+		expect(pauseView).toContain("P2P_SESSION_JSON_EXPORT_LABEL = 'Export diagnostics'");
+		expect(resolveP2PMatchPauseView({
+			competitionPhase: 'pre_battle',
+			connectionState: 'connected',
+			disconnectSide: null,
+			integrityError: 'temporary setup failure',
+			reconnectCountdown: 0,
+			reconnectAttemptCount: 0,
+		})).toBeNull();
 	});
 });
 

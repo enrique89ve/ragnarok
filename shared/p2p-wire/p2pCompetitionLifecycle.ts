@@ -41,6 +41,7 @@ export type P2PCompetitionState = {
 	readonly phase: P2PCompetitionPhase;
 	readonly absentParticipantId: string | null;
 	readonly firstAcceptedAction: P2PCompetitionAcceptedAction | null;
+	readonly lastAcceptedAction: P2PCompetitionAcceptedAction | null;
 	/** Command IDs already accepted; prevents replay with a newer UI order. */
 	readonly acceptedActionIds: readonly string[];
 	readonly lastCanonicalOrder: number;
@@ -52,6 +53,12 @@ export type P2PCompetitionEvent =
 	| {
 			type: 'action_accepted';
 			actionId: string;
+			actorId: string;
+			canonicalOrder: number;
+		}
+	| {
+			type: 'battle_started';
+			moveId: string;
 			actorId: string;
 			canonicalOrder: number;
 		}
@@ -151,6 +158,7 @@ export function createP2PCompetitionState(input: {
 		phase: 'pre_battle',
 		absentParticipantId: null,
 		firstAcceptedAction: null,
+		lastAcceptedAction: null,
 		acceptedActionIds: [],
 		lastCanonicalOrder: 0,
 		terminalEventId: null,
@@ -184,17 +192,33 @@ export function reduceP2PCompetitionLifecycle(
 				return state;
 			}
 			if (state.acceptedActionIds.includes(event.actionId) || event.canonicalOrder <= state.lastCanonicalOrder) return state;
+			const acceptedAction = {
+				actionId: event.actionId,
+				actorId: event.actorId,
+				canonicalOrder: event.canonicalOrder,
+			};
 			return {
 				...state,
-				phase: state.phase === 'pre_battle' ? 'battle' : state.phase,
-				firstAcceptedAction: state.firstAcceptedAction ?? {
-					actionId: event.actionId,
-					actorId: event.actorId,
-					canonicalOrder: event.canonicalOrder,
-				},
+				firstAcceptedAction: state.firstAcceptedAction ?? acceptedAction,
+				lastAcceptedAction: acceptedAction,
 				acceptedActionIds: [...state.acceptedActionIds, event.actionId],
 				lastCanonicalOrder: event.canonicalOrder,
 			};
+		}
+
+		case 'battle_started': {
+			if (
+				state.phase !== 'pre_battle'
+				|| !isParticipant(state, event.actorId)
+				|| !isNonEmptyString(event.moveId)
+				|| !isPositiveInteger(event.canonicalOrder)
+				|| event.canonicalOrder !== state.lastCanonicalOrder
+				|| state.lastAcceptedAction?.actionId !== event.moveId
+				|| state.lastAcceptedAction.actorId !== event.actorId
+			) {
+				return state;
+			}
+			return { ...state, phase: 'battle' };
 		}
 
 		case 'commitment_restored':

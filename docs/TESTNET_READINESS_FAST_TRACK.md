@@ -207,6 +207,14 @@ como host-auth.
 Chequeo 2026-09-01 (codigo + pruebas focalizadas + smoke automatizado de relay;
 no sustituye Keychain humano, dispositivo fisico ni health del deploy real).
 
+Actualizacion 2026-09-02: Mulligan permanece en `pre_battle`; su receipt se
+reintenta de forma idempotente con el mismo `commandId + seq` y, si no converge,
+el match se cancela sin resultado. `battle_started` deriva solamente del primer
+movimiento legal de pieza aceptado por Chess. El hard integrity overlay queda
+reservado para una batalla ya iniciada y la accion de evidencia se llama
+`Export diagnostics`. Este cierre de codigo no cierra el gate humano/deploy de
+dos browsers con Keychain.
+
 | Orden | Gate | Estado actual | Cierre minimo |
 |---|---|---|---|
 | 0 | WIP del arbol | Queda chrome poker | Diff actual: `HoleCardsOverlay.tsx`, `hero-card.css`, `CardFrame.css`. Spine/resume/labels ya en `main`. No empilar trabajo nuevo fuera de arena. |

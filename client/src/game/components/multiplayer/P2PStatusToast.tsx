@@ -58,6 +58,7 @@ export function P2PStatusToast(): null {
 	}, [disconnect, myPeerId, requestP2PLeave]);
 	const previousState = useRef<P2PConnectionState | null>(null);
 	const overlayActive = resolveP2PMatchPauseView({
+		competitionPhase: battleLifecyclePhase,
 		connectionState,
 		disconnectSide,
 		integrityError,

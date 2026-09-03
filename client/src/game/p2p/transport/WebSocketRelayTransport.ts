@@ -26,6 +26,7 @@ export type WebSocketRelayTransport = GameTransport & {
 	readonly peer: string;
 	readonly open: boolean;
 	readonly isHostHint: boolean;
+	readonly transportEpoch: number;
 	on: (event: TransportEvent, listener: TransportListener) => void;
 	off: (event: TransportEvent, listener: TransportListener) => void;
 	readonly controlAvailable?: boolean;

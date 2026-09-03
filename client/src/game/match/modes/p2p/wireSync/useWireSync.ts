@@ -57,7 +57,10 @@ import {
 import useGame from '../../../../../lib/stores/useGame';
 import type { HiveCardAsset } from '../../../../../data/schemas/HiveTypes';
 import { planCardsLocalAction, shouldCommitLocalCardsAction } from './cardsWirePlan';
-import { commitNextP2PCanonicalAction } from '../../../../p2p/canonicalActionOrder';
+import {
+	commitNextP2PCanonicalAction,
+	startP2PBattleFromAcceptedChessAction,
+} from '../../../../p2p/canonicalActionOrder';
 import type { P2PMessage } from '../../../../p2p/messages';
 import { parseWireMessage } from '../../../../p2p/messageSchemas';
 import { CombatAction, CombatPhase } from '../../../../types/PokerCombatTypes';
@@ -174,6 +177,9 @@ export type { P2PMessage } from '../../../../p2p/messages';
 declare const __BUILD_HASH__: string;
 
 const P2P_INTEGRITY_PAUSED_MESSAGE = 'Game integrity diverged. Actions are paused until the match is left.';
+const PRE_BATTLE_CARDS_DELIVERY_ATTEMPTS = 3;
+const PRE_BATTLE_HASH_RETRY_ATTEMPTS = 3;
+const PRE_BATTLE_HASH_RETRY_DELAY_MS = 150;
 
 type PendingPokerActionGate = {
 	readonly matchId: string;
@@ -196,6 +202,7 @@ type PendingCardsActionGate = {
 	readonly resolve: (receipt: ActionAppliedMessage | null) => void;
 	timeout: ReturnType<typeof setTimeout> | null;
 	retrying: boolean;
+	attempts: number;
 };
 
 function readConnectionTransportEpoch(connection: { readonly transportEpoch?: number } | null): number {
@@ -224,6 +231,25 @@ function isGameplayWireMessage(data: P2PMessage): boolean {
 function quarantineP2PSession(reason: string): void {
 	const peer = usePeerStore.getState();
 	if (peer.p2pIntegrityError !== null) return;
+	if (peer.battleLifecycle?.phase !== 'battle') {
+		if (!peer.battleLifecycle || !peer.myPeerId) {
+			const detail = `Match setup could not be verified. (${reason})`;
+			peer.setP2pBattleReady({ error: detail });
+			recordSessionEvent('p2p_pre_battle_failed', { reason, detail });
+			return;
+		}
+		const eventId = `pre-battle-cancel:${peer.battleLifecycle.matchId}:${reason}`;
+		const lifecycle = peer.requestP2PLeave(peer.myPeerId, eventId);
+		recordSessionEvent('p2p_pre_battle_cancelled', { reason, eventId });
+		if (lifecycle?.phase === 'cancelled') {
+			GameEventBus.emitNotification({
+				level: 'warning',
+				message: 'Match setup could not be synchronized. The match was canceled with no result.',
+				duration: 8_000,
+			});
+		}
+		return;
+	}
 	const detail = `${P2P_INTEGRITY_PAUSED_MESSAGE} (${reason})`;
 	peer.setP2pIntegrityError(detail);
 	recordSessionEvent('p2p_integrity_quarantined', { reason, detail });
@@ -232,6 +258,10 @@ function quarantineP2PSession(reason: string): void {
 		message: P2P_INTEGRITY_PAUSED_MESSAGE,
 		duration: 10_000,
 	});
+}
+
+function waitForPreBattleHashRetry(): Promise<void> {
+	return new Promise(resolve => setTimeout(resolve, PRE_BATTLE_HASH_RETRY_DELAY_MS));
 }
 
 function isP2PSessionQuarantined(): boolean {
@@ -570,6 +600,7 @@ export function useWireSync() {
 	// a late action after the bytes were accepted by the browser socket.
 	const pendingPokerActionGateRef = useRef(new Map<string, PendingPokerActionGate>());
 	const pendingCardsActionGateRef = useRef(new Map<string, PendingCardsActionGate>());
+	const localCardsCommandPendingRef = useRef(false);
 	const cardsReceiptByCommandIdRef = useRef(new Map<string, ActionAppliedMessage>());
 	const cardsReceiptCommandOrderRef = useRef<string[]>([]);
 
@@ -737,16 +768,52 @@ export function useWireSync() {
 		const pending = pendingCardsActionGateRef.current.get(commandId);
 		if (!pending) return;
 		if (pending.timeout) clearTimeout(pending.timeout);
-		pending.timeout = setTimeout(() => {
+		const onTimeout = (): void => {
 			if (pendingCardsActionGateRef.current.get(commandId) !== pending) return;
+			const peer = usePeerStore.getState();
+			if (
+				peer.battleLifecycle?.phase === 'pre_battle'
+				&& peer.connectionState === 'connected'
+				&& pending.attempts < PRE_BATTLE_CARDS_DELIVERY_ATTEMPTS
+			) {
+				pending.attempts += 1;
+				pending.retrying = true;
+				let accepted = false;
+				try {
+					accepted = send(pending.gameplayMessage);
+				} catch (error) {
+					debug.warn('[wireSync] Pre-battle cards command retry rejected by transport', {
+						commandId: commandId.slice(0, 24),
+						error,
+					});
+				} finally {
+					pending.retrying = false;
+				}
+				recordSessionEvent('p2p_pre_battle_action_retry', {
+					commandId,
+					seq: pending.seq,
+					attempt: pending.attempts,
+					accepted,
+				});
+				GameEventBus.emitNotification({
+					level: 'warning',
+					message: 'Synchronizing match…',
+					duration: 2_500,
+				});
+				if (pendingCardsActionGateRef.current.get(commandId) === pending) {
+					pending.timeout = setTimeout(onTimeout, P2P_ACTION_APPLIED_WAIT_TIMEOUT_MS);
+				}
+				return;
+			}
 			pendingCardsActionGateRef.current.delete(commandId);
 			pending.timeout = null;
 			pending.resolve(null);
-			if (usePeerStore.getState().connectionState === 'connected') {
+			if (peer.connectionState === 'connected') {
 				quarantineP2PSession('cards_action_applied_timeout');
 			}
-		}, P2P_ACTION_APPLIED_WAIT_TIMEOUT_MS);
-	}, []);
+		};
+		pending.timeout = setTimeout(onTimeout, P2P_ACTION_APPLIED_WAIT_TIMEOUT_MS);
+	}, [send]);
 
 	const pausePendingCardsActionGateTimeouts = useCallback((): void => {
 		for (const pending of pendingCardsActionGateRef.current.values()) {
@@ -788,6 +855,7 @@ export function useWireSync() {
 		for (const [commandId, pending] of pendingCardsActionGateRef.current) {
 			if (pending.retrying || pending.matchId !== matchIdRef.current) continue;
 			pending.retrying = true;
+			pending.attempts += 1;
 			let accepted = false;
 			try {
 				accepted = send(pending.gameplayMessage);
@@ -2197,7 +2265,15 @@ export function useWireSync() {
 							// initializing avoids spurious mismatches at handshake-time.
 							// Mirrors `local_prev_state_hash_unavailable` on the chess
 							// branch.
-								quarantineP2PSession('remote_cards_prev_state_hash_unavailable');
+								if (usePeerStore.getState().battleLifecycle?.phase === 'battle') {
+									quarantineP2PSession('remote_cards_prev_state_hash_unavailable');
+								} else {
+									recordSessionEvent('p2p_pre_battle_hash_retry_requested', {
+										commandId: data.commandId,
+										seq: data.seq,
+										reason: 'remote_cards_prev_state_hash_unavailable',
+									});
+								}
 								reject('local_prev_state_hash_unavailable');
 							break;
 						}
@@ -2966,9 +3042,18 @@ export function useWireSync() {
 						const transcriptCanonicalOrder = actorId
 							? commitNextP2PCanonicalAction({ actionId: envelope.commandId, actorId })
 							: null;
-						if (transcriptCanonicalOrder === null) {
+						if (!actorId || transcriptCanonicalOrder === null) {
 							quarantineP2PSession('remote_chess_canonical_order_unavailable');
 							reject('canonical_order_unavailable');
+							break;
+						}
+						if (cmd.type !== 'chess_mine_placement' && !startP2PBattleFromAcceptedChessAction({
+							moveId: envelope.commandId,
+							actorId,
+							canonicalOrder: transcriptCanonicalOrder,
+						})) {
+							quarantineP2PSession('remote_chess_battle_start_unavailable');
+							reject('battle_start_unavailable');
 							break;
 						}
 
@@ -3885,6 +3970,11 @@ export function useWireSync() {
 				debug.warn('[wireSync] sendCommandEnvelope blocked — P2P integrity is quarantined');
 				return null;
 			}
+			const lifecycle = usePeerStore.getState().battleLifecycle;
+			if (lifecycle?.phase === 'resolved' || lifecycle?.phase === 'cancelled') {
+				debug.warn('[wireSync] sendCommandEnvelope blocked — P2P lifecycle is terminal');
+				return null;
+			}
 			const matchId = matchIdRef.current ?? '';
 			if (!matchId) {
 				debug.warn('[wireSync] sendCommandEnvelope skipped: no matchId yet');
@@ -3932,7 +4022,7 @@ export function useWireSync() {
 
 			const localState = useGameStore.getState().gameState;
 			let prevStateHash = computeCardsPrevStateHash(localState, isCardsCanonicalPlayerFrame);
-			if (!prevStateHash) {
+			for (let attempt = 1; !prevStateHash && attempt <= PRE_BATTLE_HASH_RETRY_ATTEMPTS; attempt += 1) {
 				// The cards handshake can complete in the same tick as the eager
 				// WASM load. Finish that load at the command boundary rather than
 				// signing an empty pre-state hash that the peer cannot verify.
@@ -3944,6 +4034,14 @@ export function useWireSync() {
 					);
 				} catch (error) {
 					debug.warn('[wireSync] cards command hash unavailable after WASM load', error);
+				}
+				if (!prevStateHash && attempt < PRE_BATTLE_HASH_RETRY_ATTEMPTS) {
+					GameEventBus.emitNotification({
+						level: 'warning',
+						message: 'Synchronizing match…',
+						duration: 1_500,
+					});
+					await waitForPreBattleHashRetry();
 				}
 			}
 			if (!prevStateHash) {
@@ -3962,7 +4060,9 @@ export function useWireSync() {
 			if (usePeerStore.getState().connectionState !== 'connected'
 				|| matchIdRef.current !== matchId
 				|| sessionKeyRef.current !== key
-				|| usePeerStore.getState().p2pIntegrityError !== null) {
+				|| usePeerStore.getState().p2pIntegrityError !== null
+				|| usePeerStore.getState().battleLifecycle?.phase === 'resolved'
+				|| usePeerStore.getState().battleLifecycle?.phase === 'cancelled') {
 				debug.warn('[wireSync] signed command became stale before send');
 				return null;
 			}
@@ -3989,6 +4089,7 @@ export function useWireSync() {
 				resolve: resolveApplied,
 				timeout: null,
 				retrying: false,
+				attempts: 1,
 			};
 			pendingCardsActionGateRef.current.set(unsignedEnvelope.commandId, pendingGate);
 			armCardsActionGateTimeout(unsignedEnvelope.commandId);
@@ -4021,6 +4122,15 @@ export function useWireSync() {
 			isP2PMatch,
 		});
 		if (plan.sendEnvelope) {
+			if (localCardsCommandPendingRef.current) {
+				GameEventBus.emitNotification({
+					level: 'warning',
+					message: 'Synchronizing match…',
+					duration: 1_500,
+				});
+				return;
+			}
+			localCardsCommandPendingRef.current = true;
 			void sendCommandEnvelope(command)
 				.then((sent) => {
 					if (sent && plan.applyLocal) {
@@ -4058,6 +4168,9 @@ export function useWireSync() {
 					// chess/poker integrity checks.
 					debug.error('[wireSync] cards command signing failed; quarantining P2P session', error);
 					quarantineP2PSession(`cards_command_signing_failed_${command.type}`);
+				})
+				.finally(() => {
+					localCardsCommandPendingRef.current = false;
 				});
 		} else if (plan.applyLocal) {
 			applyLocal();

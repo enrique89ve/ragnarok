@@ -18,6 +18,13 @@ const acceptFirstAction = (state = createState()) => reduceP2PCompetitionLifecyc
 	canonicalOrder: 1,
 });
 
+const startBattle = (state = acceptFirstAction()) => reduceP2PCompetitionLifecycle(state, {
+	type: 'battle_started',
+	moveId: 'move-1',
+	actorId: 'peer-a',
+	canonicalOrder: 1,
+});
+
 describe('P2P competition lifecycle', () => {
 	it('starts in pre_battle and canonicalizes participant identity order', () => {
 		const state = createState();
@@ -27,8 +34,14 @@ describe('P2P competition lifecycle', () => {
 		expect(state.result).toBeNull();
 	});
 
-	it('cancels before the first accepted action without a competitive result', () => {
-		const disconnected = reduceP2PCompetitionLifecycle(createState(), {
+	it('cancels before the first legal chess move without a competitive result', () => {
+		const mulligan = reduceP2PCompetitionLifecycle(createState(), {
+			type: 'action_accepted',
+			actionId: 'mulligan-confirm-1',
+			actorId: 'peer-a',
+			canonicalOrder: 1,
+		});
+		const disconnected = reduceP2PCompetitionLifecycle(mulligan, {
 			type: 'disconnect_detected',
 			participantId: 'peer-b',
 		});
@@ -43,7 +56,7 @@ describe('P2P competition lifecycle', () => {
 		expect(cancelled.terminalEventId).toBe('expiry-1');
 	});
 
-	it('enters battle only after a valid action and ignores non-canonical duplicates', () => {
+	it('records canonical setup actions without starting battle and ignores duplicates', () => {
 		const active = acceptFirstAction();
 		const duplicate = reduceP2PCompetitionLifecycle(active, {
 			type: 'action_accepted',
@@ -58,7 +71,7 @@ describe('P2P competition lifecycle', () => {
 			canonicalOrder: 2,
 		});
 
-		expect(active.phase).toBe('battle');
+		expect(active.phase).toBe('pre_battle');
 		expect(active.firstAcceptedAction).toEqual({
 			actionId: 'move-1',
 			actorId: 'peer-a',
@@ -66,6 +79,43 @@ describe('P2P competition lifecycle', () => {
 		});
 		expect(duplicate).toEqual(active);
 		expect(replayWithNewOrder).toEqual(active);
+	});
+
+	it('enters battle only from the latest accepted legal chess move', () => {
+		const setupAction = reduceP2PCompetitionLifecycle(createState(), {
+			type: 'action_accepted',
+			actionId: 'mulligan-1',
+			actorId: 'peer-a',
+			canonicalOrder: 1,
+		});
+		const chessAction = reduceP2PCompetitionLifecycle(setupAction, {
+			type: 'action_accepted',
+			actionId: 'move-2',
+			actorId: 'peer-b',
+			canonicalOrder: 2,
+		});
+		const staleStart = reduceP2PCompetitionLifecycle(chessAction, {
+			type: 'battle_started',
+			moveId: 'mulligan-1',
+			actorId: 'peer-a',
+			canonicalOrder: 1,
+		});
+		const wrongActor = reduceP2PCompetitionLifecycle(chessAction, {
+			type: 'battle_started',
+			moveId: 'move-2',
+			actorId: 'peer-a',
+			canonicalOrder: 2,
+		});
+		const started = reduceP2PCompetitionLifecycle(chessAction, {
+			type: 'battle_started',
+			moveId: 'move-2',
+			actorId: 'peer-b',
+			canonicalOrder: 2,
+		});
+
+		expect(staleStart.phase).toBe('pre_battle');
+		expect(wrongActor.phase).toBe('pre_battle');
+		expect(started.phase).toBe('battle');
 	});
 
 	it('restores battle commitment from a validated resume snapshot without inventing an actor', () => {
@@ -80,7 +130,7 @@ describe('P2P competition lifecycle', () => {
 	});
 
 	it('resolves an opponent reconnect expiry using absolute IDs', () => {
-		const disconnected = reduceP2PCompetitionLifecycle(acceptFirstAction(), {
+		const disconnected = reduceP2PCompetitionLifecycle(startBattle(), {
 			type: 'disconnect_detected',
 			participantId: 'peer-b',
 		});
@@ -99,7 +149,7 @@ describe('P2P competition lifecycle', () => {
 	});
 
 	it('makes explicit leave consequential only after battle commitment', () => {
-		const resolved = reduceP2PCompetitionLifecycle(acceptFirstAction(), {
+		const resolved = reduceP2PCompetitionLifecycle(startBattle(), {
 			type: 'leave_requested',
 			participantId: 'peer-a',
 			eventId: 'leave-1',
@@ -114,7 +164,7 @@ describe('P2P competition lifecycle', () => {
 	});
 
 	it('is irreversible and idempotent after normal or technical resolution', () => {
-		const technical = reduceP2PCompetitionLifecycle(acceptFirstAction(), {
+		const technical = reduceP2PCompetitionLifecycle(startBattle(), {
 			type: 'leave_requested',
 			participantId: 'peer-a',
 			eventId: 'leave-2',
@@ -137,7 +187,7 @@ describe('P2P competition lifecycle', () => {
 	});
 
 	it('accepts a deterministic normal result only from battle phase', () => {
-		const resolved = reduceP2PCompetitionLifecycle(acceptFirstAction(), {
+		const resolved = reduceP2PCompetitionLifecycle(startBattle(), {
 			type: 'normal_result',
 			winnerId: 'peer-a',
 			loserId: 'peer-b',

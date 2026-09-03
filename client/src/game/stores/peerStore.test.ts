@@ -221,6 +221,11 @@ describe('peerStore P2P session boundary', () => {
 			actorId: 'peer-local',
 			canonicalOrder: 1,
 		});
+		usePeerStore.getState().recordBattleStarted({
+			moveId: 'move-1',
+			actorId: 'peer-local',
+			canonicalOrder: 1,
+		});
 
 		const resolved = usePeerStore.getState().requestP2PLeave('peer-local');
 		expect(resolved?.result).toMatchObject({
