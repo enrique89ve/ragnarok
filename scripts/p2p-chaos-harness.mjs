@@ -43,6 +43,7 @@ function parseArgs(argv) {
 	const options = { ...DEFAULTS, click: true, headed: false, out: null, url: null, profileA: null, profileB: null };
 	for (let index = 0; index < argv.length; index += 1) {
 		const arg = argv[index];
+		if (arg === '--') continue;
 		if (arg === '--help' || arg === '-h') return { help: true, options };
 		if (arg === '--headed') { options.headed = true; continue; }
 		if (arg === '--no-click') { options.click = false; continue; }
@@ -117,6 +118,7 @@ function initChaosScript(config) {
 }
 
 async function waitForText(page, pattern, timeoutMs) {
+	if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) return false;
 	try {
 		await page.waitForFunction(
 			value => new RegExp(value, 'i').test(document.body?.innerText ?? ''),
@@ -218,10 +220,12 @@ async function run() {
 			waitForText(pageA, options.battleText, Math.max(0, deadlineAt - Date.now())),
 			waitForText(pageB, options.battleText, Math.max(0, deadlineAt - Date.now())),
 		]);
-		const [terminalA, terminalB] = await Promise.all([
-			waitForText(pageA, options.terminalText, Math.max(0, deadlineAt - Date.now())),
-			waitForText(pageB, options.terminalText, Math.max(0, deadlineAt - Date.now())),
-		]);
+		const [terminalA, terminalB] = battleA && battleB
+			? await Promise.all([
+				waitForText(pageA, options.terminalText, Math.max(0, deadlineAt - Date.now())),
+				waitForText(pageB, options.terminalText, Math.max(0, deadlineAt - Date.now())),
+			])
+			: [false, false];
 		const evidence = {
 			status: battleA && battleB && terminalA && terminalB && pageErrors.length === 0 ? 'PASS' : 'FAIL',
 			startedAt,
