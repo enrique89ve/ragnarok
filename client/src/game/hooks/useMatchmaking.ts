@@ -327,9 +327,11 @@ export async function buildMatchmakingDelegation(input: {
 		ephemeralPubkey: ephemeralKey.pubkey,
 	};
 	if (input.searchIntentId) {
-		recordQuickMatchEvent(input.searchIntentId, 'keychain_authorization_started', {
+		if (!recordQuickMatchEvent(input.searchIntentId, 'keychain_authorization_started', {
 			account: input.accountId,
-		});
+		})) {
+			throw new Error('Quick Match authorization invariant violated; no second wallet prompt was opened.');
+		}
 	}
 	const signed = await invokeClientWalletAction(
 		{ kind: 'p2p_matchmaking_delegation', authority: 'Posting', label: 'Find opponent' },
@@ -342,10 +344,12 @@ export async function buildMatchmakingDelegation(input: {
 		throw new Error(getHiveKeychainError({ success: false, error: signed.error }, 'Matchmaking authorization signature rejected.'));
 	}
 	if (input.searchIntentId) {
-		recordQuickMatchEvent(input.searchIntentId, 'keychain_authorization_approved', {
+		if (!recordQuickMatchEvent(input.searchIntentId, 'keychain_authorization_approved', {
 			account: input.accountId,
 			cached: false,
-		});
+		})) {
+			throw new Error('Quick Match authorization approval invariant violated.');
+		}
 	}
 	return {
 		delegation: { ...delegation, hiveSig: signed.signature },
@@ -653,7 +657,9 @@ export function useMatchmaking() {
 
 			const sharedNetwork = isSharedNetworkEnvironment();
 			activeQuickMatchIntentId = searchIntentId;
-			recordQuickMatchEvent(searchIntentId, 'quick_match_intent', { sharedNetwork });
+			if (!recordQuickMatchEvent(searchIntentId, 'quick_match_intent', { sharedNetwork })) {
+				return failJoin('Quick Match could not start safely. Try again.');
+			}
 			const authenticatedHiveUsername = getAuthenticatedHiveUsername();
 			const matchmakingAccountId = resolveQuickMatchAccountId({
 				hiveUsername,
@@ -693,10 +699,10 @@ export function useMatchmaking() {
 					&& cachedDelegation.delegation.expiresAt > Date.now();
 				if (cachedIsReusable) {
 					delegation = cachedDelegation.delegation;
-					recordQuickMatchEvent(searchIntentId, 'keychain_authorization_approved', {
+					if (!recordQuickMatchEvent(searchIntentId, 'keychain_authorization_approved', {
 						account: accountId,
 						cached: true,
-					});
+					})) return failJoin('Quick Match authorization state is no longer valid. Try again.');
 				} else {
 					const built = await runQuickMatchAuthorizationSingleFlight(
 						`${p2pAccess.accountId}:${peerId}:${preparation.rulesetHash}:${preparation.engineHash}`,
@@ -712,10 +718,10 @@ export function useMatchmaking() {
 					cacheMatchmakingDelegation(built);
 				}
 			} else {
-				recordQuickMatchEvent(searchIntentId, 'keychain_authorization_approved', {
+				if (!recordQuickMatchEvent(searchIntentId, 'keychain_authorization_approved', {
 					cached: true,
 					mode: 'local',
-				});
+				})) return failJoin('Quick Match authorization state is no longer valid. Try again.');
 			}
 
 			const queueBodyResult = await buildQuickMatchQueueBody({
@@ -727,10 +733,10 @@ export function useMatchmaking() {
 				delegation,
 			});
 			if (!queueBodyResult.ok) return failJoin(queueBodyResult.message);
-			recordQuickMatchEvent(searchIntentId, 'matchmaking_search_started', {
-			account: p2pAccess.accountId,
-			sharedNetwork,
-		});
+			if (!recordQuickMatchEvent(searchIntentId, 'matchmaking_search_started', {
+				account: p2pAccess.accountId,
+				sharedNetwork,
+			})) return failJoin('Quick Match authorization was not completed. Try again.');
 
 			const existingQueueToken = useMatchmakingStore.getState().queueToken;
 			const response = await fetch(`${getMatchmakingApiBase()}/api/matchmaking/queue`, {

@@ -16,6 +16,7 @@ import {
 	buildMatchAcceptance,
 	buildQuickMatchQueueBody,
 	failQueuedStatus,
+	getQuickMatchTelemetry,
 	isMatchOfferForPeer,
 	readMatchmakingError,
 	resetQuickMatchTelemetryForTests,
@@ -175,6 +176,46 @@ describe('useMatchmaking quick-match access helpers', () => {
 			expect.stringContaining('ragnarok-matchmaking-delegation-v1'),
 			expect.objectContaining({ username: 'alice' }),
 		);
+	});
+
+	it('blocks a second wallet prompt for the same Quick Match intent', async () => {
+		const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({
+			success: true,
+			challenge: {
+				protocol: 'ragnarok-matchmaking-delegation-v1',
+				delegationId: 'delegation-single-prompt',
+				account: 'alice',
+				peerId: 'peer-one',
+				rulesetHash: 'ruleset-hash',
+				engineHash: 'engine-hash',
+				serverNonce: 'nonce_single_prompt',
+				issuedAt: Date.now(),
+				expiresAt: Date.now() + 600_000,
+			},
+		}), { status: 200 })));
+		vi.stubGlobal('fetch', fetchMock);
+		matchmakingMocks.signHiveMessage.mockResolvedValue({ success: true, signature: 'hive-signature' });
+
+		await buildMatchmakingDelegation({
+			peerId: 'peer-one',
+			accountId: 'alice',
+			rulesetHash: 'ruleset-hash',
+			engineHash: 'engine-hash',
+			searchIntentId: 'intent-single-prompt',
+		});
+
+		await expect(buildMatchmakingDelegation({
+			peerId: 'peer-one',
+			accountId: 'alice',
+			rulesetHash: 'ruleset-hash',
+			engineHash: 'engine-hash',
+			searchIntentId: 'intent-single-prompt',
+		})).rejects.toThrow('no second wallet prompt');
+		expect(matchmakingMocks.signHiveMessage).toHaveBeenCalledOnce();
+		expect(getQuickMatchTelemetry('intent-single-prompt')).toMatchObject({
+			promptCount: 2,
+			authorizationApproved: true,
+		});
 	});
 
 	it('turns a Keychain assertion into actionable Find feedback', async () => {
