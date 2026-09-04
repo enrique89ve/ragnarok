@@ -190,6 +190,28 @@ describe('MultiplayerLobby direct challenge helpers', () => {
 		expect(helpers.formatChallengeTimeRemaining(190_000, 10_000)).toBe('3m');
 	});
 
+	it('auto-accepts only a visible active Quick Match offer', () => {
+		const offer = {
+			protocol: 'ragnarok-match-offer-v1' as const,
+			offerId: 'offer-1',
+			matchId: 'room-1',
+			player: { peerId: 'peer-local', elo: 1000 },
+			opponent: { peerId: 'peer-remote', elo: 1000 },
+			createdAt: 1_000,
+			expiresAt: 2_000,
+			serverNonce: 'nonce-1',
+		};
+		expect(helpers.shouldAutoAcceptQuickMatchOffer({ status: 'offered', offer, pageVisible: true, searchIntentActive: true })).toBe(true);
+		expect(helpers.shouldAutoAcceptQuickMatchOffer({ status: 'offered', offer, pageVisible: false, searchIntentActive: true })).toBe(false);
+		expect(helpers.shouldAutoAcceptQuickMatchOffer({ status: 'offered', offer, pageVisible: true, searchIntentActive: false })).toBe(false);
+	});
+
+	it('reduces internal matchmaking errors to player-facing copy', () => {
+		expect(helpers.getPlayerFacingMatchmakingError('Matchmaking service unreachable: offline')).toContain('connection');
+		expect(helpers.getPlayerFacingMatchmakingError('Posting key rejected')).toContain('Approval');
+		expect(helpers.getPlayerFacingMatchmakingError('starter claim required')).toContain('starter claim');
+	});
+
 	it('keeps the lobby visible while connected transport is still syncing match state', () => {
 		expect(helpers.getConnectedMatchProgress({
 			connectionState: 'connected',
@@ -252,7 +274,7 @@ describe('MultiplayerLobby direct challenge helpers', () => {
 		})).toEqual({
 			ready: false,
 			title: 'Reconnecting',
-			detail: 'Attempt 1/2. 25s before technical result.',
+			detail: 'Restoring the match automatically (25s).',
 		});
 	});
 

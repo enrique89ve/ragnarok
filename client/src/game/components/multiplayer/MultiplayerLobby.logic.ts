@@ -141,17 +141,54 @@ export function resolveLobbyProgressStep(input: {
 	return 0;
 }
 
-export function getLobbyProgressCopy(step: number, hasOffer: boolean): { readonly eyebrow: string; readonly title: string; readonly detail: string } {
+export function getLobbyProgressCopy(
+	step: number,
+	hasOffer: boolean,
+	status: MatchmakingStatus = 'idle',
+): { readonly eyebrow: string; readonly title: string; readonly detail: string } {
 	if (step >= 3) {
 		return { eyebrow: 'Room sealed', title: 'Battle ready', detail: 'Entering now.' };
 	}
 	if (step === 2) {
-		return { eyebrow: 'Link established', title: 'Preparing battle', detail: 'Checking shared state.' };
+		return { eyebrow: 'Opponent found', title: 'Connecting', detail: 'Checking the shared battle state.' };
 	}
-	if (step === 1 || hasOffer) {
-		return { eyebrow: 'Opponent found', title: 'Authorize match', detail: 'Accept to continue.' };
+	if (hasOffer) {
+		return { eyebrow: 'Opponent found', title: 'Connecting', detail: 'Approval is sent automatically.' };
 	}
-	return { eyebrow: 'Gameplay-only P2P', title: 'Choose battle', detail: 'Find a peer.' };
+	if (step === 1 || status === 'authorizing' || status === 'accepting' || status === 'waiting_opponent') {
+		return status === 'authorizing'
+			? { eyebrow: 'Quick Match', title: 'Approve in Keychain', detail: 'One approval starts the search.' }
+			: { eyebrow: 'Quick Match', title: 'Finding opponent', detail: 'Your room is being prepared.' };
+	}
+	if (status === 'queued') {
+		return { eyebrow: 'Quick Match', title: 'Finding opponent', detail: 'Peer-only matchmaking is active.' };
+	}
+	return { eyebrow: 'Gameplay-only P2P', title: 'Find opponent', detail: 'One approval, then we search.' };
+}
+
+export function shouldAutoAcceptQuickMatchOffer(input: {
+	readonly status: MatchmakingStatus;
+	readonly offer: MatchOffer | null;
+	readonly pageVisible: boolean;
+	readonly searchIntentActive: boolean;
+}): boolean {
+	return input.status === 'offered'
+		&& input.offer !== null
+		&& input.pageVisible
+		&& input.searchIntentActive;
+}
+
+export function getPlayerFacingMatchmakingError(error: string | null): string | null {
+	if (!error) return null;
+	const normalized = error.toLowerCase();
+	if (normalized.includes('starter claim')) return 'Complete your starter claim before searching.';
+	if (normalized.includes('keychain') || normalized.includes('posting key') || normalized.includes('approval')) {
+		return 'Approval was not completed. Try again when Keychain is ready.';
+	}
+	if (normalized.includes('unreachable') || normalized.includes('network') || normalized.includes('http ') || normalized.includes('server')) {
+		return 'We could not reach matchmaking. Check your connection and try again.';
+	}
+	return 'We could not start the search. Try again.';
 }
 
 export type ConnectedMatchProgressInput = {
@@ -171,12 +208,13 @@ export type ConnectedMatchProgress =
 
 export function getConnectedMatchProgress(input: ConnectedMatchProgressInput): ConnectedMatchProgress {
 	if (input.connectionState === 'reconnecting' || input.connectionState === 'grace_period') {
-		const attempt = input.reconnectAttemptCount > 0 ? `Attempt ${input.reconnectAttemptCount}/2. ` : '';
-		const countdown = input.reconnectCountdown > 0 ? `${input.reconnectCountdown}s before technical result.` : 'Trying to restore the room.';
+		const countdown = input.reconnectCountdown > 0
+			? `Restoring the match automatically (${input.reconnectCountdown}s).`
+			: 'Restoring the match automatically.';
 		return {
 			ready: false,
 			title: 'Reconnecting',
-			detail: `${attempt}${countdown}`,
+			detail: countdown,
 		};
 	}
 	if (input.connectionState !== 'connected') {

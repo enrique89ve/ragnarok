@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useMatchmakingStore } from '../stores/matchmakingStore';
 import { usePeerStore } from '../stores/peerStore';
 import { useNFTUsername } from '../nft/hooks';
@@ -21,6 +21,7 @@ import { getCardRegistryHash } from '../data/effects/registryHash';
 import { getWasmHash, loadWasmEngine } from '../engine/wasmLoader';
 import { bindSessionKey, generateEphemeralSigningKey, generateSessionKey } from '../protocol/sessionKey';
 import { invokeClientWalletAction } from '../../data/wallet/clientWalletInvocation';
+import { recordSessionEvent } from '../../data/blockchain/transcriptBuilder';
 import {
 	cacheMatchAcceptance,
 	cacheMatchmakingDelegation,
@@ -58,6 +59,126 @@ type QuickMatchInFlight = {
 // lobby both expose the shared action. Keep the promise at module scope so a
 // second click or a screen transition cannot prepare/sign/enqueue twice.
 let quickMatchInFlight: QuickMatchInFlight | null = null;
+
+type QuickMatchAuthorizationFlight = {
+	key: string;
+	promise: Promise<MatchmakingDelegationBuildResult>;
+};
+
+let quickMatchAuthorizationInFlight: QuickMatchAuthorizationFlight | null = null;
+let quickMatchAcceptanceInFlight: Promise<boolean> | null = null;
+let quickMatchPreparation: Promise<Readonly<{ rulesetHash: string; engineHash: string }>> | null = null;
+let activeQuickMatchIntentId: string | null = null;
+
+type QuickMatchIntentTelemetry = {
+	authorizationApproved: boolean;
+	promptCount: number;
+	searchStarted: boolean;
+	matchFound: boolean;
+};
+
+const quickMatchTelemetry = new Map<string, QuickMatchIntentTelemetry>();
+
+function telemetryForIntent(intentId: string): QuickMatchIntentTelemetry {
+	const existing = quickMatchTelemetry.get(intentId);
+	if (existing) return existing;
+	const created: QuickMatchIntentTelemetry = {
+		authorizationApproved: false,
+		promptCount: 0,
+		searchStarted: false,
+		matchFound: false,
+	};
+	quickMatchTelemetry.set(intentId, created);
+	while (quickMatchTelemetry.size > 128) {
+		const oldest = quickMatchTelemetry.keys().next().value;
+		if (oldest === undefined) break;
+		quickMatchTelemetry.delete(oldest);
+	}
+	return created;
+}
+
+function recordQuickMatchEvent(
+	intentId: string,
+	kind: 'quick_match_intent' | 'keychain_authorization_started' | 'keychain_authorization_approved' | 'matchmaking_search_started' | 'match_found',
+	payload: Record<string, unknown> = {},
+): boolean {
+	const state = telemetryForIntent(intentId);
+	if (kind === 'keychain_authorization_started') {
+		state.promptCount += 1;
+		if (state.promptCount > 1) {
+			debug.error('[useMatchmaking] Quick Match wallet prompt invariant violated', { intentId });
+			return false;
+		}
+	}
+	if (kind === 'keychain_authorization_approved') state.authorizationApproved = true;
+	if (kind === 'matchmaking_search_started' && !state.authorizationApproved) {
+		debug.error('[useMatchmaking] Quick Match search started before authorization approval', { intentId });
+		return false;
+	}
+	if (kind === 'matchmaking_search_started') state.searchStarted = true;
+	if (kind === 'match_found') state.matchFound = true;
+	recordSessionEvent(kind, { intentId, ...payload });
+	return true;
+}
+
+function recordActiveQuickMatchFound(payload: Record<string, unknown>): void {
+	if (!activeQuickMatchIntentId) return;
+	const state = telemetryForIntent(activeQuickMatchIntentId);
+	if (state.matchFound) return;
+	recordQuickMatchEvent(activeQuickMatchIntentId, 'match_found', payload);
+}
+
+export function resetQuickMatchTelemetryForTests(): void {
+	quickMatchTelemetry.clear();
+	activeQuickMatchIntentId = null;
+}
+
+export function getQuickMatchTelemetry(intentId: string): Readonly<QuickMatchIntentTelemetry> | null {
+	const state = quickMatchTelemetry.get(intentId);
+	return state ? { ...state } : null;
+}
+
+/**
+ * Warm deterministic prerequisites once per browser session. It deliberately
+ * excludes wallet/session work: entering the lobby must never prompt Keychain.
+ */
+export function prewarmQuickMatch(): Promise<Readonly<{ rulesetHash: string; engineHash: string }>> {
+	if (quickMatchPreparation) return quickMatchPreparation;
+	quickMatchPreparation = (async () => {
+		await loadWasmEngine();
+		const rulesetHash = await getCardRegistryHash();
+		return { rulesetHash, engineHash: getWasmHash() };
+	})().catch(error => {
+		quickMatchPreparation = null;
+		throw error;
+	});
+	return quickMatchPreparation;
+}
+
+export function runQuickMatchAuthorizationSingleFlight(
+	key: string,
+	runAttempt: () => Promise<MatchmakingDelegationBuildResult>,
+): Promise<MatchmakingDelegationBuildResult> {
+	if (quickMatchAuthorizationInFlight?.key === key) return quickMatchAuthorizationInFlight.promise;
+	const promise = Promise.resolve().then(runAttempt);
+	quickMatchAuthorizationInFlight = { key, promise };
+	void promise.then(
+		() => { if (quickMatchAuthorizationInFlight?.promise === promise) quickMatchAuthorizationInFlight = null; },
+		() => { if (quickMatchAuthorizationInFlight?.promise === promise) quickMatchAuthorizationInFlight = null; },
+	);
+	return promise;
+}
+
+export function runQuickMatchAcceptanceSingleFlight(runAttempt: () => Promise<boolean>): Promise<boolean> {
+	if (quickMatchAcceptanceInFlight) return quickMatchAcceptanceInFlight;
+	const promise = Promise.resolve().then(runAttempt);
+	quickMatchAcceptanceInFlight = promise;
+	void promise.then(
+		() => { if (quickMatchAcceptanceInFlight === promise) quickMatchAcceptanceInFlight = null; },
+		() => { if (quickMatchAcceptanceInFlight === promise) quickMatchAcceptanceInFlight = null; },
+	);
+	return promise;
+}
 
 export function runQuickMatchSingleFlight(runAttempt: (intentId: string) => Promise<boolean>): Promise<boolean> {
 	if (quickMatchInFlight) return quickMatchInFlight.promise;
@@ -181,6 +302,7 @@ export async function buildMatchmakingDelegation(input: {
 	readonly accountId: string;
 	readonly rulesetHash: string;
 	readonly engineHash: string;
+	readonly searchIntentId?: string;
 }): Promise<MatchmakingDelegationBuildResult> {
 	const ephemeralKey = await generateEphemeralSigningKey();
 	const challengeResponse = await fetch(`${getMatchmakingApiBase()}/api/matchmaking/delegation-challenge`, {
@@ -204,6 +326,11 @@ export async function buildMatchmakingDelegation(input: {
 		...challenge,
 		ephemeralPubkey: ephemeralKey.pubkey,
 	};
+	if (input.searchIntentId) {
+		recordQuickMatchEvent(input.searchIntentId, 'keychain_authorization_started', {
+			account: input.accountId,
+		});
+	}
 	const signed = await invokeClientWalletAction(
 		{ kind: 'p2p_matchmaking_delegation', authority: 'Posting', label: 'Find opponent' },
 		() => signHiveMessage(buildMatchmakingDelegationMessage(delegation), {
@@ -213,6 +340,12 @@ export async function buildMatchmakingDelegation(input: {
 	);
 	if (!signed.success || !signed.signature) {
 		throw new Error(getHiveKeychainError({ success: false, error: signed.error }, 'Matchmaking authorization signature rejected.'));
+	}
+	if (input.searchIntentId) {
+		recordQuickMatchEvent(input.searchIntentId, 'keychain_authorization_approved', {
+			account: input.accountId,
+			cached: false,
+		});
 	}
 	return {
 		delegation: { ...delegation, hiveSig: signed.signature },
@@ -308,6 +441,7 @@ function applyReadyMatchmakingPayload(data: Record<string, unknown>, actions: Ma
 	if (typeof data.isHost !== 'boolean') {
 		throw new Error('Matchmaking server did not return host assignment');
 	}
+	recordActiveQuickMatchFound({ status: 'ready', matchId: typeof data.matchId === 'string' ? data.matchId : null });
 
 	const localMatchChallenge = readOptionalMatchmakingChallenge(data.matchChallenge, 'match challenge');
 	const opponentMatchChallenge = readOptionalMatchmakingChallenge(data.opponentMatchChallenge, 'opponent match challenge');
@@ -322,6 +456,7 @@ function applyReadyMatchmakingPayload(data: Record<string, unknown>, actions: Ma
 	actions.setOpponent(data.opponentPeerId, data.isHost);
 	if (typeof data.matchId === 'string') actions.setRoomId(data.matchId);
 	actions.setQueuePosition(null);
+	activeQuickMatchIntentId = null;
 }
 
 function applyOfferedMatchmakingPayload(
@@ -346,6 +481,7 @@ function applyOfferedMatchmakingPayload(
 		? data.queueToken
 		: fallbackQueueToken;
 	if (!offeredToken) throw new Error('Matchmaking server did not return a queue token');
+	recordActiveQuickMatchFound({ status: 'offered', matchId: offer.matchId, offerId: offer.offerId });
 	actions.setQueueToken(offeredToken);
 	actions.setOffer?.(offer);
 	actions.setMatchCommitted?.(false);
@@ -447,7 +583,25 @@ function startServerStatusPoller(actions: MatchmakingActions): void {
 }
 
 export function useMatchmaking() {
+	useEffect(() => {
+		usePeerStore.getState().prepareForMatchmaking();
+		void prewarmQuickMatch().catch(error => {
+			debug.warn('[useMatchmaking] quick-match prewarm failed; Find will retry it', error);
+		});
+	}, []);
+
 	const hiveUsername = useNFTUsername();
+	useEffect(() => {
+		if (!isSharedNetworkEnvironment()) return;
+		const accountId = resolveQuickMatchAccountId({
+			hiveUsername,
+			authenticatedHiveUsername: getAuthenticatedHiveUsername(),
+		});
+		if (!accountId) return;
+		void hasSharedNetworkStarterClaimReceipt(accountId).catch(error => {
+			debug.warn('[useMatchmaking] starter status prewarm failed; Find will retry it', error);
+		});
+	}, [hiveUsername]);
 	const {
 		status,
 		queuePosition,
@@ -482,6 +636,7 @@ export function useMatchmaking() {
 			setRoomId(null);
 			setOffer(null);
 			setMatchCommitted(false);
+			if (activeQuickMatchIntentId === searchIntentId) activeQuickMatchIntentId = null;
 			return false;
 		};
 
@@ -497,6 +652,8 @@ export function useMatchmaking() {
 			setError(null);
 
 			const sharedNetwork = isSharedNetworkEnvironment();
+			activeQuickMatchIntentId = searchIntentId;
+			recordQuickMatchEvent(searchIntentId, 'quick_match_intent', { sharedNetwork });
 			const authenticatedHiveUsername = getAuthenticatedHiveUsername();
 			const matchmakingAccountId = resolveQuickMatchAccountId({
 				hiveUsername,
@@ -525,27 +682,40 @@ export function useMatchmaking() {
 
 			let delegation: MatchmakingDelegationProof | undefined;
 			if (sharedNetwork && p2pAccess.accountId) {
-				await loadWasmEngine();
-				const [rulesetHash] = await Promise.all([getCardRegistryHash()]);
+				const accountId = p2pAccess.accountId;
+				const preparation = await prewarmQuickMatch();
 				const cachedDelegation = getCachedMatchmakingDelegation();
 				const cachedIsReusable = cachedDelegation
-					&& cachedDelegation.delegation.account === p2pAccess.accountId
+					&& cachedDelegation.delegation.account === accountId
 					&& cachedDelegation.delegation.peerId === peerId
-					&& cachedDelegation.delegation.rulesetHash === rulesetHash
-					&& cachedDelegation.delegation.engineHash === getWasmHash()
+					&& cachedDelegation.delegation.rulesetHash === preparation.rulesetHash
+					&& cachedDelegation.delegation.engineHash === preparation.engineHash
 					&& cachedDelegation.delegation.expiresAt > Date.now();
 				if (cachedIsReusable) {
 					delegation = cachedDelegation.delegation;
-				} else {
-					const built = await buildMatchmakingDelegation({
-						peerId,
-						accountId: p2pAccess.accountId,
-						rulesetHash,
-						engineHash: getWasmHash(),
+					recordQuickMatchEvent(searchIntentId, 'keychain_authorization_approved', {
+						account: accountId,
+						cached: true,
 					});
+				} else {
+					const built = await runQuickMatchAuthorizationSingleFlight(
+						`${p2pAccess.accountId}:${peerId}:${preparation.rulesetHash}:${preparation.engineHash}`,
+						() => buildMatchmakingDelegation({
+							peerId,
+							accountId,
+							rulesetHash: preparation.rulesetHash,
+							engineHash: preparation.engineHash,
+							searchIntentId,
+						}),
+					);
 					delegation = built.delegation;
 					cacheMatchmakingDelegation(built);
 				}
+			} else {
+				recordQuickMatchEvent(searchIntentId, 'keychain_authorization_approved', {
+					cached: true,
+					mode: 'local',
+				});
 			}
 
 			const queueBodyResult = await buildQuickMatchQueueBody({
@@ -557,6 +727,10 @@ export function useMatchmaking() {
 				delegation,
 			});
 			if (!queueBodyResult.ok) return failJoin(queueBodyResult.message);
+			recordQuickMatchEvent(searchIntentId, 'matchmaking_search_started', {
+			account: p2pAccess.accountId,
+			sharedNetwork,
+		});
 
 			const existingQueueToken = useMatchmakingStore.getState().queueToken;
 			const response = await fetch(`${getMatchmakingApiBase()}/api/matchmaking/queue`, {
@@ -615,7 +789,7 @@ export function useMatchmaking() {
 		}
 	}), [hiveUsername, setStatus, setError, setQueuePosition, setOpponent, setRoomId, setQueueToken, setOffer, setMatchCommitted]);
 
-	const acceptOffer = useCallback(async (): Promise<boolean> => {
+	const acceptOffer = useCallback((): Promise<boolean> => runQuickMatchAcceptanceSingleFlight(async () => {
 		const currentOffer = useMatchmakingStore.getState().offer ?? offer;
 		const peerId = usePeerStore.getState().myPeerId;
 		if (!currentOffer || !peerId || !isMatchOfferForPeer(currentOffer, peerId)) {
@@ -718,7 +892,7 @@ export function useMatchmaking() {
 			setError(err instanceof Error ? err.message : 'Could not accept this match.');
 			return false;
 		}
-	}, [offer, hiveUsername, setStatus, setError, setQueuePosition, setOpponent, setRoomId, setQueueToken, setOffer, setMatchCommitted]);
+	}), [offer, hiveUsername, setStatus, setError, setQueuePosition, setOpponent, setRoomId, setQueueToken, setOffer, setMatchCommitted]);
 
 	const declineOffer = useCallback(async (): Promise<void> => {
 		const currentOffer = useMatchmakingStore.getState().offer ?? offer;
@@ -736,6 +910,7 @@ export function useMatchmaking() {
 		}
 		clearCachedMatchAcceptance();
 		clearCachedMatchmakingDelegation();
+		activeQuickMatchIntentId = null;
 		reset();
 	}, [offer, reset]);
 
@@ -744,6 +919,7 @@ export function useMatchmaking() {
 		usePeerStore.getState().clearMatchChallenges();
 		clearCachedMatchAcceptance();
 		clearCachedMatchmakingDelegation();
+		activeQuickMatchIntentId = null;
 		clearServerStatusPoller();
 		const pendingJoin = quickMatchInFlight?.promise;
 		if (pendingJoin) await pendingJoin.catch(() => false);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
+import { useState, useEffect, useCallback, useRef, useSyncExternalStore } from 'react';
 import { usePeerStore } from '../../stores/peerStore';
 import { useMatchmaking } from '../../hooks/useMatchmaking';
 import { useNFTUsername } from '../../nft/hooks';
@@ -17,9 +17,7 @@ import {
 } from '../../../components/ui-norse';
 import {
 	Check,
-	ChevronRight,
 	Copy,
-	LockKeyhole,
 	LoaderCircle,
 	Radio,
 	Search,
@@ -44,15 +42,16 @@ import {
 	getDirectChallengeBlockCopy,
 	getDirectChallengeProtectedBlockMessage,
 	getDirectChallengeRoomAccessFor,
+	getPlayerFacingMatchmakingError,
 	getQuickMatchLobbyReadiness,
 	getLobbyProgressCopy,
 	isOutgoingChallengeActive,
 	resolveDirectChallengeRoomId,
 	resolveLobbyProgressStep,
+	shouldAutoAcceptQuickMatchOffer,
 	shouldClearDirectChallengeStateAfterPoll,
 	type ConnectedMatchProgress,
 	type DirectChallengeAccessContext,
-	type LobbyProgressStep,
 } from './MultiplayerLobby.logic';
 import './MultiplayerLobby.css';
 
@@ -63,39 +62,6 @@ interface MultiplayerLobbyProps {
 }
 
 const DIRECT_CHALLENGE_POLL_MS = 15_000;
-
-function LobbyProgressRail({ currentStep }: { readonly currentStep: number }) {
-	const steps: readonly { readonly key: LobbyProgressStep; readonly label: string; readonly detail: string }[] = [
-		{ key: 'find', label: 'Find', detail: 'Opponent' },
-		{ key: 'authorize', label: 'Authorize', detail: 'Both players' },
-		{ key: 'connect', label: 'Connect', detail: 'Shared room' },
-	];
-
-	return (
-		<ol className="grid grid-cols-3 border-y border-obsidian-700/80 bg-obsidian-950/45" aria-label="P2P match progress">
-			{steps.map((step, index) => {
-				const complete = index < currentStep;
-				const active = index === currentStep;
-				return (
-					<li
-						key={step.key}
-						className={`relative flex min-w-0 items-center justify-center gap-2 px-3 py-3 text-center sm:px-4 ${active ? 'bg-gold-300/8' : ''}`}
-						data-progress-state={complete ? 'complete' : active ? 'active' : 'locked'}
-					>
-						<span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-xs font-black ${complete ? 'border-rune-300/70 bg-rune-500/15 text-rune-300' : active ? 'border-gold-300 bg-gold-300 text-obsidian-950' : 'border-obsidian-600 text-ink-400'}`}>
-							{complete ? <Check className="h-3.5 w-3.5" aria-hidden={true} /> : active ? index + 1 : <LockKeyhole className="h-3 w-3" aria-hidden={true} />}
-						</span>
-						<span className="min-w-0">
-							<span className={`block whitespace-nowrap font-display text-[9px] font-black uppercase tracking-[0.1em] sm:text-[10px] sm:tracking-[0.16em] ${active ? 'text-gold-100' : complete ? 'text-rune-300' : 'text-ink-300'}`}>{step.label}</span>
-							<span className="hidden whitespace-nowrap text-[11px] text-ink-300 sm:block">{step.detail}</span>
-						</span>
-						{index < steps.length - 1 && <ChevronRight className="absolute -right-2 z-10 hidden h-4 w-4 text-obsidian-500 sm:block" aria-hidden={true} />}
-					</li>
-				);
-			})}
-		</ol>
-	);
-}
 
 type AsyncVoidHandler = () => void | Promise<void>;
 
@@ -503,8 +469,8 @@ function MatchmakingErrorPanel({
 			<div className="flex items-start gap-3">
 				<div className="grid h-8 w-8 shrink-0 place-items-center border border-blood-300/60 bg-blood-500/20 font-display font-black text-blood-200">!</div>
 				<div>
-					<p className="font-display text-xs font-black uppercase tracking-[0.14em] text-blood-200">Matchmaking error</p>
-					<p className="mt-1 text-sm leading-relaxed text-ink-100">{error}</p>
+					<p className="font-display text-xs font-black uppercase tracking-[0.14em] text-blood-200">Could not find opponent</p>
+					<p className="mt-1 text-sm leading-relaxed text-ink-100">{getPlayerFacingMatchmakingError(error)}</p>
 				</div>
 			</div>
 			<div className="flex flex-col gap-2 sm:flex-row">
@@ -704,9 +670,10 @@ function ConnectionErrorPanel({
 
 	return (
 		<div className="p-4 bg-(--blood-500)/10 border border-(--blood-500)/20 rounded-lg">
-			<p className="text-sm text-(--blood-300)">{error}</p>
+			<p className="font-display text-xs font-black uppercase tracking-[0.14em] text-(--blood-300)">Match interrupted</p>
+			<p className="mt-1 text-sm text-(--ink-200)">We could not reconnect this room.</p>
 				<Button onClick={onDisconnect} variant="outline" className="w-full mt-2 hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300 active:translate-y-px disabled:opacity-50">
-				Try Again
+				Leave match
 			</Button>
 		</div>
 	);
@@ -771,6 +738,8 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 	const [now, setNow] = useState(() => Date.now());
 	const [acceptingFrom, setAcceptingFrom] = useState<string | null>(null);
 	const [openingOutgoing, setOpeningOutgoing] = useState(false);
+	const [pageVisible, setPageVisible] = useState(() => typeof document === 'undefined' || document.visibilityState === 'visible');
+	const autoAcceptedOfferRef = useRef<string | null>(null);
 	const activeIncomingChallenges = getActiveIncomingChallenges(pendingChallenges, now);
 	const activeOutgoingChallenge = isOutgoingChallengeActive(outgoingChallenge, now) ? outgoingChallenge : null;
 	const sharedNetwork = isSharedNetworkEnvironment();
@@ -826,6 +795,24 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 			? { ready: true as const, title: 'Battle ready', detail: 'Both players are authorized and the battle state matches.' }
 			: { ready: false as const, title: 'Preparing battle', detail: quickBattleReadiness.reason }
 		: legacyMatchProgress;
+
+	useEffect(() => {
+		const handleVisibilityChange = () => setPageVisible(document.visibilityState === 'visible');
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+		return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+	}, []);
+
+	useEffect(() => {
+		if (!shouldAutoAcceptQuickMatchOffer({
+			status: matchmakingStatus,
+			offer: matchOffer,
+			pageVisible,
+			searchIntentActive: matchmakingStatus !== 'idle' && matchmakingStatus !== 'error',
+		}) || !matchOffer) return;
+		if (autoAcceptedOfferRef.current === matchOffer.offerId) return;
+		autoAcceptedOfferRef.current = matchOffer.offerId;
+		void acceptOffer();
+	}, [acceptOffer, matchOffer, matchmakingStatus, pageVisible]);
 
 	const fetchIncomingChallenges = useCallback(async (signal?: AbortSignal) => {
 		if (!hiveUsername) return;
@@ -1031,7 +1018,7 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 		matchOffer,
 		battleReady: quickBattleReadiness.ready,
 	});
-	const progressCopy = getLobbyProgressCopy(currentProgressStep, Boolean(matchOffer));
+	const progressCopy = getLobbyProgressCopy(currentProgressStep, Boolean(matchOffer), matchmakingStatus);
 
 	return (
 		<div className="multiplayer-lobby-shell min-h-dvh w-full overflow-y-auto px-4 py-6 text-ink-0 sm:px-6 sm:py-10">
@@ -1072,7 +1059,6 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 								Peer link
 							</span>
 						</div>
-						<LobbyProgressRail currentStep={currentProgressStep} />
 					</PanelHeader>
 					<PanelContent className="space-y-5 p-5 sm:p-6">
 					<IncomingChallengesPanel

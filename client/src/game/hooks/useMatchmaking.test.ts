@@ -18,6 +18,9 @@ import {
 	failQueuedStatus,
 	isMatchOfferForPeer,
 	readMatchmakingError,
+	resetQuickMatchTelemetryForTests,
+	runQuickMatchAcceptanceSingleFlight,
+	runQuickMatchAuthorizationSingleFlight,
 	runQuickMatchSingleFlight,
 	resolveQuickMatchAccountId,
 	resolveQuickMatchQueueAccess,
@@ -36,6 +39,7 @@ const matchTicket: P2PMatchTicket = {
 describe('useMatchmaking quick-match access helpers', () => {
 	beforeEach(() => {
 		matchmakingMocks.signHiveMessage.mockReset();
+		resetQuickMatchTelemetryForTests();
 		useMatchmakingStore.getState().reset();
 		usePeerStore.getState().disconnect();
 	});
@@ -257,6 +261,28 @@ describe('useMatchmaking quick-match access helpers', () => {
 		expect(runAttempt).toHaveBeenCalledTimes(2);
 		resolveAttempt?.(true);
 		expect(await third).toBe(true);
+	});
+
+	it('single-flights wallet authorization for the same preparation key', async () => {
+		const runAttempt = vi.fn(async () => { throw new Error('authorization stopped'); });
+		const first = runQuickMatchAuthorizationSingleFlight('alice:peer:rules:engine', runAttempt);
+		const second = runQuickMatchAuthorizationSingleFlight('alice:peer:rules:engine', runAttempt);
+		expect(second).toBe(first);
+		await Promise.resolve();
+		expect(runAttempt).toHaveBeenCalledOnce();
+		await expect(first).rejects.toThrow('authorization stopped');
+	});
+
+	it('single-flights automatic match acceptance before the first promise settles', async () => {
+		let resolveAttempt: ((value: boolean) => void) | undefined;
+		const runAttempt = vi.fn(() => new Promise<boolean>(resolve => { resolveAttempt = resolve; }));
+		const first = runQuickMatchAcceptanceSingleFlight(runAttempt);
+		const second = runQuickMatchAcceptanceSingleFlight(runAttempt);
+		expect(second).toBe(first);
+		await Promise.resolve();
+		expect(runAttempt).toHaveBeenCalledOnce();
+		resolveAttempt?.(true);
+		await expect(first).resolves.toBe(true);
 	});
 
 	it('never signs while building the queue request', async () => {
