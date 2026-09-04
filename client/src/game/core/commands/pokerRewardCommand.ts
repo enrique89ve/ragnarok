@@ -1,9 +1,31 @@
 import { sha256 as nobleSha256 } from '@noble/hashes/sha2.js';
 import type { CombatResolution } from '../../types/PokerCombatTypes';
+import type { GameState } from '../../types';
 import type { GrantPokerHandRewardsCommand } from './gameCommandTypes';
 
 const TEXT_ENCODER = new TextEncoder();
 const HEX = '0123456789abcdef';
+
+export type PokerRewardCommitRegistration = 'already_applied' | 'pending';
+
+/**
+ * Register the remote callback only while the canonical reward is genuinely
+ * absent. A local state update can win the race before the remote receipt is
+ * delivered, in which case the callback must settle immediately.
+ */
+export function registerPokerRewardCommit(input: {
+	readonly rewardId: string;
+	readonly gameState: Pick<GameState, 'pokerRewardIds'> | null;
+	readonly pending: Map<string, () => void>;
+	readonly onCommitted: () => void;
+}): PokerRewardCommitRegistration {
+	if (input.gameState?.pokerRewardIds?.includes(input.rewardId)) {
+		input.onCommitted();
+		return 'already_applied';
+	}
+	input.pending.set(input.rewardId, input.onCommitted);
+	return 'pending';
+}
 
 export function createPokerHandRewardsCommand(input: {
 	readonly matchId: string;

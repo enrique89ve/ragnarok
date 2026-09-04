@@ -24,7 +24,7 @@ import { computeChessPrevStateHash } from '../../../../engine/chessHash';
 import { computeInitialMatchRoot, computeInitialMatchRootDebug, computePokerCombatStateHash } from '../../../../p2p/phaseBoundaryRoot';
 import { isSharedNetworkEnvironment } from '../../../../config/featureFlags';
 import { findExistingMatchResult, type SlashEvidenceParams } from '../../../../../data/blockchain/slashEvidence';
-import { derivePokerHandRewardId, GAME_COMMAND_TYPES } from '../../../../core/commands';
+import { derivePokerHandRewardId, GAME_COMMAND_TYPES, registerPokerRewardCommit } from '../../../../core/commands';
 import type { ApplyGameCommandResult } from '../../../../core/commands';
 import type { GameCommandEnvelope, WireGameCommand } from '../../../../hooks/p2pEnvelope';
 import { useWarbandStore, selectArmy, selectDeckCardIds, selectDeckCardIdsByPiece } from '../../../../../lib/stores/useWarbandStore';
@@ -4682,7 +4682,12 @@ export function useWireSync() {
 		if (isP2PMatch && !isCardsCanonicalPlayerFrame) {
 			// The canonical player is the only sender. The other perspective waits
 			// for this exact rewardId so its pre-command hash remains contiguous.
-			pendingPokerRewardCommitsRef.current.set(command.rewardId, () => onCommitted?.());
+			registerPokerRewardCommit({
+				rewardId: command.rewardId,
+				gameState: useGameStore.getState().gameState,
+				pending: pendingPokerRewardCommitsRef.current,
+				onCommitted: () => onCommitted?.(),
+			});
 			return;
 		}
 		runCardsLocalAction(command, () => grantPokerHandRewards(command), (sent) => {

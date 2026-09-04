@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { CardData, CardInstance, GameState, HeroClass, Player } from '../types';
-import { applyGameCommand, applyOpponentCommand } from '../core/commands';
+import { applyGameCommand, applyOpponentCommand, registerPokerRewardCommit } from '../core/commands';
 import { createSeededIdGen } from '../utils/seededRng';
 
 const rewardCard: CardData = {
@@ -77,6 +77,38 @@ const command = {
 } as const;
 
 describe('Poker reward determinism', () => {
+	it('settles a late callback when the reward was already applied locally', () => {
+		const pending = new Map<string, () => void>();
+		const onCommitted = vi.fn();
+
+		const registration = registerPokerRewardCommit({
+			rewardId: command.rewardId,
+			gameState: { pokerRewardIds: [command.rewardId] },
+			pending,
+			onCommitted,
+		});
+
+		expect(registration).toBe('already_applied');
+		expect(onCommitted).toHaveBeenCalledOnce();
+		expect(pending).toHaveLength(0);
+	});
+
+	it('keeps the callback pending while the canonical reward is absent', () => {
+		const pending = new Map<string, () => void>();
+		const onCommitted = vi.fn();
+
+		const registration = registerPokerRewardCommit({
+			rewardId: command.rewardId,
+			gameState: { pokerRewardIds: [] },
+			pending,
+			onCommitted,
+		});
+
+		expect(registration).toBe('pending');
+		expect(pending.get(command.rewardId)).toBe(onCommitted);
+		expect(onCommitted).not.toHaveBeenCalled();
+	});
+
 	it('does not mutate the input state while applying the reward', () => {
 		const state = makeState();
 		const before = structuredClone(state);
