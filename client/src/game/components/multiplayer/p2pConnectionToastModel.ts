@@ -31,15 +31,9 @@ export function getP2PConnectionToastModel(input: {
 		};
 	}
 	if (input.connectionState === 'reconnecting' || input.connectionState === 'grace_period') {
-		const attempt = input.reconnectAttemptCount > 0
-			? `Attempt ${input.reconnectAttemptCount}/2. `
-			: '';
 		const countdown = input.reconnectCountdown > 0
-			? `${input.reconnectCountdown}s before the technical result.`
+			? `Restoring the match automatically (${input.reconnectCountdown}s).`
 			: 'Restoring the match automatically.';
-		const queued = input.bufferedMessageCount > 0
-			? ` ${input.bufferedMessageCount} message${input.bufferedMessageCount === 1 ? '' : 's'} queued safely.`
-			: '';
 		return {
 			kind: 'warning',
 			title: input.hardReloadResume
@@ -47,22 +41,21 @@ export function getP2PConnectionToastModel(input: {
 				: input.disconnectSide === 'opponent'
 					? 'Opponent connection interrupted'
 					: 'Connection interrupted',
-			description: `${attempt}${countdown}${queued}`,
+			description: countdown,
 		};
 	}
 	if (input.connectionState === 'error') {
 		return {
 			kind: 'error',
-			title: 'Match connection failed',
-			description: input.error ?? 'Return to the lobby and try again.',
+			title: 'Match interrupted',
+			description: 'We could not reconnect this match. Leave and try again.',
 		};
 	}
 	if (input.connectionState === 'connected') {
-		const transport = input.transportKind === 'webrtc' ? 'Direct WebRTC' : 'Secure relay';
 		return {
 			kind: 'success',
 			title: 'Opponent connected',
-			description: `${transport} is ready. Match state will sync before play begins.`,
+			description: 'Match state will sync before play begins.',
 		};
 	}
 	return { kind: 'dismiss' };

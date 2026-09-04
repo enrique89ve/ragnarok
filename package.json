@@ -37,6 +37,7 @@
 		"test:watch": "vitest",
 		"smoke:phase0": "vitest run client/src/game/protocol/phase0.smoke.test.ts",
 		"audit:determinism": "node scripts/audit-wasm-determinism.mjs",
+		"qa:p2p-chaos": "node scripts/p2p-chaos-harness.mjs",
 		"lint": "node scripts/run-eslint.mjs",
 		"lint:fix": "node scripts/run-eslint.mjs --fix",
 		"lint:css": "stylelint 'client/src/**/*.css' --max-warnings=0",

@@ -8,30 +8,25 @@
 import { Download } from 'lucide-react';
 
 import { useP2PActions } from '../../context/useP2PActions';
-import { formatP2PTransportRole, getP2PTransportRole } from '../../p2p/p2pPerspective';
 import { usePeerStore } from '../../stores/peerStore';
 
 interface P2PStatusBadgeProps {
 	className?: string;
 }
 
-function reconnectStatusLabel(hardReloadResume: boolean, attemptCount: number): string {
-	if (hardReloadResume) {
-		return attemptCount > 0 ? `Rejoining ${attemptCount}/2` : 'Rejoining saved match';
-	}
-	return attemptCount > 0 ? `Attempt ${attemptCount}/2` : 'Reconnecting';
+function reconnectStatusLabel(hardReloadResume: boolean): string {
+	return hardReloadResume ? 'Rejoining saved match' : 'Reconnecting';
 }
 
 function badgeCaption(input: {
 	readonly connectionState: string;
-	readonly transportRoleLabel: string;
 	readonly unstableSubject: string;
 	readonly reconnectLabel: string;
 	readonly fallbackLabel: string;
 	readonly integrityPaused?: boolean;
 }): string {
 	if (input.integrityPaused) return 'Integrity paused';
-	if (input.connectionState === 'connected') return `P2P · ${input.transportRoleLabel}`;
+	if (input.connectionState === 'connected') return 'Connected';
 	if (input.connectionState === 'grace_period') return input.unstableSubject;
 	if (input.connectionState === 'reconnecting') return input.reconnectLabel;
 	return input.fallbackLabel;
@@ -59,11 +54,8 @@ const STATUS_CONFIG = {
 export const P2PStatusBadge: React.FC<P2PStatusBadgeProps> = ({ className = '' }) => {
 	const {
 		connectionState,
-		isHost,
 		reconnectCountdown,
-		reconnectAttemptCount,
 		disconnectSide,
-		bufferedMessageCount,
 		hardReloadResume,
 		p2pIntegrityError,
 	} = usePeerStore();
@@ -75,13 +67,11 @@ export const P2PStatusBadge: React.FC<P2PStatusBadgeProps> = ({ className = '' }
 	const config = integrityPaused
 		? { ...STATUS_CONFIG.error, label: 'Integrity paused' }
 		: STATUS_CONFIG[connectionState as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.connected;
-	const transportRoleLabel = formatP2PTransportRole(getP2PTransportRole(isHost));
 	const showCountdown = !integrityPaused && shouldShowReconnectCountdown(connectionState) && reconnectCountdown > 0;
 	const unstableSubject = disconnectSide === 'opponent' ? 'Opponent unstable' : 'Connection unstable';
-	const reconnectLabel = reconnectStatusLabel(hardReloadResume, reconnectAttemptCount);
+	const reconnectLabel = reconnectStatusLabel(hardReloadResume);
 	const caption = badgeCaption({
 		connectionState,
-		transportRoleLabel,
 		unstableSubject,
 		reconnectLabel,
 		fallbackLabel: config.label,
@@ -95,8 +85,8 @@ export const P2PStatusBadge: React.FC<P2PStatusBadgeProps> = ({ className = '' }
 				className={`p2p-status-badge ${className}`}
 				role="status"
 				aria-live="polite"
-				aria-label={`P2P multiplayer: ${caption}${showCountdown ? `, ${reconnectCountdown} seconds remaining` : ''}`}
-				title={`P2P Multiplayer — ${transportRoleLabel} — ${config.label}`}
+				aria-label={`Match: ${caption}${showCountdown ? `, ${reconnectCountdown} seconds remaining` : ''}`}
+				title={`Match connection — ${config.label}`}
 				style={{
 					position: 'fixed',
 					bottom: '18px',
@@ -128,11 +118,6 @@ export const P2PStatusBadge: React.FC<P2PStatusBadgeProps> = ({ className = '' }
 				/>
 				{caption}
 				{showCountdown && ` (${reconnectCountdown}s)`}
-				{bufferedMessageCount > 0 && connectionState !== 'connected' && (
-					<span style={{ fontSize: '9px', opacity: 0.6, marginLeft: 2 }}>
-						{bufferedMessageCount} queued
-					</span>
-				)}
 				<button
 					type="button"
 					aria-label="Download P2P session log"

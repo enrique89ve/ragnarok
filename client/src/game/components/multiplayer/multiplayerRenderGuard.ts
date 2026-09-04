@@ -47,12 +47,11 @@ function hasLiveBoard(input: P2PRenderGuardInput): boolean {
 }
 
 function reconnectWaitReason(input: P2PRenderGuardInput): string {
-	const attempt = input.reconnectAttemptCount > 0 ? ` Attempt ${input.reconnectAttemptCount}/2.` : '';
-	const countdown = input.reconnectCountdown > 0 ? ` ${input.reconnectCountdown}s before technical result.` : '';
+	const countdown = input.reconnectCountdown > 0 ? ` ${input.reconnectCountdown}s.` : '';
 	const prefix = input.hardReloadResume
 		? 'Rejoining your saved match from this device…'
 		: 'Reconnecting with opponent…';
-	return `${prefix}${attempt}${countdown}`;
+	return `${prefix}${countdown}`;
 }
 
 export function computeP2PRenderGuard(input: P2PRenderGuardInput): P2PRenderGuardDecision {
@@ -66,7 +65,7 @@ export function computeP2PRenderGuard(input: P2PRenderGuardInput): P2PRenderGuar
 	}
 	if (input.connectionState === 'error') {
 		if (hasLiveBoard(input)) return { kind: 'render' };
-		return { kind: 'wait', reason: 'P2P connection failed. Return to the lobby and try again.' };
+		return { kind: 'wait', reason: 'Match connection failed. Return to the lobby and try again.' };
 	}
 	if (input.connectionState !== 'connected') {
 		return { kind: 'wait', reason: 'Waiting for opponent connection…' };

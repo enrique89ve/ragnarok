@@ -45,6 +45,7 @@ integrity quarantine and both browsers stop gameplay.
   poker P2P adapter seam.
 - `TESTNET_READINESS_FAST_TRACK.md` — active work plan, technical debt, and
   release gates for Alfa Testnet to Closed Testnet Beta.
+- `scripts/p2p-chaos-harness.mjs` — two-profile browser chaos release gate.
 - `shared/p2p-wire/chess.ts` — chess wire schema (canon for chess envelopes).
 
 **Conventions**:
@@ -314,7 +315,13 @@ reintroducing WebRTC mid-match.
 	after competitive commitment, the disconnected side receives a local
 	technical result.
 - On reconnect, `useWireSync` does not run a new seed handshake. It sends
-  version/engine probes and `state_sync_request` for transcript recovery.
+  version/engine probes and `state_sync_request_v2` for domain-scoped recovery.
+  A recovery request carries the requesting domain (`cards`, `chess`, or
+  `poker`), its last local domain revision, the shared canonical-order cursor,
+  and an optional domain command-sequence cursor. The peer replays only retained
+  signed envelopes from that domain; it never installs a peer-authored board
+  snapshot. One incomplete or mismatching replay attempt enters integrity
+  quarantine.
 - P0 technical results are gameplay/UI outcomes only. They do not authorize
   RUNE settlement. Ranked RUNE must stay `no settlement` unless a future
   `timeout_claim`/`forfeit_claim` path can prove abandonment from a prior
@@ -330,6 +337,31 @@ reintroducing WebRTC mid-match.
   `P2P_MATCH_RESUME.md`) and rejoins the room with the same 2-attempt / 60s
   window. The relay does not hold the board. Ranked replay from the signed
   action log remains deferred (ADR 0007).
+
+### Browser chaos release gate
+
+The unit and in-memory multi-profile suites do not prove browser WebSocket,
+WebRTC, relay, or tab-lifecycle behavior. The release gate is the explicit
+two-profile harness in `scripts/p2p-chaos-harness.mjs`:
+
+```bash
+pnpm add -D playwright
+pnpm exec playwright install chromium
+pnpm run qa:p2p-chaos -- \
+  --url https://<deployed-host> \
+  --profile-a /path/to/profile-a \
+  --profile-b /path/to/profile-b \
+  --headed \
+  --out artifacts/p2p-chaos-evidence.json
+```
+
+Each profile must already contain the intended authenticated browser and
+Keychain setup. The harness injects bounded latency, drops, duplicates,
+reordering, a first WebRTC failure, and an offline/online reconnect on player
+A. It records console/page errors and requires both profiles to expose a
+BattleReady marker and a terminal-result marker before reporting
+`PASS`. A missing Playwright installation reports `BROWSER_GATE_BLOCKED`; a
+local unit-test pass is not a substitute for this deployed evidence.
 
 ---
 
@@ -604,6 +636,7 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `session_renewal` | peer→peer | both | **Future ADR 0004 settlement path**; disabled because current matches cannot request a reload Keychain signature |
 | `session_resumed` | peer→peer | both | **Future ADR 0004 settlement path**; not a current testnet release gate |
 | `state_sync_request` | peer→peer | both | Ask the **peer** for missing Cards `game_command` envelopes (`fromCommandSeq`) and transcript leaves (`fromTurn`) after reconnect or soft desync. The relay only fans the request out. The peer must have a contiguous retained command suffix or the session pauses. |
+| `state_sync_request_v2` | peer→peer | both | Domain-scoped recovery request with `domain`, `fromRevision`, `fromCanonicalOrder`, and an optional domain `fromCommandSeq`. The peer replays retained signed Cards, Chess, or Poker envelopes in sequence; a missing suffix is a hard integrity pause. |
 | `action_envelope` | peer→peer | broadcaster | Signed transcript leaf; retained for replay/audit and not an alternative to the signed gameplay envelope. Exact retransmissions are idempotent; any fork, gap, bad signature or foreign match quarantines the session. The receiver holds the next local cards command behind all remote leaves already applied but not yet verified (bounded queue, 8s timeout). |
 
 Envelope schemas live next to their handlers:

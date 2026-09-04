@@ -163,7 +163,7 @@ describe('computeP2PRenderGuard', () => {
 		});
 		expect(decision).toEqual({
 			kind: 'wait',
-			reason: 'Reconnecting with opponent… Attempt 1/2. 42s before technical result.',
+			reason: 'Reconnecting with opponent… 42s.',
 		});
 	});
 });
