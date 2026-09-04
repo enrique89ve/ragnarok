@@ -556,12 +556,21 @@ export function useWireSync() {
 	// Broadcaster role is canonical (A = first-mover, B = second-mover),
 	// derived from the WS host hint at seed_reveal — see seed_reveal handler.
 	const signedTranscriptRef = useRef<Transcript | null>(null);
+	const lastPokerQaHashRef = useRef<{ readonly matchId: string; readonly hash: string } | null>(null);
 	useEffect(() => {
 		if (!isP2PMatch) {
 			clearP2PQaSnapshot();
 			return;
 		}
 		const logicalClock = battleLifecycle?.logicalClock;
+		const currentPokerHash = computePokerCombatStateHash(currentPokerCombatState);
+		if (matchId && currentPokerHash) {
+			lastPokerQaHashRef.current = { matchId, hash: currentPokerHash };
+		}
+		const pokerHash = currentPokerHash
+			?? (matchId && lastPokerQaHashRef.current?.matchId === matchId
+				? lastPokerQaHashRef.current.hash
+				: null);
 		publishP2PQaSnapshot({
 			matchId,
 			canonicalOrder: logicalClock?.canonicalOrder ?? battleLifecycle?.lastCanonicalOrder ?? 0,
@@ -574,7 +583,7 @@ export function useWireSync() {
 			hashes: {
 				cards: computeCardsPrevStateHash(currentGameState, isCardsCanonicalPlayerFrame) || null,
 				chess: computeChessPrevStateHash(currentChessBoardState) || null,
-				poker: computePokerCombatStateHash(currentPokerCombatState),
+				poker: pokerHash,
 			},
 			result: battleLifecycle?.result ?? null,
 		});
