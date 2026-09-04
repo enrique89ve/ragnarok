@@ -415,7 +415,19 @@ export interface CombatResolution {
   wagerDrawPlayer?: number;          // Cards to draw for player
   wagerDrawOpponent?: number;        // Cards to draw for opponent
   wagerAoeDamagePlayer?: number;     // AOE to enemy minions (player's wager)
-  wagerAoeDamageOpponent?: number;   // AOE to enemy minions (opponent's wager)
+	wagerAoeDamageOpponent?: number;   // AOE to enemy minions (opponent's wager)
+}
+
+/**
+ * Deterministic snapshot that authorizes a post-hand reward. It remains
+ * available until the next hand starts so the receiving peer can verify the
+ * reward without trusting counts supplied by the wire.
+ */
+export interface PokerResolvedHand {
+	readonly combatId: string;
+	readonly handIndex: number;
+	readonly allInShowdown: boolean;
+	readonly resolution: CombatResolution;
 }
 
 /**

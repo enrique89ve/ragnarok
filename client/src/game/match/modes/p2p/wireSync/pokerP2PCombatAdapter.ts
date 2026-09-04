@@ -16,6 +16,7 @@ export type P2PPokerTurnClockInput = {
 
 export type P2PPokerCombatAdapter = {
 	readonly getPokerState: () => PokerCombatState | null;
+	readonly lastResolvedHand: ReturnType<typeof getPokerCombatAdapterState>['lastResolvedHand'];
 	readonly applyRemotePokerAction: (input: {
 		readonly playerId: string;
 		readonly action: CombatAction;
@@ -47,6 +48,9 @@ export type P2PPokerActionRejectionReason = 'no_combat_state' | 'engine_rejected
 export function getP2PPokerCombatAdapter(): P2PPokerCombatAdapter {
 	return {
 		getPokerState: () => getPokerCombatAdapterState().combatState,
+		get lastResolvedHand() {
+			return getPokerCombatAdapterState().lastResolvedHand;
+		},
 		applyRemotePokerAction: (input) => {
 			const engine = getPokerCombatAdapterState();
 			const before = engine.combatState;

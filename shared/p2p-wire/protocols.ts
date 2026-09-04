@@ -43,6 +43,7 @@ const RESUME_TYPES = new Set([
 	'session_renewal',
 	'session_resumed',
 	'state_sync_request',
+	'state_sync_request_v2',
 ]);
 
 export function classifyLogicalProtocol(messageType: string): RagnarokLogicalProtocol {

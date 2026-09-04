@@ -9,9 +9,10 @@ import React from 'react';
 import { useUnifiedCombatStore, PokerPhase } from '../stores/unifiedCombatStore';
 import {
   PokerCombatState,
-  CombatAction,
-  CombatResolution,
-  PokerCard,
+	CombatAction,
+	CombatResolution,
+	PokerResolvedHand,
+	PokerCard,
   PetData,
   PokerCombatDeterministicOptions,
 } from '../types/PokerCombatTypes';
@@ -33,7 +34,8 @@ export function getActionPermissions(
 }
 
 export interface PokerCombatAdapter {
-  combatState: PokerCombatState | null;
+	combatState: PokerCombatState | null;
+	lastResolvedHand: PokerResolvedHand | null;
   deck: PokerCard[];
   isActive: boolean;
   mulliganComplete: boolean;
@@ -107,7 +109,8 @@ const POKER_TO_UNIFIED_PHASE: Record<string, PokerPhase> = {
 };
 
 export function usePokerCombatAdapter(): PokerCombatAdapter {
-  const combatState = useUnifiedCombatStore(s => s.pokerCombatState);
+	const combatState = useUnifiedCombatStore(s => s.pokerCombatState);
+	const lastResolvedHand = useUnifiedCombatStore(s => s.lastResolvedPokerHand);
   const deck = useUnifiedCombatStore(s => s.pokerDeck);
   const isActive = useUnifiedCombatStore(s => s.pokerIsActive);
   const mulliganComplete = useUnifiedCombatStore(s => s.mulliganComplete);
@@ -135,7 +138,7 @@ export function usePokerCombatAdapter(): PokerCombatAdapter {
   const markBothPlayersReadyFn = useUnifiedCombatStore(s => s.markBothPlayersReady);
   const completeFirstStrikeFn = useUnifiedCombatStore(s => s.completeFirstStrike);
 
-  return React.useMemo(() => {
+	return React.useMemo(() => {
     const initializeCombatFromPayload = (payload: PokerCombatAdapterInit) => {
       initializePokerCombat(
         payload.playerId,
@@ -181,7 +184,8 @@ export function usePokerCombatAdapter(): PokerCombatAdapter {
     };
 
     return {
-      combatState,
+		combatState,
+		lastResolvedHand,
       deck,
       isActive,
       mulliganComplete,
@@ -305,7 +309,7 @@ export function usePokerCombatAdapter(): PokerCombatAdapter {
       },
     };
   // Deps intentionally limited - adapter identity should only change on these 4 values
-  }, [combatState, deck, isActive, mulliganComplete]);
+	}, [combatState, deck, isActive, mulliganComplete, lastResolvedHand]);
 }
 
 export function getPokerCombatAdapterState(): PokerCombatAdapter {
@@ -354,8 +358,9 @@ export function getPokerCombatAdapterState(): PokerCombatAdapter {
     );
   };
 
-  return {
-    combatState: getStore().pokerCombatState,
+	return {
+		combatState: getStore().pokerCombatState,
+		lastResolvedHand: getStore().lastResolvedPokerHand,
     deck: getStore().pokerDeck,
     isActive: getStore().pokerIsActive,
     mulliganComplete: getStore().mulliganComplete,

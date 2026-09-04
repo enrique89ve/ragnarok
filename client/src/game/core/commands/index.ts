@@ -22,7 +22,14 @@ export {
 } from './gameCommandTypes';
 export { applyGameCommand, applyOpponentCommand, type ApplyGameCommandDeps } from './applyGameCommand';
 export { applyPokerHandRewards } from './pokerRewardReducer';
-export { createPokerHandRewardsCommand, derivePokerHandRewardId, registerPokerRewardCommit } from './pokerRewardCommand';
+export {
+	applyPokerRewardAuthority,
+	createPokerHandRewardsCommand,
+	derivePokerHandRewardId,
+	derivePokerRewardAuthority,
+	registerPokerRewardCommit,
+	validatePokerRewardAuthority,
+} from './pokerRewardCommand';
 export {
 	canPlayCardInPokerWindow,
 	canActInPokerWindow,

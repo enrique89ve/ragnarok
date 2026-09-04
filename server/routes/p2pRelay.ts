@@ -131,6 +131,7 @@ const RELAY_ALLOWED_MESSAGE_TYPES: ReadonlySet<string> = new Set([
 	'session_renewal',
 	'session_resumed',
 	'state_sync_request',
+	'state_sync_request_v2',
 	'action_envelope',
 	'spectator_state',
 	'phase_checkpoint_propose_v1',

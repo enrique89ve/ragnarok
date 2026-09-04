@@ -47,7 +47,7 @@ export function resolveP2PMatchPauseView(input: {
 	if (input.connectionState === 'error') {
 		return {
 			kind: 'error',
-			title: 'Match connection failed',
+			title: 'Match interrupted',
 			detail: 'The board is paused. Export diagnostics, then return to the lobby.',
 			exportLabel: P2P_SESSION_JSON_EXPORT_LABEL,
 			showCountdown: false,
@@ -56,9 +56,8 @@ export function resolveP2PMatchPauseView(input: {
 	if (input.connectionState !== 'reconnecting' && input.connectionState !== 'grace_period') {
 		return null;
 	}
-	const attempt = input.reconnectAttemptCount > 0 ? `Attempt ${input.reconnectAttemptCount}/2. ` : '';
 	const countdown = input.reconnectCountdown > 0
-		? `${input.reconnectCountdown}s before the technical result.`
+		? `Restoring the match automatically (${input.reconnectCountdown}s).`
 		: 'Restoring the match automatically.';
 	const subject = input.disconnectSide === 'opponent'
 		? 'Opponent connection interrupted'
@@ -66,7 +65,7 @@ export function resolveP2PMatchPauseView(input: {
 	return {
 		kind: 'reconnecting',
 		title: subject,
-		detail: `${attempt}${countdown} Actions are locked. The board stays visible.`,
+		detail: `${countdown} Actions are locked. The board stays visible.`,
 		exportLabel: P2P_SESSION_JSON_EXPORT_LABEL,
 		showCountdown: input.reconnectCountdown > 0,
 	};

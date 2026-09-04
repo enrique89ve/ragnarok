@@ -120,6 +120,19 @@ describe('useWireSync global dependency boundary', () => {
 		expect(chess).toContain('pausePendingChessReceiptTimeout');
 	});
 
+	it('never falls back to a second Keychain signature for committed Quick Match', () => {
+		const sourcePath = join(dirname(fileURLToPath(import.meta.url)), 'useWireSync.ts');
+		const source = readFileSync(sourcePath, 'utf8');
+		const quickMatchStart = source.indexOf('const quickMatchCommitted =');
+		const legacyAuthorizationStart = source.indexOf('} else if (!shouldRequestP2PSessionAuthorizePrompt()', quickMatchStart);
+		const quickMatchAuthorization = source.slice(quickMatchStart, legacyAuthorizationStart);
+
+		expect(quickMatchStart).toBeGreaterThanOrEqual(0);
+		expect(legacyAuthorizationStart).toBeGreaterThan(quickMatchStart);
+		expect(quickMatchAuthorization).toContain('refusing legacy authorization fallback');
+		expect(quickMatchAuthorization).not.toContain('signSessionAuthorize');
+	});
+
 	it('records discovery choices with the same command identity on the remote path', () => {
 		const sourcePath = join(dirname(fileURLToPath(import.meta.url)), 'useWireSync.ts');
 		const source = readFileSync(sourcePath, 'utf8');

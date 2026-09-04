@@ -111,6 +111,15 @@ export type WireMessage =
 			/** First locally-missing Cards game_command seq, when available. */
 			fromCommandSeq?: number;
 		}
+	| {
+			type: 'state_sync_request_v2';
+			matchId: string;
+			domain: 'cards' | 'chess' | 'poker';
+			fromRevision: number;
+			fromCanonicalOrder: number;
+			/** Domain-specific cursor retained for rolling v1/v2 compatibility. */
+			fromCommandSeq?: number;
+		}
 	| { type: 'action_envelope'; matchId: string; seq: number; prevHash: string; action: unknown; sig: string };
 
 export interface HeartbeatMessage {

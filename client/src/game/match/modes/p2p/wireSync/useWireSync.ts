@@ -24,7 +24,13 @@ import { computeChessPrevStateHash } from '../../../../engine/chessHash';
 import { computeInitialMatchRoot, computeInitialMatchRootDebug, computePokerCombatStateHash } from '../../../../p2p/phaseBoundaryRoot';
 import { isSharedNetworkEnvironment } from '../../../../config/featureFlags';
 import { findExistingMatchResult, type SlashEvidenceParams } from '../../../../../data/blockchain/slashEvidence';
-import { derivePokerHandRewardId, GAME_COMMAND_TYPES, registerPokerRewardCommit } from '../../../../core/commands';
+import {
+	applyPokerRewardAuthority,
+	derivePokerHandRewardId,
+	GAME_COMMAND_TYPES,
+	registerPokerRewardCommit,
+	validatePokerRewardAuthority,
+} from '../../../../core/commands';
 import type { ApplyGameCommandResult } from '../../../../core/commands';
 import type { GameCommandEnvelope, WireGameCommand } from '../../../../hooks/p2pEnvelope';
 import { useWarbandStore, selectArmy, selectDeckCardIds, selectDeckCardIdsByPiece } from '../../../../../lib/stores/useWarbandStore';
@@ -40,6 +46,8 @@ import {
 	retryPendingChessTransition,
 	setChessSendObserver,
 	setChessGameplaySigner,
+	replayChessCommandEnvelopes,
+	getChessCommandSequence,
 } from '../../../../p2p/chessWireSender';
 import { getP2PProcessFlags, getP2PTransportRole } from '../../../../p2p/p2pPerspective';
 import { ensureCanonicalP2PChessBoard, isP2PBoardBoundTo } from '../../../../p2p/p2pChessBoardBinding';
@@ -131,7 +139,7 @@ import type {
 import { settleRemoteCommand } from './remoteCommandSettlement';
 import { commitCheckpoint, type CommittedCheckpoint } from '../../../../p2p/committedCheckpoint';
 import type { P2PLogicalDomain } from '@shared/p2p-wire/p2pCompetitionLifecycle';
-import { CLEAN_DESYNC_RECOVERY_LEDGER, observeDomainDesync, observeMatchingDomainInLedger } from '../../../../p2p/desyncRecovery';
+import { CLEAN_DESYNC_RECOVERY_LEDGER, getDomainRevision, observeDomainDesync, observeMatchingDomainInLedger } from '../../../../p2p/desyncRecovery';
 import { getCachedMatchAcceptance, getCachedMatchmakingDelegation } from '../../../../p2p/matchAcceptance';
 import { buildMatchAcceptanceMessage, buildMatchAcceptanceV2Message, readMatchAcceptanceProof } from '../../../../../../../shared/p2pMatchAcceptance';
 import { isCurrentMatchmakingDelegation, readMatchmakingDelegationProof, buildMatchmakingDelegationMessage } from '@shared/p2pMatchDelegation';
@@ -564,6 +572,7 @@ export function useWireSync() {
 	const localCommandSignChainRef = useRef<Promise<void>>(Promise.resolve());
 	const committedCardsCheckpointRef = useRef<CommittedCheckpoint | null>(null);
 	const sentCardsCommandHistoryRef = useRef<GameCommandEnvelope[]>([]);
+	const sentPokerActionHistoryRef = useRef<Array<Extract<P2PMessage, { type: 'poker_action' }>>>([]);
 	const desyncRecoveryRef = useRef(CLEAN_DESYNC_RECOVERY_LEDGER);
 	// Signed transcript envelopes use the same async signing boundary. Keep their
 	// append path serialized as well; otherwise two rapid cards actions can both
@@ -597,10 +606,23 @@ export function useWireSync() {
 		if (decision.action === 'request_replay') {
 			const activeMatchId = matchIdRef.current;
 			if (!activeMatchId) return false;
-			const fromTurn = signedTranscriptRef.current?.leaves.length ?? 0;
-			const fromCommandSeq = Math.max(0, lastIncomingSeqRef.current + 1);
-			const accepted = send({ type: 'state_sync_request', matchId: activeMatchId, fromTurn, fromCommandSeq });
-			recordSessionEvent('p2p_soft_resync_requested', { reason, fromTurn, fromCommandSeq, accepted });
+			const logicalClock = usePeerStore.getState().battleLifecycle?.logicalClock;
+			const fromRevision = getDomainRevision(logicalClock, domain);
+			const fromCanonicalOrder = logicalClock?.canonicalOrder ?? 0;
+			const fromCommandSeq = domain === 'cards'
+				? Math.max(0, lastIncomingSeqRef.current + 1)
+				: domain === 'chess'
+					? Math.max(0, lastIncomingChessSeqRef.current + 1)
+					: Math.max(0, lastIncomingPokerSeqRef.current + 1);
+			const accepted = send({
+				type: 'state_sync_request_v2',
+				matchId: activeMatchId,
+				domain,
+				fromRevision,
+				fromCanonicalOrder,
+				...(fromCommandSeq === undefined ? {} : { fromCommandSeq }),
+			});
+			recordSessionEvent('p2p_soft_resync_requested', { reason, domain, fromRevision, fromCanonicalOrder, accepted });
 			return accepted;
 		}
 		quarantineP2PSession(`desync_unrecovered_${reason}`);
@@ -639,6 +661,7 @@ export function useWireSync() {
 	const seenPokerDecisionIdsRef = useRef<Set<string>>(new Set());
 	const seenPokerDecisionIdsOrderRef = useRef<string[]>([]);
 	const pokerActionSeqRef = useRef(0);
+	const lastIncomingPokerSeqRef = useRef(-1);
 	// Poker reducers must not apply a second local decision while the first
 	// decision is waiting for its Ed25519 signature. The controller applies the
 	// reducer only after `sendPokerAction` resolves true.
@@ -1009,25 +1032,27 @@ export function useWireSync() {
 			clearTranscript(); // also resets moveCounter inside the transcript module
 			outgoingSeqCounter = 0;
 			lastIncomingSeqRef.current = -1;
-					seenCommandIdsRef.current.clear();
-					seenCommandIdsOrderRef.current.length = 0;
-					sentCardsCommandHistoryRef.current = [];
-					committedCardsCheckpointRef.current = null;
-					pendingPokerRewardCommitsRef.current.clear();
-					desyncRecoveryRef.current = CLEAN_DESYNC_RECOVERY_LEDGER;
-				lastIncomingChessSeqRef.current = -1;
-				seenChessCommandIdsRef.current.clear();
-					seenChessCommandIdsOrderRef.current.length = 0;
-					chessReceiptByCommandIdRef.current.clear();
-					chessReceiptCommandOrderRef.current.length = 0;
-					cardsReceiptByCommandIdRef.current.clear();
-					cardsReceiptCommandOrderRef.current.length = 0;
-					seenPokerDecisionIdsRef.current.clear();
-					seenPokerDecisionIdsOrderRef.current.length = 0;
-					pokerActionSeqRef.current = 0;
-					pokerActionSignPendingRef.current = false;
-					resetChessWireSender();
-				phaseCheckpointClient.reset();
+			seenCommandIdsRef.current.clear();
+			seenCommandIdsOrderRef.current.length = 0;
+			sentCardsCommandHistoryRef.current = [];
+			sentPokerActionHistoryRef.current = [];
+			committedCardsCheckpointRef.current = null;
+			pendingPokerRewardCommitsRef.current.clear();
+			desyncRecoveryRef.current = CLEAN_DESYNC_RECOVERY_LEDGER;
+			lastIncomingChessSeqRef.current = -1;
+			lastIncomingPokerSeqRef.current = -1;
+			seenChessCommandIdsRef.current.clear();
+			seenChessCommandIdsOrderRef.current.length = 0;
+			chessReceiptByCommandIdRef.current.clear();
+			chessReceiptCommandOrderRef.current.length = 0;
+			cardsReceiptByCommandIdRef.current.clear();
+			cardsReceiptCommandOrderRef.current.length = 0;
+			seenPokerDecisionIdsRef.current.clear();
+			seenPokerDecisionIdsOrderRef.current.length = 0;
+			pokerActionSeqRef.current = 0;
+			pokerActionSignPendingRef.current = false;
+			resetChessWireSender();
+			phaseCheckpointClient.reset();
 			lastEnvelopeSentAtRef.current = 0;
 			lastCardsCommandAtRef.current = 0;
 			sessionKeyRef.current = null;
@@ -1114,12 +1139,32 @@ export function useWireSync() {
 				});
 				const hash = typeof __BUILD_HASH__ !== 'undefined' ? __BUILD_HASH__ : 'dev';
 				send({ type: 'version_check', buildHash: hash });
-				send({
-					type: 'state_sync_request',
-					matchId: resumedMatchId,
-					fromTurn: signedTranscriptRef.current?.leaves.length ?? 0,
-					fromCommandSeq: Math.max(0, lastIncomingSeqRef.current + 1),
-				});
+				const logicalClock = usePeerStore.getState().battleLifecycle?.logicalClock;
+				const fromCanonicalOrder = logicalClock?.canonicalOrder ?? 0;
+				const domainRequests: Array<{
+					readonly domain: P2PLogicalDomain;
+					readonly fromRevision: number;
+					readonly fromCommandSeq: number;
+				}> = [
+					{
+						domain: 'cards',
+						fromRevision: logicalClock?.cardsRevision ?? 0,
+						fromCommandSeq: Math.max(0, lastIncomingSeqRef.current + 1),
+					},
+					{
+						domain: 'chess',
+						fromRevision: logicalClock?.chessRevision ?? 0,
+						fromCommandSeq: Math.max(0, lastIncomingChessSeqRef.current + 1),
+					},
+					{
+						domain: 'poker',
+						fromRevision: logicalClock?.pokerRevision ?? 0,
+						fromCommandSeq: Math.max(0, lastIncomingPokerSeqRef.current + 1),
+					},
+				];
+				for (const request of domainRequests) {
+					send({ type: 'state_sync_request_v2', matchId: resumedMatchId, fromCanonicalOrder, ...request });
+				}
 				debug.log('[wireSync] Reconnected existing P2P session without reseeding', {
 					matchId: resumedMatchId,
 					localLeaves: signedTranscriptRef.current?.leaves.length ?? 0,
@@ -2491,7 +2536,7 @@ export function useWireSync() {
 
 		// Lightweight payload validation; wireCommand is already a discriminated union.
 			switch (wireCommand.type) {
-			case GAME_COMMAND_TYPES.grantPokerHandRewards:
+		case GAME_COMMAND_TYPES.grantPokerHandRewards:
 				if (wireCommand.rewardId !== derivePokerHandRewardId(
 					expectedMatchId,
 					wireCommand.combatId,
@@ -2506,16 +2551,27 @@ export function useWireSync() {
 					rejectCanonicalCommand('poker_reward_hand_mismatch');
 					break;
 				}
+				const resolvedPokerHand = getP2PPokerCombatAdapter().lastResolvedHand;
+				if (!pokerRewardAlreadyApplied) {
+					const authorityError = validatePokerRewardAuthority(wireCommand, resolvedPokerHand);
+					if (authorityError) {
+						rejectCanonicalCommand(authorityError);
+						break;
+					}
+				}
+				const authoritativeRewardCommand = resolvedPokerHand
+					? applyPokerRewardAuthority(wireCommand, resolvedPokerHand)
+					: wireCommand;
 				const settlePokerRewardCommit = (): void => {
 						if (!recordRemoteCanonicalMove('grantPokerHandRewards', {
-							combatId: wireCommand.combatId,
-							handIndex: wireCommand.handIndex,
-							rewardId: wireCommand.rewardId,
-							wagerDrawPlayer: wireCommand.wagerDrawPlayer,
-							wagerDrawOpponent: wireCommand.wagerDrawOpponent,
-							wagerAoeDamagePlayer: wireCommand.wagerAoeDamagePlayer,
-							wagerAoeDamageOpponent: wireCommand.wagerAoeDamageOpponent,
-							allInShowdown: wireCommand.allInShowdown,
+							combatId: authoritativeRewardCommand.combatId,
+							handIndex: authoritativeRewardCommand.handIndex,
+							rewardId: authoritativeRewardCommand.rewardId,
+							wagerDrawPlayer: authoritativeRewardCommand.wagerDrawPlayer,
+							wagerDrawOpponent: authoritativeRewardCommand.wagerDrawOpponent,
+							wagerAoeDamagePlayer: authoritativeRewardCommand.wagerAoeDamagePlayer,
+							wagerAoeDamageOpponent: authoritativeRewardCommand.wagerAoeDamageOpponent,
+							allInShowdown: authoritativeRewardCommand.allInShowdown,
 							commandId: data.commandId,
 							seq: data.seq,
 						})) return;
@@ -2525,7 +2581,7 @@ export function useWireSync() {
 						pendingPokerRewardCommitsRef.current.delete(wireCommand.rewardId);
 						pendingCommit?.();
 				};
-				settleRemoteCommand(applyOpponentCommandToStore(wireCommand), {
+				settleRemoteCommand(applyOpponentCommandToStore(authoritativeRewardCommand), {
 					onApplied: settlePokerRewardCommit,
 					onIgnored: settlePokerRewardCommit,
 					onUnapplied: (reason) => rejectCanonicalCommand(reason),
@@ -3322,8 +3378,9 @@ export function useWireSync() {
 								decisionId: data.decisionId.slice(0, 24),
 							});
 						},
-						onApplied: () => {
+						 onApplied: () => {
 							commitRemotePokerDecision(pokerDecisionLedger, data.decisionId, SEEN_COMMAND_IDS_MAX);
+							if (data.seq !== undefined) lastIncomingPokerSeqRef.current = Math.max(lastIncomingPokerSeqRef.current, data.seq);
 							const remoteActorId = usePeerStore.getState().remotePeerId;
 							const canonicalOrder = remoteActorId
 								? commitNextP2PCanonicalAction({ actionId: data.decisionId, actorId: remoteActorId, domain: 'poker' })
@@ -3887,6 +3944,76 @@ export function useWireSync() {
 					break;
 				}
 
+				case 'state_sync_request_v2': {
+					const activeId = matchIdRef.current;
+					if (!activeId || data.matchId !== activeId) break;
+					const logicalClock = usePeerStore.getState().battleLifecycle?.logicalClock;
+					if (logicalClock && data.fromCanonicalOrder > logicalClock.canonicalOrder) {
+						debug.warn('[wireSync] state sync cursor is ahead of local canonical order', {
+							domain: data.domain,
+							fromCanonicalOrder: data.fromCanonicalOrder,
+							localCanonicalOrder: logicalClock.canonicalOrder,
+						});
+						break;
+					}
+					if (logicalClock && data.fromRevision > getDomainRevision(logicalClock, data.domain)) {
+						debug.warn('[wireSync] state sync domain cursor is ahead of local revision', {
+							domain: data.domain,
+							fromRevision: data.fromRevision,
+							localRevision: getDomainRevision(logicalClock, data.domain),
+						});
+						break;
+					}
+
+					let replayAccepted = true;
+					let replaySent = 0;
+					if (data.domain === 'cards') {
+						const replay = replayCardsCommandEnvelopes({
+							envelopes: sentCardsCommandHistoryRef.current,
+							fromSeq: data.fromCommandSeq ?? data.fromRevision,
+							nextSeq: outgoingSeqCounter,
+							send,
+						});
+						replayAccepted = replay.accepted;
+						replaySent = replay.sent;
+					} else if (data.domain === 'chess') {
+						const replay = replayChessCommandEnvelopes({
+							fromSeq: data.fromCommandSeq ?? data.fromRevision,
+							nextSeq: getChessCommandSequence(),
+							send,
+						});
+						replayAccepted = replay.accepted;
+						replaySent = replay.sent;
+					} else {
+						const fromSeq = data.fromCommandSeq ?? data.fromRevision;
+						const pokerEnvelopes = sentPokerActionHistoryRef.current
+							.filter(envelope => (envelope.seq ?? -1) >= fromSeq)
+							.sort((left, right) => (left.seq ?? -1) - (right.seq ?? -1));
+						const expectedCount = pokerActionSeqRef.current - fromSeq;
+						replayAccepted = expectedCount >= 0
+							&& pokerEnvelopes.length === expectedCount
+							&& pokerEnvelopes.every((envelope, index) => envelope.seq === fromSeq + index);
+						if (replayAccepted) {
+							for (const envelope of pokerEnvelopes) {
+								if (!send(envelope)) {
+									replayAccepted = false;
+									break;
+								}
+								replaySent += 1;
+							}
+						}
+					}
+					debug.log('[wireSync] state_sync_request_v2 — replaying domain history', {
+						domain: data.domain,
+						fromRevision: data.fromRevision,
+						fromCanonicalOrder: data.fromCanonicalOrder,
+						replaySent,
+						replayAccepted,
+					});
+					if (!replayAccepted) quarantineP2PSession(`state_sync_${data.domain}_history_incomplete`);
+					break;
+				}
+
 				case 'action_envelope': {
 					// ADR 0004 §Decision.4 (issue 03). Per-action signed
 					// envelopes feed a parallel transcript (additive to the
@@ -4224,16 +4351,6 @@ export function useWireSync() {
 				signerPubkey: key.pubkey,
 				signature,
 			};
-			const accepted = send(signedEnvelope);
-			if (!accepted) {
-				debug.warn('[wireSync] signed command was not accepted by transport/buffer');
-				return null;
-			}
-			sentCardsCommandHistoryRef.current.push(signedEnvelope);
-			if (sentCardsCommandHistoryRef.current.length > MAX_REPLAYABLE_CARDS_COMMANDS) {
-				sentCardsCommandHistoryRef.current.shift();
-			}
-			outgoingSeqCounter += 1;
 			let resolveApplied: (receipt: ActionAppliedMessage | null) => void = () => undefined;
 			const appliedPromise = new Promise<ActionAppliedMessage | null>((resolve) => {
 				resolveApplied = resolve;
@@ -4250,6 +4367,29 @@ export function useWireSync() {
 			};
 			pendingCardsActionGateRef.current.set(unsignedEnvelope.commandId, pendingGate);
 			armCardsActionGateTimeout(unsignedEnvelope.commandId);
+			let accepted = false;
+			try {
+				accepted = send(signedEnvelope);
+			} catch (error) {
+				if (pendingCardsActionGateRef.current.get(unsignedEnvelope.commandId) === pendingGate) {
+					if (pendingGate.timeout) clearTimeout(pendingGate.timeout);
+					pendingCardsActionGateRef.current.delete(unsignedEnvelope.commandId);
+				}
+				throw error;
+			}
+			if (!accepted) {
+				if (pendingCardsActionGateRef.current.get(unsignedEnvelope.commandId) === pendingGate) {
+					if (pendingGate.timeout) clearTimeout(pendingGate.timeout);
+					pendingCardsActionGateRef.current.delete(unsignedEnvelope.commandId);
+				}
+				debug.warn('[wireSync] signed command was not accepted by transport/buffer');
+				return null;
+			}
+			sentCardsCommandHistoryRef.current.push(signedEnvelope);
+			if (sentCardsCommandHistoryRef.current.length > MAX_REPLAYABLE_CARDS_COMMANDS) {
+				sentCardsCommandHistoryRef.current.shift();
+			}
+			outgoingSeqCounter += 1;
 			const receipt = await appliedPromise;
 			if (!receipt) return null;
 			return {
@@ -4860,12 +5000,11 @@ export function useWireSync() {
 		const pokerState = getP2PPokerCombatAdapter().getPokerState();
 		const prevStateHash = input.prevStateHash ?? computePokerCombatStateHash(pokerState);
 		if (!prevStateHash) return false;
-		// Reserve the correlation number before the asynchronous WebCrypto call;
-		// two fast clicks must never sign the same sequence number. Gaps caused by
-		// a failed/stale signature are harmless because Poker deduplicates by the
-		// signed decisionId and does not require contiguous delivery.
+		// Reserve the current sequence while signing. It advances only after the
+		// referee gate and applied receipt both succeed, so recovery can replay a
+		// contiguous suffix of accepted Poker actions.
 		pokerActionSignPendingRef.current = true;
-		const pokerSeq = pokerActionSeqRef.current++;
+		const pokerSeq = pokerActionSeqRef.current;
 		const pokerAction = {
 			playerId: input.playerId,
 			action: input.action,
@@ -4950,14 +5089,26 @@ export function useWireSync() {
 					cancelGateAckWait();
 					throw error;
 				}
-				return await gateAckPromise;
+				const accepted = await gateAckPromise;
+				if (accepted) {
+					sentPokerActionHistoryRef.current.push(gameplayMessage);
+					if (sentPokerActionHistoryRef.current.length > SEEN_COMMAND_IDS_MAX) sentPokerActionHistoryRef.current.shift();
+					pokerActionSeqRef.current += 1;
+				}
+				return accepted;
 			}
 			const accepted = send(gameplayMessage);
 			if (!accepted) {
 				cancelGateAckWait();
 				return false;
 			}
-			return await gateAckPromise;
+			const acceptedByRelay = await gateAckPromise;
+			if (acceptedByRelay) {
+				sentPokerActionHistoryRef.current.push(gameplayMessage);
+				if (sentPokerActionHistoryRef.current.length > SEEN_COMMAND_IDS_MAX) sentPokerActionHistoryRef.current.shift();
+				pokerActionSeqRef.current += 1;
+			}
+			return acceptedByRelay;
 		} catch (error) {
 			debug.warn('[wireSync] poker gameplay signing/send failed', error);
 			quarantineP2PSession('poker_action_signing_failed');

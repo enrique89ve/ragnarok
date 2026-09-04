@@ -550,6 +550,24 @@ describe('parseWireMessage — integrity probes', () => {
 		})).toBeNull();
 	});
 
+	it('accepts domain-scoped state-sync requests with canonical cursors', () => {
+		expect(parseWireMessage({
+			type: 'state_sync_request_v2',
+			matchId: 'match-integrity-1',
+			domain: 'poker',
+			fromRevision: 2,
+			fromCanonicalOrder: 7,
+		})).toMatchObject({ domain: 'poker', fromRevision: 2, fromCanonicalOrder: 7 });
+		expect(parseWireMessage({
+			type: 'state_sync_request_v2',
+			matchId: 'match-integrity-1',
+			domain: 'cards',
+			fromRevision: 2,
+			fromCanonicalOrder: 7,
+			fromCommandSeq: -1,
+		})).toBeNull();
+	});
+
 	it('rejects a Poker hash check without its turn identity', () => {
 		expect(parseWireMessage({
 			type: 'poker_hash_check',

@@ -72,6 +72,8 @@ import type { Hash256 } from '@shared/p2p-wire/integrity';
 
 let outgoingChessSeq = 0;
 let pendingChessEnvelope: ChessCommandEnvelope | null = null;
+const MAX_REPLAYABLE_CHESS_COMMANDS = 256;
+const sentChessCommandHistory: ChessCommandEnvelope[] = [];
 let pendingChessReceiptTimeout: ReturnType<typeof setTimeout> | null = null;
 // Invalidates async signing continuations when a transport/session reset
 // starts a new wire epoch. Without this, a late signature from the old match
@@ -168,6 +170,41 @@ let chessSendObserver: ChessSendObserver | null = null;
 
 export function setChessSendObserver(observer: ChessSendObserver | null): void {
 	chessSendObserver = observer;
+}
+
+export type ChessCommandReplayResult = Readonly<{
+	readonly accepted: boolean;
+	readonly sent: number;
+	readonly total: number;
+}>;
+
+export function getChessCommandSequence(): number {
+	return outgoingChessSeq;
+}
+
+export function replayChessCommandEnvelopes(input: {
+	readonly fromSeq: number;
+	readonly nextSeq: number;
+	readonly send: (envelope: ChessCommandEnvelope) => boolean;
+}): ChessCommandReplayResult {
+	if (!Number.isSafeInteger(input.fromSeq) || input.fromSeq < 0
+		|| !Number.isSafeInteger(input.nextSeq) || input.nextSeq < input.fromSeq) {
+		return { accepted: false, sent: 0, total: 0 };
+	}
+	const envelopes = sentChessCommandHistory
+		.filter(envelope => envelope.seq >= input.fromSeq)
+		.sort((left, right) => left.seq - right.seq);
+	const expectedCount = input.nextSeq - input.fromSeq;
+	if (envelopes.length !== expectedCount
+		|| envelopes.some((envelope, index) => envelope.seq !== input.fromSeq + index)) {
+		return { accepted: false, sent: 0, total: expectedCount };
+	}
+	let sent = 0;
+	for (const envelope of envelopes) {
+		if (!input.send(envelope)) return { accepted: false, sent, total: envelopes.length };
+		sent += 1;
+	}
+	return { accepted: true, sent, total: envelopes.length };
 }
 
 export interface ChessMoveEmit {
@@ -474,6 +511,8 @@ function dispatchChessCommand(
 			debug.error('[chessWireSender] transition quarantined — transport rejected signed command');
 			return;
 		}
+		sentChessCommandHistory.push(envelope);
+		if (sentChessCommandHistory.length > MAX_REPLAYABLE_CHESS_COMMANDS) sentChessCommandHistory.shift();
 		armPendingChessReceiptTimeout(envelope, postCheckpoint.root);
 		const actorId = usePeerStore.getState().myPeerId;
 		const transcriptCanonicalOrder = actorId
@@ -695,6 +734,7 @@ export function resetChessWireSender(): void {
 	outgoingChessSeq = 0;
 	clearPendingChessReceiptTimeout();
 	pendingChessEnvelope = null;
+	sentChessCommandHistory.length = 0;
 	clearQueuedP2PBattleStart();
 	pendingChessSignature = false;
 	chessGameplaySigner = null;

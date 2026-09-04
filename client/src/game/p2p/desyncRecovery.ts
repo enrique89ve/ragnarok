@@ -1,4 +1,4 @@
-import type { P2PLogicalDomain } from '@shared/p2p-wire/p2pCompetitionLifecycle';
+import type { P2PLogicalClock, P2PLogicalDomain } from '@shared/p2p-wire/p2pCompetitionLifecycle';
 
 export type DesyncRecoveryState = Readonly<{
 	readonly status: 'clean' | 'replay_requested';
@@ -27,6 +27,15 @@ export const CLEAN_DESYNC_RECOVERY_LEDGER: DesyncRecoveryLedger = Object.freeze(
 	chess: CLEAN_DESYNC_RECOVERY,
 	poker: CLEAN_DESYNC_RECOVERY,
 });
+
+export function getDomainRevision(clock: P2PLogicalClock | undefined, domain: P2PLogicalDomain): number {
+	if (!clock) return 0;
+	switch (domain) {
+		case 'cards': return clock.cardsRevision;
+		case 'chess': return clock.chessRevision;
+		case 'poker': return clock.pokerRevision;
+	}
+}
 
 /** One bounded transcript replay gets a chance before a root mismatch pauses. */
 export function observeDesync(state: DesyncRecoveryState): DesyncRecoveryDecision {

@@ -83,6 +83,7 @@ export const useUnifiedCombatStore = create<UnifiedCombatStore>()((set, get, api
       isTransitioningHand: false,
       pokerHandsWonPlayer: 0,
       pokerHandsWonOpponent: 0,
+      lastResolvedPokerHand: null,
       playerKingAbility: null,
       opponentKingAbility: null,
       allActiveMines: [],

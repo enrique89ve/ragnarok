@@ -17,10 +17,11 @@ import {
   ArmySelection
 } from '../../types/ChessTypes';
 import {
-  PokerCombatState,
-  PokerCard,
-  CombatResolution,
-  PetData,
+	PokerCombatState,
+	PokerCard,
+	CombatResolution,
+	PokerResolvedHand,
+	PetData,
   CombatAction,
   PokerCombatDeterministicOptions
 } from '../../types/PokerCombatTypes';
@@ -129,8 +130,9 @@ export interface PokerCombatSliceState {
   pokerIsActive: boolean;
   mulliganComplete: boolean;
   isTransitioningHand: boolean;
-  pokerHandsWonPlayer: number;
-  pokerHandsWonOpponent: number;
+	pokerHandsWonPlayer: number;
+	pokerHandsWonOpponent: number;
+	lastResolvedPokerHand: PokerResolvedHand | null;
   // True when the human player is the chess defender — poker UI mirrors
   // attacker/defender so the human stays in the "player" slot. Lives across
   // chess→poker→chess so the resolution step knows which chess piece to

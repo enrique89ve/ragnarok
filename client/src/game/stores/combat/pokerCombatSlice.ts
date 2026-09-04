@@ -267,6 +267,7 @@ export const createPokerCombatSlice: StateCreator<
   isTransitioningHand: false,
   pokerHandsWonPlayer: 0,
   pokerHandsWonOpponent: 0,
+  lastResolvedPokerHand: null,
   pokerSlotsSwapped: false,
 
   setPokerSlotsSwapped: (swapped) => set({ pokerSlotsSwapped: swapped }),
@@ -546,6 +547,7 @@ export const createPokerCombatSlice: StateCreator<
       combatPhase: 'POKER_BETTING',
       pokerHandsWonPlayer: 0,
       pokerHandsWonOpponent: 0,
+      lastResolvedPokerHand: null,
     });
     
     const initTick = get()._nextLogTick();
@@ -1291,6 +1293,12 @@ export const createPokerCombatSlice: StateCreator<
         },
         pokerHandsWonPlayer: winner === 'player' ? currentState.pokerHandsWonPlayer + 1 : currentState.pokerHandsWonPlayer,
         pokerHandsWonOpponent: winner === 'opponent' ? currentState.pokerHandsWonOpponent + 1 : currentState.pokerHandsWonOpponent,
+        lastResolvedPokerHand: {
+          combatId: combatState.combatId,
+          handIndex: combatState.handNumber,
+          allInShowdown: combatState.isAllInShowdown,
+          resolution,
+        },
       });
       
       const foldTick = get()._nextLogTick();
@@ -1531,9 +1539,15 @@ export const createPokerCombatSlice: StateCreator<
             heroArmor: opponentFinalArmor,
           }
         },
-        pokerHandsWonPlayer: winner === 'player' ? stateForUpdate.pokerHandsWonPlayer + 1 : stateForUpdate.pokerHandsWonPlayer,
-        pokerHandsWonOpponent: winner === 'opponent' ? stateForUpdate.pokerHandsWonOpponent + 1 : stateForUpdate.pokerHandsWonOpponent,
-      });
+		pokerHandsWonPlayer: winner === 'player' ? stateForUpdate.pokerHandsWonPlayer + 1 : stateForUpdate.pokerHandsWonPlayer,
+		pokerHandsWonOpponent: winner === 'opponent' ? stateForUpdate.pokerHandsWonOpponent + 1 : stateForUpdate.pokerHandsWonOpponent,
+		lastResolvedPokerHand: {
+			combatId: combatState.combatId,
+			handIndex: combatState.handNumber,
+			allInShowdown: combatState.isAllInShowdown,
+			resolution,
+		},
+	      });
     }
     
     const showdownTick = get()._nextLogTick();
@@ -1547,15 +1561,16 @@ export const createPokerCombatSlice: StateCreator<
     return resolution;
   },
 
-  endPokerCombat: () => {
+	  endPokerCombat: () => {
     cancelPendingPokerHandTransition();
     set({
       pokerCombatState: null,
       pokerDeck: [],
       pokerIsActive: false,
       mulliganComplete: false,
-      isTransitioningHand: false,
-      combatPhase: 'CHESS_MOVEMENT'
+	      isTransitioningHand: false,
+	      lastResolvedPokerHand: null,
+	      combatPhase: 'CHESS_MOVEMENT'
     });
     
     const endTick = get()._nextLogTick();
@@ -1729,9 +1744,9 @@ export const createPokerCombatSlice: StateCreator<
               attack: newStats.attack,
             }
           }
+          }
         }
-      }
-    });
+      });
   },
 
   setOpponentHeroBuffs: (buffs: { attack?: number; health?: number; armor?: number }) => {
@@ -1873,10 +1888,11 @@ export const createPokerCombatSlice: StateCreator<
 	    const newActivePlayerId = getActivePlayerForPhase(PokerCombatPhase.PRE_FLOP, ctx);
 	    validateActivePlayer(PokerCombatPhase.PRE_FLOP, newActivePlayerId, 'startNextHand');
     
-    set({
-      pokerDeck: newDeck,
-      isTransitioningHand: false,
-      pokerCombatState: applyLocalPokerTurnClock({
+	    set({
+	      pokerDeck: newDeck,
+	      isTransitioningHand: false,
+	      lastResolvedPokerHand: null,
+	      pokerCombatState: applyLocalPokerTurnClock({
         ...state.pokerCombatState,
         handNumber: state.pokerCombatState.handNumber + 1,
 	        phase: PokerCombatPhase.PRE_FLOP,

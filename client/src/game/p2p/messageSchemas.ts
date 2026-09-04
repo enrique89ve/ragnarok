@@ -519,6 +519,15 @@ const StateSyncRequestSchema = z.object({
 	fromCommandSeq: NonNegativeInt.optional(),
 }).strict();
 
+const StateSyncRequestV2Schema = z.object({
+	type: z.literal('state_sync_request_v2'),
+	matchId: MatchIdString,
+	domain: z.enum(['cards', 'chess', 'poker']),
+	fromRevision: NonNegativeInt,
+	fromCanonicalOrder: NonNegativeInt,
+	fromCommandSeq: NonNegativeInt.optional(),
+}).strict();
+
 // `action` is intentionally `unknown` — issue 03 owns the per-action schema
 // and we must not narrow it on the wire boundary. The required-ness check
 // rejects `undefined` so the field cannot be silently dropped over the wire.
@@ -572,6 +581,7 @@ const SCHEMA_BY_TYPE = {
 	session_renewal: SessionRenewalSchema,
 	session_resumed: SessionResumedSchema,
 	state_sync_request: StateSyncRequestSchema,
+	state_sync_request_v2: StateSyncRequestV2Schema,
 	action_envelope: ActionEnvelopeSchema,
 } as const satisfies Record<P2PMessage['type'], z.ZodTypeAny>;
 
