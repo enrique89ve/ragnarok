@@ -18,6 +18,7 @@ import {
 	failQueuedStatus,
 	isMatchOfferForPeer,
 	readMatchmakingError,
+	runQuickMatchSingleFlight,
 	resolveQuickMatchAccountId,
 	resolveQuickMatchQueueAccess,
 } from './useMatchmaking';
@@ -216,6 +217,7 @@ describe('useMatchmaking quick-match access helpers', () => {
 	it('builds an unsigned F1 shared-network queue body without Keychain', async () => {
 		const result = await buildQuickMatchQueueBody({
 			peerId: 'peer-one',
+			searchIntentId: 'intent-one',
 			accountId: 'alice',
 			sharedNetwork: true,
 			starterClaimed: true,
@@ -225,11 +227,36 @@ describe('useMatchmaking quick-match access helpers', () => {
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
 		expect(result.body).toEqual({
+			searchIntentId: 'intent-one',
 			peerId: 'peer-one',
 			username: 'alice',
 			starterClaimed: true,
 		});
 		expect(matchmakingMocks.signHiveMessage).not.toHaveBeenCalled();
+	});
+
+	it('single-flights the complete Quick Match operation and preserves its intent id', async () => {
+		let resolveAttempt: ((result: boolean) => void) | undefined;
+		const runAttempt = vi.fn(() => new Promise<boolean>((resolve) => {
+			resolveAttempt = resolve;
+		}));
+
+		const first = runQuickMatchSingleFlight(runAttempt);
+		const second = runQuickMatchSingleFlight(runAttempt);
+
+		expect(second).toBe(first);
+		await Promise.resolve();
+		expect(runAttempt).toHaveBeenCalledOnce();
+		expect(runAttempt.mock.calls[0]?.[0]).toMatch(/^[0-9a-f-]{36}$/);
+		resolveAttempt?.(true);
+		expect(await first).toBe(true);
+
+		const third = runQuickMatchSingleFlight(runAttempt);
+		expect(third).not.toBe(first);
+		await Promise.resolve();
+		expect(runAttempt).toHaveBeenCalledTimes(2);
+		resolveAttempt?.(true);
+		expect(await third).toBe(true);
 	});
 
 	it('never signs while building the queue request', async () => {
@@ -240,6 +267,7 @@ describe('useMatchmaking quick-match access helpers', () => {
 
 		const result = await buildQuickMatchQueueBody({
 			peerId: 'peer-one',
+			searchIntentId: 'intent-two',
 			accountId: 'alice',
 			sharedNetwork: true,
 			starterClaimed: true,
@@ -249,6 +277,7 @@ describe('useMatchmaking quick-match access helpers', () => {
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
 		expect(result.body).toEqual({
+			searchIntentId: 'intent-two',
 			peerId: 'peer-one',
 			username: 'alice',
 			starterClaimed: true,
@@ -305,6 +334,7 @@ describe('useMatchmaking quick-match access helpers', () => {
 
 		await expect(buildQuickMatchQueueBody({
 			peerId: 'peer-one',
+			searchIntentId: 'intent-three',
 			accountId: 'alice',
 			sharedNetwork: true,
 			starterClaimed: true,

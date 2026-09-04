@@ -354,6 +354,12 @@ in phases 0-2 before any gameplay action is sent.
    ceremony receipt recorded through `/api/starter/claim` before enqueueing.
    The server returns a process-local `queueToken`; clients send it as
    `x-p2p-queue-token` for queue rechecks, status polling and leave requests.
+   Each Quick Match attempt also carries a client-generated `searchIntentId`.
+   The browser single-flights the complete Find operation, and the server
+   keeps that intent idempotent for five minutes, returning the same queue
+   token when the initial HTTP response is lost. The intent is bound to the
+   peer, account and delegation proof; reuse with a different identity is
+   rejected.
    During rolling deployment, an already-authenticated legacy client may still
    enqueue through its existing Hive web session; new clients use the signed
    delegation path above.

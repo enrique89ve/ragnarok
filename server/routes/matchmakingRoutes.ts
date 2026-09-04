@@ -97,6 +97,21 @@ type ExistingQueueResponse = {
 	readonly body: Record<string, unknown>;
 };
 
+type SearchIntentBinding = {
+	readonly peerId: string;
+	readonly account: string | undefined;
+	readonly delegationFingerprint: string | null;
+};
+
+type SearchIntentRecord = SearchIntentBinding & {
+	readonly queueToken: string;
+	readonly createdAt: number;
+};
+
+type SearchIntentOperation = SearchIntentBinding & {
+	readonly promise: Promise<ExistingQueueResponse>;
+};
+
 type QueuePlayerCreation = {
 	readonly player: QueuedPlayer;
 	readonly queueToken: string;
@@ -130,6 +145,36 @@ type QueueJoinResult =
 	| { readonly status: 'queued'; readonly position: number; readonly elo: number; readonly queueToken: string }
 	| { readonly status: 'offered'; readonly offer: MatchOffer; readonly queueToken: string }
 	| { readonly status: 'failed'; readonly statusCode: number; readonly error: string };
+
+function queueJoinResultResponse(result: QueueJoinResult): ExistingQueueResponse {
+	if (result.status === 'failed') {
+		return {
+			statusCode: result.statusCode,
+			body: { success: false, error: result.error },
+		};
+	}
+	if (result.status === 'queued') {
+		return {
+			statusCode: 200,
+			body: {
+				success: true,
+				status: 'queued',
+				position: result.position,
+				elo: result.elo,
+				queueToken: result.queueToken,
+			},
+		};
+	}
+	return {
+		statusCode: 200,
+		body: {
+			success: true,
+			status: 'offered',
+			offer: result.offer,
+			queueToken: result.queueToken,
+		},
+	};
+}
 type SharedQueueStarterClaimAccess =
 	| { readonly ok: true }
 	| { readonly ok: false; readonly statusCode: 403; readonly error: 'starter claim required' };
@@ -139,9 +184,12 @@ const pendingMatchOffers = new Map<string, PendingMatchOffer>();
 const pendingOfferIdsByPeerId = new Map<string, string>();
 const delegationChallenges = new Map<string, MatchmakingDelegationChallenge>();
 const delegationProofFingerprints = new Map<string, string>();
+const searchIntentRecords = new Map<string, SearchIntentRecord>();
+const searchIntentOperations = new Map<string, SearchIntentOperation>();
 
 const QUEUE_STALE_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_DELEGATION_CHALLENGES = 10_000;
+const MAX_SEARCH_INTENT_RECORDS = 10_000;
 
 function pendingOfferForPeer(peerId: string): PendingMatchOffer | null {
 	const offerId = pendingOfferIdsByPeerId.get(peerId);
@@ -174,8 +222,8 @@ function readQueueToken(req: Request): string | null {
 	return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
-function hasValidQueueToken(req: Request, expectedHash: string): boolean {
-	const token = readQueueToken(req);
+function hasValidQueueToken(req: Request, expectedHash: string, tokenOverride?: string): boolean {
+	const token = tokenOverride ?? readQueueToken(req);
 	return p2pQueueTokenMatches(expectedHash, token);
 }
 
@@ -195,6 +243,40 @@ function validateQueuePeerId(req: Request, res: Response, next: NextFunction): v
 		return;
 	}
 	next();
+}
+
+function isSafeSearchIntentId(value: unknown): value is string {
+	return typeof value === 'string'
+		&& value.length >= 1
+		&& value.length <= 128
+		&& /^[A-Za-z0-9_-]+$/.test(value);
+}
+
+function sameSearchIntentBinding(left: SearchIntentBinding, right: SearchIntentBinding): boolean {
+	return left.peerId === right.peerId
+		&& left.account === right.account
+		&& left.delegationFingerprint === right.delegationFingerprint;
+}
+
+function searchIntentConflictResponse(): ExistingQueueResponse {
+	return {
+		statusCode: 409,
+		body: { success: false, error: 'Search intent was already used with different matchmaking identity' },
+	};
+}
+
+function rememberSearchIntent(searchIntentId: string, input: SearchIntentRecord): void {
+	if (searchIntentRecords.size >= MAX_SEARCH_INTENT_RECORDS && !searchIntentRecords.has(searchIntentId)) {
+		const oldestId = searchIntentRecords.keys().next().value;
+		if (typeof oldestId === 'string') searchIntentRecords.delete(oldestId);
+	}
+	searchIntentRecords.set(searchIntentId, input);
+}
+
+function clearSearchIntentForPeer(peerId: string): void {
+	for (const [searchIntentId, record] of searchIntentRecords.entries()) {
+		if (record.peerId === peerId) searchIntentRecords.delete(searchIntentId);
+	}
 }
 
 function saveQueue(): void {
@@ -221,6 +303,9 @@ function removeStaleQueueEntries() {
 			delegationChallenges.delete(delegationId);
 			delegationProofFingerprints.delete(delegationId);
 		}
+	}
+	for (const [searchIntentId, record] of searchIntentRecords.entries()) {
+		if (now - record.createdAt > QUEUE_STALE_MS) searchIntentRecords.delete(searchIntentId);
 	}
 }
 
@@ -279,6 +364,8 @@ export function clearP2PMatchmakingStateForTests(): void {
 	pendingOfferIdsByPeerId.clear();
 	delegationChallenges.clear();
 	delegationProofFingerprints.clear();
+	searchIntentRecords.clear();
+	searchIntentOperations.clear();
 	clearP2PActiveMatches();
 }
 
@@ -482,16 +569,16 @@ async function canQueuedPlayerUseSharedP2P(player: Pick<QueuedPlayer, 'username'
 	return hasStarterCeremonyClaim(player.username);
 }
 
-async function getExistingQueueResponse(req: Request, peerId: string): Promise<ExistingQueueResponse | null> {
-	const pendingResponse = pendingOfferResponse(req, peerId, { expired: 'clear' });
+async function getExistingQueueResponse(req: Request, peerId: string, queueTokenOverride?: string): Promise<ExistingQueueResponse | null> {
+	const pendingResponse = pendingOfferResponse(req, peerId, { expired: 'clear' }, queueTokenOverride);
 	if (pendingResponse) return pendingResponse;
 
-	const activeResponse = await getActiveMatchStatusResponse(req, peerId);
+	const activeResponse = await getActiveMatchStatusResponse(req, peerId, queueTokenOverride);
 	if (activeResponse) return activeResponse;
 
 	const existingIndex = matchmakingQueue.findIndex(p => p.peerId === peerId);
 	if (existingIndex === -1) return null;
-	if (!hasValidQueueToken(req, matchmakingQueue[existingIndex].queueTokenHash)) {
+	if (!hasValidQueueToken(req, matchmakingQueue[existingIndex].queueTokenHash, queueTokenOverride)) {
 		return {
 			statusCode: 403,
 			body: { success: false, error: 'queue token required' },
@@ -499,6 +586,7 @@ async function getExistingQueueResponse(req: Request, peerId: string): Promise<E
 	}
 	if (!await canQueuedPlayerUseSharedP2P(matchmakingQueue[existingIndex])) {
 		matchmakingQueue.splice(existingIndex, 1);
+		clearSearchIntentForPeer(peerId);
 		saveQueue();
 		return {
 			statusCode: 403,
@@ -507,11 +595,16 @@ async function getExistingQueueResponse(req: Request, peerId: string): Promise<E
 	}
 	return {
 		statusCode: 200,
-		body: { success: true, status: 'queued', position: existingIndex + 1 },
+		body: {
+			success: true,
+			status: 'queued',
+			position: existingIndex + 1,
+			...(queueTokenOverride ? { queueToken: queueTokenOverride } : {}),
+		},
 	};
 }
 
-async function getActiveMatchStatusResponse(req: Request, peerId: string): Promise<ExistingQueueResponse | null> {
+async function getActiveMatchStatusResponse(req: Request, peerId: string, queueTokenOverride?: string): Promise<ExistingQueueResponse | null> {
 	const matchId = getP2PActiveMatchIdForPeer(peerId);
 	if (!matchId) return null;
 	const match = getP2PActiveMatchById(matchId);
@@ -520,7 +613,7 @@ async function getActiveMatchStatusResponse(req: Request, peerId: string): Promi
 	if (!peerView) {
 		return null;
 	}
-	if (!hasValidQueueToken(req, peerView.queueTokenHash)) {
+	if (!hasValidQueueToken(req, peerView.queueTokenHash, queueTokenOverride)) {
 		return {
 			statusCode: 403,
 			body: { success: false, error: 'queue token required' },
@@ -542,6 +635,7 @@ async function getActiveMatchStatusResponse(req: Request, peerId: string): Promi
 			opponentPeerId: peerView.opponentPeerId,
 			isHost: peerView.isHost,
 			matchTicket: peerView.matchTicket,
+			...(queueTokenOverride ? { queueToken: queueTokenOverride } : {}),
 			...(peerView.matchChallenge ? { matchChallenge: peerView.matchChallenge } : {}),
 			...(peerView.opponentMatchChallenge ? { opponentMatchChallenge: peerView.opponentMatchChallenge } : {}),
 		},
@@ -564,6 +658,7 @@ function getActiveMatchLeaveResponse(req: Request, peerId: string): ExistingQueu
 		};
 	}
 	releaseP2PActiveMatchPeer(peerId);
+	clearSearchIntentForPeer(peerId);
 	const otherStillMapped = match.player1 === peerId
 		? hasP2PActiveMatchPeer(match.player2, matchId)
 		: hasP2PActiveMatchPeer(match.player1, matchId);
@@ -766,13 +861,14 @@ function pendingOfferResponse(
 	req: Request,
 	peerId: string,
 	options: { readonly expired: 'not_queued' | 'clear' } = { expired: 'not_queued' },
+	queueTokenOverride?: string,
 ): ExistingQueueResponse | null {
 	const pending = pendingOfferForPeer(peerId);
 	if (!pending) return null;
 	const offer = offerForPeer(pending, peerId);
 	const player = pending.playerA.peerId === peerId ? pending.playerA : pending.playerB;
 	if (!offer) return null;
-	if (!hasValidQueueToken(req, player.queueTokenHash)) {
+	if (!hasValidQueueToken(req, player.queueTokenHash, queueTokenOverride)) {
 		return { statusCode: 403, body: { success: false, error: 'queue token required' } };
 	}
 	if (offer.expiresAt <= Date.now()) {
@@ -788,6 +884,7 @@ function pendingOfferResponse(
 			success: true,
 			status: accepted ? 'waiting_opponent' : 'offered',
 			offer,
+			...(queueTokenOverride ? { queueToken: queueTokenOverride } : {}),
 			...(accepted ? { accepted: true } : {}),
 		},
 	};
@@ -825,6 +922,11 @@ router.post('/delegation-challenge', (req: Request, res: Response) => {
 
 router.post('/queue', validateQueuePeerId, requireMatchmakingSession, async (req: Request, res: Response) => {
 	const { peerId, username } = req.body;
+	const rawSearchIntentId = req.body?.searchIntentId;
+	if (rawSearchIntentId !== undefined && !isSafeSearchIntentId(rawSearchIntentId)) {
+		return res.status(400).json({ success: false, error: 'Invalid search intent id' });
+	}
+	const searchIntentId = rawSearchIntentId as string | undefined;
 
 	removeStaleQueueEntries();
 	const rawDelegation = readMatchmakingDelegationProof(req.body?.delegation);
@@ -862,6 +964,35 @@ router.post('/queue', validateQueuePeerId, requireMatchmakingSession, async (req
 		authenticatedUsername: Reflect.get(req, 'hiveUsername'),
 		providedUsername: username,
 	});
+	const searchIntentBinding: SearchIntentBinding = {
+		peerId,
+		account: queueUsername,
+		delegationFingerprint,
+	};
+
+	if (searchIntentId) {
+		const recordedIntent = searchIntentRecords.get(searchIntentId);
+		if (recordedIntent) {
+			if (!sameSearchIntentBinding(recordedIntent, searchIntentBinding)) {
+				const conflict = searchIntentConflictResponse();
+				return res.status(conflict.statusCode).json(conflict.body);
+			}
+			const existingResponse = await getExistingQueueResponse(req, peerId, recordedIntent.queueToken);
+			if (existingResponse) return res.status(existingResponse.statusCode).json(existingResponse.body);
+			searchIntentRecords.delete(searchIntentId);
+		}
+
+		const pendingOperation = searchIntentOperations.get(searchIntentId);
+		if (pendingOperation) {
+			if (!sameSearchIntentBinding(pendingOperation, searchIntentBinding)) {
+				const conflict = searchIntentConflictResponse();
+				return res.status(conflict.statusCode).json(conflict.body);
+			}
+			const pendingResponse = await pendingOperation.promise;
+			return res.status(pendingResponse.statusCode).json(pendingResponse.body);
+		}
+	}
+
 	const starterClaimAccess = await resolveSharedQueueStarterClaim({
 		sharedNetwork: isSharedServerNetworkEnvironment(),
 		account: queueUsername,
@@ -870,36 +1001,51 @@ router.post('/queue', validateQueuePeerId, requireMatchmakingSession, async (req
 		return res.status(starterClaimAccess.statusCode).json({ success: false, error: starterClaimAccess.error });
 	}
 
-	const existingResponse = await getExistingQueueResponse(req, peerId);
-	if (existingResponse) {
-		return res.status(existingResponse.statusCode).json(existingResponse.body);
+	const executeQueueOperation = async (): Promise<ExistingQueueResponse> => {
+		const existingResponse = await getExistingQueueResponse(req, peerId);
+		if (existingResponse) return existingResponse;
+
+		const { player: newPlayer, queueToken } = createQueuedPlayer({
+			peerId,
+			username: queueUsername,
+			delegation: rawDelegation ?? undefined,
+		});
+		const result = await queueNewPlayer(newPlayer, queueToken);
+		if (rawDelegation && delegationFingerprint) delegationProofFingerprints.set(rawDelegation.delegationId, delegationFingerprint);
+		return queueJoinResultResponse(result);
+	};
+
+	if (!searchIntentId) {
+		const outcome = await executeQueueOperation();
+		return res.status(outcome.statusCode).json(outcome.body);
 	}
 
-	const { player: newPlayer, queueToken } = createQueuedPlayer({
-		peerId,
-		username: queueUsername,
-		delegation: rawDelegation ?? undefined,
-	});
-	const result = await queueNewPlayer(newPlayer, queueToken);
-	if (rawDelegation && delegationFingerprint) delegationProofFingerprints.set(rawDelegation.delegationId, delegationFingerprint);
-	if (result.status === 'failed') {
-		return res.status(result.statusCode).json({ success: false, error: result.error });
+	// Set the promise before starting the async work. Two identical POSTs can
+	// therefore share one queue insertion even when both requests arrive before
+	// the first response is available.
+	const operationPromise = Promise.resolve().then(executeQueueOperation);
+	const operation: SearchIntentOperation = { ...searchIntentBinding, promise: operationPromise };
+	searchIntentOperations.set(searchIntentId, operation);
+	try {
+		const outcome = await operationPromise;
+		if (outcome.statusCode < 400) {
+			const queueToken = typeof outcome.body.queueToken === 'string'
+				? outcome.body.queueToken
+				: readQueueToken(req);
+			if (queueToken) {
+				rememberSearchIntent(searchIntentId, {
+					...searchIntentBinding,
+					queueToken,
+					createdAt: Date.now(),
+				});
+			}
+		}
+		return res.status(outcome.statusCode).json(outcome.body);
+	} finally {
+		if (searchIntentOperations.get(searchIntentId)?.promise === operationPromise) {
+			searchIntentOperations.delete(searchIntentId);
+		}
 	}
-	if (result.status === 'queued') {
-		return res.json({
-			success: true,
-			status: 'queued',
-			position: result.position,
-			elo: result.elo,
-			queueToken: result.queueToken,
-		});
-	}
-	return res.json({
-		success: true,
-		status: 'offered',
-		offer: result.offer,
-		queueToken: result.queueToken,
-	});
 });
 
 router.post('/accept', validateQueuePeerId, requireMatchmakingSession, async (req: Request, res: Response) => {
@@ -983,6 +1129,7 @@ function clearPendingOfferForPeer(req: Request, peerId: string): ExistingQueueRe
 		return { statusCode: 404, body: { success: false, error: 'match offer not found' } };
 	}
 	deletePendingMatchOffer(pending.offerA.offerId);
+	clearSearchIntentForPeer(peerId);
 	return { statusCode: 200, body: { success: true } };
 }
 
@@ -1005,6 +1152,7 @@ router.post('/leave', requireMatchmakingSession, (req: Request, res: Response) =
 			return res.status(403).json({ success: false, error: 'queue token required' });
 		}
 		matchmakingQueue.splice(index, 1);
+		clearSearchIntentForPeer(peerId);
 		saveQueue();
 	}
 
@@ -1034,6 +1182,7 @@ router.get('/status/:peerId', requireMatchmakingSession, async (req: Request, re
 		}
 		if (!await canQueuedPlayerUseSharedP2P(matchmakingQueue[queuePosition])) {
 			matchmakingQueue.splice(queuePosition, 1);
+			clearSearchIntentForPeer(peerId);
 			saveQueue();
 			return res.status(403).json({ success: false, error: 'starter claim required' });
 		}

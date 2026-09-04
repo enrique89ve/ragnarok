@@ -26,6 +26,7 @@ describe('p2pAvailability', () => {
 		expect(availabilityFromConnectionState('grace_period', 'idle')).toBe('reconnecting');
 		expect(availabilityFromConnectionState('reconnecting', 'idle')).toBe('reconnecting');
 		expect(availabilityFromConnectionState('disconnected', 'queued')).toBe('matchmaking');
+		expect(availabilityFromConnectionState('disconnected', 'authorizing')).toBe('matchmaking');
 		expect(availabilityFromConnectionState('disconnected', 'ready')).toBe('in_match');
 		expect(availabilityFromConnectionState('disconnected', 'connecting')).toBe('in_match');
 	});

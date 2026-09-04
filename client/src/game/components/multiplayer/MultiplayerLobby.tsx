@@ -330,6 +330,26 @@ function QueuePanel({
 	);
 }
 
+function MatchmakingAuthorizingPanel({
+	status,
+}: {
+	readonly status: MatchmakingStatus;
+}) {
+	if (status !== 'authorizing') return null;
+
+	return (
+		<div className="flex items-start gap-3" role="status" aria-live="polite" aria-busy={true}>
+			<div className="grid h-10 w-10 shrink-0 place-items-center border border-gold-300/45 bg-gold-300/10 text-gold-200">
+				<LoaderCircle className="h-5 w-5 animate-spin motion-reduce:animate-none" aria-hidden={true} />
+			</div>
+			<div>
+				<p className="font-display text-sm font-black uppercase tracking-[0.14em] text-ink-0">Authorizing</p>
+				<p className="mt-1 text-xs leading-relaxed text-ink-200">Approve the one-time matchmaking request in Hive Keychain.</p>
+			</div>
+		</div>
+	);
+}
+
 function HiveAvatar({
 	username,
 	fallback,
@@ -1083,6 +1103,7 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 						queuePosition={queuePosition}
 						onLeaveQueue={leaveQueue}
 					/>
+					<MatchmakingAuthorizingPanel status={matchmakingStatus} />
 						<MatchOfferPanel
 							offer={matchOffer}
 							localUsername={hiveUsername}

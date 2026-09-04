@@ -137,7 +137,7 @@ export function resolveLobbyProgressStep(input: {
 }): number {
 	if (input.battleReady) return 3;
 	if (input.connectionState === 'connected' || input.matchmakingStatus === 'connecting') return 2;
-	if (input.matchOffer || input.matchCommitted || input.matchmakingStatus === 'accepting') return 1;
+	if (input.matchOffer || input.matchCommitted || input.matchmakingStatus === 'authorizing' || input.matchmakingStatus === 'accepting') return 1;
 	return 0;
 }
 

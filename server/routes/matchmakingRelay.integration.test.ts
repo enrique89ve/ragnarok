@@ -659,6 +659,77 @@ describe('matchmaking and relay integration', () => {
 		}
 	});
 
+	it('replays a lost queue response by search intent without creating a second entry', async () => {
+		const { default: matchmakingRouter, clearP2PMatchmakingStateForTests } = await import('./matchmakingRoutes');
+		clearP2PMatchmakingStateForTests();
+		const app = express();
+		app.use(express.json());
+		app.use('/api/session', hiveSessionRouter);
+		app.use('/api/matchmaking', matchmakingRouter);
+		const server = createServer(app);
+
+		try {
+			const port = await listenOnEphemeralPort(server);
+			const baseUrl = `http://127.0.0.1:${port}`;
+			const cookie = await loginSession(baseUrl, 'alice');
+			await setStarterCeremonyClaim('alice', 1_800_000_000_000);
+			const body = {
+				...queueBody('intent-peer', 'alice'),
+				searchIntentId: 'intent-lost-response-1',
+			};
+
+			const firstQueue = await postJson(baseUrl, '/api/matchmaking/queue', body, undefined, cookie);
+			expect(firstQueue.status).toBe(200);
+			const firstRecord = isRecord(firstQueue.body) ? firstQueue.body : {};
+			const firstToken = readStringProperty(firstRecord, 'queueToken');
+
+			const retryQueue = await postJson(baseUrl, '/api/matchmaking/queue', body, undefined, cookie);
+			expect(retryQueue.status).toBe(200);
+			expect(retryQueue.body).toMatchObject({ success: true, status: 'queued', queueToken: firstToken });
+
+			const stats = await getJson(baseUrl, '/api/matchmaking/stats');
+			expect(stats.body).toMatchObject({ success: true, queueLength: 1 });
+		} finally {
+			await closeServer(server);
+		}
+	});
+
+	it('coalesces concurrent queue requests with the same search intent', async () => {
+		const { default: matchmakingRouter, clearP2PMatchmakingStateForTests } = await import('./matchmakingRoutes');
+		clearP2PMatchmakingStateForTests();
+		const app = express();
+		app.use(express.json());
+		app.use('/api/session', hiveSessionRouter);
+		app.use('/api/matchmaking', matchmakingRouter);
+		const server = createServer(app);
+
+		try {
+			const port = await listenOnEphemeralPort(server);
+			const baseUrl = `http://127.0.0.1:${port}`;
+			const cookie = await loginSession(baseUrl, 'alice');
+			await setStarterCeremonyClaim('alice', 1_800_000_000_000);
+			const body = {
+				...queueBody('concurrent-intent-peer', 'alice'),
+				searchIntentId: 'intent-concurrent-1',
+			};
+
+			const responses = await Promise.all([
+				postJson(baseUrl, '/api/matchmaking/queue', body, undefined, cookie),
+				postJson(baseUrl, '/api/matchmaking/queue', body, undefined, cookie),
+			]);
+			expect(responses[0].status).toBe(200);
+			expect(responses[1].status).toBe(200);
+			const firstRecord = isRecord(responses[0].body) ? responses[0].body : {};
+			const secondRecord = isRecord(responses[1].body) ? responses[1].body : {};
+			expect(readStringProperty(firstRecord, 'queueToken')).toBe(readStringProperty(secondRecord, 'queueToken'));
+
+			const stats = await getJson(baseUrl, '/api/matchmaking/stats');
+			expect(stats.body).toMatchObject({ success: true, queueLength: 1 });
+		} finally {
+			await closeServer(server);
+		}
+	});
+
 	it('rejects matchmaking without the reusable HTTP Hive session', async () => {
 		const { default: matchmakingRouter, clearP2PMatchmakingStateForTests } = await import('./matchmakingRoutes');
 		clearP2PMatchmakingStateForTests();

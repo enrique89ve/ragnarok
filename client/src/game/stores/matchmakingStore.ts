@@ -3,6 +3,7 @@ import type { MatchOffer } from '@shared/p2pMatchAcceptance';
 
 export type MatchmakingStatus =
 	| 'idle'
+	| 'authorizing'
 	| 'queued'
 	| 'offered'
 	| 'accepting'

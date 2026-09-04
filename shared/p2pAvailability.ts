@@ -161,9 +161,9 @@ export function isP2PConnectionStateBusy(state: P2PConnectionAvailabilityState):
 
 export function availabilityFromConnectionState(
 	state: P2PConnectionAvailabilityState,
-	matchmakingStatus?: 'idle' | 'queued' | 'offered' | 'accepting' | 'waiting_opponent' | 'ready' | 'connecting' | 'error',
+	matchmakingStatus?: 'idle' | 'authorizing' | 'queued' | 'offered' | 'accepting' | 'waiting_opponent' | 'ready' | 'connecting' | 'error',
 ): P2PAvailabilityState {
-	if (matchmakingStatus === 'queued' || matchmakingStatus === 'offered' || matchmakingStatus === 'accepting' || matchmakingStatus === 'waiting_opponent') return 'matchmaking';
+	if (matchmakingStatus === 'authorizing' || matchmakingStatus === 'queued' || matchmakingStatus === 'offered' || matchmakingStatus === 'accepting' || matchmakingStatus === 'waiting_opponent') return 'matchmaking';
 	if (matchmakingStatus === 'ready' || matchmakingStatus === 'connecting') return 'in_match';
 	if (state === 'reconnecting' || state === 'grace_period') return 'reconnecting';
 	if (isP2PConnectionStateBusy(state)) return 'busy';

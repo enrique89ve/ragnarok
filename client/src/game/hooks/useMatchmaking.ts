@@ -49,6 +49,37 @@ function getMatchmakingApiBase(): string {
 // unmounts during that screen transition.
 let serverStatusPollIntervalId: number | null = null;
 
+type QuickMatchInFlight = {
+	intentId: string;
+	promise: Promise<boolean>;
+};
+
+// Quick Match is one logical user operation even when ArmySelection and the
+// lobby both expose the shared action. Keep the promise at module scope so a
+// second click or a screen transition cannot prepare/sign/enqueue twice.
+let quickMatchInFlight: QuickMatchInFlight | null = null;
+
+export function runQuickMatchSingleFlight(runAttempt: (intentId: string) => Promise<boolean>): Promise<boolean> {
+	if (quickMatchInFlight) return quickMatchInFlight.promise;
+
+	const attempt: QuickMatchInFlight = {
+		intentId: crypto.randomUUID(),
+		promise: Promise.resolve(false),
+	};
+	quickMatchInFlight = attempt;
+	const promise = Promise.resolve().then(() => runAttempt(attempt.intentId));
+	attempt.promise = promise;
+	void promise.then(
+		() => {
+			if (quickMatchInFlight === attempt) quickMatchInFlight = null;
+		},
+		() => {
+			if (quickMatchInFlight === attempt) quickMatchInFlight = null;
+		},
+	);
+	return promise;
+}
+
 function clearServerStatusPoller(): void {
 	if (serverStatusPollIntervalId !== null) {
 		window.clearInterval(serverStatusPollIntervalId);
@@ -191,6 +222,7 @@ export async function buildMatchmakingDelegation(input: {
 
 export async function buildQuickMatchQueueBody(input: {
 	readonly peerId: string;
+	readonly searchIntentId: string;
 	readonly accountId: string | null;
 	readonly sharedNetwork: boolean;
 	readonly starterClaimed: boolean;
@@ -205,6 +237,7 @@ export async function buildQuickMatchQueueBody(input: {
 		return {
 			ok: true,
 			body: {
+				searchIntentId: input.searchIntentId,
 				...unsignedQueueBody({
 					peerId: input.peerId,
 					accountId: input.accountId,
@@ -214,7 +247,7 @@ export async function buildQuickMatchQueueBody(input: {
 			},
 		};
 	}
-	return { ok: true, body: { peerId: input.peerId } };
+	return { ok: true, body: { peerId: input.peerId, searchIntentId: input.searchIntentId } };
 }
 
 export function buildMatchAcceptance(input: {
@@ -335,6 +368,7 @@ function applyQueuedMatchmakingPayload(
 	}
 	actions.setQueueToken(queuedToken);
 	actions.setQueuePosition(readMatchmakingPosition(data));
+	actions.setStatus('queued');
 }
 
 export function isMatchOfferForPeer(offer: MatchOffer, peerId: string): boolean {
@@ -420,7 +454,6 @@ export function useMatchmaking() {
 		opponentPeerId,
 		isHost,
 		roomId,
-		queueToken,
 		error,
 		offer,
 		matchCommitted,
@@ -435,7 +468,7 @@ export function useMatchmaking() {
 		reset,
 	} = useMatchmakingStore();
 
-	const joinQueue = useCallback(async () => {
+	const joinQueue = useCallback((): Promise<boolean> => runQuickMatchSingleFlight(async (searchIntentId) => {
 		clearServerStatusPoller();
 		const failJoin = (message: string) => {
 			clearServerStatusPoller();
@@ -460,7 +493,7 @@ export function useMatchmaking() {
 		}
 
 		try {
-			setStatus('queued');
+			setStatus('authorizing');
 			setError(null);
 
 			const sharedNetwork = isSharedNetworkEnvironment();
@@ -517,6 +550,7 @@ export function useMatchmaking() {
 
 			const queueBodyResult = await buildQuickMatchQueueBody({
 				peerId,
+				searchIntentId,
 				accountId: p2pAccess.accountId,
 				sharedNetwork,
 				starterClaimed,
@@ -524,7 +558,7 @@ export function useMatchmaking() {
 			});
 			if (!queueBodyResult.ok) return failJoin(queueBodyResult.message);
 
-			const existingQueueToken = queueToken;
+			const existingQueueToken = useMatchmakingStore.getState().queueToken;
 			const response = await fetch(`${getMatchmakingApiBase()}/api/matchmaking/queue`, {
 				method: 'POST',
 				headers: {
@@ -563,14 +597,15 @@ export function useMatchmaking() {
 				setOffer,
 				setMatchCommitted,
 			};
+			const fallbackQueueToken = useMatchmakingStore.getState().queueToken;
 			if (data.status === 'offered') {
-				applyOfferedMatchmakingPayload(data, queueToken, actions);
+				applyOfferedMatchmakingPayload(data, fallbackQueueToken, actions);
 			} else if (data.status === 'ready') {
 				applyReadyMatchmakingPayload(data, actions);
 				clearServerStatusPoller();
 				return true;
 			} else {
-				applyQueuedMatchmakingPayload(data, queueToken, actions);
+				applyQueuedMatchmakingPayload(data, fallbackQueueToken, actions);
 			}
 			startServerStatusPoller(actions);
 
@@ -578,7 +613,7 @@ export function useMatchmaking() {
 		} catch (err: unknown) {
 			return failJoin(err instanceof Error ? err.message : 'Failed to join matchmaking queue');
 		}
-	}, [hiveUsername, queueToken, setStatus, setError, setQueuePosition, setOpponent, setRoomId, setQueueToken, setOffer, setMatchCommitted]);
+	}), [hiveUsername, setStatus, setError, setQueuePosition, setOpponent, setRoomId, setQueueToken, setOffer, setMatchCommitted]);
 
 	const acceptOffer = useCallback(async (): Promise<boolean> => {
 		const currentOffer = useMatchmakingStore.getState().offer ?? offer;
@@ -710,6 +745,8 @@ export function useMatchmaking() {
 		clearCachedMatchAcceptance();
 		clearCachedMatchmakingDelegation();
 		clearServerStatusPoller();
+		const pendingJoin = quickMatchInFlight?.promise;
+		if (pendingJoin) await pendingJoin.catch(() => false);
 
 		if (!peerId) {
 			reset();
