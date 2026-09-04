@@ -22,6 +22,7 @@ import { computeStateHash } from '../../../../engine/engineBridge';
 import { flipGameState, computeCardsPrevStateHash } from '../../../../engine/wireHash';
 import { computeChessPrevStateHash } from '../../../../engine/chessHash';
 import { computeInitialMatchRoot, computeInitialMatchRootDebug, computePokerCombatStateHash } from '../../../../p2p/phaseBoundaryRoot';
+import { clearP2PQaSnapshot, publishP2PQaSnapshot } from '../../../../p2p/p2pQaDiagnostics';
 import { isSharedNetworkEnvironment } from '../../../../config/featureFlags';
 import { findExistingMatchResult, type SlashEvidenceParams } from '../../../../../data/blockchain/slashEvidence';
 import {
@@ -472,6 +473,10 @@ export function useWireSync() {
 		&& isP2PBoardBoundTo(p2pBoardBinding, matchId, matchSeed),
 	);
 	const competitionPhase = usePeerStore(state => state.battleLifecycle?.phase ?? null);
+	const battleLifecycle = usePeerStore(state => state.battleLifecycle);
+	const currentGameState = useGameStore(state => state.gameState);
+	const currentChessBoardState = useUnifiedCombatStore(state => state.boardState);
+	const currentPokerCombatState = useUnifiedCombatStore(state => state.pokerCombatState);
 
 	/**
 	 * A WebRTC DataChannel is the gameplay plane, not a server-observable
@@ -551,6 +556,38 @@ export function useWireSync() {
 	// Broadcaster role is canonical (A = first-mover, B = second-mover),
 	// derived from the WS host hint at seed_reveal — see seed_reveal handler.
 	const signedTranscriptRef = useRef<Transcript | null>(null);
+	useEffect(() => {
+		if (!isP2PMatch) {
+			clearP2PQaSnapshot();
+			return;
+		}
+		const logicalClock = battleLifecycle?.logicalClock;
+		publishP2PQaSnapshot({
+			matchId,
+			canonicalOrder: logicalClock?.canonicalOrder ?? battleLifecycle?.lastCanonicalOrder ?? 0,
+			transcriptRoot: signedTranscriptRef.current?.merkleRoot ?? null,
+			revisions: {
+				chessRevision: logicalClock?.chessRevision ?? 0,
+				cardsRevision: logicalClock?.cardsRevision ?? 0,
+				pokerRevision: logicalClock?.pokerRevision ?? 0,
+			},
+			hashes: {
+				cards: computeCardsPrevStateHash(currentGameState, isCardsCanonicalPlayerFrame) || null,
+				chess: computeChessPrevStateHash(currentChessBoardState) || null,
+				poker: computePokerCombatStateHash(currentPokerCombatState),
+			},
+			result: battleLifecycle?.result ?? null,
+		});
+	}, [
+		battleLifecycle,
+		currentChessBoardState,
+		currentGameState,
+		currentPokerCombatState,
+		isCardsCanonicalPlayerFrame,
+		isP2PMatch,
+		matchId,
+	]);
+	useEffect(() => clearP2PQaSnapshot, []);
 	const myBroadcasterRef = useRef<Broadcaster | null>(null);
 	// A remote cards command is applied before its asynchronously signed
 	// action_envelope is necessarily on the wire. Hold the next local command

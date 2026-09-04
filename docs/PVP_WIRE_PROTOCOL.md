@@ -359,9 +359,12 @@ Each profile must already contain the intended authenticated browser and
 Keychain setup. The harness injects bounded latency, drops, duplicates,
 reordering, a first WebRTC failure, and an offline/online reconnect on player
 A. It records console/page errors and requires both profiles to expose a
-BattleReady marker and a terminal-result marker before reporting
-`PASS`. A missing Playwright installation reports `BROWSER_GATE_BLOCKED`; a
-local unit-test pass is not a substitute for this deployed evidence.
+BattleReady marker and a terminal-result marker before reporting `PASS`. It
+also requires both pages to publish the complete `ragnarok-p2p-qa-v1` snapshot
+and compares `matchId`, `canonicalOrder`, `transcriptRoot`, all three logical
+revisions, all three canonical state hashes, and the canonical result. A
+missing Playwright installation reports `BROWSER_GATE_BLOCKED`; a local
+unit-test pass is not a substitute for this deployed evidence.
 
 ---
 

@@ -131,6 +131,68 @@ async function waitForText(page, pattern, timeoutMs) {
 	}
 }
 
+function isQaSnapshot(value) {
+	if (!value || typeof value !== 'object') return false;
+	const snapshot = value;
+	const revisions = snapshot.revisions;
+	const hashes = snapshot.hashes;
+	return snapshot.protocol === 'ragnarok-p2p-qa-v1'
+		&& typeof snapshot.matchId === 'string'
+		&& Number.isSafeInteger(snapshot.canonicalOrder)
+		&& typeof snapshot.transcriptRoot === 'string'
+		&& revisions && typeof revisions === 'object'
+		&& Number.isSafeInteger(revisions.chessRevision)
+		&& Number.isSafeInteger(revisions.cardsRevision)
+		&& Number.isSafeInteger(revisions.pokerRevision)
+		&& hashes && typeof hashes === 'object'
+		&& typeof hashes.chess === 'string'
+		&& typeof hashes.cards === 'string'
+		&& typeof hashes.poker === 'string'
+		&& snapshot.result && typeof snapshot.result === 'object';
+}
+
+function stableJson(value) {
+	if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+	if (value && typeof value === 'object') {
+		return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(',')}}`;
+	}
+	return JSON.stringify(value);
+}
+
+function compareQaSnapshots(left, right) {
+	if (!isQaSnapshot(left) || !isQaSnapshot(right)) {
+		return { ready: false, equal: false, reason: 'Both browsers did not publish a complete canonical QA snapshot' };
+	}
+	return {
+		ready: true,
+		equal: stableJson(left) === stableJson(right),
+		...(stableJson(left) === stableJson(right) ? {} : { reason: 'Canonical QA snapshots differ between browsers' }),
+	};
+}
+
+async function readQaSnapshot(page, timeoutMs) {
+	if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) return null;
+	try {
+		await page.waitForFunction(
+			() => {
+				const snapshot = window.__RAGNAROK_P2P_QA__;
+				return Boolean(
+					snapshot
+					&& snapshot.protocol === 'ragnarok-p2p-qa-v1'
+					&& typeof snapshot.matchId === 'string'
+					&& typeof snapshot.transcriptRoot === 'string'
+					&& snapshot.result
+				);
+			},
+			null,
+			{ timeout: timeoutMs },
+		);
+		return await page.evaluate(() => window.__RAGNAROK_P2P_QA__ ?? null);
+	} catch {
+		return null;
+	}
+}
+
 async function run() {
 	const parsed = parseArgs(process.argv.slice(2));
 	if (parsed.help) { usage(); return 0; }
@@ -226,14 +288,23 @@ async function run() {
 				waitForText(pageB, options.terminalText, Math.max(0, deadlineAt - Date.now())),
 			])
 			: [false, false];
+		const [qaSnapshotA, qaSnapshotB] = terminalA && terminalB
+			? await Promise.all([
+				readQaSnapshot(pageA, Math.max(0, deadlineAt - Date.now())),
+				readQaSnapshot(pageB, Math.max(0, deadlineAt - Date.now())),
+			])
+			: [null, null];
+		const semanticComparison = compareQaSnapshots(qaSnapshotA, qaSnapshotB);
 		const evidence = {
-			status: battleA && battleB && terminalA && terminalB && pageErrors.length === 0 ? 'PASS' : 'FAIL',
+			status: battleA && battleB && terminalA && terminalB && pageErrors.length === 0 && semanticComparison.equal ? 'PASS' : 'FAIL',
 			startedAt,
 			finishedAt: new Date().toISOString(),
 			url: options.url,
 			profiles: { A: profileA, B: profileB },
 			chaos: browserConfig,
 			markers: { battleA, battleB, terminalA, terminalB },
+			semanticComparison,
+			qaSnapshots: { A: qaSnapshotA, B: qaSnapshotB },
 			pageErrors,
 			events,
 		};
