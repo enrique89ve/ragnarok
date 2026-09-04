@@ -11,6 +11,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { serializeGameState } from './stateSerializer';
+import { flipGameState } from './wireHash';
 
 // Mock the wasmInterface module to test enforcement without actual WASM binary
 vi.mock('./wasmInterface', async () => {
@@ -295,6 +296,77 @@ describe('WASM Anti-Cheat: State Serialization Determinism', () => {
 		const state2 = createMinimalGameState();
 		state2.players.player.heroArmor = 5;
 		expect(serializeGameState(state1 as any)).not.toBe(serializeGameState(state2 as any));
+	});
+
+	it('mechanical action gates produce different serialization', () => {
+		const state1 = createMinimalGameState();
+		const state2 = createMinimalGameState();
+		state2.players.player.heroPower = { name: 'Fireblast', cost: 2, used: true };
+		state2.players.player.attacksPerformedThisTurn = 1;
+		expect(serializeGameState(state1 as any)).not.toBe(serializeGameState(state2 as any));
+	});
+
+	it('equipped weapon and fatigue produce different serialization', () => {
+		const state1 = createMinimalGameState();
+		const state2 = createMinimalGameState();
+		state2.players.player.weapon = {
+			instanceId: 'weapon-1',
+			card: { id: 9001, keywords: [] },
+			currentAttack: 3,
+			currentDurability: 2,
+		};
+		state2.fatigueCount = { player: 1, opponent: 0 };
+		expect(serializeGameState(state1 as any)).not.toBe(serializeGameState(state2 as any));
+	});
+
+	it('artifact and temporary combat state produce different serialization', () => {
+		const state1 = createMinimalGameState();
+		const state2 = createMinimalGameState();
+		(state2.players.player as any).artifactState = { souls: 2, firstSpellCastThisTurn: true };
+		(state2.players.player as any).tempStats = { attack: 3 };
+		(state2.players.player as any).heroPowerUpgraded = true;
+		state2.players.player.battlefield.push({
+			instanceId: 'attacker-1',
+			card: { id: 9002, keywords: [] },
+			currentAttack: 4,
+			currentHealth: 4,
+			attacksPerformed: 1,
+		});
+		expect(serializeGameState(state1 as any)).not.toBe(serializeGameState(state2 as any));
+	});
+
+	it('flipping perspectives also flips fatigue ownership', () => {
+		const state = createMinimalGameState() as any;
+		state.fatigueCount = { player: 2, opponent: 5 };
+		const opposite = flipGameState(state);
+		expect(opposite.fatigueCount).toEqual({ player: 5, opponent: 2 });
+	});
+
+	it('realm and prophecy state is canonical and flips ownership', () => {
+		const state = createMinimalGameState() as any;
+		state.activeRealm = {
+			id: 'asgard',
+			name: 'Asgard',
+			description: 'test realm',
+			owner: 'player',
+			effects: [{ type: 'cost_increase', value: 1, target: 'enemy' }],
+		};
+		state.prophecies = [{
+			id: 'prophecy-1',
+			name: 'Test prophecy',
+			description: 'test',
+			turnsRemaining: 2,
+			effect: { type: 'draw', value: 1 },
+			owner: 'opponent',
+			sourceCardId: 123,
+		}];
+		const opposite = flipGameState(state);
+		expect(opposite.activeRealm?.owner).toBe('opponent');
+		expect(opposite.prophecies?.[0].owner).toBe('player');
+
+		const changed = createMinimalGameState() as any;
+		changed.activeRealm = { ...state.activeRealm, owner: 'opponent' };
+		expect(serializeGameState(state)).not.toBe(serializeGameState(changed));
 	});
 
 	it('swapping player/opponent positions produces different serialization', () => {

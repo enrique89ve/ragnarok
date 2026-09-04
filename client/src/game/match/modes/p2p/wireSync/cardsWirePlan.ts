@@ -14,16 +14,21 @@ export type CardsLocalActionPlan = {
 export type CardsLocalApplyStatus = 'applied' | 'rejected' | 'ignored' | 'missing';
 
 /**
- * A P2P envelope is canonical only when the local reducer committed the same
- * command. Local/single-player callers retain their historical callback
- * behavior, but a peer match must never append a transcript leaf for a
- * rejected or missing local apply.
+ * A P2P envelope is canonical when the local reducer committed the same
+ * command, or when an explicitly idempotent command was already committed.
+ * Local/single-player callers retain their historical callback behavior, but
+ * a peer match must never append a transcript leaf for a rejected or missing
+ * local apply.
  */
 export function shouldCommitLocalCardsAction(input: {
 	readonly isP2PMatch: boolean;
 	readonly localApplyStatus: CardsLocalApplyStatus;
+	/** Only canonical idempotent commands may commit after a reducer no-op. */
+	readonly idempotentCommand?: boolean;
 }): boolean {
-	return !input.isP2PMatch || input.localApplyStatus === 'applied';
+	return !input.isP2PMatch
+		|| input.localApplyStatus === 'applied'
+		|| (input.idempotentCommand === true && input.localApplyStatus === 'ignored');
 }
 
 export function planCardsLocalAction(input: {

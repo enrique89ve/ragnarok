@@ -26,7 +26,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePokerCombatAdapter, getActionPermissions, getPokerCombatAdapterState } from '../../hooks/usePokerCombatAdapter';
 import { useGameStore, selectPlayerHand } from '../../stores/gameStore';
 import { usePeerStore } from '../../stores/peerStore';
-import { GAME_COMMAND_TYPES } from '../../core/commands';
+import { GAME_COMMAND_TYPES, createPokerHandRewardsCommand } from '../../core/commands';
 import { useP2PActions } from '../../context/useP2PActions';
 import { useMatchStore } from '../../match';
 import { CombatPhase, CombatAction } from '../../types/PokerCombatTypes';
@@ -142,7 +142,6 @@ export interface UseRagnarokCombatControllerReturn {
   advanceTurnPhase: () => any;
   
   endTurn: () => void;
-  grantPokerHandRewards: () => void;
   endCombat: () => void;
   performAction: ReturnType<typeof usePokerCombatAdapter>['performAction'];
   applyDirectDamage: ReturnType<typeof usePokerCombatAdapter>['applyDirectDamage'];
@@ -719,8 +718,24 @@ export function useRagnarokCombatController(
     }
   }, [mulliganActive, combatState?.phase, completeMulligan, mulliganProcessed, mulliganArmed, mulliganComplete]);
   
-  const grantPokerHandRewards = useGameStore(state => state.grantPokerHandRewards);
-  
+  const commitPokerHandRewards = useCallback((resolved: NonNullable<typeof resolution>) => {
+    const pokerState = getPokerCombatAdapterState().combatState;
+    if (!pokerState) return;
+    const gameStore = useGameStore.getState();
+    const command = createPokerHandRewardsCommand({
+      matchId: gameStore.matchId ?? gameStore.matchSeed ?? pokerState.combatId,
+      combatId: pokerState.combatId,
+      handIndex: pokerState.handNumber,
+      resolution: resolved,
+      allInShowdown: pokerState.isAllInShowdown,
+    });
+    p2pActions.dispatchGameCommand(command, () => {
+      advanceTurnPhase();
+      getPokerCombatAdapterState().startNextHandDelayed(resolved);
+      setResolution(null);
+    });
+  }, [advanceTurnPhase, p2pActions]);
+
   const handleAction = useCallback(async (action: CombatAction, hp?: number) => {
     if (combatState && !isPlayerTurn) return;
     // Read the transport store again at the action boundary. React's render
@@ -846,7 +861,7 @@ export function useRagnarokCombatController(
 	if (connectedP2P) {
 		const actorId = usePeerStore.getState().myPeerId ?? '';
 		const canonicalOrder = decisionId
-			? commitNextP2PCanonicalAction({ actionId: decisionId, actorId })
+			? commitNextP2PCanonicalAction({ actionId: decisionId, actorId, domain: 'poker' })
 			: null;
 		if (canonicalOrder === null) {
 			usePeerStore.getState().setP2pIntegrityError('Game integrity diverged. Actions are paused until the match is left. (local_poker_canonical_order_unavailable)');
@@ -926,13 +941,8 @@ export function useRagnarokCombatController(
     handEndProcessedRef.current = true;
     cardPositionsRef.current.clear();
 
-    advanceTurnPhase();
-
-    grantPokerHandRewards();
-
-    getPokerCombatAdapterState().startNextHandDelayed(resolution);
-    setResolution(null);
-  }, [resolution, grantPokerHandRewards, advanceTurnPhase]);
+    commitPokerHandRewards(resolution);
+  }, [resolution, commitPokerHandRewards]);
 
   const handleCombatEndRef = useRef(handleCombatEnd);
   useEffect(() => {
@@ -990,9 +1000,7 @@ export function useRagnarokCombatController(
           debug.warn('[ResolutionEscape] Stuck in RESOLUTION for 3s — forcing next hand');
           cardPositionsRef.current.clear();
           adapter.setTransitioning(false);
-          advanceTurnPhase();
-          grantPokerHandRewards();
-          adapter.startNextHand();
+          commitPokerHandRewards(resolution);
         }
       }, 3000);
     } else {
@@ -1007,7 +1015,7 @@ export function useRagnarokCombatController(
         resolutionEscapeRef.current = null;
       }
     };
-  }, [combatState?.phase, showdownCelebration, heroDeathState, isActive, isP2PCombat, advanceTurnPhase, grantPokerHandRewards]);
+  }, [combatState?.phase, showdownCelebration, heroDeathState, isActive, isP2PCombat, commitPokerHandRewards, resolution]);
 
   const heroDeathFinishedRef = useRef(false);
   useEffect(() => {
@@ -1129,7 +1137,6 @@ export function useRagnarokCombatController(
     advanceTurnPhase,
     
     endTurn,
-    grantPokerHandRewards,
     endCombat,
     performAction,
     applyDirectDamage,

@@ -120,6 +120,18 @@ describe('useWireSync global dependency boundary', () => {
 		expect(chess).toContain('pausePendingChessReceiptTimeout');
 	});
 
+	it('records discovery choices with the same command identity on the remote path', () => {
+		const sourcePath = join(dirname(fileURLToPath(import.meta.url)), 'useWireSync.ts');
+		const source = readFileSync(sourcePath, 'utf8');
+		const branchStart = source.indexOf("case GAME_COMMAND_TYPES.selectDiscoveryOption:");
+		const branchEnd = source.indexOf("default:", branchStart);
+		const branch = source.slice(branchStart, branchEnd);
+
+		expect(branchStart).toBeGreaterThanOrEqual(0);
+		expect(branchEnd).toBeGreaterThan(branchStart);
+		expect(branch).toContain('commandId: data.commandId');
+	});
+
 	it('starts competitive battle from an accepted piece move but not mine placement', () => {
 		const wirePath = join(dirname(fileURLToPath(import.meta.url)), 'useWireSync.ts');
 		const chessPath = join(dirname(fileURLToPath(import.meta.url)), '../../../../p2p/chessWireSender.ts');
@@ -175,6 +187,22 @@ describe('settleRemoteCommand', () => {
 		expect(onApplied).not.toHaveBeenCalled();
 		expect(onUnapplied).toHaveBeenCalledTimes(1);
 		expect(onUnapplied).toHaveBeenCalledWith(P2P_COMMAND_STATUS_REJECT_REASON);
+	});
+
+	it('allows an explicit idempotent ignored settlement without weakening default rejection', () => {
+		const onApplied = vi.fn();
+		const onIgnored = vi.fn();
+		const onUnapplied = vi.fn();
+
+		settleRemoteCommand(ignoredGameCommand(baseState, 'poker reward already applied'), {
+			onApplied,
+			onIgnored,
+			onUnapplied,
+		});
+
+		expect(onApplied).not.toHaveBeenCalled();
+		expect(onIgnored).toHaveBeenCalledWith(P2P_COMMAND_STATUS_REJECT_REASON);
+		expect(onUnapplied).not.toHaveBeenCalled();
 	});
 
 	it('does not expose the engine rejection reason', () => {

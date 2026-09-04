@@ -19,6 +19,7 @@ import { usePeerStore } from '../stores/peerStore';
 export function commitNextP2PCanonicalAction(input: {
 	readonly actionId: string;
 	readonly actorId: string;
+	readonly domain?: 'chess' | 'cards' | 'poker';
 }): number | null {
 	if (!input.actionId || !input.actorId) return null;
 	const peer = usePeerStore.getState();
@@ -30,6 +31,7 @@ export function commitNextP2PCanonicalAction(input: {
 		actionId: input.actionId,
 		actorId: input.actorId,
 		canonicalOrder,
+		domain: input.domain,
 	});
 	if (!next || next.lastCanonicalOrder !== canonicalOrder || !next.acceptedActionIds.includes(input.actionId)) return null;
 	return canonicalOrder;

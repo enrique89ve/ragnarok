@@ -2,6 +2,7 @@ import type {
 	AttackCommand,
 	ConfirmMulliganCommand,
 	EndTurnCommand,
+	GrantPokerHandRewardsCommand,
 	FrontlineAttackCommand,
 	NorseHeroPowerCommand,
 	PlayCardCommand,
@@ -16,6 +17,7 @@ export type WireGameCommand =
 	| PlayCardCommand
 	| AttackCommand
 	| EndTurnCommand
+	| GrantPokerHandRewardsCommand
 	| UseHeroPowerCommand
 	| ToggleMulliganCardCommand
 	| ConfirmMulliganCommand

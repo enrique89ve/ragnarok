@@ -10,7 +10,7 @@ import { confirmMulligan, skipMulligan, toggleCardSelection, type MulliganActor 
 import { getArtifactSpellCostReduction } from '../../utils/artifactTriggerProcessor';
 import { MAX_BATTLEFIELD_SIZE } from '../../constants/gameConstants';
 import { validateResourceInvariants, type ResourceInvariantViolation } from '@shared/protocol-core/gameLimits';
-import { createSeededIdGen, cryptoRng } from '../../utils/seededRng';
+import { createSeededIdGen, cryptoIdGen, cryptoRng } from '../../utils/seededRng';
 import { withCardsIdGen, withCardsRng } from '../../utils/cardsCommandRng';
 import {
 	appliedGameCommand,
@@ -21,6 +21,7 @@ import {
 	type GameCommandEffect,
 } from './gameCommandResult';
 import { canActInPokerWindow, canPlayCardInPokerWindow, type PokerCardTimingContext } from './pokerCardTiming';
+import { applyPokerHandRewards } from './pokerRewardReducer';
 
 export type ApplyGameCommandDeps = {
 	readonly isAiSimulationMode?: () => boolean;
@@ -51,6 +52,19 @@ export type ApplyGameCommandDeps = {
  */
 function swapPlayerOpponent(state: GameState): GameState {
 	const mulligan = state.mulligan;
+	const activeRealm = state.activeRealm
+		? {
+			...state.activeRealm,
+			owner: state.activeRealm.owner === 'player' ? 'opponent' as const : 'player' as const,
+		}
+		: state.activeRealm;
+	const prophecies = state.prophecies?.map(prophecy => ({
+		...prophecy,
+		owner: prophecy.owner === 'player' ? 'opponent' as const : 'player' as const,
+	}));
+	const fatigueCount = state.fatigueCount
+		? { player: state.fatigueCount.opponent, opponent: state.fatigueCount.player }
+		: state.fatigueCount;
 	return {
 		...state,
 		players: {
@@ -70,6 +84,9 @@ function swapPlayerOpponent(state: GameState): GameState {
 				opponentReady: mulligan.playerReady,
 			}
 			: mulligan,
+		activeRealm,
+		prophecies,
+		fatigueCount,
 	};
 }
 
@@ -264,6 +281,8 @@ function applyGameCommandUnbound(
 			return applyEndTurnCommand(state);
 		case GAME_COMMAND_TYPES.useHeroPower:
 			return applyUseHeroPowerCommand(state, command, deps);
+		case GAME_COMMAND_TYPES.grantPokerHandRewards:
+			return applyPokerHandRewards(state, command, deps.idGen ?? cryptoIdGen);
 		case GAME_COMMAND_TYPES.frontlineAttack:
 			return applyFrontlineAttackCommand(state, command, deps);
 		case GAME_COMMAND_TYPES.norseHeroPower:

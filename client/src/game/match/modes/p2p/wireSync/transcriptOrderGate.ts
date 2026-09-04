@@ -29,6 +29,7 @@ export function requiresSignedActionEnvelope(commandType: WireGameCommand['type'
 		case GAME_COMMAND_TYPES.attack:
 		case GAME_COMMAND_TYPES.endTurn:
 		case GAME_COMMAND_TYPES.useHeroPower:
+		case GAME_COMMAND_TYPES.grantPokerHandRewards:
 		case GAME_COMMAND_TYPES.frontlineAttack:
 		case GAME_COMMAND_TYPES.norseHeroPower:
 		case GAME_COMMAND_TYPES.weaponUpgrade:

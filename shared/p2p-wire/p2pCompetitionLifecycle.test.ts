@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+	advanceP2PLogicalClock,
 	createP2PCompetitionState,
 	reduceP2PCompetitionLifecycle,
 } from './p2pCompetitionLifecycle';
@@ -26,6 +27,23 @@ const startBattle = (state = acceptFirstAction()) => reduceP2PCompetitionLifecyc
 });
 
 describe('P2P competition lifecycle', () => {
+	it('tracks one canonical order with independent chess, cards, and poker revisions', () => {
+		const state = createState();
+		const chess = reduceP2PCompetitionLifecycle(state, {
+			type: 'action_accepted', actionId: 'chess-1', actorId: 'peer-a', canonicalOrder: 1, domain: 'chess',
+		});
+		const cards = reduceP2PCompetitionLifecycle(chess, {
+			type: 'action_accepted', actionId: 'cards-1', actorId: 'peer-b', canonicalOrder: 2, domain: 'cards',
+		});
+		const poker = reduceP2PCompetitionLifecycle(cards, {
+			type: 'action_accepted', actionId: 'poker-1', actorId: 'peer-a', canonicalOrder: 3, domain: 'poker',
+		});
+
+		expect(poker.logicalClock).toEqual({ canonicalOrder: 3, chessRevision: 1, cardsRevision: 1, pokerRevision: 1 });
+		expect(advanceP2PLogicalClock(poker.logicalClock, 'cards', 4)).toEqual({
+			canonicalOrder: 4, chessRevision: 1, cardsRevision: 2, pokerRevision: 1,
+		});
+	});
 	it('starts in pre_battle and canonicalizes participant identity order', () => {
 		const state = createState();
 
@@ -126,6 +144,12 @@ describe('P2P competition lifecycle', () => {
 
 		expect(restored.phase).toBe('battle');
 		expect(restored.lastCanonicalOrder).toBe(3);
+		expect(restored.logicalClock).toEqual({
+			canonicalOrder: 3,
+			chessRevision: 0,
+			cardsRevision: 0,
+			pokerRevision: 0,
+		});
 		expect(restored.firstAcceptedAction).toBeNull();
 	});
 

@@ -17,6 +17,34 @@ export type P2PCompetitionAcceptedAction = {
 	readonly canonicalOrder: number;
 };
 
+export type P2PLogicalDomain = 'chess' | 'cards' | 'poker';
+
+export type P2PLogicalClock = {
+	readonly canonicalOrder: number;
+	readonly chessRevision: number;
+	readonly cardsRevision: number;
+	readonly pokerRevision: number;
+};
+
+export function createP2PLogicalClock(): P2PLogicalClock {
+	return { canonicalOrder: 0, chessRevision: 0, cardsRevision: 0, pokerRevision: 0 };
+}
+
+export function advanceP2PLogicalClock(
+	clock: P2PLogicalClock | undefined,
+	domain: P2PLogicalDomain | undefined,
+	canonicalOrder: number,
+): P2PLogicalClock {
+	const current = clock ?? createP2PLogicalClock();
+	return {
+		...current,
+		canonicalOrder,
+		chessRevision: current.chessRevision + (domain === 'chess' ? 1 : 0),
+		cardsRevision: current.cardsRevision + (domain === 'cards' ? 1 : 0),
+		pokerRevision: current.pokerRevision + (domain === 'poker' ? 1 : 0),
+	};
+}
+
 export type P2PCompetitionResult =
 	| {
 			readonly kind: 'normal';
@@ -51,6 +79,7 @@ export type P2PCompetitionState = {
 	/** Command IDs already accepted; prevents replay with a newer UI order. */
 	readonly acceptedActionIds: readonly string[];
 	readonly lastCanonicalOrder: number;
+	readonly logicalClock: P2PLogicalClock;
 	readonly terminalEventId: string | null;
 	readonly result: P2PCompetitionResult | null;
 };
@@ -61,6 +90,7 @@ export type P2PCompetitionEvent =
 			actionId: string;
 			actorId: string;
 			canonicalOrder: number;
+			domain?: P2PLogicalDomain;
 		}
 	| {
 			type: 'battle_started';
@@ -172,6 +202,7 @@ export function createP2PCompetitionState(input: {
 		lastAcceptedAction: null,
 		acceptedActionIds: [],
 		lastCanonicalOrder: 0,
+		logicalClock: createP2PLogicalClock(),
 		terminalEventId: null,
 		result: null,
 	};
@@ -214,6 +245,7 @@ export function reduceP2PCompetitionLifecycle(
 				lastAcceptedAction: acceptedAction,
 				acceptedActionIds: [...state.acceptedActionIds, event.actionId],
 				lastCanonicalOrder: event.canonicalOrder,
+				logicalClock: advanceP2PLogicalClock(state.logicalClock, event.domain, event.canonicalOrder),
 			};
 		}
 
@@ -238,6 +270,7 @@ export function reduceP2PCompetitionLifecycle(
 				...state,
 				phase: 'battle',
 				lastCanonicalOrder: event.canonicalOrder,
+				logicalClock: advanceP2PLogicalClock(state.logicalClock, undefined, event.canonicalOrder),
 			};
 
 		case 'disconnect_detected':

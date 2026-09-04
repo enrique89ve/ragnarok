@@ -993,6 +993,8 @@ export interface GameState {
   prophecies?: Prophecy[];
   activeRealm?: RealmState;
   realmsVisited?: RealmId[];
+  /** Idempotency ledger for canonical Poker reward commands. */
+  pokerRewardIds?: string[];
 }
 
 export interface Prophecy {

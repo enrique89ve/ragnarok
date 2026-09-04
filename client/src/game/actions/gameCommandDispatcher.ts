@@ -22,6 +22,7 @@ export interface GameCommandHandlers {
 	readonly confirmMulligan: (onCommitted?: GameCommandCommitCallback) => void;
 	readonly skipMulligan: (onCommitted?: GameCommandCommitCallback) => void;
 	readonly selectDiscoveryOption: (card: CardData | null, onCommitted?: GameCommandCommitCallback) => void;
+	readonly grantPokerHandRewards: (command: Extract<GameCommand, { type: 'grant_poker_hand_rewards' }>, onCommitted?: GameCommandCommitCallback) => void;
 }
 
 export function dispatchGameCommand(
@@ -45,6 +46,9 @@ export function dispatchGameCommand(
 		case GAME_COMMAND_TYPES.useHeroPower:
 			if (onCommitted) handlers.performHeroPower(command.targetId, command.targetType, onCommitted);
 			else handlers.performHeroPower(command.targetId, command.targetType);
+			return;
+		case GAME_COMMAND_TYPES.grantPokerHandRewards:
+			handlers.grantPokerHandRewards(command, onCommitted);
 			return;
 		case GAME_COMMAND_TYPES.frontlineAttack:
 			if (onCommitted) handlers.frontlineAttack(command.mode, command.actionId, onCommitted);

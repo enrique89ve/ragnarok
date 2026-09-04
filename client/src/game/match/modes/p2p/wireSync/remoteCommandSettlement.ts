@@ -10,12 +10,15 @@ export const P2P_COMMAND_STATUS_REJECT_REASON = 'p2p_command_status';
 
 export type RemoteCommandSettlementDispatchers = {
 	readonly onApplied: () => void;
+	/** Explicit opt-in for a command whose reducer-level idempotency is canonical. */
+	readonly onIgnored?: (reason: string) => void;
 	readonly onUnapplied: (reason: string) => void;
 };
 
 /**
- * Only an applied command may advance the incoming sequence, enter the
- * transcript, or trigger post-apply synchronization.
+ * An applied command may advance the incoming sequence, enter the transcript,
+ * or trigger post-apply synchronization. An ignored command needs an explicit
+ * idempotent dispatcher to receive the same treatment.
  */
 export function settleRemoteCommand(
 	result: ApplyGameCommandResult,
@@ -23,6 +26,10 @@ export function settleRemoteCommand(
 ): void {
 	if (result.status === 'applied') {
 		dispatchers.onApplied();
+		return;
+	}
+	if (result.status === 'ignored' && dispatchers.onIgnored) {
+		dispatchers.onIgnored(P2P_COMMAND_STATUS_REJECT_REASON);
 		return;
 	}
 	dispatchers.onUnapplied(P2P_COMMAND_STATUS_REJECT_REASON);

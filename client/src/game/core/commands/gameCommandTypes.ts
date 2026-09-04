@@ -13,6 +13,7 @@ export const GAME_COMMAND_TYPES = {
 	attack: 'attack',
 	endTurn: 'end_turn',
 	useHeroPower: 'use_hero_power',
+	grantPokerHandRewards: 'grant_poker_hand_rewards',
 	toggleMulliganCard: 'toggle_mulligan_card',
 	confirmMulligan: 'confirm_mulligan',
 	skipMulligan: 'skip_mulligan',
@@ -52,6 +53,18 @@ export type UseHeroPowerCommand = {
 	readonly targetType?: HeroPowerTargetType;
 };
 
+export type GrantPokerHandRewardsCommand = {
+	readonly type: typeof GAME_COMMAND_TYPES.grantPokerHandRewards;
+	readonly combatId: string;
+	readonly handIndex: number;
+	readonly rewardId: string;
+	readonly wagerDrawPlayer: number;
+	readonly wagerDrawOpponent: number;
+	readonly wagerAoeDamagePlayer: number;
+	readonly wagerAoeDamageOpponent: number;
+	readonly allInShowdown: boolean;
+};
+
 export type ToggleMulliganCardCommand = {
 	readonly type: typeof GAME_COMMAND_TYPES.toggleMulliganCard;
 	readonly cardId: string;
@@ -80,6 +93,7 @@ export type GameCommand =
 	| AttackCommand
 	| EndTurnCommand
 	| UseHeroPowerCommand
+	| GrantPokerHandRewardsCommand
 	| ToggleMulliganCardCommand
 	| ConfirmMulliganCommand
 	| SkipMulliganCommand

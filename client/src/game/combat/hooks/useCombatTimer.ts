@@ -301,6 +301,7 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
             const canonicalOrder = commitNextP2PCanonicalAction({
               actionId: decisionId,
               actorId: usePeerStore.getState().myPeerId ?? '',
+              domain: 'poker',
             });
             if (canonicalOrder === null) {
               usePeerStore.getState().setP2pIntegrityError('Game integrity diverged. Actions are paused until the match is left. (local_poker_canonical_order_unavailable)');

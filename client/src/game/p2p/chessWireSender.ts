@@ -477,7 +477,7 @@ function dispatchChessCommand(
 		armPendingChessReceiptTimeout(envelope, postCheckpoint.root);
 		const actorId = usePeerStore.getState().myPeerId;
 		const transcriptCanonicalOrder = actorId
-			? commitNextP2PCanonicalAction({ actionId: envelope.commandId, actorId })
+			? commitNextP2PCanonicalAction({ actionId: envelope.commandId, actorId, domain: 'chess' })
 			: null;
 		if (!actorId || transcriptCanonicalOrder === null) {
 			quarantineChessSession('chess_canonical_order_unavailable');

@@ -105,6 +105,32 @@ describe('transcriptBuilder session log evidence', () => {
 		expect(second.getBuiltRecords()?.map(move => move.canonicalOrder)).toEqual([1, 2]);
 	});
 
+	it('keeps discovery choice metadata identical on both P2P perspectives', async () => {
+		const local = new TranscriptBuilder();
+		local.addMove({
+			moveNumber: 0,
+			canonicalOrder: 1,
+			action: 'selectDiscoveryOption',
+			payload: { cardId: 42, commandId: 'command-1', seq: 0 },
+			playerId: 'peer-a',
+			timestamp: 1_000,
+		});
+
+		const remote = new TranscriptBuilder();
+		remote.addMove({
+			moveNumber: 0,
+			canonicalOrder: 1,
+			action: 'selectDiscoveryOption',
+			// The receiver must retain the same command identity fields that the
+			// local recorder appends before hashing the canonical action.
+			payload: { cardId: 42, commandId: 'command-1', seq: 0 },
+			playerId: 'peer-a',
+			timestamp: 2_000,
+		});
+
+		expect(await local.buildMerkleTree()).toBe(await remote.buildMerkleTree());
+	});
+
 	it('fails closed for mixed or non-contiguous canonical ordering', async () => {
 		const mixed = new TranscriptBuilder();
 		mixed.addMove({

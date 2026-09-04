@@ -12,7 +12,6 @@ import { cryptoRng, cryptoIdGen, createSeededRng, createSeededIdGen, seededRngFr
 import type { SeededRng } from '@shared/p2p-wire/rng';
 import type { HiveCardAsset } from '../../data/schemas/HiveTypes';
 import { useMulliganStore } from './mulliganStore';
-import { usePokerRewardStore } from './pokerRewardStore';
 import { CardInstance, GameState, CardData } from '../types';
 import { CardInstanceWithCardData } from '../types/interfaceExtensions';
 import useGame from '../../lib/stores/useGame';
@@ -30,7 +29,7 @@ import { useMatchStore } from '../match/store';
 import { computeStateHash } from '../engine/engineBridge';
 import { flipGameState } from '../engine/wireHash';
 import { serializeGameState } from '../engine/stateSerializer';
-import { GAME_COMMAND_TYPES, applyGameCommand, applyOpponentCommand, canActInPokerWindow, appliedGameCommand, ignoredGameCommand, rejectedGameCommand, type ApplyGameCommandResult, type GameCommand, type PokerCardTimingContext } from '../core/commands';
+import { GAME_COMMAND_TYPES, applyGameCommand, applyOpponentCommand, canActInPokerWindow, appliedGameCommand, ignoredGameCommand, rejectedGameCommand, type ApplyGameCommandResult, type GameCommand, type GrantPokerHandRewardsCommand, type PokerCardTimingContext } from '../core/commands';
 import { applyGameCommandToStore } from './gameCommandStoreAdapter';
 import { buildHandshakeGameState, type CardsDeckAnnounce } from '../p2p/cardsDeckHandshake';
 import { applyPokerAuxiliaryEffects } from '../combat/pokerAuxiliaryEffects';
@@ -160,7 +159,7 @@ interface GameStore {
   skipMulligan: () => ApplyGameCommandResult;
 
   // Poker hand rewards - give mana crystal and draw a card
-  grantPokerHandRewards: () => void;
+  grantPokerHandRewards: (command: GrantPokerHandRewardsCommand) => ApplyGameCommandResult;
   setupOpponentSpellPetCards: () => void;
 
   // WASM state hash
@@ -218,6 +217,25 @@ function getPokerCardTimingContext(): PokerCardTimingContext | null {
 	};
 }
 
+function getPokerCommandTiming(): {
+	readonly pokerCombat: PokerCardTimingContext | null;
+	readonly nowMs?: number;
+} {
+	const pokerCombat = getPokerCardTimingContext();
+	// A peer command is already gated by the signed/notarized Poker window;
+	// evaluate its local reducer against that same canonical boundary instead
+	// of letting browser wall clocks disagree near the deadline.
+	return {
+		pokerCombat,
+		nowMs: isPeerOpponentMatch()
+			? getCanonicalPokerActionNowMs({
+				origin: 'player',
+				deadlineAtMs: pokerCombat?.turnDeadlineAtMs ?? null,
+			})
+			: undefined,
+	};
+}
+
 export type EndTurnPokerFoldResult =
 	| { readonly status: 'not_required' }
 	| { readonly status: 'applied' }
@@ -266,8 +284,6 @@ let autoEndTurnTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Guard: prevents double-firing endTurn while AI is thinking
 let isAITurnProcessing = false;
-
-// Guard: poker reward retries moved to pokerRewardStore.ts
 
 /**
  * Lazy read of the player's NFT collection from the Hive data store.
@@ -386,8 +402,9 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     });
   },
 
-	  playCard: (cardId: string, targetId?: string, targetType?: 'minion' | 'hero', insertionIndex?: number, payWithBlood?: boolean) => {
+	playCard: (cardId: string, targetId?: string, targetType?: 'minion' | 'hero', insertionIndex?: number, payWithBlood?: boolean) => {
 	    const { gameState, matchSeed, myCanonicalSide } = get();
+	    const pokerTiming = getPokerCommandTiming();
     const command = {
       type: GAME_COMMAND_TYPES.playCard,
       cardId,
@@ -400,7 +417,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 	      isAiSimulationMode: isAISimulationMode,
 	      rng: commandRng(),
 	      idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
-	      pokerCombat: getPokerCardTimingContext(),
+	      ...pokerTiming,
 	    });
 
 	    applyGameCommandToStore({
@@ -414,11 +431,12 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 
 	  applyOpponentCommand: (command: GameCommand) => {
 	    const { gameState, matchSeed, myCanonicalSide } = get();
+	    const pokerTiming = getPokerCommandTiming();
 	    const result = applyOpponentCommand(gameState, command, {
 	      isAiSimulationMode: isAISimulationMode,
 	      rng: commandRng(),
 	      idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
-	      pokerCombat: getPokerCardTimingContext(),
+	      ...pokerTiming,
 	      canonicalMulliganFirstActor: myCanonicalSide === 'opponent' ? 'opponent' : 'player',
 	    });
 
@@ -574,16 +592,17 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 	        return ignoredGameCommand(gameState, 'attacker_not_found');
       }
 
-      const command = {
+	      const command = {
         type: GAME_COMMAND_TYPES.attack,
         attackerId,
         defenderId,
-      } as const;
+	      } as const;
+	      const pokerTiming = getPokerCommandTiming();
 	      const result = applyGameCommand(gameState, command, {
 	        isAiSimulationMode: isAISimulationMode,
 	        rng: commandRng(),
 	        idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
-	        pokerCombat: getPokerCardTimingContext(),
+	        ...pokerTiming,
 	      });
 
       if (result.status === 'applied') {
@@ -663,12 +682,13 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 
 	  frontlineAttack: (mode: FrontlineAttackMode = 'minion', actionId = crypto.randomUUID()) => {
 	    const { gameState, matchSeed, myCanonicalSide } = get();
+	    const pokerTiming = getPokerCommandTiming();
     const command = { type: GAME_COMMAND_TYPES.frontlineAttack, mode, actionId } as const;
 	    const result = applyGameCommand(gameState, command, {
 	      isAiSimulationMode: isAISimulationMode,
 	      rng: commandRng(),
 	      idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
-	      pokerCombat: getPokerCardTimingContext(),
+	      ...pokerTiming,
 	    });
 	    applyGameCommandToStore({ command, beforeState: gameState, result, setState: set });
 	    if (result.status === 'applied') applyPokerAuxiliaryEffects(command, 'player');
@@ -719,12 +739,6 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
     });
     applyGameCommandToStore({ command, beforeState: gameState, result, setState: set });
-    if (result.status === 'applied') {
-      setTimeout(() => {
-        debug.log('[GameStore] Discovery complete, granting deferred poker hand rewards');
-        get().grantPokerHandRewards();
-      }, 0);
-    }
     return result;
   },
 
@@ -867,8 +881,9 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
   // the canonical `executeHeroPower`). Poker-combat Norse powers use the separate
   // `norse_hero_power` auxiliary command so their Poker-slot effects can be mirrored
   // deterministically on both peers.
-	  performHeroPower: (targetId?: string, targetType?: 'card' | 'hero') => {
+	performHeroPower: (targetId?: string, targetType?: 'card' | 'hero') => {
 	    const { gameState, heroTargetMode, matchSeed, myCanonicalSide } = get();
+	    const pokerTiming = getPokerCommandTiming();
     const player = gameState.players.player;
 
     // UX pre-step: some hero powers require a target (e.g. mage Fireblast).
@@ -896,7 +911,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 	      isAiSimulationMode: isAISimulationMode,
 	      rng: commandRng(),
 	      idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
-	      pokerCombat: getPokerCardTimingContext(),
+	      ...pokerTiming,
 	    });
 
     applyGameCommandToStore({
@@ -938,6 +953,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 		actionId = crypto.randomUUID(),
 	) => {
 			const { gameState, matchSeed, myCanonicalSide } = get();
+			const pokerTiming = getPokerCommandTiming();
 		const command = {
 			type: GAME_COMMAND_TYPES.norseHeroPower,
 			norseHeroId,
@@ -949,7 +965,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 				isAiSimulationMode: isAISimulationMode,
 				rng: commandRng(),
 				idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
-				pokerCombat: getPokerCardTimingContext(),
+				...pokerTiming,
 			});
 		applyGameCommandToStore({ command, beforeState: gameState, result, setState: set });
 		if (result.status === 'applied') applyPokerAuxiliaryEffects(command, 'player');
@@ -958,36 +974,27 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 
 	weaponUpgrade: (norseHeroId: string, actionId = crypto.randomUUID()) => {
 		const { gameState, matchSeed, myCanonicalSide } = get();
+		const pokerTiming = getPokerCommandTiming();
 		const command = { type: GAME_COMMAND_TYPES.weaponUpgrade, norseHeroId, actionId } as const;
 		const result = applyGameCommand(gameState, command, {
 			isAiSimulationMode: isAISimulationMode,
 			rng: commandRng(),
 			idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
-			pokerCombat: getPokerCardTimingContext(),
+			...pokerTiming,
 		});
 		applyGameCommandToStore({ command, beforeState: gameState, result, setState: set });
 		if (result.status === 'applied') applyPokerAuxiliaryEffects(command, 'player');
 		return result;
 	},
 
-  grantPokerHandRewards: () => {
-    const { gameState } = get();
-    const rewardStore = usePokerRewardStore.getState();
-
-    if (gameState?.mulligan?.active) {
-      debug.log('[PokerRewards] Blocked: card game mulligan still active');
-      return;
-    }
-
-    if (rewardStore.shouldDeferForDiscovery(gameState)) {
-      setTimeout(() => get().grantPokerHandRewards(), 500);
-      return;
-    }
-
-    const newState = rewardStore.grantPokerHandRewards(gameState);
-    if (newState) {
-      set({ gameState: newState });
-    }
+  grantPokerHandRewards: (command: GrantPokerHandRewardsCommand) => {
+    const { gameState, matchSeed, myCanonicalSide } = get();
+    const result = applyGameCommand(gameState, command, {
+      rng: commandRng(),
+      idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
+    });
+    applyGameCommandToStore({ command, beforeState: gameState, result, setState: set });
+    return result;
   },
 
   setupOpponentSpellPetCards: () => {

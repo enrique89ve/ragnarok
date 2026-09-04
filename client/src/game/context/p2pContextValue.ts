@@ -35,6 +35,7 @@ export interface P2PActions {
 	performNorseHeroPower: (norseHeroId: string, targetId?: string, targetType?: 'minion' | 'hero', actionId?: string, onCommitted?: GameCommandCommitCallback) => void;
 	weaponUpgrade: (norseHeroId: string, actionId?: string, onCommitted?: GameCommandCommitCallback) => void;
 	selectDiscoveryOption: (card: CardData | null, onCommitted?: GameCommandCommitCallback) => void;
+	grantPokerHandRewards: (command: Extract<GameCommand, { type: 'grant_poker_hand_rewards' }>, onCommitted?: GameCommandCommitCallback) => void;
 	dispatchGameCommand: (command: GameCommand, onCommitted?: GameCommandCommitCallback) => void;
 	sendPokerAction: (input: {
 		playerId: string;

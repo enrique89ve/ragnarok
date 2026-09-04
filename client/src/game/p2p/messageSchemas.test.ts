@@ -133,6 +133,22 @@ describe('parseWireMessage — game_command envelope (cards integrity)', () => {
 		expect(parseWireMessage({ ...validEnvelope, command: { type: 'use_hero_power' } })).not.toBeNull();
 	});
 
+	it('accepts the deterministic Poker hand reward command and rejects extra fields', () => {
+		const command = {
+			type: 'grant_poker_hand_rewards' as const,
+			combatId: 'combat-1',
+			handIndex: 0,
+			rewardId: 'reward-1',
+			wagerDrawPlayer: 1,
+			wagerDrawOpponent: 0,
+			wagerAoeDamagePlayer: 2,
+			wagerAoeDamageOpponent: 0,
+			allInShowdown: false,
+		};
+		expect(parseWireMessage({ ...validEnvelope, command })).not.toBeNull();
+		expect(parseWireMessage({ ...validEnvelope, command: { ...command, unexpected: true } })).toBeNull();
+	});
+
 	it('accepts the three actor-scoped mulligan commands', () => {
 		expect(parseWireMessage({ ...validEnvelope, command: { type: 'toggle_mulligan_card', cardId: 'card-1' } })).not.toBeNull();
 		expect(parseWireMessage({ ...validEnvelope, command: { type: 'confirm_mulligan' } })).not.toBeNull();
@@ -489,6 +505,26 @@ describe('parseWireMessage — integrity probes', () => {
 		expect(parseWireMessage({ type: 'hash_mismatch', turnNumber: 3, myHash: 'h' })).not.toBeNull();
 	});
 
+	it('accepts a hash beacon with domain revisions and rejects malformed clocks', () => {
+		const logicalClock = { canonicalOrder: 4, chessRevision: 2, cardsRevision: 1, pokerRevision: 1 };
+		expect(parseWireMessage({
+			type: 'hash_check',
+			stateHash: 'h',
+			chessStateHash: 'c',
+			chessMoveCount: 0,
+			turnNumber: 0,
+			logicalClock,
+		})).not.toBeNull();
+		expect(parseWireMessage({
+			type: 'hash_check',
+			stateHash: 'h',
+			chessStateHash: 'c',
+			chessMoveCount: 0,
+			turnNumber: 0,
+			logicalClock: { ...logicalClock, pokerRevision: -1 },
+		})).toBeNull();
+	});
+
 	it('accepts a turn-scoped Poker hash check', () => {
 		expect(parseWireMessage({
 			type: 'poker_hash_check',
@@ -497,6 +533,21 @@ describe('parseWireMessage — integrity probes', () => {
 			turnId: 'combat-a:faith:remote-piece:0',
 			actionsThisRound: 0,
 		})).not.toBeNull();
+	});
+
+	it('accepts a state-sync request with a Cards command cursor', () => {
+		expect(parseWireMessage({
+			type: 'state_sync_request',
+			matchId: 'match-integrity-1',
+			fromTurn: 3,
+			fromCommandSeq: 5,
+		})).not.toBeNull();
+		expect(parseWireMessage({
+			type: 'state_sync_request',
+			matchId: 'match-integrity-1',
+			fromTurn: 3,
+			fromCommandSeq: -1,
+		})).toBeNull();
 	});
 
 	it('rejects a Poker hash check without its turn identity', () => {

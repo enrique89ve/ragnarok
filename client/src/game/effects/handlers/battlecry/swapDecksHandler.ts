@@ -10,6 +10,7 @@ import { GameContext } from '../../../GameContext';
 import { Card, BattlecryEffect, CardInstance } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
 import { MAX_HAND_SIZE } from '../../../constants/gameConstants';
+import { cryptoIdGen } from '../../../utils/seededRng';
 
 export default function executeSwapDecks(
   context: GameContext, 
@@ -32,7 +33,7 @@ export default function executeSwapDecks(
     
     if (effect.giveRansom) {
       const ransomCard: CardInstance = {
-        instanceId: 'ransom-' + Date.now(),
+        instanceId: 'ransom-' + cryptoIdGen(),
         card: {
           id: effect.ransomCardId || 99998,
           name: effect.ransomCardName || "King's Ransom",

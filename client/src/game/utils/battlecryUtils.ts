@@ -731,6 +731,35 @@ function executeBattlecryUnbound(
       case 'swap_hands':
         return executeSwapHandsBattlecry(newState);
 
+      case 'swap_decks': {
+        const playerDeck = newState.players.player.deck;
+        newState.players.player.deck = newState.players.opponent.deck;
+        newState.players.opponent.deck = playerDeck;
+
+        if (battlecry.giveRansom && newState.players.opponent.hand.length < MAX_HAND_SIZE) {
+          const ransomCard: CardInstance = {
+            instanceId: 'ransom-' + cryptoIdGen(),
+            card: {
+              id: battlecry.ransomCardId || 99998,
+              name: battlecry.ransomCardName || "King's Ransom",
+              description: 'Swap decks with your opponent.',
+              manaCost: battlecry.ransomCost || 5,
+              type: 'spell',
+              rarity: 'mythic',
+              heroClass: 'neutral',
+              spellEffect: { type: 'swap_decks' },
+            },
+            canAttack: false,
+            isPlayed: false,
+            isSummoningSick: false,
+            attacksPerformed: 0,
+          } as CardInstance;
+          newState.players.opponent.hand.push(ransomCard);
+        }
+
+        return newState;
+      }
+
       case 'adapt_nagas':
         return executeAdaptNagasBattlecry(newState);
 

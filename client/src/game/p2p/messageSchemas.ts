@@ -46,6 +46,7 @@ import {
 } from '@shared/p2pAvailability';
 
 import type { P2PMessage } from './messages';
+import type { P2PLogicalClock } from '@shared/p2p-wire/p2pCompetitionLifecycle';
 import {
 	GAME_STATE_WIRE_CODEC,
 	MAX_COMPRESSED_GAME_STATE_BASE64URL_CHARS,
@@ -91,6 +92,18 @@ const AttackSchema = z.object({
 
 const EndTurnSchema = z.object({
 	type: z.literal('end_turn'),
+}).strict();
+
+const GrantPokerHandRewardsSchema = z.object({
+	type: z.literal('grant_poker_hand_rewards'),
+	combatId: NonEmptyString(128),
+	handIndex: NonNegativeInt,
+	rewardId: NonEmptyString(128),
+	wagerDrawPlayer: NonNegativeInt,
+	wagerDrawOpponent: NonNegativeInt,
+	wagerAoeDamagePlayer: NonNegativeInt,
+	wagerAoeDamageOpponent: NonNegativeInt,
+	allInShowdown: z.boolean(),
 }).strict();
 
 const UseHeroPowerSchema = z.object({
@@ -151,6 +164,7 @@ const WireGameCommandSchema = z.discriminatedUnion('type', [
 	PlayCardSchema,
 	AttackSchema,
 	EndTurnSchema,
+	GrantPokerHandRewardsSchema,
 	UseHeroPowerSchema,
 	FrontlineAttackSchema,
 	NorseHeroPowerSchema,
@@ -288,6 +302,13 @@ const WasmHashCheckSchema = z.object({
 	wasmHash: NonEmptyString(128),
 }).strict();
 
+const P2PLogicalClockSchema = z.object({
+	canonicalOrder: NonNegativeInt,
+	chessRevision: NonNegativeInt,
+	cardsRevision: NonNegativeInt,
+	pokerRevision: NonNegativeInt,
+}).strict() satisfies z.ZodType<P2PLogicalClock>;
+
 const HashCheckSchema = z.object({
 	type: z.literal('hash_check'),
 	stateHash: HashString,
@@ -311,6 +332,7 @@ const HashCheckSchema = z.object({
 	// application window even when both peers are still on the same turn.
 	sentCommandSeq: z.number().int().min(-1).optional(),
 	receivedCommandSeq: z.number().int().min(-1).optional(),
+	logicalClock: P2PLogicalClockSchema.optional(),
 }).strict();
 
 const HashMismatchSchema = z.object({
@@ -325,6 +347,7 @@ const PokerHashCheckSchema = z.object({
 	phase: z.enum(['pre_flop', 'faith', 'foresight', 'destiny']),
 	turnId: NonEmptyString(256),
 	actionsThisRound: NonNegativeInt,
+	logicalClock: P2PLogicalClockSchema.optional(),
 }).strict();
 
 // ── Poker (symmetric apply — see OPEN-4 / PVP_WIRE_PROTOCOL §5) ────────────
@@ -493,6 +516,7 @@ const StateSyncRequestSchema = z.object({
 	type: z.literal('state_sync_request'),
 	matchId: MatchIdString,
 	fromTurn: NonNegativeInt,
+	fromCommandSeq: NonNegativeInt.optional(),
 }).strict();
 
 // `action` is intentionally `unknown` — issue 03 owns the per-action schema

@@ -15,6 +15,7 @@ export function useP2PActions(): P2PActions {
 	const gsPerformNorseHeroPower = useGameStore(s => s.performNorseHeroPower);
 	const gsWeaponUpgrade = useGameStore(s => s.weaponUpgrade);
 	const gsSelectDiscoveryOption = useGameStore(s => s.selectDiscoveryOption);
+	const gsGrantPokerHandRewards = useGameStore(s => s.grantPokerHandRewards);
 	const gsGameState = useGameStore(s => s.gameState);
 	const isP2PMatch = useMatchStore(s => s.activeMatch?.opponent.kind === 'peer');
 
@@ -33,6 +34,7 @@ export function useP2PActions(): P2PActions {
 			performNorseHeroPower: () => undefined,
 			weaponUpgrade: () => undefined,
 			selectDiscoveryOption: () => undefined,
+			grantPokerHandRewards: () => undefined,
 			dispatchGameCommand: () => undefined,
 			sendPokerAction: async () => false,
 			sendPokerTurnStarted: () => false,
@@ -56,6 +58,10 @@ export function useP2PActions(): P2PActions {
 			const result = gsSelectDiscoveryOption(card);
 			if (result.status === 'applied') onCommitted?.();
 		},
+		grantPokerHandRewards: (command, onCommitted) => {
+			const result = gsGrantPokerHandRewards(command);
+			if (result.status === 'applied') onCommitted?.();
+		},
 		dispatchGameCommand: (command: GameCommand, onCommitted?: () => void) => {
 			dispatchGameCommand(command, {
 				playCard: gsPlayCard,
@@ -69,6 +75,7 @@ export function useP2PActions(): P2PActions {
 				confirmMulligan: useGameStore.getState().confirmMulligan,
 				skipMulligan: useGameStore.getState().skipMulligan,
 				selectDiscoveryOption: useGameStore.getState().selectDiscoveryOption,
+				grantPokerHandRewards: useGameStore.getState().grantPokerHandRewards,
 			});
 			onCommitted?.();
 		},

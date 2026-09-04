@@ -19,6 +19,7 @@ export const P2PProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 	const gsConfirmMulligan = useGameStore(s => s.confirmMulligan);
 	const gsSkipMulligan = useGameStore(s => s.skipMulligan);
 	const gsSelectDiscoveryOption = useGameStore(s => s.selectDiscoveryOption);
+	const gsGrantPokerHandRewards = useGameStore(s => s.grantPokerHandRewards);
 	const gameState = useGameStore(s => s.gameState);
 	const isP2PMatch = useMatchStore(s => s.activeMatch?.opponent.kind === 'peer');
 
@@ -32,6 +33,7 @@ export const P2PProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 		performNorseHeroPower: gsPerformNorseHeroPower,
 		weaponUpgrade: gsWeaponUpgrade,
 		selectDiscoveryOption: () => undefined,
+		grantPokerHandRewards: () => undefined,
 		dispatchGameCommand: () => undefined,
 		sendPokerAction: async () => false,
 		sendPokerTurnStarted: () => false,
@@ -113,6 +115,12 @@ export const P2PProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 			const result = gsSelectDiscoveryOption(card);
 			if (result.status === 'applied') onCommitted?.();
 		};
+	const activeGrantPokerHandRewards = useP2PHandlers
+		? p2pSync.grantPokerHandRewards
+		: (command: Parameters<typeof gsGrantPokerHandRewards>[0], onCommitted?: () => void) => {
+			const result = gsGrantPokerHandRewards(command);
+			if (result.status === 'applied') onCommitted?.();
+		};
 
 	// Mutate ref fields — zero allocations, zero new object identity
 	ref.current.playCard = activePlayCard;
@@ -123,6 +131,7 @@ export const P2PProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 	ref.current.performNorseHeroPower = activePerformNorseHeroPower;
 	ref.current.weaponUpgrade = activeWeaponUpgrade;
 	ref.current.selectDiscoveryOption = activeSelectDiscoveryOption;
+	ref.current.grantPokerHandRewards = activeGrantPokerHandRewards;
 	ref.current.dispatchGameCommand = (command: GameCommand, onCommitted?: () => void) => {
 		dispatchGameCommand(command, {
 			playCard: activePlayCard,
@@ -136,6 +145,7 @@ export const P2PProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 			confirmMulligan: activeConfirmMulligan,
 			skipMulligan: activeSkipMulligan,
 			selectDiscoveryOption: activeSelectDiscoveryOption,
+			grantPokerHandRewards: activeGrantPokerHandRewards,
 		}, onCommitted);
 	};
 	ref.current.sendPokerAction = p2pSync.sendPokerAction;

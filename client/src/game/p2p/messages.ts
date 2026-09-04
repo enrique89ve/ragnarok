@@ -16,6 +16,7 @@ import type { GameStateWirePayload } from './stateFrameCodec';
 import type { MatchAcceptanceProof } from '../../../../shared/p2pMatchAcceptance';
 import type { MatchmakingDelegationProof } from '@shared/p2pMatchDelegation';
 import type { BattleReadyDebug, P2PBattleReadyProof } from './battleReady';
+import type { P2PLogicalClock } from '@shared/p2p-wire/p2pCompetitionLifecycle';
 
 /**
  * Challenge shape allowed inside `session_authorize`.
@@ -74,8 +75,10 @@ export type WireMessage =
 			sentCommandSeq?: number;
 			/** Highest remote game_command seq applied by the beacon sender, if present. */
 			receivedCommandSeq?: number;
+			/** Logical revisions captured with this committed beacon. Optional for legacy rooms. */
+			logicalClock?: P2PLogicalClock;
 		}
-	| { type: 'poker_hash_check'; pokerStateHash: string; phase: 'pre_flop' | 'faith' | 'foresight' | 'destiny'; turnId: string; actionsThisRound: number }
+	| { type: 'poker_hash_check'; pokerStateHash: string; phase: 'pre_flop' | 'faith' | 'foresight' | 'destiny'; turnId: string; actionsThisRound: number; logicalClock?: P2PLogicalClock }
 	| { type: 'hash_mismatch'; turnNumber: number; myHash: string }
 	| { type: 'poker_action'; playerId: string; action: string; origin: PokerActionOrigin; hpCommitment?: number; compact?: CompactPokerAction; turnId: string; decisionId: string; seq?: number; prevStateHash?: string; signerPubkey?: string; signature?: string; sentAtMs?: number }
 	| ActionAppliedMessage
@@ -101,7 +104,13 @@ export type WireMessage =
 	}
 	| { type: 'session_renewal'; matchId: string; newPubkey: string; hiveSig: string }
 	| { type: 'session_resumed'; matchId: string; lastSeenStateHash: string }
-	| { type: 'state_sync_request'; matchId: string; fromTurn: number }
+	| {
+			type: 'state_sync_request';
+			matchId: string;
+			fromTurn: number;
+			/** First locally-missing Cards game_command seq, when available. */
+			fromCommandSeq?: number;
+		}
 	| { type: 'action_envelope'; matchId: string; seq: number; prevHash: string; action: unknown; sig: string };
 
 export interface HeartbeatMessage {

@@ -1,4 +1,5 @@
 import type { P2PCompetitionPhase } from '@shared/p2p-wire/p2pCompetitionLifecycle';
+import type { P2PLogicalClock, P2PLogicalDomain } from '@shared/p2p-wire/p2pCompetitionLifecycle';
 
 export const SETUP_STATE_MISMATCH_REASON = 'setup_state_mismatch' as const;
 
@@ -21,8 +22,17 @@ export function shouldCompareHashBeacon(
 	return competitionPhase === 'battle' && !chessTransitionPending;
 }
 
-export function shouldDeferSlashForHashMismatch(
-	competitionPhase: P2PCompetitionPhase | null | undefined,
+/**
+ * A beacon is comparable only within the same domain revision. Missing clocks
+ * are treated as legacy compatibility, while a known revision mismatch is a
+ * normal in-flight condition and must not quarantine the session.
+ */
+export function shouldCompareDomainRevision(
+	local: P2PLogicalClock | undefined,
+	remote: P2PLogicalClock | undefined,
+	domain: P2PLogicalDomain,
 ): boolean {
-	return competitionPhase === 'battle';
+	if (!local || !remote) return true;
+	const revisionKey = `${domain}Revision` as const;
+	return local[revisionKey] === remote[revisionKey];
 }

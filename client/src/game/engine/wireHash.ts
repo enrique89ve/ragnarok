@@ -40,6 +40,19 @@ export function flipGameState(state: GameState): GameState {
 			opponentReady: (state.mulligan as { playerReady?: boolean }).playerReady ?? false,
 		}
 		: state.mulligan;
+	const flippedFatigueCount = state.fatigueCount
+		? { player: state.fatigueCount.opponent, opponent: state.fatigueCount.player }
+		: state.fatigueCount;
+	const flippedActiveRealm = state.activeRealm
+		? {
+			...state.activeRealm,
+			owner: state.activeRealm.owner === 'player' ? 'opponent' as const : 'player' as const,
+		}
+		: state.activeRealm;
+	const flippedProphecies = state.prophecies?.map(prophecy => ({
+		...prophecy,
+		owner: prophecy.owner === 'player' ? 'opponent' as const : 'player' as const,
+	}));
 	return {
 		...state,
 		players: {
@@ -49,6 +62,9 @@ export function flipGameState(state: GameState): GameState {
 		currentTurn: state.currentTurn === 'player' ? 'opponent' : 'player',
 		winner: state.winner === 'player' ? 'opponent' : state.winner === 'opponent' ? 'player' : state.winner,
 		mulligan: flippedMulligan,
+		fatigueCount: flippedFatigueCount,
+		activeRealm: flippedActiveRealm,
+		prophecies: flippedProphecies,
 	};
 }
 

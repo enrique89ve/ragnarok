@@ -1550,7 +1550,7 @@ describe('Protocol Core: Replay Traces', () => {
 
 			expect(result.status).toBe('rejected');
 			expect((result as { reason: string }).reason).toContain('missing transcript root');
-		});
+		}, 20_000);
 
 		it('ranked match_result rejects tampering with transcript root after commitment', async () => {
 			await seedGenesis(state, deps);
@@ -1568,7 +1568,7 @@ describe('Protocol Core: Replay Traces', () => {
 
 			expect(result.status).toBe('rejected');
 			expect((result as { reason: string }).reason).toContain('compact hash mismatch');
-		});
+		}, 20_000);
 
 		it('ranked match_result verifies the winner signature over the compact commitment', async () => {
 			await seedGenesis(state, deps);

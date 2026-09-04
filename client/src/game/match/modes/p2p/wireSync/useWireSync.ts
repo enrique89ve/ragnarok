@@ -24,9 +24,9 @@ import { computeChessPrevStateHash } from '../../../../engine/chessHash';
 import { computeInitialMatchRoot, computeInitialMatchRootDebug, computePokerCombatStateHash } from '../../../../p2p/phaseBoundaryRoot';
 import { isSharedNetworkEnvironment } from '../../../../config/featureFlags';
 import { findExistingMatchResult, type SlashEvidenceParams } from '../../../../../data/blockchain/slashEvidence';
-import { GAME_COMMAND_TYPES } from '../../../../core/commands';
+import { derivePokerHandRewardId, GAME_COMMAND_TYPES } from '../../../../core/commands';
 import type { ApplyGameCommandResult } from '../../../../core/commands';
-import type { WireGameCommand } from '../../../../hooks/p2pEnvelope';
+import type { GameCommandEnvelope, WireGameCommand } from '../../../../hooks/p2pEnvelope';
 import { useWarbandStore, selectArmy, selectDeckCardIds, selectDeckCardIdsByPiece } from '../../../../../lib/stores/useWarbandStore';
 import { HERO_DECK_PIECE_TYPES } from '../../../../deck/heroDeckRules';
 import { deriveCanonicalSide, isChessAttackInstantKill, tryParseChessCommandEnvelope, type ChessCommandEnvelope } from '../../../../../../../shared/p2p-wire/chess';
@@ -45,8 +45,8 @@ import { getP2PProcessFlags, getP2PTransportRole } from '../../../../p2p/p2pPers
 import { ensureCanonicalP2PChessBoard, isP2PBoardBoundTo } from '../../../../p2p/p2pChessBoardBinding';
 import {
 	SETUP_STATE_MISMATCH_REASON,
+	shouldCompareDomainRevision,
 	shouldCompareHashBeacon,
-	shouldDeferSlashForHashMismatch,
 	shouldEmitHashBeacon,
 } from '../../../../p2p/p2pIntegrityPolicy';
 import {
@@ -129,6 +129,9 @@ import type {
 	PokerTurnClockProposal,
 } from '@shared/p2p-wire/pokerTimeNotary';
 import { settleRemoteCommand } from './remoteCommandSettlement';
+import { commitCheckpoint, type CommittedCheckpoint } from '../../../../p2p/committedCheckpoint';
+import type { P2PLogicalDomain } from '@shared/p2p-wire/p2pCompetitionLifecycle';
+import { CLEAN_DESYNC_RECOVERY_LEDGER, observeDomainDesync, observeMatchingDomainInLedger } from '../../../../p2p/desyncRecovery';
 import { getCachedMatchAcceptance, getCachedMatchmakingDelegation } from '../../../../p2p/matchAcceptance';
 import { buildMatchAcceptanceMessage, buildMatchAcceptanceV2Message, readMatchAcceptanceProof } from '../../../../../../../shared/p2pMatchAcceptance';
 import { isCurrentMatchmakingDelegation, readMatchmakingDelegationProof, buildMatchmakingDelegationMessage } from '@shared/p2pMatchDelegation';
@@ -156,6 +159,7 @@ import {
 import { enqueueWireMessage, MAX_INBOUND_WIRE_QUEUE_SIZE } from './wireMessageQueue';
 import { resolveP2PResumeAuthPolicy } from '../../../../p2p/p2pResumeAuthPolicy';
 import { replayTranscriptLeaves } from './transcriptReplay';
+import { replayCardsCommandEnvelopes } from './cardsCommandReplay';
 import {
 	createTranscriptOrderGate,
 	requiresSignedActionEnvelope,
@@ -193,6 +197,7 @@ const P2P_INTEGRITY_PAUSED_MESSAGE = 'Game integrity diverged. Actions are pause
 const PRE_BATTLE_CARDS_DELIVERY_ATTEMPTS = 3;
 const PRE_BATTLE_HASH_RETRY_ATTEMPTS = 3;
 const PRE_BATTLE_HASH_RETRY_DELAY_MS = 150;
+const MAX_REPLAYABLE_CARDS_COMMANDS = 256;
 
 type PendingPokerActionGate = {
 	readonly matchId: string;
@@ -511,9 +516,11 @@ export function useWireSync() {
 	const confirmMulligan = useGameStore(state => state.confirmMulligan);
 	const skipMulligan = useGameStore(state => state.skipMulligan);
 	const selectDiscoveryOption = useGameStore(state => state.selectDiscoveryOption);
+	const grantPokerHandRewards = useGameStore(state => state.grantPokerHandRewards);
 	const applyOpponentCommandToStore = useGameStore(state => state.applyOpponentCommand);
 	const pendingActionEnvelopeQueueRef = useRef<Extract<P2PMessage, { type: 'action_envelope' }>[]>([]);
 	const initSentRef = useRef(false);
+	const pendingPokerRewardCommitsRef = useRef(new Map<string, () => void>());
 
 	// Rate limiting: max 5 action messages per second from opponent
 	const actionTimestampsRef = useRef<number[]>([]);
@@ -555,6 +562,9 @@ export function useWireSync() {
 	// Serialize asynchronous Ed25519 signing so local sequence numbers remain
 	// contiguous even when actions are clicked faster than WebCrypto responds.
 	const localCommandSignChainRef = useRef<Promise<void>>(Promise.resolve());
+	const committedCardsCheckpointRef = useRef<CommittedCheckpoint | null>(null);
+	const sentCardsCommandHistoryRef = useRef<GameCommandEnvelope[]>([]);
+	const desyncRecoveryRef = useRef(CLEAN_DESYNC_RECOVERY_LEDGER);
 	// Signed transcript envelopes use the same async signing boundary. Keep their
 	// append path serialized as well; otherwise two rapid cards actions can both
 	// observe the same transcript length and emit duplicate sequence numbers.
@@ -581,12 +591,30 @@ export function useWireSync() {
 	const theirCommitmentRef = useRef<string | null>(null);
 	const seedResolvedRef = useRef(false);
 
+	const handleSoftDesync = (reason: string, domain: P2PLogicalDomain): boolean => {
+		const decision = observeDomainDesync(desyncRecoveryRef.current, domain);
+		desyncRecoveryRef.current = decision.state;
+		if (decision.action === 'request_replay') {
+			const activeMatchId = matchIdRef.current;
+			if (!activeMatchId) return false;
+			const fromTurn = signedTranscriptRef.current?.leaves.length ?? 0;
+			const fromCommandSeq = Math.max(0, lastIncomingSeqRef.current + 1);
+			const accepted = send({ type: 'state_sync_request', matchId: activeMatchId, fromTurn, fromCommandSeq });
+			recordSessionEvent('p2p_soft_resync_requested', { reason, fromTurn, fromCommandSeq, accepted });
+			return accepted;
+		}
+		quarantineP2PSession(`desync_unrecovered_${reason}`);
+		return false;
+	};
+
+	const observeMatchingDomainRoot = (domain: P2PLogicalDomain): void => {
+		desyncRecoveryRef.current = observeMatchingDomainInLedger(desyncRecoveryRef.current, domain);
+	};
+
 	// Slash dedup: one cards-slash + one chess-slash per turn at most. Tracked
 	// independently because cards and chess hash checks are independent
 	// detections — a turn can plausibly fail one without the other (e.g.
 	// chess-only mutation that doesn't touch cards GameState).
-	const lastSlashTurnRef = useRef<number>(-1);
-	const lastChessSlashTurnRef = useRef<number>(-1);
 	const debouncedSyncRef = useRef<(() => void) | null>(null);
 
 	// Command dedup: track commandIds (UUIDs from envelope) we've already applied so a
@@ -981,8 +1009,12 @@ export function useWireSync() {
 			clearTranscript(); // also resets moveCounter inside the transcript module
 			outgoingSeqCounter = 0;
 			lastIncomingSeqRef.current = -1;
-			seenCommandIdsRef.current.clear();
-			seenCommandIdsOrderRef.current.length = 0;
+					seenCommandIdsRef.current.clear();
+					seenCommandIdsOrderRef.current.length = 0;
+					sentCardsCommandHistoryRef.current = [];
+					committedCardsCheckpointRef.current = null;
+					pendingPokerRewardCommitsRef.current.clear();
+					desyncRecoveryRef.current = CLEAN_DESYNC_RECOVERY_LEDGER;
 				lastIncomingChessSeqRef.current = -1;
 				seenChessCommandIdsRef.current.clear();
 					seenChessCommandIdsOrderRef.current.length = 0;
@@ -1086,6 +1118,7 @@ export function useWireSync() {
 					type: 'state_sync_request',
 					matchId: resumedMatchId,
 					fromTurn: signedTranscriptRef.current?.leaves.length ?? 0,
+					fromCommandSeq: Math.max(0, lastIncomingSeqRef.current + 1),
 				});
 				debug.log('[wireSync] Reconnected existing P2P session without reseeding', {
 					matchId: resumedMatchId,
@@ -1697,6 +1730,15 @@ export function useWireSync() {
 					}
 					const gs = useGameStore.getState().gameState;
 					if (!gs) break;
+					const localLogicalClock = usePeerStore.getState().battleLifecycle?.logicalClock;
+					const cardsRevisionComparable = shouldCompareDomainRevision(localLogicalClock, data.logicalClock, 'cards');
+					if (!cardsRevisionComparable) {
+						debug.log('[wireSync] Ignored cards hash beacon from a different cards revision', {
+							localCardsRevision: localLogicalClock?.cardsRevision,
+							remoteCardsRevision: data.logicalClock?.cardsRevision,
+						});
+					}
+					if (cardsRevisionComparable) {
 					// A beacon can cross an in-flight turn or reconnect replay. Do not
 					// classify that ordinary ordering window as divergence; compare roots
 					// only when both peers identify the same cards turn.
@@ -1747,30 +1789,23 @@ export function useWireSync() {
 					if (myHash !== data.stateHash) {
 						debug.error(`[wireSync] Cards state hash mismatch at turn ${data.turnNumber}: local=${myHash.slice(0, 16)}, remote=${data.stateHash.slice(0, 16)}`);
 						send({ type: 'hash_mismatch', turnNumber: data.turnNumber, myHash });
-						quarantineP2PSession(`cards_hash_mismatch_turn_${data.turnNumber}`);
-
-						if (shouldDeferSlashForHashMismatch(usePeerStore.getState().battleLifecycle?.phase) && isSharedNetworkEnvironment() && data.turnNumber !== lastSlashTurnRef.current) {
-							lastSlashTurnRef.current = data.turnNumber;
-							const matchSeed = useGameStore.getState().matchSeed;
-							const opponentName = usePeerStore.getState().remotePeerId ?? 'unknown';
-								if (matchSeed) {
-									deferSlashEvidence({
-										matchId: matchSeed,
-										offender: opponentName,
-										reason: 'forged_move',
-										trxId1: matchSeed,
-										trxId2: `hash_check_fail_cards_turn_${data.turnNumber}_${myHash.slice(0, 16)}`,
-										notes: `Cards hash check failed at turn ${data.turnNumber}. Local: ${myHash.slice(0, 16)}, remote: ${data.stateHash.slice(0, 16)}`,
-									});
-								}
-							}
+						const softResyncAccepted = handleSoftDesync(`cards_hash_mismatch_turn_${data.turnNumber}`, 'cards');
+						recordSessionEvent('cards_state_desync', {
+							turnNumber: data.turnNumber,
+							localHash: myHash,
+							remoteHash: data.stateHash,
+							recovery: softResyncAccepted ? 'replay_requested' : 'hard_pause',
+						});
+					} else {
+						observeMatchingDomainRoot('cards');
+					}
 					}
 
 					// Chess hash check (TD-27c-chess F3). Empty on either side means
 					// well-known race ('' from sender = no chess phase or WASM not
 					// ready; '' from local = same on receiver). Skip rather than
 					// reject — periodic beacon will retry in 2s.
-					if (data.chessStateHash.length > 0) {
+					if (data.chessStateHash.length > 0 && shouldCompareDomainRevision(localLogicalClock, data.logicalClock, 'chess')) {
 						const localChessSnapshot = useUnifiedCombatStore.getState().boardState ?? null;
 						const myChessHash = computeChessPrevStateHash(localChessSnapshot);
 						const localChessMoveCount = localChessSnapshot?.moveCount ?? -1;
@@ -1784,26 +1819,24 @@ export function useWireSync() {
 						const moveCountsMatch = data.chessMoveCount >= 0
 							&& localChessMoveCount >= 0
 							&& data.chessMoveCount === localChessMoveCount;
+						if (moveCountsMatch && myChessHash.length > 0 && myChessHash === data.chessStateHash) {
+							observeMatchingDomainRoot('chess');
+						}
 						if (moveCountsMatch && myChessHash.length > 0 && myChessHash !== data.chessStateHash) {
 							debug.error(`[wireSync] Chess state hash mismatch at turn ${data.turnNumber}: local=${myChessHash.slice(0, 16)}, remote=${data.chessStateHash.slice(0, 16)}`);
-							quarantineP2PSession(`chess_hash_mismatch_turn_${data.turnNumber}`);
-
-							if (shouldDeferSlashForHashMismatch(usePeerStore.getState().battleLifecycle?.phase) && isSharedNetworkEnvironment() && data.turnNumber !== lastChessSlashTurnRef.current) {
-								lastChessSlashTurnRef.current = data.turnNumber;
-								const matchSeed = useGameStore.getState().matchSeed;
-								const opponentName = usePeerStore.getState().remotePeerId ?? 'unknown';
-									if (matchSeed) {
-										deferSlashEvidence({
-											matchId: matchSeed,
-											offender: opponentName,
-											reason: 'forged_move',
-											trxId1: matchSeed,
-											trxId2: `hash_check_fail_chess_turn_${data.turnNumber}_${myChessHash.slice(0, 16)}`,
-											notes: `Chess hash check failed at turn ${data.turnNumber}. Local: ${myChessHash.slice(0, 16)}, remote: ${data.chessStateHash.slice(0, 16)}`,
-										});
-									}
-								}
+							const softResyncAccepted = handleSoftDesync(`chess_hash_mismatch_turn_${data.turnNumber}`, 'chess');
+							recordSessionEvent('chess_state_desync', {
+								turnNumber: data.turnNumber,
+								localHash: myChessHash,
+								remoteHash: data.chessStateHash,
+								recovery: softResyncAccepted ? 'replay_requested' : 'hard_pause',
+							});
 						}
+					} else if (data.chessStateHash.length > 0) {
+						debug.log('[wireSync] Ignored chess hash beacon from a different chess revision', {
+							localChessRevision: localLogicalClock?.chessRevision,
+							remoteChessRevision: data.logicalClock?.chessRevision,
+						});
 					}
 					break;
 				}
@@ -1815,6 +1848,14 @@ export function useWireSync() {
 					)) {
 						break;
 					}
+					if (!shouldCompareDomainRevision(
+						usePeerStore.getState().battleLifecycle?.logicalClock,
+						data.logicalClock,
+						'poker',
+					)) {
+						debug.log('[wireSync] Ignored Poker hash beacon from a different Poker revision');
+						break;
+					}
 					const pokerState = getP2PPokerCombatAdapter().getPokerState();
 					if (!pokerState
 						|| pokerState.phase !== data.phase
@@ -1822,10 +1863,14 @@ export function useWireSync() {
 						|| pokerState.actionsThisRound !== data.actionsThisRound) {
 						break;
 					}
-					const localPokerHash = computePokerCombatStateHash(pokerState);
-					if (!localPokerHash || localPokerHash === data.pokerStateHash) break;
+						const localPokerHash = computePokerCombatStateHash(pokerState);
+						if (!localPokerHash) break;
+						if (localPokerHash === data.pokerStateHash) {
+							observeMatchingDomainRoot('poker');
+							break;
+						}
 					debug.error(`[wireSync] Poker state hash mismatch at ${data.turnId}: local=${localPokerHash.slice(0, 16)}, remote=${data.pokerStateHash.slice(0, 16)}`);
-					quarantineP2PSession(`poker_hash_mismatch_${data.turnId}`);
+					handleSoftDesync(`poker_hash_mismatch_${data.turnId}`, 'poker');
 					recordSessionEvent('poker_integrity_mismatch', {
 						turnId: data.turnId,
 						phase: data.phase,
@@ -1850,25 +1895,16 @@ export function useWireSync() {
 						break;
 					}
 					debug.error(`[wireSync] Opponent reports hash mismatch at turn ${data.turnNumber}: theirHash=${data.myHash.slice(0, 16)}`);
-					quarantineP2PSession(`opponent_reported_hash_mismatch_turn_${data.turnNumber}`);
+						const softResyncAccepted = handleSoftDesync(`opponent_reported_hash_mismatch_turn_${data.turnNumber}`, 'cards');
+					recordSessionEvent('cards_state_desync_reported', {
+					turnNumber: data.turnNumber,
+					remoteHash: data.myHash,
+					recovery: softResyncAccepted ? 'replay_requested' : 'hard_pause',
+				});
 					// Do not answer a divergence report with a peer-authored full state.
 					// The receiver deliberately rejects gameState frames; recovery must
 					// use the signed transcript from the agreed root or terminate.
 
-					if (shouldDeferSlashForHashMismatch(usePeerStore.getState().battleLifecycle?.phase) && isSharedNetworkEnvironment()) {
-						const matchSeed = useGameStore.getState().matchSeed;
-						const opponentName = usePeerStore.getState().remotePeerId ?? 'unknown';
-							if (matchSeed) {
-								deferSlashEvidence({
-									matchId: matchSeed,
-									offender: opponentName,
-									reason: 'forged_move',
-									trxId1: matchSeed,
-									trxId2: `hash_mismatch_turn_${data.turnNumber}_${data.myHash.slice(0, 16)}`,
-									notes: `State hash mismatch at turn ${data.turnNumber}. Opponent hash: ${data.myHash.slice(0, 16)}`,
-								});
-							}
-						}
 					break;
 
 				case 'seed_commit':
@@ -2369,13 +2405,16 @@ export function useWireSync() {
 						const remoteOwnsPokerTurn = pokerStateForCommand !== null
 							&& pokerStateForCommand.turnId !== null
 							&& pokerStateForCommand.activePlayerId === pokerStateForCommand.opponent.playerId;
-						const isMulliganCommand = wireCommand.type === GAME_COMMAND_TYPES.toggleMulliganCard
-							|| wireCommand.type === GAME_COMMAND_TYPES.confirmMulligan
-							|| wireCommand.type === GAME_COMMAND_TYPES.skipMulligan;
-						const isActiveMulligan = gs.gamePhase === 'mulligan' && gs.mulligan?.active === true;
-						if (gs.gamePhase === 'game_over'
-							|| (!isMulliganCommand && !remoteOwnsPokerTurn && gs.currentTurn !== 'opponent')
-							|| (isMulliganCommand && !isActiveMulligan)) {
+		const isMulliganCommand = wireCommand.type === GAME_COMMAND_TYPES.toggleMulliganCard
+			|| wireCommand.type === GAME_COMMAND_TYPES.confirmMulligan
+			|| wireCommand.type === GAME_COMMAND_TYPES.skipMulligan;
+		const isPokerRewardCommand = wireCommand.type === GAME_COMMAND_TYPES.grantPokerHandRewards;
+		const pokerRewardAlreadyApplied = isPokerRewardCommand
+			&& gs.pokerRewardIds?.includes(wireCommand.rewardId) === true;
+		const isActiveMulligan = gs.gamePhase === 'mulligan' && gs.mulligan?.active === true;
+		if (gs.gamePhase === 'game_over'
+			|| (!isMulliganCommand && !isPokerRewardCommand && !remoteOwnsPokerTurn && gs.currentTurn !== 'opponent')
+			|| (isMulliganCommand && !isActiveMulligan)) {
 								rejectCanonicalCommand('not_opponent_turn_or_game_over');
 							break;
 						}
@@ -2395,10 +2434,11 @@ export function useWireSync() {
 								useGameStore.getState().gameState,
 								isCardsCanonicalPlayerFrameRef.current,
 							);
-							if (!resultingStateHash) {
-								quarantineP2PSession('cards_applied_hash_unavailable');
-								return;
-							}
+				if (!resultingStateHash) {
+					quarantineP2PSession('cards_applied_hash_unavailable');
+					return;
+				}
+				if (!rememberCardsCheckpoint(resultingStateHash, data.commandId)) return;
 							const receipt = buildActionAppliedMessage({
 								matchId: expectedMatchId,
 								transportEpoch: readConnectionTransportEpoch(usePeerStore.getState().connection),
@@ -2425,7 +2465,7 @@ export function useWireSync() {
 		): boolean => {
 			const actorId = usePeerStore.getState().remotePeerId;
 			const canonicalOrder = actorId
-				? commitNextP2PCanonicalAction({ actionId: data.commandId, actorId })
+					? commitNextP2PCanonicalAction({ actionId: data.commandId, actorId, domain: 'cards' })
 				: null;
 			if (canonicalOrder === null) {
 				quarantineP2PSession('remote_canonical_order_unavailable');
@@ -2449,9 +2489,49 @@ export function useWireSync() {
 							|| gs.players.player.battlefield.some(c => c.instanceId === id)
 						);
 
-						// Lightweight payload validation; wireCommand is already a discriminated union.
-						switch (wireCommand.type) {
-							case GAME_COMMAND_TYPES.playCard:
+		// Lightweight payload validation; wireCommand is already a discriminated union.
+			switch (wireCommand.type) {
+			case GAME_COMMAND_TYPES.grantPokerHandRewards:
+				if (wireCommand.rewardId !== derivePokerHandRewardId(
+					expectedMatchId,
+					wireCommand.combatId,
+					wireCommand.handIndex,
+				)) {
+					rejectCanonicalCommand('poker_reward_id_mismatch');
+					break;
+				}
+				if (!pokerRewardAlreadyApplied && (!pokerStateForCommand
+					|| pokerStateForCommand.combatId !== wireCommand.combatId
+					|| pokerStateForCommand.handNumber !== wireCommand.handIndex)) {
+					rejectCanonicalCommand('poker_reward_hand_mismatch');
+					break;
+				}
+				const settlePokerRewardCommit = (): void => {
+						if (!recordRemoteCanonicalMove('grantPokerHandRewards', {
+							combatId: wireCommand.combatId,
+							handIndex: wireCommand.handIndex,
+							rewardId: wireCommand.rewardId,
+							wagerDrawPlayer: wireCommand.wagerDrawPlayer,
+							wagerDrawOpponent: wireCommand.wagerDrawOpponent,
+							wagerAoeDamagePlayer: wireCommand.wagerAoeDamagePlayer,
+							wagerAoeDamageOpponent: wireCommand.wagerAoeDamageOpponent,
+							allInShowdown: wireCommand.allInShowdown,
+							commandId: data.commandId,
+							seq: data.seq,
+						})) return;
+						markCommandApplied();
+						debouncedSyncRef.current?.();
+						const pendingCommit = pendingPokerRewardCommitsRef.current.get(wireCommand.rewardId);
+						pendingPokerRewardCommitsRef.current.delete(wireCommand.rewardId);
+						pendingCommit?.();
+				};
+				settleRemoteCommand(applyOpponentCommandToStore(wireCommand), {
+					onApplied: settlePokerRewardCommit,
+					onIgnored: settlePokerRewardCommit,
+					onUnapplied: (reason) => rejectCanonicalCommand(reason),
+				});
+				break;
+			case GAME_COMMAND_TYPES.playCard:
 								if (typeof wireCommand.cardId !== 'string' || wireCommand.cardId.length > 64) {
 									rejectCanonicalCommand('invalid_play_card_payload');
 									break;
@@ -2653,10 +2733,11 @@ export function useWireSync() {
 							case GAME_COMMAND_TYPES.selectDiscoveryOption:
 								settleRemoteCommand(applyOpponentCommandToStore(wireCommand), {
 									onApplied: () => {
-										if (!recordRemoteCanonicalMove('selectDiscoveryOption', {
-											cardId: wireCommand.card?.id,
-											seq: data.seq,
-										})) return;
+						if (!recordRemoteCanonicalMove('selectDiscoveryOption', {
+							cardId: wireCommand.card?.id,
+							commandId: data.commandId,
+							seq: data.seq,
+						})) return;
 										markCommandApplied();
 										debouncedSyncRef.current?.();
 									},
@@ -3095,7 +3176,7 @@ export function useWireSync() {
 						}
 						const actorId = usePeerStore.getState().remotePeerId;
 						const transcriptCanonicalOrder = actorId
-							? commitNextP2PCanonicalAction({ actionId: envelope.commandId, actorId })
+							? commitNextP2PCanonicalAction({ actionId: envelope.commandId, actorId, domain: 'chess' })
 							: null;
 						if (!actorId || transcriptCanonicalOrder === null) {
 							quarantineP2PSession('remote_chess_canonical_order_unavailable');
@@ -3245,7 +3326,7 @@ export function useWireSync() {
 							commitRemotePokerDecision(pokerDecisionLedger, data.decisionId, SEEN_COMMAND_IDS_MAX);
 							const remoteActorId = usePeerStore.getState().remotePeerId;
 							const canonicalOrder = remoteActorId
-								? commitNextP2PCanonicalAction({ actionId: data.decisionId, actorId: remoteActorId })
+								? commitNextP2PCanonicalAction({ actionId: data.decisionId, actorId: remoteActorId, domain: 'poker' })
 								: null;
 							if (canonicalOrder === null) {
 								quarantineP2PSession('remote_poker_canonical_order_unavailable');
@@ -3769,6 +3850,23 @@ export function useWireSync() {
 					if (!activeId || data.matchId !== activeId) break;
 					const tr = signedTranscriptRef.current;
 					const leaves = tr ? tr.leaves.slice(data.fromTurn) : [];
+					if (data.fromCommandSeq !== undefined) {
+						const commandReplay = replayCardsCommandEnvelopes({
+							envelopes: sentCardsCommandHistoryRef.current,
+							fromSeq: data.fromCommandSeq,
+							nextSeq: outgoingSeqCounter,
+							send,
+						});
+						if (!commandReplay.accepted) {
+							debug.warn('[wireSync] state sync command history is incomplete', commandReplay);
+							quarantineP2PSession('state_sync_command_history_incomplete');
+							break;
+						}
+						debug.log('[wireSync] state_sync_request — replaying Cards commands', {
+							fromCommandSeq: data.fromCommandSeq,
+							commandCount: commandReplay.sent,
+						});
+					}
 					debug.log('[wireSync] state_sync_request — replying with', {
 						matchId: data.matchId,
 						leafCount: leaves.length,
@@ -4131,6 +4229,10 @@ export function useWireSync() {
 				debug.warn('[wireSync] signed command was not accepted by transport/buffer');
 				return null;
 			}
+			sentCardsCommandHistoryRef.current.push(signedEnvelope);
+			if (sentCardsCommandHistoryRef.current.length > MAX_REPLAYABLE_CARDS_COMMANDS) {
+				sentCardsCommandHistoryRef.current.shift();
+			}
 			outgoingSeqCounter += 1;
 			let resolveApplied: (receipt: ActionAppliedMessage | null) => void = () => undefined;
 			const appliedPromise = new Promise<ActionAppliedMessage | null>((resolve) => {
@@ -4193,6 +4295,7 @@ export function useWireSync() {
 						if (!shouldCommitLocalCardsAction({
 							isP2PMatch,
 							localApplyStatus: localResult.status,
+							idempotentCommand: command.type === GAME_COMMAND_TYPES.grantPokerHandRewards,
 						})) {
 							// The signed envelope already crossed the transport boundary.
 							// A local reducer rejection means this browser and its peer
@@ -4354,6 +4457,30 @@ export function useWireSync() {
 		myPeerId: usePeerStore.getState().myPeerId,
 	});
 
+	const rememberCardsCheckpoint = (root: string, commandId: string): boolean => {
+		const lifecycle = usePeerStore.getState().battleLifecycle;
+		if (!lifecycle) return false;
+		const logicalClock = lifecycle.logicalClock ?? {
+			canonicalOrder: lifecycle.lastCanonicalOrder,
+			chessRevision: 0,
+			cardsRevision: 0,
+			pokerRevision: 0,
+		};
+		const checkpoint = commitCheckpoint({
+			previous: committedCardsCheckpointRef.current,
+			commandId,
+			root,
+			domain: 'cards' satisfies P2PLogicalDomain,
+			clock: logicalClock,
+		});
+		if (!checkpoint) {
+			quarantineP2PSession('cards_committed_checkpoint_invalid');
+			return false;
+		}
+		committedCardsCheckpointRef.current = checkpoint;
+		return true;
+	};
+
 	// Sender wrappers: when the local player is the P2P client, the command travels
 	// in the SENDER's perspective (e.g. `targetId: 'opponent-hero'` means "the host's hero
 	// from the client's POV"). The host's applyOpponentCommand swaps player/opponent
@@ -4389,7 +4516,7 @@ export function useWireSync() {
 		}
 		const actorId = usePeerStore.getState().myPeerId;
 		const canonicalOrder = actorId
-			? commitNextP2PCanonicalAction({ actionId: sent.commandId, actorId })
+			? commitNextP2PCanonicalAction({ actionId: sent.commandId, actorId, domain: 'cards' })
 			: null;
 		if (canonicalOrder === null) {
 			quarantineP2PSession('local_canonical_order_unavailable');
@@ -4404,6 +4531,7 @@ export function useWireSync() {
 			quarantineP2PSession('local_transcript_unavailable');
 			return false;
 		}
+		if (!rememberCardsCheckpoint(sent.resultingStateHash, sent.commandId)) return false;
 		return true;
 	};
 
@@ -4546,6 +4674,42 @@ export function useWireSync() {
 		});
 	}, [selectDiscoveryOption, runCardsLocalAction, appendAndSendActionEnvelope, isP2PMatch]);
 
+	const wrappedGrantPokerHandRewards = useCallback((
+		command: Parameters<typeof grantPokerHandRewards>[0],
+		onCommitted?: () => void,
+	): void => {
+		if (isP2PMatch && isP2PSessionQuarantined()) return;
+		if (isP2PMatch && !isCardsCanonicalPlayerFrame) {
+			// The canonical player is the only sender. The other perspective waits
+			// for this exact rewardId so its pre-command hash remains contiguous.
+			pendingPokerRewardCommitsRef.current.set(command.rewardId, () => onCommitted?.());
+			return;
+		}
+		runCardsLocalAction(command, () => grantPokerHandRewards(command), (sent) => {
+			if (!recordLocalCanonicalMove('grantPokerHandRewards', {
+				combatId: command.combatId,
+				handIndex: command.handIndex,
+				rewardId: command.rewardId,
+				wagerDrawPlayer: command.wagerDrawPlayer,
+				wagerDrawOpponent: command.wagerDrawOpponent,
+				wagerAoeDamagePlayer: command.wagerAoeDamagePlayer,
+				wagerAoeDamageOpponent: command.wagerAoeDamageOpponent,
+				allInShowdown: command.allInShowdown,
+			}, sent)) return;
+			void appendAndSendActionEnvelope(buildTranscriptAction(command.type, {
+				combatId: command.combatId,
+				handIndex: command.handIndex,
+				rewardId: command.rewardId,
+				wagerDrawPlayer: command.wagerDrawPlayer,
+				wagerDrawOpponent: command.wagerDrawOpponent,
+				wagerAoeDamagePlayer: command.wagerAoeDamagePlayer,
+				wagerAoeDamageOpponent: command.wagerAoeDamageOpponent,
+				allInShowdown: command.allInShowdown,
+			}));
+			onCommitted?.();
+		});
+	}, [appendAndSendActionEnvelope, grantPokerHandRewards, isCardsCanonicalPlayerFrame, isP2PMatch, runCardsLocalAction]);
+
 	const downloadSessionLog = useCallback((): void => {
 		try {
 			const blob = exportSessionLog({
@@ -4601,8 +4765,12 @@ export function useWireSync() {
 					// The beacon must use the same canonical player frame as the
 					// receiver. The transport host is not necessarily the canonical
 					// cards player after commit-reveal side derivation.
-					const canonicalState = isCardsCanonicalPlayerFrameRef.current ? gs : flipGameState(gs);
-					const stateHash = await computeStateHash(canonicalState);
+					const committedCheckpoint = committedCardsCheckpointRef.current;
+					if (!committedCheckpoint) {
+						scheduleCheck();
+						return;
+					}
+					const stateHash = committedCheckpoint.root;
 					// Beacon-covered chess hash (TD-27c-chess F3). Closes the
 					// cross-peer divergence-detection gap between chess moves: per-
 					// envelope validation catches mid-move drift, but two peers can
@@ -4616,6 +4784,7 @@ export function useWireSync() {
 					// flight envelopes faster than 2s beacon → near-permanent stale-
 					// snapshot mismatches without this gate). -1 = no chess snapshot.
 					const chessMoveCount = chessSnapshot?.moveCount ?? -1;
+					const logicalClock = usePeerStore.getState().battleLifecycle?.logicalClock;
 					if (!cancelled) {
 						send({
 							type: 'hash_check',
@@ -4625,6 +4794,7 @@ export function useWireSync() {
 							turnNumber: gs.turnNumber,
 							sentCommandSeq: outgoingSeqCounter - 1,
 							receivedCommandSeq: lastIncomingSeqRef.current,
+							...(logicalClock ? { logicalClock } : {}),
 						});
 						const pokerState = getP2PPokerCombatAdapter().getPokerState();
 						const pokerStateHash = computePokerCombatStateHash(pokerState);
@@ -4635,6 +4805,7 @@ export function useWireSync() {
 								phase: pokerState.phase,
 								turnId: pokerState.turnId,
 								actionsThisRound: pokerState.actionsThisRound,
+								...(logicalClock ? { logicalClock } : {}),
 							});
 						}
 					}
@@ -4918,6 +5089,7 @@ export function useWireSync() {
 		confirmMulligan: wrappedConfirmMulligan,
 		skipMulligan: wrappedSkipMulligan,
 		selectDiscoveryOption: wrappedSelectDiscoveryOption,
+		grantPokerHandRewards: wrappedGrantPokerHandRewards,
 		sendPokerAction,
 		sendPokerTurnStarted,
 		sendDeckVerification,

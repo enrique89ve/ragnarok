@@ -4,6 +4,7 @@ export {
 	type AttackCommand,
 	type ConfirmMulliganCommand,
 	type EndTurnCommand,
+	type GrantPokerHandRewardsCommand,
 	type FrontlineAttackCommand,
 	type FrontlineAttackMode,
 	type GameCommand,
@@ -20,6 +21,8 @@ export {
 	type WeaponUpgradeCommand,
 } from './gameCommandTypes';
 export { applyGameCommand, applyOpponentCommand, type ApplyGameCommandDeps } from './applyGameCommand';
+export { applyPokerHandRewards } from './pokerRewardReducer';
+export { createPokerHandRewardsCommand, derivePokerHandRewardId } from './pokerRewardCommand';
 export {
 	canPlayCardInPokerWindow,
 	canActInPokerWindow,
