@@ -307,4 +307,119 @@ describe('MultiplayerLobby direct challenge helpers', () => {
 			remoteBattleReady: battleProof({ loadoutHash: 'loadout-b' }),
 		})).toEqual({ ready: true, reason: 'Battle ready' });
 	});
+	it('detects when a P2P handshake is active before transport connects', () => {
+		expect(helpers.isP2pHandshakeActive({
+			connectionState: 'disconnected',
+			matchCommitted: false,
+			matchTicket: null,
+		})).toBe(false);
+
+		expect(helpers.isP2pHandshakeActive({
+			connectionState: 'disconnected',
+			matchCommitted: true,
+			matchTicket: null,
+		})).toBe(true);
+
+		expect(helpers.isP2pHandshakeActive({
+			connectionState: 'disconnected',
+			matchCommitted: false,
+			matchTicket: matchTicket(),
+		})).toBe(true);
+
+		expect(helpers.isP2pHandshakeActive({
+			connectionState: 'connecting',
+			matchCommitted: false,
+			matchTicket: null,
+		})).toBe(true);
+	});
+
+	it('uses legacy match progress while idle and disconnected without a committed match', () => {
+		const legacy = {
+			ready: false as const,
+			title: 'Connecting',
+			detail: 'Waiting for peer.',
+		};
+
+		expect(helpers.resolveLobbyMatchProgress({
+			connectionState: 'disconnected',
+			matchCommitted: false,
+			matchTicket: null,
+			quickBattleReadiness: { ready: true, reason: 'Battle ready' },
+			legacyMatchProgress: legacy,
+		})).toEqual(legacy);
+	});
+
+	it('prefers quick-match readiness once the handshake is active', () => {
+		const legacy = {
+			ready: true as const,
+			title: 'Ready',
+			detail: 'Starting.',
+		};
+
+		expect(helpers.resolveLobbyMatchProgress({
+			connectionState: 'connected',
+			matchCommitted: true,
+			matchTicket: matchTicket('room-1'),
+			quickBattleReadiness: { ready: false, reason: 'Opponent battle-ready proof is not complete' },
+			legacyMatchProgress: legacy,
+		})).toEqual({
+			ready: false,
+			title: 'Preparing battle',
+			detail: 'Opponent battle-ready proof is not complete',
+		});
+
+		expect(helpers.resolveLobbyMatchProgress({
+			connectionState: 'connected',
+			matchCommitted: true,
+			matchTicket: matchTicket('room-1'),
+			quickBattleReadiness: { ready: true, reason: 'Battle ready' },
+			legacyMatchProgress: legacy,
+		})).toEqual({
+			ready: true,
+			title: 'Battle ready',
+			detail: 'Both players are authorized and the battle state matches.',
+		});
+	});
+
+	it('runs the lobby clock while challenges, outgoing state, or offers need expiry updates', () => {
+		const offer = {
+			protocol: 'ragnarok-match-offer-v1' as const,
+			offerId: 'offer-1',
+			matchId: 'room-1',
+			player: { peerId: 'peer-local', elo: 1000 },
+			opponent: { peerId: 'peer-remote', elo: 1000 },
+			createdAt: 1_000,
+			expiresAt: 2_000,
+			serverNonce: 'nonce-1',
+		};
+
+		expect(helpers.shouldRunLobbyClock({
+			pendingChallengeCount: 0,
+			outgoingChallenge: null,
+			matchOffer: null,
+		})).toBe(false);
+
+		expect(helpers.shouldRunLobbyClock({
+			pendingChallengeCount: 1,
+			outgoingChallenge: null,
+			matchOffer: null,
+		})).toBe(true);
+
+		expect(helpers.shouldRunLobbyClock({
+			pendingChallengeCount: 0,
+			outgoingChallenge: {
+				to: 'bob',
+				peerId: 'peer-room-1',
+				sentAt: 1_000,
+				expiresAt: 91_000,
+			},
+			matchOffer: null,
+		})).toBe(true);
+
+		expect(helpers.shouldRunLobbyClock({
+			pendingChallengeCount: 0,
+			outgoingChallenge: null,
+			matchOffer: offer,
+		})).toBe(true);
+	});
 });

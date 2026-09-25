@@ -7,6 +7,10 @@ import { resolveProtectedFlowAccess } from '../../auth/protectedFlowAccess';
 import type { MatchOffer } from '@shared/p2pMatchAcceptance';
 import { readChallengeSendResponse, type P2PMatchTicket, type ServerSignedChallenge } from '@shared/p2pAvailability';
 
+export const DIRECT_CHALLENGE_POLL_MS = 15_000;
+export const LOBBY_CLOCK_INTERVAL_MS = 1_000;
+export const MATCH_START_DELAY_MS = 1_200;
+
 export function getActiveIncomingChallenges(
 	challenges: readonly ServerSignedChallenge[],
 	now: number,
@@ -287,4 +291,44 @@ export function getQuickMatchLobbyReadiness(input: QuickMatchLobbyReadinessInput
 	return readiness.ready
 		? { ready: true, reason: 'Battle ready' }
 		: { ready: false, reason: readiness.reason };
+}
+
+export function isP2pHandshakeActive(input: {
+	readonly connectionState: P2PConnectionState;
+	readonly matchCommitted: boolean;
+	readonly matchTicket: P2PMatchTicket | null;
+}): boolean {
+	return input.connectionState !== 'disconnected' || input.matchCommitted || Boolean(input.matchTicket);
+}
+
+export function resolveLobbyMatchProgress(input: {
+	readonly connectionState: P2PConnectionState;
+	readonly matchCommitted: boolean;
+	readonly matchTicket: P2PMatchTicket | null;
+	readonly quickBattleReadiness: { readonly ready: boolean; readonly reason: string };
+	readonly legacyMatchProgress: ConnectedMatchProgress;
+}): ConnectedMatchProgress {
+	if (!isP2pHandshakeActive(input)) {
+		return input.legacyMatchProgress;
+	}
+	if (input.quickBattleReadiness.ready) {
+		return {
+			ready: true,
+			title: 'Battle ready',
+			detail: 'Both players are authorized and the battle state matches.',
+		};
+	}
+	return {
+		ready: false,
+		title: 'Preparing battle',
+		detail: input.quickBattleReadiness.reason,
+	};
+}
+
+export function shouldRunLobbyClock(input: {
+	readonly pendingChallengeCount: number;
+	readonly outgoingChallenge: OutgoingFriendChallenge | null;
+	readonly matchOffer: MatchOffer | null;
+}): boolean {
+	return input.pendingChallengeCount > 0 || input.outgoingChallenge !== null || input.matchOffer !== null;
 }

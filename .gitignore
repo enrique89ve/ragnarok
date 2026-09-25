@@ -256,6 +256,7 @@ __tests__/
 !client/src/game/components/social/FriendsPanel.test.ts
 !client/src/game/components/social/friendSession.test.ts
 !client/src/game/components/multiplayer/MultiplayerLobby.test.ts
+!client/src/game/components/multiplayer/multiplayerChallengePoll.test.ts
 !client/src/game/hooks/useMatchmaking.test.ts
 !client/src/game/match/modes/p2p/qaLocalRewardPreview.test.ts
 !client/src/game/match/modes/p2p/wireSync/pokerP2PCombatAdapter.securityBoundary.test.ts
