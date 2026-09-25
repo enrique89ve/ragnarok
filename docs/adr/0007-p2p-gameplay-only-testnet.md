@@ -66,7 +66,7 @@ or submit a Hive operation.
 A gameplay-only P2P smoke is successful when two browsers complete the full
 `chess → poker_combat → chess → game_over` path, agree at every phase checkpoint,
 survive the supported short reconnect path, export diagnostic evidence, show a
-local terminal result, and show exactly one visible `Accept` signature per
+local terminal result, and show exactly one visible Find/delegation Keychain signature per
 player followed by no additional match-driven Keychain prompt or Hive
 operation.
 

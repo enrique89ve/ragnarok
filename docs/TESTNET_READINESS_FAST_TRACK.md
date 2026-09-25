@@ -89,7 +89,7 @@ chess_attack       v
                    v
             local result
             campana: first-clear / replay no-op
-            P2P: JSON export, one Accept signature, no later Keychain/Hive op
+            P2P: JSON export, one Find/delegation Keychain signature, no later Keychain/Hive op
             daily quest Claim en home
 ```
 
@@ -97,7 +97,7 @@ F1 terminal settlement is local and complete: campaign/daily/P2P RUNE is
 idempotent IndexedDB ledger state; ELO, SeasonScore, CardXP and level-ups are
 local projections. The two-browser smoke must verify those projections and
 zero Hive/custom_json/outbox/wallet output after the explicit Quick Match
-`Accept` signatures. It must not claim browser smoke is complete until it is
+Find/delegation signatures. It must not claim browser smoke is complete until it is
 run operationally.
 
 La decision normativa es
@@ -105,8 +105,8 @@ La decision normativa es
 P2P completas y fluidas. El relay arbitra solamente checkpoints deterministas
 de cambio de fase. No hay firma ni broadcast de `match_result`, settlement P2P
 canonico de RUNE/ELO/Season Score/CardXP, ni prompts de Keychain posteriores a
-`Accept` causados por la partida. La cola es unsigned; `Accept` es la unica
-firma especifica de partida por jugador. El resultado terminal y esas
+Find causados por la partida. La cola es unsigned; Find/delegation es la unica
+firma Keychain especifica de partida por jugador. Accept es local (sessionSig). El resultado terminal y esas
 proyecciones economicas son evidencia local en IndexedDB/replay.
 
 ## Definicion de listo
@@ -221,7 +221,7 @@ dos browsers con Keychain.
 | 1 | Spine practica / campana / P2P | Integracion automatizada cerrada; smoke humano abierto | Practica: chess → poker writeback → Leave Match → `game_over` (2026-08-19). Campana: el test de lifecycle ejecuta derrota, first-clear, segundo clear y reapertura de IndexedDB con settlement local. P2P: el tracer multiperfil cubre handshake, chess, checkpoint, Poker, reload serializado y `game_over`. Faltan ganar norse-1 en browser y el smoke P2P de dos browsers reales. |
 | 2 | Poker board + funnel | Funnel y telefono landscape cerrados; pass amplio abierto | El contrato SSR prueba labels visibles dinamicos Bet/Raise y Check/Call, Fold, Frontline, All in, HP, aria/title y razones disabled; la geometria `117x99` queda fijada por test. Browser 844x390 confirma starter, warband, deckbuilder y combate lado a lado; portrait muestra el gate de rotacion. Atlas 844x390 muestra mapa+dossier y 390x844 sigue responsive, sin relajar CSP. Falta el pass visual humano 1366/1920/ultrawide/dispositivo fisico. |
 | 3 | Runtime Alfa desplegable | Host inspeccionado; arbol actual no desplegado | `build:alfa-testnet` pasa. En `testnetdev.ragnaroknft.quest`, health/admin/p2p status, sync, headers y cache pasaron; challenge signing figura `source=env`, `required=true`, `ready=true`. El host todavia sirve copy/API anteriores (por ejemplo daily claim) y no prueba este workspace hasta el siguiente deploy. |
-| 4 | Hive session | Abierto P0 humano | Login real con Keychain; Quick Match queue unsigned, una firma `Accept` por jugador y cero prompts posteriores o claims F1. |
+| 4 | Hive session | Abierto P0 humano | Login real con Keychain; Quick Match queue unsigned, una firma Find/delegation por jugador y cero prompts Keychain posteriores o claims F1. |
 | 5 | Campana 1 mision + daily quest | Persistencia local automatizada cerrada | Claim diario local: commit IDB `claimed` / `already_claimed` con RUNE local una vez. Campana: first-clear concede RUNE/CardXP/level local una sola vez, el replay persiste tras cerrar/reabrir IndexedDB y una derrota no completa la mision. Falta evidencia jugada en browser de una victoria norse-1. |
 | 6 | Dualidades P0 | Cerrado | Fin de partida unico (`matchEndController` cableado). Lookup de cartas unico en `data/cardRegistry`; `allCards.ts` y `cardManagement/cardRegistry.ts` son adaptadores sin dataset propio. Docs: Standard Match historico. OPEN-8 cerrado. Showdown 9s queda como red de seguridad aceptada. |
 | 7 | P2P smoke dos browsers | Automatizacion cerrada; P0 humano abierto | El tracer usa dos perfiles aislados y prueba spine + checkpoints + reload serializado + settlement local externamente silencioso. Los tests de relay y control añaden cambio de `X-Forwarded-For`, reemplazo de socket con la misma sesión/ticket/`peerId` y rechazo de ticket distinto sin expulsar al miembro. El transporte conserva frames de referee que llegan antes del listener, no duplica timers de reconnect y no reprograma un reconnect cuyo room ya perdió ownership; una sala nueva cancela la ventana anterior. `transport_ready_v1` es solo anuncio: WebRTC/relay no publican gameplay hasta el `transport_committed_v1` bilateral; una carrera de kinds fuerza fallback coordinado y permite recuperación por relay. El reducer de combate y el smoke de battlecry prueban IDs deterministas para Overkill, deathrattle draw, tokens materializados y Discover después de aplicar local/remoto. La habilidad de Rey usa `chess_mine_placement` firmado y tile-set determinista, pero falta evidencia de dos browsers/Keychain reales, relay desplegado, desconexion/reconexion de transporte y export. |
@@ -486,7 +486,7 @@ Flujo minimo:
    Express. Un runtime futuro con `session_renewal` visible podrá reactivar el
    reintento de sala (2 intentos / 60s).
 10. `game_over` ocurre solo tras el checkpoint terminal; se muestra el resultado
-    local y no aparece Keychain ni una operacion Hive después de `Accept`.
+    local y no aparece Keychain ni una operacion Hive después de Find/Accept.
 11. Export JSON incluye match/session id, roles, reset epoch, reject code si
     existe, hashes, checkpoints y resultado local.
 

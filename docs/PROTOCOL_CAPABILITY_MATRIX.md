@@ -34,9 +34,10 @@ deterministic rejection, not a hidden network attempt.
 - `hiveBroadcast`: permits external Hive transaction/custom-json broadcast.
 - `walletLogin`: permits identity/login discovery without signing or invocation.
 - `walletInvocation`: permits an explicit Keychain/wallet operation.
-- `p2pMatchAcceptance`: permits the one explicit Quick Match `Accept` signature
-  that authorizes the match-specific P2P handshake. It is deliberately
-  narrower than generic `walletInvocation`.
+- `p2pMatchAcceptance`: permits the one explicit Quick Match Find/delegation
+  Posting signature that authorizes matchmaking search and the P2P handshake.
+  HTTP Accept reuses the delegated key without a second Keychain prompt.
+  It is deliberately narrower than generic `walletInvocation`.
 - `marketplace`: permits marketplace mutation handlers and UI actions.
 - `packs`: permits pack purchase/open mutation handlers and UI actions.
 - `nftLoxWrites`: permits NFTLox ownership or protocol writes.

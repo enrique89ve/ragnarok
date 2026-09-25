@@ -21,7 +21,7 @@ For Quick Match, the phase contract is:
 
 ```text
 SEARCH ≠ SIGN
-ACCEPT = única firma Keychain de la partida
+FIND = única firma Keychain de la partida (delegation); ACCEPT = confirmación local sin Keychain
 BATTLE_START ⇒ A_AUTHORIZED ∧ B_AUTHORIZED ∧ P2P_READY
 P2P ∨ UNKNOWN_STATE ⇒ AI_DISABLED
 ```
