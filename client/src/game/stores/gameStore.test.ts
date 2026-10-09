@@ -423,6 +423,33 @@ describe('local match identity reset', () => {
 		expect(state.myCanonicalSide).toBe('player');
 	});
 
+	it('pays a poker reward after local single init without re-entering cryptoIdGen', () => {
+		useGameStore.getState().initGame();
+		expect(useGameStore.getState().matchSeed).toBeNull();
+		const started = useGameStore.getState().gameState;
+		useGameStore.setState({
+			gameState: { ...started, mulligan: { ...started.mulligan, active: false } },
+		});
+
+		const result = useGameStore.getState().grantPokerHandRewards({
+			type: GAME_COMMAND_TYPES.grantPokerHandRewards,
+			combatId: 'single-combat',
+			handIndex: 0,
+			rewardId: 'single-reward',
+			wagerDrawPlayer: 0,
+			wagerDrawOpponent: 0,
+			wagerAoeDamagePlayer: 0,
+			wagerAoeDamageOpponent: 0,
+			allInShowdown: false,
+		});
+
+		expect(result.status).toBe('applied');
+		if (result.status !== 'applied') return;
+		const drawn = result.state.players.player.hand.at(-1);
+		expect(drawn?.instanceId).toEqual(expect.any(String));
+		expect(drawn?.instanceId).not.toBe('poker-reward-card');
+	});
+
 	it('clears stale P2P seed on full game reset', () => {
 		useGameStore.setState({
 			matchSeed: 'stale-p2p-seed',

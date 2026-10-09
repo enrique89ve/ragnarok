@@ -2,7 +2,7 @@ import type { CardInstance, GameState, Player } from '../../types';
 import { MAX_HAND_SIZE } from '../../constants/gameConstants';
 import { createCardInstance } from '../../utils/cards/cardUtils';
 import { withCardsIdGen } from '../../utils/cardsCommandRng';
-import { cryptoIdGen } from '../../utils/seededRng';
+import { cryptoIdGen, getActiveDeterministicIdGen } from '../../utils/seededRng';
 import {
 	appliedGameCommand,
 	ignoredGameCommand,
@@ -18,12 +18,13 @@ export function applyPokerHandRewards(
 	command: GrantPokerHandRewardsCommand,
 	idGen: () => string = cryptoIdGen,
 ): ApplyGameCommandResult {
-	return withCardsIdGen(idGen, () => applyPokerHandRewardsInScope(state, command));
+	return withCardsIdGen(idGen, () => applyPokerHandRewardsInScope(state, command, idGen));
 }
 
 function applyPokerHandRewardsInScope(
 	state: GameState,
 	command: GrantPokerHandRewardsCommand,
+	idGen: () => string,
 ): ApplyGameCommandResult {
 	const invalidReason = validateRewardCommand(command);
 	if (invalidReason) return rejectedGameCommand(state, invalidReason);
@@ -32,8 +33,8 @@ function applyPokerHandRewardsInScope(
 		return ignoredGameCommand(state, 'poker reward already applied');
 	}
 
-	const player = applyPlayerReward(state.players.player, command.wagerDrawPlayer);
-	const opponent = applyPlayerReward(state.players.opponent, command.wagerDrawOpponent);
+	const player = applyPlayerReward(state.players.player, command.wagerDrawPlayer, idGen);
+	const opponent = applyPlayerReward(state.players.opponent, command.wagerDrawOpponent, idGen);
 	const playerWithWagers = applyRewardBattlefield(player, command.wagerAoeDamageOpponent, command.allInShowdown);
 	const opponentWithWagers = applyRewardBattlefield(opponent, command.wagerAoeDamagePlayer, command.allInShowdown);
 	const pokerRewardIds = [...(state.pokerRewardIds ?? []), command.rewardId];
@@ -62,14 +63,17 @@ function validateRewardCommand(command: GrantPokerHandRewardsCommand): string | 
 	return null;
 }
 
-function applyPlayerReward(player: Player, wagerDrawCount: number): Player {
+function applyPlayerReward(player: Player, wagerDrawCount: number, idGen: () => string): Player {
 	const hand = [...player.hand];
 	const deck = [...player.deck];
 	for (let index = 0; index < 1 + wagerDrawCount; index += 1) {
 		if (deck.length === 0 || hand.length >= MAX_HAND_SIZE) break;
 		const drawnCard = deck.pop();
 		if (!drawnCard) break;
-		hand.push(createCardInstance(drawnCard, 'poker-reward-card'));
+		// A seeded command scope replaces this argument inside createCardInstance.
+		// Local play has no scope, so the id has to be minted here.
+		const instanceId = getActiveDeterministicIdGen() ? 'poker-reward-card' : idGen();
+		hand.push(createCardInstance(drawnCard, instanceId));
 	}
 
 	const overloaded = player.mana.overloaded || 0;

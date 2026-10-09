@@ -73,6 +73,9 @@ let activeDeterministicIdGen: (() => string) | null = null;
 let activeDeterministicRng: (() => number) | null = null;
 
 export function withDeterministicRng<T>(rng: () => number, run: () => T): T {
+	// The scope exists only to swap a seeded stream under legacy cryptoRng()
+	// calls. Installing the crypto fallback itself makes those calls re-enter.
+	if (rng === cryptoRng) return run();
 	const previous = activeDeterministicRng;
 	activeDeterministicRng = rng;
 	try {
@@ -83,6 +86,7 @@ export function withDeterministicRng<T>(rng: () => number, run: () => T): T {
 }
 
 export function withDeterministicIdGen<T>(idGen: () => string, run: () => T): T {
+	if (idGen === cryptoIdGen) return run();
 	const previous = activeDeterministicIdGen;
 	activeDeterministicIdGen = idGen;
 	try {

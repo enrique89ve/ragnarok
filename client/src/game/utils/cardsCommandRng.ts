@@ -32,6 +32,7 @@ export function getCardsIdGen(): () => string {
 }
 
 export function withCardsRng<T>(rng: () => number, run: () => T): T {
+	if (rng === cryptoRng) return run();
 	const prev = activeRng;
 	activeRng = rng;
 	try {
@@ -47,6 +48,7 @@ export function withCardsRng<T>(rng: () => number, run: () => T): T {
  * restore the caller's generator when they return.
  */
 export function withCardsIdGen<T>(idGen: () => string, run: () => T): T {
+	if (idGen === cryptoIdGen) return run();
 	const prev = activeIdGen;
 	activeIdGen = idGen;
 	try {

@@ -109,6 +109,17 @@ describe('Poker reward determinism', () => {
 		expect(onCommitted).not.toHaveBeenCalled();
 	});
 
+	it('draws the single-player reward without re-entering cryptoIdGen', () => {
+		const result = applyGameCommand(makeState(), command);
+
+		expect(result.status).toBe('applied');
+		if (result.status !== 'applied') return;
+		const drawn = result.state.players.player.hand[0];
+		expect(drawn?.instanceId).toEqual(expect.any(String));
+		expect(drawn?.instanceId.length).toBeGreaterThan(0);
+		expect(drawn?.instanceId).not.toBe('poker-reward-card');
+	});
+
 	it('does not mutate the input state while applying the reward', () => {
 		const state = makeState();
 		const before = structuredClone(state);
