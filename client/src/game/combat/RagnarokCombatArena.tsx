@@ -1141,6 +1141,9 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
 
   // HUD selectors
   const gamePhase = useGameStore(state => state.gameState?.gamePhase);
+  const animationsEnabled = useSettingsStore(state => state.animationsEnabled);
+  const reduceMotion = useSettingsStore(state => state.reduceMotion);
+  const particleCanvasEnabled = animationsEnabled && !reduceMotion && gamePhase !== 'game_over';
   const gameWinner = useGameStore(state => state.gameState?.winner);
   const turnNumber = useGameStore(state => state.gameState?.turnNumber ?? 1);
   const currentTurnForBanner = useGameStore(state => state.gameState?.currentTurn);
@@ -1594,7 +1597,9 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
       ))}
       <KingPassivePopup />
       <AIAttackAnimationProcessor />
-      <PixiParticleCanvas realm={activeRealmId || 'midgard'} />
+      {particleCanvasEnabled && (
+        <PixiParticleCanvas realm={activeRealmId || 'midgard'} />
+      )}
       <AnimationOverlay />
       
       {/* First Strike is a presentation snapshot; gameplay was committed above. */}
@@ -1706,20 +1711,21 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
         opponentHasAdvantage={elementalBuff.opponentHasAdvantage}
       />
 
-      {/* Game Over Screen - Victory/Defeat */}
-      <GameOverScreen
-        isVisible={gamePhase === 'game_over'}
-        winner={gameOverWinner}
-        turnNumber={turnNumber}
-        playerHeroName={combatState?.player?.pet?.name ?? 'You'}
-        opponentHeroName={combatState?.opponent?.pet?.name ?? 'Opponent'}
-        playerHeroClass={getCombatHeroClass(combatState?.player)}
-        opponentHeroClass={getCombatHeroClass(combatState?.opponent)}
-        playerHeroPortrait={combatState?.player?.pet?.norseHeroId ? resolveHeroPortrait(combatState.player.pet.norseHeroId) : undefined}
-        opponentHeroPortrait={combatState?.opponent?.pet?.norseHeroId ? resolveHeroPortrait(combatState.opponent.pet.norseHeroId) : undefined}
-        onPlayAgain={onCombatEnd ? () => onCombatEnd(gameOverWinner) : undefined}
-        onMainMenu={() => { window.location.hash = '/'; }}
-      />
+      {gamePhase === 'game_over' && (
+        <GameOverScreen
+          isVisible
+          winner={gameOverWinner}
+          turnNumber={turnNumber}
+          playerHeroName={combatState?.player?.pet?.name ?? 'You'}
+          opponentHeroName={combatState?.opponent?.pet?.name ?? 'Opponent'}
+          playerHeroClass={getCombatHeroClass(combatState?.player)}
+          opponentHeroClass={getCombatHeroClass(combatState?.opponent)}
+          playerHeroPortrait={combatState?.player?.pet?.norseHeroId ? resolveHeroPortrait(combatState.player.pet.norseHeroId) : undefined}
+          opponentHeroPortrait={combatState?.opponent?.pet?.norseHeroId ? resolveHeroPortrait(combatState.opponent.pet.norseHeroId) : undefined}
+          onPlayAgain={onCombatEnd ? () => onCombatEnd(gameOverWinner) : undefined}
+          onMainMenu={() => { window.location.hash = '/'; }}
+        />
+      )}
 
       <GameLog />
 
