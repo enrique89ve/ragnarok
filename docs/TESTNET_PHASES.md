@@ -138,6 +138,12 @@ host configuration has been inspected, but the current workspace tree is not
 yet deployed there. A real two-account/Keychain P2P smoke and a played browser
 victory for the first Norse campaign mission remain operational evidence.
 
+As of 2026-10-09, `main` also contains the single-player poker reward fix
+(`cryptoIdGen` is no longer installed as its own scope) and the poker mount
+gates (`PixiParticleCanvas` only while motion is on and the duel is live;
+`GameOverScreen` only at `game_over`). `testnetdev.ragnaroknft.quest` keeps
+the previous bundle until the next Alfa deploy.
+
 Before changing phase, use the [migration runbook](./PHASE_MIGRATION_RUNBOOK.md).
 Migration never promotes local economy or progression. Code/tests validate the
 boundaries; deployed smoke and browser visual QA remain operational checks.

@@ -215,6 +215,15 @@ reservado para una batalla ya iniciada y la accion de evidencia se llama
 `Export diagnostics`. Este cierre de codigo no cierra el gate humano/deploy de
 dos browsers con Keychain.
 
+Actualizacion 2026-10-09: en `main`, la recompensa de poker en single ya no
+reinstala `cryptoIdGen` como alcance propio (eso era el
+`Maximum call stack size exceeded` en `#/game/single`). `PixiParticleCanvas`
+se monta solo con animaciones activas, sin reduced motion y fuera de
+`game_over`; `GameOverScreen` se monta solo en `game_over`. Las cinco zonas
+del tablero y `GameHUD` siguen montadas durante el duelo. El host Alfa sigue
+sirviendo el bundle anterior hasta el proximo deploy. La fila 0 de la tabla
+conserva el diff historico del 2026-09-01; no describe este arbol.
+
 | Orden | Gate | Estado actual | Cierre minimo |
 |---|---|---|---|
 | 0 | WIP del arbol | Queda chrome poker | Diff actual: `HoleCardsOverlay.tsx`, `hero-card.css`, `CardFrame.css`. Spine/resume/labels ya en `main`. No empilar trabajo nuevo fuera de arena. |

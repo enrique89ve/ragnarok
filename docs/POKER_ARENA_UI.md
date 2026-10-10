@@ -89,11 +89,11 @@ Every visual element in the arena belongs to exactly **one** logical layer. Back
 | `PhaseBanner` (portal) | `#arena-layer-vfx` | Transitions between phases, fades in centered |
 | `MulliganScreen` (portal) | `#arena-layer-modal` | Blocks input until mulligan committed |
 | `ShowdownCelebration` (portal) | `#arena-layer-modal` | Blocks input during resolution |
-| `GameOverScreen` (portal) | `#arena-layer-modal` | Terminal modal |
+| `GameOverScreen` (portal) | `#arena-layer-modal` | Terminal modal. Mounts only when `gamePhase === 'game_over'`. |
 | `CombatFeedbackStack` | `feedbackStack` HUD zone above community cards | Spell/status chips. Waits while PhaseBanner or ActionAnnouncement occupies cinema. Game log always records the same event. |
 | `BettingPanel` | `[data-zone="betting-panel"]` in HUD z-range | Persistent control surface. Actions show **Bet/Raise/Call/Check/Fold/All in** plus HP, not icon-only. Disabled buttons keep the same label and explain why in `title`. |
 | `GameHUD` | `[data-vfx-target="risk-display"]` on stakes chip | Only turn/phase/stakes rail |
-| Particle bursts (Pixi) | `#arena-layer-vfx` | Canvas-bounded particles |
+| Particle bursts (Pixi) | `#arena-layer-vfx` | Canvas-bounded particles. `PixiParticleCanvas` mounts only while animations are on, reduced motion is off, and the phase is not `game_over`. |
 
 ### Feedback lanes (log + overlay)
 
@@ -224,7 +224,7 @@ RagnarokGameCoordinator (FSM root)
                     ├── CardBurnOverlay
                     ├── AIAttackAnimationProcessor
                     ├── AnimationOverlay
-                    └── PixiParticleCanvas        (realm particles)
+                    └── PixiParticleCanvas        (realm particles; not mounted when motion is off or the duel is over)
 ```
 
 **Historical cleanup completed:**

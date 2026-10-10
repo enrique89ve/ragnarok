@@ -47,7 +47,7 @@ before inviting a wider tester cohort.
 Current P2P scope is gameplay-only externally: two browsers run chess and poker while the
 WebSocket relay compares deterministic roots only at phase boundaries. Matches
 do not sign or broadcast Hive `match_anchor`/`match_result`. Quick Match queue
-and status are unsigned; each player explicitly signs once at `Accept`, and no
+and status are unsigned; each player signs one Find/delegation Keychain transaction, and no
 Keychain prompt occurs after that ceremony. F1 persists complete local settlement/progression
 in IndexedDB/replay and never promotes it to Hive. See
 [`ADR 0007`](docs/adr/0007-p2p-gameplay-only-testnet.md).
@@ -60,7 +60,7 @@ new network stages.
 | Order | Stage / phase | Runtime truth | What it proves | Not allowed | Exit gate |
 |---|---|---|---|---|---|
 | 0 | Local development | `VITE_NETWORK_STAGE=local`, `runtimePhase=local` | Private iteration, mocks, fast gameplay checks. | Tester claims, real Hive value, public readiness claims. | Focused checks for the touched area. |
-| 1 | QA Season 0 / Alfa / generic testnet | `stage=testnet`, `runtimePhase=qa-season-0|alfa-testnet|generic-testnet`, `phaseId=local-gameplay-v1` | Single, campaign, daily quests, P2P and complete local replay progression. | Generic Hive wallet invocation, packs, marketplace, NFTLox writes and official ranking; Quick Match `Accept` is the narrow one-signature exception. | Local settlement evidence plus zero external output; deployed smoke remains pending. |
+| 1 | QA Season 0 / Alfa / generic testnet | `stage=testnet`, `runtimePhase=qa-season-0|alfa-testnet|generic-testnet`, `phaseId=local-gameplay-v1` | Single, campaign, daily quests, P2P and complete local replay progression. | Generic Hive wallet invocation, packs, marketplace, NFTLox writes and official ranking; Quick Match Find/delegation is the narrow one-signature exception. | Local settlement evidence plus zero external output; deployed smoke remains pending. |
 | 2 | Closed Testnet Beta | `stage=testnet`, `runtimePhase=closed-beta`, `phaseId=hive-testnet-v1` | Hive replay and explicit wallet flows where enabled. | Marketplace, packs, NFTLox writes and official ranking remain disabled by policy. | F2 operator/runtime sign-off; no F3 claims. |
 | 3 | Genesis / mainnet rehearsal | `stage=mainnet` in a controlled rehearsal | Multisig ceremony, irreversible replay, pack minting, seal lifecycle, production indexer behavior. | Treating rehearsal balances as final user value. | Tabletop rehearsal, hash bundle, post-seal replay validation. |
 | 4 | Mainnet | `VITE_NETWORK_STAGE=mainnet`, `runtimePhase=mainnet`, `phaseId=mainnet-v1` | Permanent canonical ownership and economy after Genesis gates. | Resettable shortcuts, QA catalog, testnet protocol ids. | Production approval and post-seal validation. |
@@ -70,6 +70,17 @@ The active readiness plan lives in
 The compact historical scope model lives in
 [`docs/BETA_TESTNET_SCOPE.md`](docs/BETA_TESTNET_SCOPE.md), and the operator
 smoke commands live in [`docs/TESTNET_RUNBOOK.md`](docs/TESTNET_RUNBOOK.md).
+
+`main` as of 2026-10-09 contains two gameplay fixes that the Alfa host does not
+serve until the next deploy:
+
+- Single-player poker rewards no longer install `cryptoIdGen` as their own
+  scope. That self-call was the `Maximum call stack size exceeded` crash on
+  `#/game/single` during poker.
+- `PixiParticleCanvas` mounts only while animations are on, reduced motion is
+  off, and the card phase is not `game_over`. `GameOverScreen` mounts only
+  when `gamePhase === 'game_over'`. The five poker zones and `GameHUD` stay
+  mounted for the duel.
 
 ---
 
@@ -665,7 +676,7 @@ server/
 
 ### Current Gate: Alfa Testnet -> Closed Testnet Beta
 
-Status 2026-08-20. Code-complete is not the same as human/operator evidence.
+Status 2026-08-20, with the 2026-10-09 tree notes above. Code-complete is not the same as human/operator evidence, and `main` is not the bundle on `testnetdev.ragnaroknft.quest`.
 
 **F1 Gameplay Validation — code path in the tree; operational browser smoke pending**
 
@@ -679,20 +690,22 @@ Status 2026-08-20. Code-complete is not the same as human/operator evidence.
 - [x] Daily quest local settlement: atomic IDB RUNE ledger, `claimed` only after commit, no Hive claim.
 - [x] P2P local snapshot + rejoin code (`docs/P2P_MATCH_RESUME.md`).
 - [x] F1 local settlement: local anchors/results, RUNE, ELO, SeasonScore, CardXP and level-ups; zero Hive output.
+- [x] Single poker reward draw does not re-enter `cryptoIdGen` (2026-10-09, `main`).
+- [x] Poker particle canvas and game-over screen mount only when needed (2026-10-09, `main`).
 
 **Alfa Player-Ready — still open**
 
 - [ ] Prove the deployed Alfa runtime through `/api/health`, `/api/admin/config`, and `/api/admin/p2p/status`: `stage=testnet`, `runtimePhase=alfa-testnet`, `resetEpoch=alfa-testnet-*`, `qaFullCatalogEnabled=false`, JSON state evidence.
 - [ ] Complete Hive/Keychain smoke with an internal testnet account (login,
-  unsigned Quick Match queue, one `Accept` signature per player, then zero
-  post-acceptance prompts).
+  unsigned Quick Match queue, one Find/delegation Keychain signature per player, then zero
+  post-match Keychain prompts).
 - [ ] Win norse-1 first-clear (not abandon) and confirm replay does not pay extra RUNE.
 - [ ] Future F2 explicit Hive claim/replay activation (not an F1 gate).
 - [ ] Poker arena visual pass at 1366x768, 1920x1080, ultrawide, and mobile landscape.
 - [ ] One `getCardById` helper (stop the `allCards` vs `cardManagement/cardRegistry` split). Do not merge the files this phase.
 - [ ] Complete the gameplay-only two-browser P2P smoke: quiet chess move,
   instant capture, poker capture, deterministic phase checkpoints, reconnect,
-  local snapshot rejoin on hard reload, local result, zero post-acceptance Keychain prompts, zero Hive
+  local snapshot rejoin on hard reload, local result, zero post-Find Keychain prompts, zero Hive
   result operation, and export JSON.
 - [ ] Re-run `bash scripts/p2p-ticket-security-check.sh` on the tree that will deploy.
 

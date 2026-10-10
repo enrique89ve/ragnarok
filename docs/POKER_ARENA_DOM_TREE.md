@@ -50,7 +50,7 @@ Parent: `position: relative; width:100%; height:100%; overflow:hidden`. Gameplay
 | 16 | `<HeroBattlePopup>` *(× N)* | fixed (inline style) | conditional (per popup) | ✓ no |
 | 17 | `<KingPassivePopup>` | absolute (`.kpp-anchor`) | conditional | ✓ no |
 | 18 | `<AIAttackAnimationProcessor>` | renders null | always | ✓ no |
-| 19 | `<PixiParticleCanvas>` | fixed (inline) | always | ✓ no |
+| 19 | `<PixiParticleCanvas>` | fixed (inline) | animations on, reduced motion off, and `gamePhase !== 'game_over'` | ✓ no |
 | 20 | `<AnimationOverlay>` | fixed (inline) | conditional | ✓ no |
 | 21 | `<FirstStrikeAnimation>` | absolute (`.first-strike-overlay`) | conditional (first strike fires) | ✓ no |
 | 22 | `<ElementBuffPopup>` | ? (CSS not audited) | conditional | ⚠ to verify |
@@ -59,7 +59,7 @@ Parent: `position: relative; width:100%; height:100%; overflow:hidden`. Gameplay
 | 25 | `<HeroPowerPrompt>` | absolute (`.targeting-prompt.hero-power-targeting`) | conditional | ✓ no |
 | 26 | `<MulliganScreen>` | overlay (full-screen modal) | conditional | ✓ no |
 | 27 | `<ShowdownCelebration>` | absolute (`.showdown-celebration-container`) | conditional (resolution) | ✓ no |
-| 28 | `<GameOverScreen>` | absolute (`.game-over-overlay`) | conditional (end of combat) | ✓ no |
+| 28 | `<GameOverScreen>` | absolute (`.game-over-overlay`) | mounts only when `gamePhase === 'game_over'` | ✓ no |
 
 **Conclusion**: `.arena-content` is the single game-layer host and is absolute. HUD/VFX/modal siblings do not push layout. Primary board geometry happens one level down in `.unified-combat-arena`.
 
