@@ -1,7 +1,7 @@
 # Ragnarok: Norse Mythos Card Game
 
 <p align="center">
-  <img src="client/public/ragnarok-logo.jpg" alt="Ragnarok" width="480" />
+  <img src="client/src/assets/images/ragnarok-logo.jpg" alt="Ragnarok" width="480" />
 </p>
 
 <p align="center">
@@ -9,6 +9,7 @@
 </p>
 
 <p align="center">
+  <a href="#inicio-local-en-otra-pc">Inicio local</a>&ensp;&bull;&ensp;
   <a href="#current-stage">Current Stage</a>&ensp;&bull;&ensp;
   <a href="#the-game">The Game</a>&ensp;&bull;&ensp;
   <a href="#features">Features</a>&ensp;&bull;&ensp;
@@ -26,10 +27,121 @@
   <img src="https://img.shields.io/badge/mythologies-5-red?style=flat-square" />
   <img src="https://img.shields.io/badge/campaign_missions-49-green?style=flat-square" />
   <img src="https://img.shields.io/badge/pet_families-38-orange?style=flat-square" />
-  <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=white" />
+  <img src="https://img.shields.io/badge/react-19-61DAFB?style=flat-square&logo=react&logoColor=white" />
   <img src="https://img.shields.io/badge/typescript-5-3178C6?style=flat-square&logo=typescript&logoColor=white" />
   <img src="https://img.shields.io/badge/blockchain-hive-E31337?style=flat-square" />
 </p>
+
+---
+
+## Inicio local en otra PC
+
+Para probar el juego, usa **modo local**: puedes preparar tu ejército y jugar
+**Single contra la IA sin cuenta Hive, sin Keychain y sin PostgreSQL**.
+El frontend y la API se ejecutan juntos en **http://localhost:5000**.
+
+### 1. Requisitos
+
+- **Git** para clonar el repositorio.
+- **Node.js 24.x** (`>=24 <25`, según `package.json`). El archivo `.nvmrc`
+  fija una versión concreta si usas nvm: ejecuta `nvm install` y `nvm use`.
+- **pnpm 11.22.0**, la versión fijada por `packageManager`.
+- Un navegador moderno con WebAssembly habilitado.
+
+En **Windows**, usa **WSL2 con Ubuntu** y ejecuta los pasos dentro de su
+terminal. Instala Git, Node y pnpm dentro de WSL, y guarda el proyecto en
+`~/projects`, por ejemplo. Los scripts actuales usan sintaxis de Bash;
+PowerShell y CMD no los ejecutan directamente.
+En **Linux y macOS**, usa tu terminal habitual con Bash disponible.
+
+Con Node instalado, prepara pnpm y comprueba las versiones:
+
+```bash
+npm install --global pnpm@11.22.0
+node --version
+pnpm --version
+```
+
+Si ya tienes pnpm 11.22.0, puedes omitir su instalación. Usa **pnpm** para las
+dependencias del proyecto; conserva `pnpm-lock.yaml`.
+
+### 2. Clonar e instalar
+
+```bash
+git clone https://github.com/enrique89ve/ragnarok.git norse-mythos-card-game
+cd norse-mythos-card-game
+pnpm install --frozen-lockfile
+```
+
+Necesitas acceso al repositorio. Si GitHub pide autenticación, usa una cuenta
+con permisos. La descarga de dependencias y assets requiere conexión.
+
+### 3. Configuración local mínima
+
+Crea un archivo **`.env` en la raíz**, junto a `package.json`, con este contenido:
+
+```dotenv
+VITE_NETWORK_STAGE=local
+ENABLE_CHAIN_INDEXER=false
+PORT=5000
+```
+
+Esto deja el indexador Hive apagado para probar Single. No necesitas secretos,
+`DATABASE_URL`, Docker ni configurar testnet. **No copies `.env.example` tal
+cual** para este arranque: incluye una URL de PostgreSQL de ejemplo.
+Si estás reutilizando una copia del proyecto, revisa su `.env` existente en
+vez de reemplazarlo sin comprobar sus valores.
+
+### 4. Arrancar y jugar
+
+```bash
+pnpm run build:wasm
+pnpm run dev:local
+```
+
+Abre **http://localhost:5000**. Entra en **Single**, revela el starter si la
+interfaz lo solicita, prepara tu Warband y comienza la partida. También puedes
+abrir directamente [la preparación de Single](http://localhost:5000/#/warband?mode=single).
+En teléfonos, la preparación y el combate requieren orientación horizontal.
+
+Deja la terminal abierta mientras juegas; usa **Ctrl+C** para detener el servidor.
+El primer acceso puede tardar mientras Vite prepara las dependencias.
+`build:wasm` genera el motor obligatorio del juego; repítelo si cambia `assembly/`.
+
+Para volver a abrirlo otro día:
+
+```bash
+cd norse-mythos-card-game
+pnpm run dev:local
+```
+
+### Datos y traslado a otra PC
+
+El progreso y los decks locales se guardan en **IndexedDB/localStorage del
+navegador**. Clonar el repositorio en otra PC no los transfiere. Otro navegador,
+perfil o puerto utiliza un almacenamiento independiente. Los archivos
+`data/chain-state.*.json` son estado del servidor, separado de esos datos.
+
+Si copias la carpeta en lugar de clonarla, instala las dependencias en la PC
+destino con `pnpm install --frozen-lockfile` y recompila WASM. No reutilices
+`node_modules` de otro sistema operativo. El modo local evita la cuenta Hive;
+no implica que todos los recursos y servicios funcionen sin internet.
+
+### Problemas frecuentes
+
+| Síntoma | Qué revisar |
+|---|---|
+| `node` o `pnpm` no se reconoce | Instala las versiones indicadas y vuelve a abrir la terminal. En WSL deben estar instaladas dentro de Ubuntu. |
+| `CHOKIDAR_USEPOLLING` o una asignación de variable falla | Ejecuta los comandos en la terminal de Ubuntu/WSL; los scripts usan sintaxis Bash. |
+| `EADDRINUSE` / puerto 5000 ocupado | Detén la otra instancia o cambia `PORT=5001` en `.env`, reinicia y abre `http://localhost:5001`. |
+| Falta `engine.wasm` o el motor no carga | Ejecuta `pnpm run build:wasm` y recarga la página. |
+| Errores de PostgreSQL | Para este modo, elimina o comenta `DATABASE_URL` en tu `.env` y reinicia. |
+| Pide Keychain al intentar probar Single | Comprueba `VITE_NETWORK_STAGE=local`, usa `pnpm run dev:local` y reinicia tras cambiar `.env`. Alfa/P2P tienen otro flujo de identidad. |
+| No abre la página | Comprueba que la terminal muestre `serving on port 5000` y usa el puerto configurado. |
+
+Para comprobar el servidor, abre [el endpoint de salud](http://localhost:5000/api/health):
+debe responder con `status: "ok"` y `runtime.stage: "local"`. Con el indexador
+apagado, su estado de sincronización no es una condición para jugar Single.
 
 ---
 
@@ -71,16 +183,9 @@ The compact historical scope model lives in
 [`docs/BETA_TESTNET_SCOPE.md`](docs/BETA_TESTNET_SCOPE.md), and the operator
 smoke commands live in [`docs/TESTNET_RUNBOOK.md`](docs/TESTNET_RUNBOOK.md).
 
-`main` as of 2026-10-09 contains two gameplay fixes that the Alfa host does not
-serve until the next deploy:
-
-- Single-player poker rewards no longer install `cryptoIdGen` as their own
-  scope. That self-call was the `Maximum call stack size exceeded` crash on
-  `#/game/single` during poker.
-- `PixiParticleCanvas` mounts only while animations are on, reduced motion is
-  off, and the card phase is not `game_over`. `GameOverScreen` mounts only
-  when `gamePhase === 'game_over'`. The five poker zones and `GameHUD` stay
-  mounted for the duel.
+Para el orden vigente de trabajo y la evidencia pendiente, consulta el
+[plan activo](docs/TESTNET_READINESS_FAST_TRACK.md). El estado de este repositorio
+no certifica qué versión está desplegada en el host Alfa.
 
 ---
 
@@ -113,7 +218,7 @@ Five mythological pantheons clash for supremacy. Norse frost giants wage war aga
 - **Escalating difficulty** with unique AI behavior profiles per mission
 
 ### Multiplayer & Social
-- **P2P multiplayer** via WebRTC (PeerJS) — no server bottleneck
+- **P2P multiplayer** with native WebRTC when enabled and a WebSocket relay fallback; authenticated server control coordinates the connection
 - **Ranked matchmaking architecture** with ELO ladder support; official ranked settlement stays gated until the winner-arbiter path ships
 - **Tournament system** — Swiss + single elimination brackets
 - **Spectator mode** — watch live matches (read-only P2P)
@@ -142,20 +247,25 @@ gates; they are not active F1 tester surfaces. F1 uses local replay/IndexedDB.
 - **DNA lineage** — every card has originDna (genotype) + instanceDna (phenotype); replicate and merge ops
 - **On-chain marketplace** — 6 ops (list, unlist, buy, offer, accept, reject) with trustless payment verification
 - **DUAT holder airdrop** — 30% of supply (164,460 packs) to 3,511 DUAT token holders; 90-day claim window
-- **Dual-signature match results** with Merkle transcript anchoring and PoW
+- **Ranked settlement design** — winner-posted `match_result` validated by replay under [ADR 0008](docs/adr/0008-winner-posted-match-result.md); separately gated and inactive in F1
 - **Supply caps** — per-card limits canonized in [`docs/RULEBOOK.md`](docs/RULEBOOK.md) (Card Rarity table)
-- **Anti-cheat** — Mandatory WASM engine, PoW, slash evidence, nonce anti-replay, STUN/TURN NAT traversal
+- **Integrity boundaries** — mandatory WASM engine, deterministic replay, authenticated P2P messages and phase checkpoints; chain settlement remains phase-gated
 - **Deterministic Ragnarok indexer** — irreversible Hive replay for gameplay, economy, packs, and ranking; decentralized indexer designs are historical/future references
 - **Cold multisig governance** — genesis → seal lifecycle permanently closes admin minting
 
-### Multiplayer (P2P WebRTC)
+### Multiplayer transport
 
-- **Peer-to-peer** — no central server required; game can't be shut down
-- **STUN/TURN** — 7 STUN servers + TURN relay for cross-continent NAT traversal (~85% global success)
-- **Madden-style disconnect protection** — 15s grace period with countdown before match ends
-- **Heartbeat keepalive** — 5s ping detects dead connections before PeerJS notices
-- **Message buffer** — 50-message queue during disconnect, replayed in order on reconnect
-- **Exponential reconnect** — 3 attempts (2s → 5s → 10s backoff), 92s total budget
+- **Control** — authenticated `/ws/control` coordinates matchmaking, signaling,
+  transport lifecycle and phase checkpoints.
+- **Gameplay** — native WebRTC DataChannel when enabled by runtime policy,
+  with the server's `/ws/p2p` relay as fallback. PeerJS is no longer used.
+- **Recovery** — reconnect and local snapshots support match recovery; local
+  input is blocked while connection integrity is unresolved.
+- **Shared server** — multiplayer requires the backend; running Single locally
+  does not establish a shared P2P deployment.
+
+See [the wire protocol](docs/PVP_WIRE_PROTOCOL.md) and
+[match resume behavior](docs/P2P_MATCH_RESUME.md).
 
 ---
 
@@ -461,7 +571,7 @@ Shared replay core     -> ELO, RUNE, Eitr, XP/level projection, Season Score inp
 ```
 
 - **Protocol spec**: [`docs/RAGNAROK_PROTOCOL_V1.md`](docs/RAGNAROK_PROTOCOL_V1.md) — frozen normative specification
-- **Conformance suite**: 170 tests (37 golden vectors + 38 replay traces + 95 existing)
+- **Conformance checks**: protocol and replay tests in `shared/protocol-core/`; run with `pnpm run test`
 - **Indexer contract**: Irreversible Hive replay with block RPC fallback and HafAH `custom_json` range catch-up; deterministic selection, validation, and NFTLox boundary in [`docs/HIVE_INDEXER_CONTRACT.md`](docs/HIVE_INDEXER_CONTRACT.md)
 - **Index checkpoints**: Optional server-side `hive-tx` publisher writes compact projection hashes with `RAGNAROK_INDEX_ACCOUNT` Posting authority when `ENABLE_INDEX_CHECKPOINT_PUBLISHER=true`
 - **Client replay**: Shared `protocol-core` module with LIB-gated application
@@ -482,47 +592,56 @@ Shared replay core     -> ELO, RUNE, Eitr, XP/level projection, Season Score inp
 
 ## Quick Start
 
+El arranque recomendado está al principio: [Inicio local en otra PC](#inicio-local-en-otra-pc).
+Los perfiles de abajo sirven para pruebas que necesitan identidad Hive o un
+entorno compartido.
+
+### Perfiles y rutas
+
+| Comando | Uso |
+|---|---|
+| `pnpm run dev:local` / `pnpm run dev` | Desarrollo local; Single como invitado, sin Keychain. |
+| `pnpm run dev:alfa-testnet` | Perfil Alfa con identidad Hive/Keychain y defaults `alfa-testnet-*`. |
+| `pnpm run dev:testnet` | QA/testnet genérica; usa `.env.testnet`. |
+| `pnpm run dev:mainnet` | Prueba del perfil mainnet; usa `.env.mainnet`. |
+
+Para QA genérica, copia `.env.testnet.example` a `.env.testnet`. Para la
+configuración Alfa consulta `.env.alfa-testnet.example` y el
+[runbook](docs/TESTNET_RUNBOOK.md). En una copia usada para Single, revisa
+`ENABLE_CHAIN_INDEXER=false` en `.env` antes de pasar a Alfa: ese perfil requiere
+el indexador activo. Usa `.env.mainnet.example` como referencia para ensayos
+mainnet, siguiendo sus gates operativos.
+
+`VITE_NETWORK_STAGE` solo admite `local | testnet | mainnet`. Alfa y Closed Beta
+son fases seleccionadas por el reset epoch. Rotarlo crea otro namespace de
+datos; no equivale a reiniciar el servidor. Mantén iguales los valores espejo
+`VITE_*` / `RAGNAROK_*`. No agregues `VITE_DATA_LAYER_MODE` ni
+`VITE_BLOCKCHAIN_PACKAGING` a los perfiles de lanzamiento.
+
+Rutas principales:
+
+- `/#/warband?mode=single`: prepara Single y luego abre `/#/game/single`.
+- `/#/campaign`: mapa y misiones; las partidas usan `/#/game/campaign`.
+- `/#/warband?mode=multiplayer`: prepara PvP y continúa al lobby `/#/multiplayer`.
+- `/#/multiplayer`: acceso al lobby; pide preparar la Warband si falta el equipo.
+
+### Ejecutar un build local
+
+Con el `.env` local mínimo descrito arriba:
+
 ```bash
-git clone https://github.com/Dhenz14/norse-mythos-card-game.git
-cd norse-mythos-card-game
-corepack enable pnpm
-pnpm install
-pnpm run dev
+pnpm run build:wasm
+pnpm run build
+pnpm run start
 ```
 
-Opens at `http://localhost:5000`. No database required for single-player — PostgreSQL is optional for server features.
-The Dokploy container is pinned to Node `24.19.0`/Alpine `3.24`; local tooling
-supports Node 24 (pnpm 11 requires Node >= 22.13). Use `.nvmrc` when you want to match the container.
+Abre `http://localhost:5000` (o el puerto de tu `.env`). `start` sirve el build de
+`dist/`, sin recarga automática de desarrollo. Para probar Single como invitado,
+usa `dev:local`: ese acceso está reservado al entorno de desarrollo.
 
-Playable entry routes:
-
-- `/#/warband?mode=single` — shared Warband surface for Single; launches `/#/game/single`.
-- `/#/warband?mode=multiplayer` — shared Warband surface for PvP; continues into the `/#/multiplayer` lobby.
-- `/#/campaign` — campaign chapter and mission flow; staged missions launch `/#/game/campaign`.
-- `/#/multiplayer` remains a direct lobby/compatibility entry for challenges and old tester links. It consumes a ready Warband and redirects to `/#/warband?mode=multiplayer` when loadout state is missing.
-
-Runtime profile is explicit. Local work uses two lanes: `dev` is the guest
-workshop; `dev:alfa-testnet` is how the launched Alfa feels (Hive login, no
-guest ledger). `dev:testnet` is generic/QA from `.env.testnet`, not the launch.
-
-```bash
-pnpm run dev              # local workshop: Single without Keychain
-pnpm run dev:alfa-testnet # launch replica (Keychain + alfa-testnet-* epoch)
-pnpm run dev:testnet      # generic/QA testnet from .env.testnet (not Alfa)
-pnpm run build:alfa-testnet # production Alfa Testnet bundle, stage=testnet
-pnpm run start:alfa-testnet # built server with Alfa Testnet JSON state
-pnpm run build:mainnet    # production browser bundle from .env.mainnet
-pnpm run start:mainnet    # built server with .env.mainnet
-```
-
-Copy `.env.testnet.example` to `.env.testnet` for generic/QA testnet (not Alfa).
-Copy `.env.mainnet.example` to `.env.mainnet` for mainnet rehearsals.
-`VITE_NETWORK_STAGE` is `local | testnet | mainnet`. Alfa is
-`stage=testnet` plus reset epoch `alfa-testnet-*`. Do not set
-`VITE_DATA_LAYER_MODE` or `VITE_BLOCKCHAIN_PACKAGING` in launch env files.
-
-Rotating `VITE_RAGNAROK_RESET_EPOCH` is a wipe (new IndexedDB/JSON namespace),
-not a restart. Keep the `VITE_*` / `RAGNAROK_*` fingerprint pair equal.
+PostgreSQL y `docker-compose.yml` son herramientas opcionales para trabajo en
+las rutas de datos que lo requieran. No forman parte del arranque de Single ni
+sustituyen la autoridad de replay/IndexedDB o Hive según la fase.
 
 ### Dokploy Environment tab
 
@@ -546,26 +665,35 @@ Full operator notes: [`docs/DOKPLOY_DEPLOYMENT.md`](docs/DOKPLOY_DEPLOYMENT.md).
 
 | Command | Description |
 |---------|-------------|
-| `pnpm run dev` | Local workshop (guest Single, no Keychain). Not the Alfa launch. |
+| `pnpm run dev:local` / `pnpm run dev` | Local workshop (guest Single, no Keychain). Not the Alfa launch. |
 | `pnpm run dev:alfa-testnet` | Local replica of the launched Alfa. Requires Hive Keychain. |
 | `pnpm run dev:testnet` | Generic/QA testnet from `.env.testnet`. Not the Alfa fingerprint. |
 | `pnpm run dev:mainnet` | Mainnet-profile local smoke using `.env.mainnet` |
-| `pnpm run build` | Production build |
+| `pnpm run build` | Build frontend + server; run `build:wasm` first if the engine changed |
+| `pnpm run start` | Serve the existing production build from `dist/` |
+| `pnpm run test` | Run the Vitest suite |
 | `pnpm run build:alfa-testnet` | Alfa Testnet production build with `stage=testnet` and an `alfa-testnet-*` reset epoch |
 | `pnpm run start:alfa-testnet` | Run the built server with Alfa Testnet JSON state defaults |
 | `pnpm run build:mainnet` | Mainnet-profile production build using `.env.mainnet` |
 | `pnpm run check` | TypeScript type checking |
 | `pnpm run lint` | ESLint |
-| `pnpm run build:wasm` | Build WASM anti-cheat engine |
+| `pnpm run build:wasm` | Build the required AssemblyScript WASM engine |
 
 ---
 
 ## Current Engineering Focus
 
-- **Systems cleanup over surface polish** — the current tranche is focused on reducing repo-wide TypeScript and ESLint debt in the highest-complexity gameplay and protocol modules first.
-- **Combat stability** — `AttackSystem.tsx` and `RagnarokCombatArena.tsx` have been refactored toward smaller resolution paths and clearer action hierarchy so live play feels less flaky under repeated attack / betting sequences.
-- **Shared replay maintenance** — `shared/protocol-core/apply.ts` is being kept as the single deterministic protocol path for browser and server, with settlement, minting, merge, and marketplace flows split into more explicit helpers.
-- **Browser QA** — responsive campaign layout received a mobile spacing pass to stop constellation lore overlays from colliding with realm nodes; a broader live-play spacing and motion QA pass is still part of the long-term polish work.
+The active order is defined in [the readiness plan](docs/TESTNET_READINESS_FAST_TRACK.md):
+
+1. F1 poker readability and the shared preparation/combat flow.
+2. Alfa Player-Ready: deployment evidence, a human Norse campaign victory and
+   two-account Hive/Keychain P2P smoke.
+3. Closed Beta F2: an explicit profile cutover and Hive replay verification.
+4. Ranked settlement under ADR 0008, followed by Mainnet F3 gates.
+
+Local play, passing automated checks and deploying the shared Alfa are separate
+pieces of evidence. Marketplace, packs, NFTLox writes and official ranking do
+not become available merely by running a testnet script.
 
 ---
 
@@ -573,17 +701,19 @@ Full operator notes: [`docs/DOKPLOY_DEPLOYMENT.md`](docs/DOKPLOY_DEPLOYMENT.md).
 
 | Layer | Technology |
 |-------|-----------|
-| **Frontend** | React 18, TypeScript 5, Vite 5 |
-| **State** | Zustand 5 (20+ specialized stores) |
-| **Styling** | Tailwind CSS 3.4, CSS custom properties |
-| **Effects** | Framer Motion, React Spring, React Three Fiber |
-| **UI** | Radix UI (shadcn/ui) |
-| **Multiplayer** | PeerJS (WebRTC P2P) |
-| **Backend** | Express + TypeScript |
-| **Database** | PostgreSQL + Drizzle ORM (optional) |
-| **Local Storage** | IndexedDB (13 stores for chain replay) |
-| **Blockchain** | Hive Layer 1 via hive-tx v7 |
-| **Anti-Cheat** | AssemblyScript WASM (35KB binary, SHA-256 hash verification) |
+| **Runtime / tooling** | Node.js 24, pnpm 11.22.0 |
+| **Frontend** | React 19.2, TypeScript 5.6, Vite 8 |
+| **State** | Zustand 5 |
+| **Styling** | Tailwind CSS 4, CSS custom properties |
+| **Effects** | Framer Motion, GSAP, PixiJS 8 |
+| **UI** | Project components, Lucide icons |
+| **Multiplayer** | Native WebRTC + WebSocket relay, authenticated control WebSocket |
+| **Backend** | Express 4 + TypeScript, esbuild server bundle |
+| **Database** | PostgreSQL + Drizzle ORM (optional tooling) |
+| **Local storage** | IndexedDB + localStorage for local progress, replay and preferences |
+| **Blockchain** | Hive Layer 1 via hive-tx 7; authority depends on phase |
+| **Game engine** | AssemblyScript compiled to mandatory WebAssembly |
+| **Checks** | Vitest 4, TypeScript, ESLint 9, Stylelint 17 |
 | **Caching** | Service Worker asset cache |
 
 ### Architecture
@@ -602,8 +732,7 @@ client/src/
 │   ├── stores/            # 20+ Zustand stores
 │   ├── tournament/        # Swiss + elimination brackets
 │   └── tutorial/          # 15-step onboarding
-├── data/blockchain/       # Hive NFT replay adapter (delegates to shared/protocol-core)
-└── components/ui/         # Radix/shadcn components
+└── data/                  # Local persistence, sync and blockchain replay adapters
 
 shared/protocol-core/      # Isomorphic replay engine (browser + Node)
 ├── types.ts               # StateAdapter, CardAsset, GenesisRecord, etc.
@@ -676,9 +805,11 @@ server/
 
 ### Current Gate: Alfa Testnet -> Closed Testnet Beta
 
-Status 2026-08-20, with the 2026-10-09 tree notes above. Code-complete is not the same as human/operator evidence, and `main` is not the bundle on `testnetdev.ragnaroknft.quest`.
+The active order and evidence requirements are maintained in
+[`docs/TESTNET_READINESS_FAST_TRACK.md`](docs/TESTNET_READINESS_FAST_TRACK.md).
+Code-complete is not the same as human/operator evidence, and `main` is not the bundle on `testnetdev.ragnaroknft.quest`.
 
-**F1 Gameplay Validation — code path in the tree; operational browser smoke pending**
+**F1 Gameplay Validation — code path in the tree**
 
 - [x] One coordinator owns single / campaign / P2P (`RagnarokGameCoordinator`).
 - [x] Match-end owner is `matchEndController` (chess terminal, hero HP=0, Leave Match).
@@ -692,26 +823,30 @@ Status 2026-08-20, with the 2026-10-09 tree notes above. Code-complete is not th
 - [x] F1 local settlement: local anchors/results, RUNE, ELO, SeasonScore, CardXP and level-ups; zero Hive output.
 - [x] Single poker reward draw does not re-enter `cryptoIdGen` (2026-10-09, `main`).
 - [x] Poker particle canvas and game-over screen mount only when needed (2026-10-09, `main`).
+- [x] One `getCardById` helper. `allCards.ts` and `cardManagement/cardRegistry.ts` delegate to `data/cardRegistry` and keep no parallel dataset.
 
-**Alfa Player-Ready — still open**
+**1. Front F1 — current product work**
 
-- [ ] Prove the deployed Alfa runtime through `/api/health`, `/api/admin/config`, and `/api/admin/p2p/status`: `stage=testnet`, `runtimePhase=alfa-testnet`, `resetEpoch=alfa-testnet-*`, `qaFullCatalogEnabled=false`, JSON state evidence.
-- [ ] Complete Hive/Keychain smoke with an internal testnet account (login,
-  unsigned Quick Match queue, one Find/delegation Keychain signature per player, then zero
-  post-match Keychain prompts).
+- [ ] Poker readability pass: actor, hand phase, hole and community cards, HP at risk, labeled action, and one visible pot/risk owner.
+- [ ] P2P status stays visible in poker and blocks local input while reconnect, grace, or error is active.
+- [ ] Showdown states the winner, winning hand, and HP delta before chess resumes.
+- [ ] Human visual pass at 1366x768, 1920x1080, ultrawide, and a physical phone.
+
+**2. Alfa Player-Ready — operational evidence still open**
+
+- [ ] Deploy this tree. Prove `/api/health`, `/api/admin/config`, and `/api/admin/p2p/status`: `stage=testnet`, `runtimePhase=alfa-testnet`, `resetEpoch=alfa-testnet-*`, `qaFullCatalogEnabled=false`, JSON state evidence.
+- [ ] Complete Hive/Keychain smoke with an internal testnet account (login, unsigned Quick Match queue, one Find/delegation Keychain signature per player, then zero post-match Keychain prompts).
 - [ ] Win norse-1 first-clear (not abandon) and confirm replay does not pay extra RUNE.
-- [ ] Future F2 explicit Hive claim/replay activation (not an F1 gate).
-- [ ] Poker arena visual pass at 1366x768, 1920x1080, ultrawide, and mobile landscape.
-- [ ] One `getCardById` helper (stop the `allCards` vs `cardManagement/cardRegistry` split). Do not merge the files this phase.
-- [ ] Complete the gameplay-only two-browser P2P smoke: quiet chess move,
-  instant capture, poker capture, deterministic phase checkpoints, reconnect,
-  local snapshot rejoin on hard reload, local result, zero post-Find Keychain prompts, zero Hive
-  result operation, and export JSON.
+- [ ] Complete the gameplay-only two-browser P2P smoke: quiet chess move, instant capture, poker capture, deterministic phase checkpoints, reconnect, local snapshot rejoin on hard reload, local result, zero post-Find Keychain prompts, zero Hive result operation, and export JSON.
 - [ ] Re-run `bash scripts/p2p-ticket-security-check.sh` on the tree that will deploy.
 
-**F2 Closed Testnet — future Hive replay profile; not an F1 gate**
+**3. F2 Closed Testnet — after Alfa evidence**
 
-- [ ] Future: activate a `closed-beta-*` F2 epoch and complete explicit replay/operator sign-off.
+- [ ] Activate a `closed-beta-*` F2 epoch and complete explicit replay/operator sign-off. Marketplace, packs, NFTLox writes, and official ranking stay off.
+
+**4. Ranked — after the F2 invite**
+
+- [ ] Open the ADR 0008 winner-posted `match_result` slice with its own runtime gate. Epoch rotation does not enable it.
 
 Keep P2P `match_anchor`/`match_result`, ranked RUNE, official ELO, Season
 Score and CardXP dark externally/officially; F1 keeps local projections active.
@@ -765,8 +900,9 @@ git checkout -b feature/your-feature
 
 # Develop
 pnpm run dev       # Local hot reload at localhost:5000
-pnpm run dev:testnet # Beta profile when testing Hive/testnet flows
+pnpm run dev:testnet # Generic QA testnet; configure .env.testnet first
 pnpm run check     # TypeScript validation
+pnpm run build:wasm # Compile the required engine
 pnpm run build     # Production build test
 
 # Submit
