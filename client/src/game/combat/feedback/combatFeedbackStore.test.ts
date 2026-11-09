@@ -8,6 +8,15 @@ import {
 } from './combatFeedbackStore';
 import { useGameLogStore } from '../../stores/gameLogStore';
 
+function enqueueNotice(title: string, tone: 'info' | 'warning' | 'error' = 'info', holdMs = 1_600): string {
+	return useCombatFeedbackStore.getState().enqueueStack({
+		lane: tone === 'error' ? 'error' : 'stack',
+		title,
+		tone,
+		holdMs,
+	});
+}
+
 describe('combat feedback cinema occupancy', () => {
 	afterEach(() => {
 		useCombatFeedbackStore.getState().reset();
@@ -68,11 +77,11 @@ describe('combat feedback cinema occupancy', () => {
 		expect(pendingBeforeError).toHaveLength(FEEDBACK_PENDING_CAP);
 		expect(pendingBeforeError.map(chip => chip.title)).not.toContain('Notice 1');
 
-		const errorId = showStatus('Connection lost', 'error', 1600);
+		const errorId = enqueueNotice('Connection lost', 'error', 1600);
 		const pendingAfterError = useCombatFeedbackStore.getState().pending;
 		expect(pendingAfterError).toHaveLength(FEEDBACK_PENDING_CAP);
 		expect(pendingAfterError.at(-1)?.title).toBe('Connection lost');
-		expect(showStatus('Connection lost', 'error', 1600)).toBe(errorId);
+		expect(enqueueNotice('Connection lost', 'error', 1600)).toBe(errorId);
 	});
 
 	it('keeps every feedback event in the battle log with or without a toast', () => {
@@ -133,5 +142,107 @@ describe('combat feedback cinema occupancy', () => {
 
 		showStatus('Fresh feedback', 'info', 1_600);
 		expect(useCombatFeedbackStore.getState().stack[0]?.title).toBe('Fresh feedback');
+	});
+
+	it('scopes feedback and timer callbacks to the current combat session', () => {
+		vi.useFakeTimers();
+		const endOldSession = useCombatFeedbackStore.getState().beginSession('combat-old');
+		showStatus('Old visible notice', 'info', 100);
+		occupyCinema('old-cinema', 1_000);
+		showStatus('Old pending notice', 'info', 1_600);
+
+		const endNewSession = useCombatFeedbackStore.getState().beginSession('combat-new');
+		showStatus('New combat notice', 'info', 1_600);
+		endOldSession();
+		vi.advanceTimersByTime(1_000);
+
+		expect(useCombatFeedbackStore.getState().sessionId).toBe('combat-new');
+		expect(useCombatFeedbackStore.getState().stack.map(chip => chip.title)).toEqual(['New combat notice']);
+		expect(useCombatFeedbackStore.getState().pending).toEqual([]);
+		endNewSession();
+		expect(useCombatFeedbackStore.getState().sessionId).toBeNull();
+	});
+
+	it('ignores an obsolete teardown after the same combat id is mounted again', () => {
+		const endFirstMount = useCombatFeedbackStore.getState().beginSession('same-combat');
+		endFirstMount();
+		useCombatFeedbackStore.getState().beginSession('same-combat');
+		showStatus('Fresh same-id notice', 'info', 1_600);
+
+		endFirstMount();
+
+		expect(useCombatFeedbackStore.getState().sessionId).toBe('same-combat');
+		expect(useCombatFeedbackStore.getState().stack.map(chip => chip.title)).toEqual(['Fresh same-id notice']);
+	});
+
+	it('suspends a visible chip during overlapping cinema and resumes its full dwell once', () => {
+		vi.useFakeTimers();
+		useCombatFeedbackStore.getState().beginSession('combat-1');
+		const firstId = enqueueNotice('Visible notice', 'info', 100);
+		vi.advanceTimersByTime(40);
+
+		occupyCinema('phase', 120);
+		occupyCinema('announcement', 200);
+		const repeatedId = enqueueNotice('Visible notice', 'info', 100);
+		showStatus('Next notice', 'warning', 100);
+		expect(repeatedId).toBe(firstId);
+		expect(useCombatFeedbackStore.getState().stack).toEqual([]);
+		expect(useCombatFeedbackStore.getState().suspended?.title).toBe('Visible notice');
+		expect(useCombatFeedbackStore.getState().pending.map(chip => chip.title)).toEqual(['Next notice']);
+
+		vi.advanceTimersByTime(200);
+		expect(useCombatFeedbackStore.getState().cinemaHolders).toEqual([]);
+		expect(useCombatFeedbackStore.getState().stack.map(chip => chip.title)).toEqual(['Visible notice']);
+		vi.advanceTimersByTime(99);
+		expect(useCombatFeedbackStore.getState().stack).toHaveLength(1);
+		vi.advanceTimersByTime(1);
+		expect(useCombatFeedbackStore.getState().stack).toEqual([]);
+	});
+
+	it('resumes the suspended chip ahead of pending feedback without reordering or duplication', () => {
+		vi.useFakeTimers();
+		showStatus('A', 'info', 100);
+		showStatus('B', 'info', 100);
+		showStatus('C', 'info', 100);
+		occupyCinema('phase', 50);
+
+		const duringCinema = useCombatFeedbackStore.getState();
+		expect(duringCinema.stack).toEqual([]);
+		expect(duringCinema.suspended?.title).toBe('A');
+		expect(duringCinema.pending.map(chip => chip.title)).toEqual(['B', 'C']);
+		vi.advanceTimersByTime(50);
+		expect(useCombatFeedbackStore.getState().stack.map(chip => chip.title)).toEqual(['A']);
+
+		vi.advanceTimersByTime(100);
+		expect(useCombatFeedbackStore.getState().pending.map(chip => chip.title)).toEqual(['B', 'C']);
+		vi.advanceTimersByTime(FEEDBACK_STAGGER_MS);
+		expect(useCombatFeedbackStore.getState().stack.map(chip => chip.title)).toEqual(['B']);
+		vi.advanceTimersByTime(100 + FEEDBACK_STAGGER_MS);
+		expect(useCombatFeedbackStore.getState().stack.map(chip => chip.title)).toEqual(['C']);
+	});
+
+	it('keeps the pending cap while a visible chip is suspended by cinema', () => {
+		vi.useFakeTimers();
+		showStatus('Visible', 'info', 1_600);
+		for (let index = 1; index <= FEEDBACK_PENDING_CAP + 1; index += 1) {
+			showStatus(`Pending ${index}`, 'info', 1_600);
+		}
+		occupyCinema('phase', 500);
+
+		const state = useCombatFeedbackStore.getState();
+		expect(state.suspended?.title).toBe('Visible');
+		expect(state.pending).toHaveLength(FEEDBACK_PENDING_CAP);
+		expect(state.pending.map(chip => chip.title)).not.toContain('Pending 1');
+		expect(state.pending.map(chip => chip.title)).toContain('Pending 5');
+	});
+
+	it('keeps a repeated cinema holder until its newest hold timer completes', () => {
+		vi.useFakeTimers();
+		occupyCinema('same-holder', 100);
+		occupyCinema('same-holder', 400);
+		vi.advanceTimersByTime(100);
+		expect(useCombatFeedbackStore.getState().cinemaHolders).toEqual(['same-holder']);
+		vi.advanceTimersByTime(300);
+		expect(useCombatFeedbackStore.getState().cinemaHolders).toEqual([]);
 	});
 });

@@ -26,9 +26,13 @@ export interface FeedbackChip {
 }
 
 interface CombatFeedbackState {
+	sessionId: string | null;
 	cinemaHolders: readonly string[];
 	stack: readonly FeedbackChip[];
+	suspended: FeedbackChip | null;
 	pending: readonly FeedbackChip[];
+	beginSession: (sessionId: string) => () => void;
+	endSession: (sessionId: string, generation: number) => void;
 	holdCinema: (holder: string) => void;
 	releaseCinema: (holder: string) => void;
 	enqueueStack: (chip: Omit<FeedbackChip, 'id' | 'holdMs'> & { holdMs?: number }) => string;
@@ -37,6 +41,7 @@ interface CombatFeedbackState {
 }
 
 let chipSeq = 0;
+let sessionGeneration = 0;
 const dismissTimers = new Map<string, GameEffectHandle>();
 const cinemaHoldTimers = new Map<string, GameEffectHandle>();
 let flushTimer: GameEffectHandle | null = null;
@@ -56,20 +61,35 @@ function cancelFlushTimer(): void {
 	flushTimer = null;
 }
 
-function scheduleDismiss(id: string, holdMs: number, dismiss: (id: string) => void): void {
+function cancelDismissTimer(id: string): void {
 	const existing = dismissTimers.get(id);
-	if (existing) existing.cancel();
-	dismissTimers.set(id, gameEffectCoordinator.schedule({
+	if (!existing) return;
+	existing.cancel();
+	dismissTimers.delete(id);
+}
+
+function scheduleDismiss(
+	id: string,
+	holdMs: number,
+	generation: number,
+	dismiss: (id: string) => void,
+): void {
+	cancelDismissTimer(id);
+	let handle: GameEffectHandle;
+	handle = gameEffectCoordinator.schedule({
 		owner: 'feedback',
 		lane: 'feedback',
 		key: id,
 		priority: 'normal',
 		delayMs: holdMs,
 		run: () => {
+			if (dismissTimers.get(id) !== handle) return;
 			dismissTimers.delete(id);
-		dismiss(id);
+			if (generation !== sessionGeneration) return;
+			dismiss(id);
 		},
-	}));
+	});
+	dismissTimers.set(id, handle);
 }
 
 function sameChip(left: FeedbackChip, right: FeedbackChip): boolean {
@@ -90,20 +110,32 @@ function enqueuePendingChip(pending: readonly FeedbackChip[], chip: FeedbackChip
 }
 
 export const useCombatFeedbackStore = create<CombatFeedbackState>((set, get) => {
+	const clearTransientState = () => {
+		sessionGeneration += 1;
+		dismissTimers.forEach((timer) => timer.cancel());
+		dismissTimers.clear();
+		cinemaHoldTimers.forEach((timer) => timer.cancel());
+		cinemaHoldTimers.clear();
+		cancelFlushTimer();
+		return sessionGeneration;
+	};
+
 	const flushPending = () => {
 		const state = get();
 		if (
 			isCinemaHeld(state.cinemaHolders)
 			|| state.stack.length >= FEEDBACK_STACK_CAP
-			|| state.pending.length === 0
+			|| (!state.suspended && state.pending.length === 0)
 		) return;
-		const [next, ...rest] = state.pending;
-		set({ stack: [next], pending: rest });
-		scheduleDismiss(next.id, next.holdMs, get().dismiss);
+		const next = state.suspended ?? state.pending[0];
+		const pending = state.suspended ? state.pending : state.pending.slice(1);
+		set({ stack: [next], suspended: null, pending });
+		scheduleDismiss(next.id, next.holdMs, sessionGeneration, get().dismiss);
 	};
 
 	const schedulePendingFlush = (delayMs = FEEDBACK_STAGGER_MS) => {
 		cancelFlushTimer();
+		const generation = sessionGeneration;
 		flushTimer = gameEffectCoordinator.schedule({
 			owner: 'feedback',
 			lane: 'feedback',
@@ -111,6 +143,7 @@ export const useCombatFeedbackStore = create<CombatFeedbackState>((set, get) => 
 			priority: 'normal',
 			delayMs,
 			run: () => {
+				if (generation !== sessionGeneration) return;
 				flushTimer = null;
 				flushPending();
 			},
@@ -118,22 +151,52 @@ export const useCombatFeedbackStore = create<CombatFeedbackState>((set, get) => 
 	};
 
 	return {
+		sessionId: null,
 		cinemaHolders: [],
 		stack: [],
+		suspended: null,
 		pending: [],
 
+		beginSession: (sessionId) => {
+			const current = get();
+			let generation: number;
+			if (current.sessionId === sessionId) {
+				generation = sessionGeneration;
+			} else {
+				generation = clearTransientState();
+				set({ sessionId, cinemaHolders: [], stack: [], suspended: null, pending: [] });
+			}
+			return () => get().endSession(sessionId, generation);
+		},
+
+		endSession: (sessionId, generation) => {
+			const current = get();
+			if (current.sessionId !== sessionId || generation !== sessionGeneration) return;
+			clearTransientState();
+			set({ sessionId: null, cinemaHolders: [], stack: [], suspended: null, pending: [] });
+		},
+
 		holdCinema: (holder) => {
-			set((state) => (
-				state.cinemaHolders.includes(holder)
-					? state
-					: { cinemaHolders: [...state.cinemaHolders, holder] }
-			));
+			const state = get();
+			if (state.cinemaHolders.includes(holder)) return;
+			if (state.cinemaHolders.length === 0 && state.stack.length > 0) {
+				const [visible] = state.stack;
+				cancelDismissTimer(visible.id);
+				set({
+					cinemaHolders: [...state.cinemaHolders, holder],
+					stack: [],
+					suspended: visible,
+				});
+				return;
+			}
+			set({ cinemaHolders: [...state.cinemaHolders, holder] });
 		},
 
 		releaseCinema: (holder) => {
-			set((state) => ({
-				cinemaHolders: state.cinemaHolders.filter((id) => id !== holder),
-			}));
+			const state = get();
+			if (!state.cinemaHolders.includes(holder)) return;
+			const cinemaHolders = state.cinemaHolders.filter((id) => id !== holder);
+			set({ cinemaHolders });
 			flushPending();
 		},
 
@@ -150,14 +213,15 @@ export const useCombatFeedbackStore = create<CombatFeedbackState>((set, get) => 
 				holdMs,
 			};
 			const state = get();
-			const existing = [...state.stack, ...state.pending].find(candidate => sameChip(candidate, full));
+			const existing = [...state.stack, ...(state.suspended ? [state.suspended] : []), ...state.pending]
+				.find(candidate => sameChip(candidate, full));
 			if (existing) return existing.id;
 			if (isCinemaHeld(state.cinemaHolders) || state.stack.length >= FEEDBACK_STACK_CAP || state.pending.length > 0) {
 				set({ pending: enqueuePendingChip(state.pending, full) });
 				return id;
 			}
 			set({ stack: [...state.stack, full] });
-			scheduleDismiss(id, holdMs, get().dismiss);
+			scheduleDismiss(id, holdMs, sessionGeneration, get().dismiss);
 			return id;
 		},
 
@@ -169,21 +233,18 @@ export const useCombatFeedbackStore = create<CombatFeedbackState>((set, get) => 
 			}
 			set((state) => ({
 				stack: state.stack.filter((chip) => chip.id !== id),
+				suspended: state.suspended?.id === id ? null : state.suspended,
 				pending: state.pending.filter((chip) => chip.id !== id),
 			}));
 			const state = get();
-			if (!isCinemaHeld(state.cinemaHolders) && state.stack.length === 0 && state.pending.length > 0) {
+			if (!isCinemaHeld(state.cinemaHolders) && state.stack.length === 0 && (state.suspended || state.pending.length > 0)) {
 				schedulePendingFlush();
 			}
 		},
 
 		reset: () => {
-			dismissTimers.forEach((timer) => timer.cancel());
-			dismissTimers.clear();
-			cinemaHoldTimers.forEach((timer) => timer.cancel());
-			cinemaHoldTimers.clear();
-			cancelFlushTimer();
-			set({ cinemaHolders: [], stack: [], pending: [] });
+			clearTransientState();
+			set({ sessionId: null, cinemaHolders: [], stack: [], suspended: null, pending: [] });
 		},
 	};
 });
@@ -226,15 +287,20 @@ export function occupyCinema(holder: string, holdMs: number): void {
 	const store = useCombatFeedbackStore.getState();
 	store.holdCinema(holder);
 	cinemaHoldTimers.get(holder)?.cancel();
-	cinemaHoldTimers.set(holder, gameEffectCoordinator.schedule({
+	const generation = sessionGeneration;
+	let handle: GameEffectHandle;
+	handle = gameEffectCoordinator.schedule({
 		owner: 'feedback',
 		lane: 'cinema-hold',
 		key: holder,
 		priority: 'critical',
 		delayMs: Math.max(0, holdMs),
 		run: () => {
+			if (cinemaHoldTimers.get(holder) !== handle) return;
 			cinemaHoldTimers.delete(holder);
+			if (generation !== sessionGeneration) return;
 			useCombatFeedbackStore.getState().releaseCinema(holder);
 		},
-	}));
+	});
+	cinemaHoldTimers.set(holder, handle);
 }

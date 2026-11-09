@@ -1146,18 +1146,36 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
   const particleCanvasEnabled = animationsEnabled && !reduceMotion && gamePhase !== 'game_over';
   const gameWinner = useGameStore(state => state.gameState?.winner);
   const turnNumber = useGameStore(state => state.gameState?.turnNumber ?? 1);
-  const currentTurnForBanner = useGameStore(state => state.gameState?.currentTurn);
   const p2pDecisionConnectionState = usePeerStore(state => state.connectionState);
   const p2pDecisionMatch = useMatchStore(state => state.activeMatch);
+  const p2pDecisionDisconnectSide = usePeerStore(state => state.disconnectSide);
+  const p2pDecisionIntegrityError = usePeerStore(state => state.p2pIntegrityError);
+  const p2pDecisionReconnectCountdown = usePeerStore(state => state.reconnectCountdown);
+  const p2pDecisionReconnectAttempts = usePeerStore(state => state.reconnectAttemptCount);
+  const hudCallStake = useMemo(
+    () => combatState ? getActionPermissions(combatState, true) : null,
+    [combatState]
+  );
   const outerDecisionView = useMemo(
     () => derivePokerDecisionView({
       combatState,
       connectionState: p2pDecisionConnectionState,
       isP2PCombat: p2pDecisionMatch?.opponent.kind === 'peer',
+      permissions: hudCallStake,
     }),
-    [combatState, p2pDecisionConnectionState, p2pDecisionMatch]
+    [combatState, hudCallStake, p2pDecisionConnectionState, p2pDecisionMatch]
   );
-  const visibleTurnForBanner = outerDecisionView.displayTurn ?? currentTurnForBanner;
+  // Active poker remains a gameplay surface while restored lifecycle metadata catches up.
+  const hudPauseView = combatState && isActive && p2pDecisionMatch?.opponent.kind === 'peer' && gamePhase !== 'game_over'
+    ? resolveP2PMatchPauseView({
+        competitionPhase: 'battle',
+        connectionState: p2pDecisionConnectionState,
+        disconnectSide: p2pDecisionDisconnectSide,
+        integrityError: p2pDecisionIntegrityError,
+        reconnectCountdown: p2pDecisionReconnectCountdown,
+        reconnectAttemptCount: p2pDecisionReconnectAttempts,
+      })
+    : null;
   const gameOverWinner = gameWinner === 'player' || gameWinner === 'opponent' || gameWinner === 'draw'
     ? gameWinner
     : 'draw';
@@ -1199,7 +1217,6 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
   const currentPhaseLabel = combatState?.phase
     ? PHASE_LABELS[combatState.phase] || combatState.phase.replace(/_/g, ' ')
     : 'Battle Ready';
-  const hudCallStake = combatState ? getActionPermissions(combatState, true) : null;
   const hudToCall = hudCallStake?.hasBetToCall ? hudCallStake.toCall : 0;
 
   useEffect(() => {
@@ -1435,7 +1452,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
         })()}
         
         <PhaseBanner phase={combatState.phase} forceHide={!!showdownCelebration} />
-        <CombatFeedbackStack />
+        <CombatFeedbackStack combatId={gamePhase === 'game_over' ? null : combatState.combatId} />
 
         {/* Hand strength indicator — live display of current best hand */}
         <HandStrengthIndicator
@@ -1703,7 +1720,8 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
         pot={combatState?.pot ?? 0}
         playerCommitted={combatState?.player.hpCommitted ?? 0}
         opponentCommitted={combatState?.opponent.hpCommitted ?? 0}
-        isPlayerTurn={visibleTurnForBanner === 'player'}
+        decisionView={outerDecisionView}
+        pauseView={hudPauseView}
         toCall={hudToCall}
         playerElement={combatState ? getCombatElement(combatState.player?.pet?.stats?.element) : undefined}
         opponentElement={combatState ? getCombatElement(combatState.opponent?.pet?.stats?.element) : undefined}

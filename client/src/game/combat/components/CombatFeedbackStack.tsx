@@ -1,9 +1,20 @@
-import React from 'react';
+import React, { useLayoutEffect } from 'react';
 import { useCombatFeedbackStore } from '../feedback/combatFeedbackStore';
 import '../styles/combat-feedback.css';
 
-export function CombatFeedbackStack() {
+interface CombatFeedbackStackProps {
+	readonly combatId: string | null;
+}
+
+export function CombatFeedbackStack({ combatId }: CombatFeedbackStackProps) {
 	const chips = useCombatFeedbackStore(state => state.stack);
+	const sessionId = useCombatFeedbackStore(state => state.sessionId);
+	const visibleChips = combatId && sessionId === combatId ? chips : [];
+
+	useLayoutEffect(() => {
+		if (!combatId) return undefined;
+		return useCombatFeedbackStore.getState().beginSession(combatId);
+	}, [combatId]);
 
 	return (
 		<div
@@ -13,7 +24,7 @@ export function CombatFeedbackStack() {
 			aria-live="polite"
 			aria-label="Combat announcements"
 		>
-			{chips.map((chip, index) => (
+			{visibleChips.map((chip, index) => (
 				<article
 					key={chip.id}
 					className={`combat-feedback-chip combat-feedback-chip--${chip.tone}`}

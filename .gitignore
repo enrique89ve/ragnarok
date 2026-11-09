@@ -207,6 +207,7 @@ __tests__/
 !client/src/game/combat/aiAttackResolution.test.ts
 !client/src/game/combat/rules/pokerActionRules.test.ts
 !client/src/game/combat/components/PokerP2PTurnStatus.test.ts
+!client/src/game/combat/components/GameHUD.render.test.ts
 !client/src/game/combat/decision/pokerDecisionView.test.ts
 !client/src/game/combat/decision/pokerTurnBadgePresentation.test.ts
 !client/src/game/combat/decision/spellcraftDecision.test.ts

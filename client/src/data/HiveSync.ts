@@ -718,8 +718,6 @@ export class HiveSync {
       metadata: {
         description:
           "Norse Mythos Card Game — collectible cards across 5 mythological factions",
-        image:
-          "https://dhenz14.github.io/norse-mythos-card-game/icons/icon-512.webp",
         externalUrl: "https://dhenz14.github.io/norse-mythos-card-game",
       },
       rules: {
@@ -739,7 +737,6 @@ export class HiveSync {
       artId: string;
       name: string;
       description: string;
-      imageUrl: string;
       maxSupply: number;
       immutableData: Record<string, unknown>;
     },
@@ -751,7 +748,6 @@ export class HiveSync {
       metadata: {
         name: seed.name,
         description: seed.description,
-        imageUrl: seed.imageUrl,
       },
       maxSupply: seed.maxSupply,
       immutableData: seed.immutableData,
@@ -763,7 +759,6 @@ export class HiveSync {
     pack: {
       name: string;
       description: string;
-      imageUrl: string;
       dropTable: Array<{ seedId: string; weight: number }>;
       itemsPerPack: number;
       maxSupply: number;
@@ -773,7 +768,6 @@ export class HiveSync {
       collectionId,
       name: pack.name,
       description: pack.description,
-      imageUrl: pack.imageUrl,
       dropTable: pack.dropTable,
       itemsPerPack: pack.itemsPerPack,
       maxSupply: pack.maxSupply,
@@ -790,12 +784,10 @@ export class HiveSync {
   async nftloxBulkDistribute(
     items: Array<{ seedId: string; quantity: number; originBlock?: number }>,
     to?: string,
-    imageOverrides?: Record<string, string>,
   ): Promise<HiveBroadcastResult> {
     return this.broadcastNFTLoxJson("bulk_distribute", {
       to: to || this.getUsername(),
       items,
-      ...(imageOverrides ? { imageOverrides } : {}),
     });
   }
 

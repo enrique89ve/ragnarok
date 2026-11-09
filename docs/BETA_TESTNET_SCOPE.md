@@ -48,8 +48,10 @@ Network constants live in `shared/runtimeConfig.ts` and are consumed by both ser
 
 NFTLoX is phase-gated. Alfa and QA Season 0 run with JSON ownership unless an
 operator intentionally sets `VITE_NFTLOX_PROTOCOL_ID` for a focused test.
-Closed Beta must not open until the NFTLoX protocol id and collection proof are
-both present.
+NFTLox writes stay off through Alfa and Closed Beta. Collection proof and
+`nftLoxWrites` are an F3 gate in `shared/protocolPhase.ts`. This file does not
+override that order; the active roadmap is
+`docs/TESTNET_READINESS_FAST_TRACK.md`.
 
 The active frontend config is resolved once as `RAGNAROK_NETWORK_CONFIG`, so runtime consumers should import constants/helpers instead of rebuilding env-derived strings.
 
@@ -119,13 +121,14 @@ Complete the QA Season 0 week-one readiness gate:
    [`TESTNET_WEEK_ONE_SPEC.md`](./TESTNET_WEEK_ONE_SPEC.md).
 4. Complete the two-browser P2P gameplay-only smoke from
    [`TESTNET_RUNBOOK.md`](./TESTNET_RUNBOOK.md#smoke-test--p2p-qa-season-0).
-5. Keep Closed Testnet Beta invites blocked until issue 08 proves a non-QA
-   `closed-beta-*` epoch, `qaFullCatalogEnabled: false`,
-   the NFTLoX/starter/DUAT/RUNE ownership gates, and the explicit evidence env
-   flags consumed by `closedBetaCutover`: `RAGNAROK_NFTLOX_COLLECTION_PROOF`,
-   `RAGNAROK_HIVE_KEYCHAIN_SMOKE`, `RAGNAROK_P2P_TWO_BROWSER_SMOKE`, and
-   `RAGNAROK_CLOSED_BETA_OPERATOR_SIGNOFF`. The final NFTLoX schema, tester
-   cohort, and invite timing still require owner/operator sign-off.
+5. Keep Closed Testnet Beta invites blocked until a non-QA `closed-beta-*`
+   epoch, `qaFullCatalogEnabled: false`, and the evidence flags consumed by
+   `closedBetaCutover`: `RAGNAROK_HIVE_KEYCHAIN_SMOKE`,
+   `RAGNAROK_P2P_TWO_BROWSER_SMOKE`, and
+   `RAGNAROK_CLOSED_BETA_OPERATOR_SIGNOFF`.
+   `RAGNAROK_NFTLOX_COLLECTION_PROOF` is stored on the runtime config and is
+   not a cutover blocker. NFTLox writes remain an F3 capability. The active
+   order is `docs/TESTNET_READINESS_FAST_TRACK.md`.
 
 ## Beta Modes
 

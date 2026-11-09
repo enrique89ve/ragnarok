@@ -32,7 +32,6 @@ type NftLoxSeedInput = {
 	readonly artId: string;
 	readonly name: string;
 	readonly description: string;
-	readonly imageUrl: string;
 	readonly maxSupply: number;
 	readonly immutableData: Record<string, unknown>;
 };
@@ -767,7 +766,6 @@ export function createNftLoxAdminAdapter() {
 				totalPotential,
 				metadata: {
 					description: 'Norse Mythos Card Game — collectible cards across 5 mythological factions',
-					image: 'https://dhenz14.github.io/norse-mythos-card-game/icons/icon-512.webp',
 					externalUrl: 'https://dhenz14.github.io/norse-mythos-card-game',
 				},
 				rules: {
@@ -791,7 +789,6 @@ export function createNftLoxAdminAdapter() {
 				metadata: {
 					name: seed.name,
 					description: seed.description,
-					imageUrl: seed.imageUrl,
 				},
 				maxSupply: seed.maxSupply,
 				immutableData: seed.immutableData,
@@ -800,13 +797,8 @@ export function createNftLoxAdminAdapter() {
 		bulkDistribute(
 			items: readonly NftLoxBulkDistributeItem[],
 			to: string,
-			imageOverrides?: Record<string, string>,
 		): Promise<HiveBroadcastResult> {
-			return broadcast('bulk_distribute', {
-				to,
-				items,
-				...(imageOverrides ? { imageOverrides } : {}),
-			});
+			return broadcast('bulk_distribute', { to, items });
 		},
 		setOwnerData(
 			nftId: string,

@@ -144,6 +144,12 @@ gates (`PixiParticleCanvas` only while motion is on and the duel is live;
 `GameOverScreen` only at `game_over`). `testnetdev.ragnaroknft.quest` keeps
 the previous bundle until the next Alfa deploy.
 
+As of 2026-10-16 the active order is the roadmap in
+[TESTNET_READINESS_FAST_TRACK.md](./TESTNET_READINESS_FAST_TRACK.md): F1 poker
+and funnel readability, then deployed Alfa evidence, then the F2 Hive-testnet
+cutover, then the explicit ADR 0008 ranked slice, then F3 economy. Rotating
+`VITE_NETWORK_STAGE` or the reset epoch does not skip a step.
+
 Before changing phase, use the [migration runbook](./PHASE_MIGRATION_RUNBOOK.md).
 Migration never promotes local economy or progression. Code/tests validate the
 boundaries; deployed smoke and browser visual QA remain operational checks.

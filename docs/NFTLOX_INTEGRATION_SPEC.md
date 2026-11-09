@@ -194,9 +194,8 @@ NFTLox derives every ID and DNA deterministically from `sha256` with a fixed dom
 | Collection origin DNA | `o<15 upper-hex>` | `sha256("nftlox:origin:" + collectionId)` |
 | Seed ID | `seed_<20 hex>` | `sha256("nftlox:seed:" + collectionId + ":" + artId.lower())` |
 | Instance ID | `nft_<seedSuffix>_<n>` | concatenation, where `n` = `instanceNumber` |
-| Seed `nftDna` | `i<19 upper-hex>` | `sha256("nftlox:seed-dna:" + nftId + ":" + originDna + ":" + edition + ":" + imageHash)` |
+| Seed `nftDna` | `i<19 upper-hex>` | `sha256("nftlox:seed-dna:v1:" + seedId + ":" + originDna + ":" + edition)` (protocol 2.0.0) |
 | Instance `nftDna` | `i<19 upper-hex>` | `sha256("nftlox:dna:" + seedId + ":" + n + ":" + txId + ":" + blockNum)` |
-| Image hash | `img_<16 hex>` | `sha256("nftlox:img:" + imageUrl)` after `toWireUrl()` normalization |
 | Listing ID | `list_<32 hex>` | `sha256("nftlox:listing:v1:" + nftId + ":" + owner + ":" + marketplace + ":" + price + ":" + currency + ":" + expiresAt + ":" + nonce)` |
 
 **`nftDna` is functional, not cosmetic.** Mutating ops (`set_data`, `set_data_from`) **require** passing the current `nftDna` as a guard; it prevents cross-NFT replays and binds the mutation to current state. `client.getNft(nftId).nft_dna` is how the SDK exposes it.
@@ -212,9 +211,9 @@ Our protocol-core (`shared/protocol-core/`) already implements its own DNA syste
 | Per-instance identity | `instanceDna` (sha256, no prefix) | `nftDna` of the instance (`i<19 upper-hex>`) |
 | Lineage (`parent`, `generation`) | Yes | Not modeled |
 | Domain separators | Ad-hoc (`\|`, `:`) | Stable namespaced (`nftlox:origin:`, `nftlox:dna:`, …) |
-| Image binding | Not in DNA | `imageHash` is part of seed `nftDna` |
+| Image binding | Not in DNA | Not in DNA — protocol 2.0.0 is media-agnostic |
 
-When integration lands, the **seed `nftDna`** replaces our per-card `originDna` (it carries strictly more information — image hash + edition), and the **instance `nftDna`** replaces our `instanceDna`. We stop computing them ourselves and read them off the indexer (`client.getNft(...)`) or recompute via `verifyDeterministicDerivation()`.
+When integration lands, the **seed `nftDna`** replaces our per-card `originDna` (it binds the seed to its collection and edition), and the **instance `nftDna`** replaces our `instanceDna`. We stop computing them ourselves and read them off the indexer (`client.getNft(...)`) or recompute via `verifyDeterministicDerivation()`.
 
 ### Replicate / Merge are Ragnarok-only
 
@@ -228,11 +227,11 @@ If we want those primitives to survive the NFTLox migration, the options are:
 
 Decision deferred until integration starts; the UI flagging in `CollectionPage.tsx` is fine to leave as-is meanwhile.
 
-### Image URL canonicalization
+### Card art is resolved by Ragnarok
 
-NFTLox does **not** host images. Art is served by the Ragnarok deploy itself from `client/public/art/nfts/<hash>.webp`. NFTLox only stores the URL and derives `imageHash = sha256("nftlox:img:" + toWireUrl(url))`, where `toWireUrl()` strips the protocol prefix (`https://example.com/img.png` → `example.com/img.png`).
+NFTLox protocol 2.0.0 (testnet genesis at block `111145991`) carries **no media**: `create_collection` and `mint` payloads that include `image`, `imageUrl` or `imageHash` are rejected, and the indexer API returns no image fields. Art is served by the Ragnarok deploy from `client/public/art/nfts/<hash>.webp` and resolved client-side from the card's `artId` / `seedId` via `assetPathFor(assetId)`. Relative paths are fine and the art host can move freely without touching on-chain identity.
 
-`assetPathFor(assetId)` currently produces relative paths (`/art/nfts/...`). Before mint we must lock a **canonical absolute origin** (the production deploy host) and prepend it at mint time — once the seed `nftDna` is signed, changing the origin would orphan every `imageHash`. The asset bytes never need to move; only the URL has to be stable.
+If we ever need an on-chain anchor for a specific artwork, add a content-hash field to the collection schema and write it in `immutableData`; NFTLox treats it as opaque application data.
 
 ---
 
@@ -275,7 +274,6 @@ NFTLox does **not** host images. Art is served by the Ragnarok deploy itself fro
 | Need | Status |
 |---|---|
 | Production protocol ID (currently `nftlox_testnet`) | Pending |
-| Lock canonical production origin to prepend to `/art/nfts/...` before mint (drives `imageHash`; assets stay in our `public/`) | Pending |
 | Test mint pass on testnet | Pending |
 | `GET /api/users/:u/state-hash?collection=RGNRK` (XOR per-NFT `claim_hash`) | Pending — required by Read-side architecture |
 
@@ -307,4 +305,4 @@ Total NFT supply at full mint: ~2.76M instances across ~2,134 seeds.
 - `bulk_distribute`: max **50 distinct seeds** AND max **250 instances** per op.
 - `bulk_transfer` / `bulk_burn`: max **50 ids** per op.
 - 8 actions support optional `seedId` / `seedTxId` provenance attestation (`transfer`, `list`, `unlist`, `set_data`, `set_data_from`, `nft_transfer_from`, `nft_lend`, `nft_return`) — mismatch is rejected.
-- Image URLs are stored in **wire form** (no `https://` prefix); `imageHash` is `sha256("nftlox:img:" + toWireUrl(url))`.
+- No media on-chain: `metadata.image`, `metadata.imageUrl` and `metadata.imageHash` are rejected by protocol 2.0.0; card art is mapped by `artId` / `seedId` inside Ragnarok.

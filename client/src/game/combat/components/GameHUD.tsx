@@ -3,7 +3,9 @@ import { getElementColor, ELEMENT_LABELS, type ElementType } from '../../utils/e
 import { getElementIcon } from '../../components/ui/ElementIconsSVG';
 import { GameIcon } from '../../utils/ui/GameIcon';
 import { ARENA_VFX_TARGETS, arenaVfxTargetProps } from '../arenaVfxTargets';
-import { getPokerTurnBadgePresentation } from '../decision/pokerTurnBadgePresentation';
+import type { PokerDecisionView } from '../decision/pokerDecisionView';
+import type { P2PMatchPauseView } from '../../p2p/p2pMatchPauseView';
+import { getPokerHudStatusPresentation } from '../decision/pokerTurnBadgePresentation';
 import '../styles/game-hud.css';
 
 interface GameHUDProps {
@@ -15,7 +17,8 @@ interface GameHUDProps {
 	pot?: number;
 	playerCommitted?: number;
 	opponentCommitted?: number;
-	isPlayerTurn?: boolean;
+	decisionView: PokerDecisionView | null;
+	pauseView: Pick<P2PMatchPauseView, 'kind' | 'title' | 'detail'> | null;
 	toCall?: number;
 	playerElement?: ElementType;
 	opponentElement?: ElementType;
@@ -32,7 +35,8 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 	pot = 0,
 	playerCommitted = 0,
 	opponentCommitted = 0,
-	isPlayerTurn = false,
+	decisionView,
+	pauseView,
 	toCall = 0,
 	playerElement,
 	opponentElement,
@@ -41,19 +45,26 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 }) => {
 	const showMatchup = playerElement && opponentElement && playerElement !== 'neutral' && opponentElement !== 'neutral';
 	const showCommitment = playerCommitted > 0 || opponentCommitted > 0;
-	const turnBadge = getPokerTurnBadgePresentation(isPlayerTurn ? 'player' : 'opponent');
+	const status = getPokerHudStatusPresentation(decisionView, pauseView);
+	const ribbonTone = status.tone === 'active'
+		? 'player-active'
+		: status.tone === 'opponent'
+			? 'opponent-active'
+			: '';
 
 	return (
 		<div className="game-hud">
-			<div className={`hud-status-ribbon ${isPlayerTurn ? 'player-active' : 'opponent-active'}`}>
+			<div className={`hud-status-ribbon ${ribbonTone}`}>
 				<span className="hud-status-chip hud-status-turn">Turn <span className="hud-numeric">{turnNumber}</span></span>
 				<span className="hud-status-chip hud-status-phase">Phase {phaseLabel}</span>
 				<span
 					className="hud-status-chip hud-status-initiative"
+					data-hud-status-tone={status.tone}
 					aria-live="polite"
-					aria-label={turnBadge?.ariaLabel}
+					aria-label={status.ariaLabel}
+					title={status.detail}
 				>
-					{isPlayerTurn ? 'Initiative Yours' : 'Initiative Enemy'}
+					{status.label}
 				</span>
 				<span
 					className="hud-status-chip hud-status-pot"

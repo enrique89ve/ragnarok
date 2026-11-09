@@ -38,6 +38,126 @@ del compromiso, evitando que una cola de transporte los aplique tarde. El host
 sigue con `inviteBlocked=true`, por lo que el deploy y los gates humanos
 continuan siendo requisitos separados.
 
+Actualizacion 2026-10-16: la arquitectura de fase ya esta cerrada. El orden
+vigente es la hoja de ruta de abajo. El diagrama de septiembre queda como
+historial: la spine, las dualidades P0 y la seguridad de tickets ya no son el
+trabajo siguiente.
+
+## Hoja de ruta
+
+La autoridad la decide el perfil de `shared/protocolPhase.ts`, no el nombre
+del script ni `VITE_NETWORK_STAGE=testnet`. Alfa, QA Season 0 y generic
+testnet siguen en F1 `local-gameplay-v1`. Closed Beta es F2
+`hive-testnet-v1`. Mainnet es F3 `mainnet-v1`.
+
+```text
+1. Front F1 (ahora)
+   poker legible + funnel, dentro del tablero unico
+        |
+        v
+2. Cerrar Alfa Player-Ready
+   deploy de este arbol + smoke humano + victoria norse-1
+        |
+        v
+3. Closed Beta F2
+   epoch closed-beta-* + replay Hive
+   market, packs, NFTLox y ranking oficial siguen apagados
+        |
+        v
+4. Ranked (ADR 0008)
+   corte explicito; rotar el epoch no lo enciende
+        |
+        v
+5. Mainnet F3
+   market, packs, escrituras NFTLox y ranking oficial
+```
+
+### 1. Front F1
+
+Es el unico trabajo de producto que acorta Alfa sin abrir otra fase. Tiene
+que responder si alguien llega al primer combate y puede jugar sin preguntar
+que mirar o que boton tocar.
+
+- Home, warband, briefing de la mision Norse y game over: una CTA primaria.
+- Poker, lectura de tres segundos: quien actua, fase de la mano, hole cards,
+  comunitarias, HP en riesgo y la accion (`Bet`, `Call`, `Check`, `Raise`,
+  `Fold`, `All in`), con el motivo cuando el control esta deshabilitado.
+- Un solo dueno visible del pot/riesgo.
+- Estado P2P visible durante poker. Reconnect, gracia y error bloquean el
+  input local y dicen por que.
+- El showdown explica ganador, mano ganadora y delta de HP antes de volver
+  a chess.
+- Pase visual humano en 1366x768, 1920x1080, ultrawide y un telefono fisico.
+  El chrome abierto de este corte vive en `HoleCardsOverlay.tsx`,
+  `hero-card.css` y `CardFrame.css`.
+
+El front de este corte obedece estas restricciones:
+
+- Un escalador, `GameViewport` a 1920x1080. Sin `vw`/`vh` nuevos dentro de
+  las zonas de combate y sin un tablero vertical paralelo. En telefono,
+  portrait pide rotar.
+- Un coordinador (`RagnarokGameCoordinator`) y un fin de partida
+  (`matchEndController`). Single, la mision Norse y P2P comparten la spine.
+- Cartas desde `client/src/game/data/cardRegistry/`.
+- Daily quest del home y las card-quests de la partida siguen siendo sistemas
+  distintos.
+- Single no muestra recompensa. Campana y P2P muestran la proyeccion local
+  de IndexedDB. Esa proyeccion no se presenta como saldo Hive, ranking
+  oficial ni propiedad NFT.
+- Quick Match conserva una sola firma de `Accept`. La partida, el reconnect
+  y `game_over` no abren Keychain.
+- Marketplace y packs siguen como superficie deshabilitada. Montar su
+  mutacion seria un cambio de fase.
+
+### 2. Cerrar Alfa Player-Ready
+
+La spine, el settlement local, las dualidades P0 y la seguridad de tickets
+ya tienen evidencia de codigo. Falta evidencia operativa:
+
+1. Desplegar este arbol. `testnetdev.ragnaroknft.quest` sigue con el bundle
+   anterior hasta ese deploy.
+2. Smoke de dos cuentas Hive con Keychain: login, cola sin firma, una firma
+   en `Accept` por jugador, checkpoints `chess ↔ poker_combat` y
+   `* → game_over`, reconnect corto, resultado local, export JSON y cero
+   prompts o `custom_json` despues de `Accept`.
+3. Victoria jugada de norse-1 en el navegador. El first-clear local ya esta
+   cubierto por tests; falta la partida humana.
+4. El pase visual del punto 1, en los viewports de arriba.
+
+### 3. Closed Beta F2
+
+Se abre solo despues del punto 2, con epoch nuevo `closed-beta-*`,
+`qaFullCatalogEnabled=false` y `inviteBlocked=false` tras
+`RAGNAROK_HIVE_KEYCHAIN_SMOKE`, `RAGNAROK_P2P_TWO_BROWSER_SMOKE` y
+`RAGNAROK_CLOSED_BETA_OPERATOR_SIGNOFF`.
+
+F2 enciende replay Hive, wallet explicito y publicacion de campana. Mantiene
+apagados marketplace, packs, escrituras NFTLox y ranking oficial. La
+migracion archiva evidencia y no promueve RUNE, ELO, Season Score ni CardXP
+locales. La prueba NFTLox de `docs/BETA_TESTNET_SCOPE.md` no es gate de este
+corte: ese requisito es F3.
+
+### 4. Ranked
+
+ADR 0008 sigue siendo el contrato: el ganador publica `match_result`, el
+replay valida y el perdedor no contrafirma. Permanece apagado durante el
+cierre de Alfa y durante la invitacion F2. Encenderlo es un corte de runtime
+posterior, con su propio smoke de ancla, receipt, transcript y una sola
+operacion Hive. No forma parte del front F1 ni del cutover de Closed Beta.
+
+### 5. Mainnet F3
+
+Marketplace, packs, escrituras NFTLox y ranking oficial se habilitan aqui,
+con fingerprint mainnet y aprobacion operativa. No se anticipan en el front
+de Alfa ni en la invitacion de Closed Beta.
+
+### Fuera de esta hoja
+
+Hasta cerrar el punto 2 quedan fuera: settlement ranked, replay del
+action-log firmado, CSP de produccion, auditoria del catalogo, fusion de los
+CSS de poker, borrar `GameBoard` / `SimpleGame` / `legacyBridge`, y el resto
+de misiones de campana.
+
 ## Verdad actual
 
 Phase 1 gameplay validation is `local-gameplay-v1`: single, campaign, daily
@@ -170,17 +290,22 @@ Closed Beta no se abre hasta que, ademas de lo anterior:
    `RAGNAROK_P2P_TWO_BROWSER_SMOKE`,
    `RAGNAROK_CLOSED_BETA_OPERATOR_SIGNOFF`.
 4. P2P ranked RUNE, ELO oficial, Season Score y CardXP siguen apagados. El
-   winner-arbiter y `match_result` pertenecen a una fase futura y no bloquean
-   la validacion de jugabilidad actual.
+   winner-arbiter y `match_result` pertenecen al corte ranked de la hoja de
+   ruta (ADR 0008), posterior a la invitacion F2.
 
 ## Orden mas corto
+
+El orden vigente es la [hoja de ruta](#hoja-de-ruta) del 2026-10-16. El
+diagrama siguiente es el historial del corte 2026-09-01: la spine, las
+ceremonias locales y las dualidades P0 ya cerraron en codigo. El trabajo
+siguiente es el front F1 y la evidencia operativa de Alfa.
 
 El trabajo paralelo que no acorta Alfa Player-Ready (ranked settlement,
 action-log replay, CSP de produccion, auditoria de catalogo,
 cemetery de CSS/VFX, las 49 misiones)
-se deja fuera hasta que practica, 1 mision y el smoke de dos browsers
-pasen. Cards OPEN-8 (handshake + apply simetrico) ya cerro; no reabrir
-como host-auth.
+se deja fuera hasta que el deploy, el smoke de dos browsers y la victoria
+norse-1 pasen. Cards OPEN-8 (handshake + apply simetrico) ya cerro; no
+reabrir como host-auth.
 
 ```text
 0. Estabilizar WIP del working tree
