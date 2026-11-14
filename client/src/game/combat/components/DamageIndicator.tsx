@@ -35,6 +35,7 @@ interface DamageIndicatorProps {
 	x: number;
 	y: number;
 	isHeal?: boolean;
+	aside?: boolean;
 	onComplete: () => void;
 }
 
@@ -44,6 +45,7 @@ export const DamageIndicator: React.FC<DamageIndicatorProps> = ({
 	x,
 	y,
 	isHeal = false,
+	aside = false,
 	onComplete,
 }) => {
 	const arenaRoot = useArenaVfxRoot();
@@ -77,6 +79,7 @@ export const DamageIndicator: React.FC<DamageIndicatorProps> = ({
 		isHeal ? 'damage-heal' : 'damage-hurt',
 		isBig ? 'damage-big' : '',
 		isCritical ? 'damage-critical' : '',
+		aside ? 'damage-aside' : '',
 	].filter(Boolean).join(' ');
 
 	const portalTarget = getArenaVfxLayer(ARENA_VFX_LAYERS.vfx, arenaRoot);

@@ -345,7 +345,7 @@
 	0% { opacity: 0; }
 	10% { opacity: 1; }
 	70% { opacity: 1; }
-	100% { opacity: 0; }
+	100% { opacity: 1; }
 }
 
 @keyframes realm-announce-glow {
@@ -364,8 +364,7 @@
 @keyframes realm-desc-fade {
 	0%, 20% { opacity: 0; transform: translateY(10px); }
 	40% { opacity: 1; transform: translateY(0); }
-	70% { opacity: 1; }
-	100% { opacity: 0; }
+	100% { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes realm-rune-pulse {

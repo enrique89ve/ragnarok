@@ -19,20 +19,22 @@
 }
 
 .game-viewport[data-tension-level="medium"]::after {
-	box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.25);
+	box-shadow: inset 0 0 36px rgba(0, 0, 0, 0.12);
 	opacity: 1;
 }
 
 .game-viewport[data-tension-level="high"]::after {
-	box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.4);
+	box-shadow: inset 0 0 42px rgba(0, 0, 0, 0.16);
 	opacity: 1;
 }
 
 .game-viewport[data-tension-level="allin"]::after {
-	box-shadow:
-		inset 0 0 120px rgba(0, 0, 0, 0.5),
-		inset 0 0 40px color-mix(in srgb, var(--danger-400) 15%, transparent);
+	box-shadow: inset 0 0 28px color-mix(in srgb, var(--danger-400) 12%, transparent);
 	opacity: 1;
+}
+
+.game-viewport[data-tension-level="allin"] [data-hero-role] {
+	--hero-portrait-state-wash: color-mix(in srgb, var(--danger-400) 16%, transparent);
 }
 
 
@@ -95,10 +97,12 @@
 }
 
 .phase-banner-text {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
 	flex: 0 1 auto;
 	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
 }
 
 .phase-banner-text-inner {
@@ -139,8 +143,8 @@
 }
 
 .phase-banner[data-phase="faith"] {
-	--phase-color: var(--rarity-epic-color);
-	--phase-glow: var(--rarity-epic-glow);
+	--phase-color: var(--rune-cyan, #38bdf8);
+	--phase-glow: color-mix(in srgb, var(--rune-cyan, #38bdf8) 45%, transparent);
 }
 
 .phase-banner[data-phase="foresight"] {

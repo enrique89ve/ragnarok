@@ -14,6 +14,8 @@ import { useArenaVfxRoot } from '../arenaVfxContext';
 import { getPokerActionDefinition } from '../decision/pokerActionCatalog';
 import { PokerActionIcon } from './PokerActionIcon';
 import { gameEffectCoordinator } from '@/game/effects/core/gameEffectCoordinator';
+import { CINEMA_READ_MS } from '../feedback/combatFeedback';
+import { useCombatFeedbackStore } from '../feedback/combatFeedbackStore';
 import './HeroBattlePopup.css';
 
 export type BattlePopupAction = CombatAction;
@@ -70,29 +72,33 @@ const SinglePopup: React.FC<{
 	const definition = getPokerActionDefinition(popup.action);
 	if (!anchor) return null;
 
+	const sentence = [popup.text, popup.subtitle].filter(Boolean).join('. ');
+
 	return (
 		<motion.div
-			className="hbp-overlay"
+			className="hbp-anchor"
 			style={{
 				left: anchor.position.x,
 				top: anchor.position.y,
 				'--hbp-color': anchor.accent ?? definition.color,
 			} as React.CSSProperties}
 			role="status"
-			aria-label={[popup.text, popup.subtitle].filter(Boolean).join('. ')}
+			aria-label={sentence}
 			initial={{ opacity: 0, scale: 0.92, x: '-50%', y: '-50%' }}
 			animate={{ opacity: 1, scale: 1, x: '-50%', y: '-50%' }}
-			exit={{ opacity: 0, scale: 0.95, x: '-50%', y: '-55%', filter: 'blur(2px)' }}
+			exit={{ opacity: 0, scale: 0.96, x: '-50%', y: '-50%' }}
 			transition={{
 				duration: 0.4,
 				ease: [0.25, 0.1, 0.25, 1.0],
 				exit: { duration: 0.6, ease: [0.25, 0.1, 0.25, 1.0] },
 			}}
 		>
-			<div className="hbp-icon-wrap" aria-hidden="true">
-				<PokerActionIcon glyph={definition.glyph} />
+			<div className="hbp-overlay" aria-hidden="true">
+				<div className="hbp-icon-wrap">
+					<PokerActionIcon glyph={definition.glyph} />
+				</div>
+				<div className="hbp-text">{definition.pokerLabel}</div>
 			</div>
-			<div className="hbp-text" aria-hidden="true">{definition.pokerLabel}</div>
 		</motion.div>
 	);
 };
@@ -102,6 +108,16 @@ export const HeroBattlePopup: React.FC<HeroBattlePopupProps> = ({ popup, onCompl
 	useEffect(() => {
 		proceduralAudio.play(getPokerActionDefinition(popup.action).sound);
 	}, [popup.action]);
+
+	useEffect(() => {
+		useCombatFeedbackStore.getState().enqueueStack({
+			lane: 'stack',
+			title: popup.text,
+			subtitle: popup.subtitle,
+			tone: 'warning',
+			holdMs: CINEMA_READ_MS,
+		});
+	}, [popup.id, popup.subtitle, popup.text]);
 
 	useEffect(() => {
 		const handle = gameEffectCoordinator.schedule({

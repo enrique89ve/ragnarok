@@ -13,8 +13,10 @@ const ACTION_VERBS: Record<CombatAction, string> = {
 
 export const FEEDBACK_ENTER_MS = 200;
 export const FEEDBACK_EXIT_MS = 160;
-export const FEEDBACK_MIN_DWELL_MS = 1600;
-export const FEEDBACK_MAX_DWELL_MS = 3200;
+/** Sharp time a title or chip stays readable, after its entrance. */
+export const CINEMA_READ_MS = 3_000;
+export const FEEDBACK_MIN_DWELL_MS = CINEMA_READ_MS;
+export const FEEDBACK_MAX_DWELL_MS = 4_800;
 export const FEEDBACK_MS_PER_WORD = 80;
 /** One readable chip at a time; subsequent messages stay in the queue. */
 export const FEEDBACK_STACK_CAP = 1;

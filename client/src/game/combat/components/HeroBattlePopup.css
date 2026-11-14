@@ -1,7 +1,12 @@
-.hbp-overlay {
+.hbp-anchor {
 	position: absolute;
 	pointer-events: none;
 	z-index: 700;
+}
+
+.hbp-overlay {
+	position: relative;
+	pointer-events: none;
 	box-sizing: border-box;
 	display: flex;
 	flex-direction: column;

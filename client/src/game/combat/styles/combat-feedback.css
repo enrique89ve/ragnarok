@@ -16,7 +16,7 @@
 
 .combat-feedback-chip {
 	min-width: 0;
-	max-width: 220px;
+	max-width: 280px;
 	padding: 8px 14px;
 	border-radius: 0;
 	clip-path: polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px);
@@ -30,9 +30,10 @@
 
 .combat-feedback-chip-copy {
 	margin: 0;
-	white-space: nowrap;
 	overflow: hidden;
-	text-overflow: ellipsis;
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
 }
 
 .combat-feedback-chip-title {
