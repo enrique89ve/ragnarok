@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useGameStore } from '../../stores/gameStore';
 import { useP2PActions } from '../../context/useP2PActions';
-import { showStatus } from '../feedback/combatFeedbackStore';
+import { GAME_MESSAGE_IDS } from '@/game/effects/feedback/gameMessageCatalog';
+import { enqueueGameplayMessage } from '@/game/effects/presentation/presentationOrchestrator';
 import { ALL_NORSE_HEROES } from '../../data/norseHeroes';
 import { canCardAttack as canCardAttackCheck } from '../attackUtils';
 import { emitBattlecryTriggered } from '../../actions/gameActions';
@@ -213,7 +214,10 @@ export function usePokerCardClickHandlers({
 			}
 
 			if (!hasValidTargets) {
-				showStatus(`${card.card.name} requires a minion to target`, 'warning', 2000);
+				enqueueGameplayMessage({
+					id: GAME_MESSAGE_IDS.POKER_SPELL_REQUIRES_MINION,
+					params: { cardName: card.card.name },
+				});
 				return;
 			}
 

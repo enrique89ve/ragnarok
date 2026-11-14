@@ -7,7 +7,14 @@
 
 import { create } from 'zustand';
 import type { IconName } from '../utils/ui/iconMap';
-import { CINEMA_READ_MS, overlayHoldMs } from '../combat/feedback/combatFeedback';
+import {
+	CINEMA_READ_MS,
+	FEEDBACK_CASCADE_GAP_MS,
+	overlayHoldMs,
+} from '../combat/feedback/combatFeedback';
+import {
+	presentationBlocksAnnouncements,
+} from '../effects/presentation/presentationOrchestrator';
 import { useCombatFeedbackStore } from '../combat/feedback/combatFeedbackStore';
 import { debug } from '../config/debugConfig';
 
@@ -90,8 +97,8 @@ function clearAnnouncementTimer(): void {
 	}
 }
 
-function cinemaBlocksAnnouncement(): boolean {
-	return useCombatFeedbackStore.getState().cinemaHolders.length > 0;
+function presentationBlocksAnnouncement(): boolean {
+	return presentationBlocksAnnouncements();
 }
 
 function clampAnnouncementText(value: string, limit: number): string {
@@ -415,7 +422,7 @@ export const useUnifiedUIStore = create<UnifiedUIStore>((set, get) => ({
       return;
     }
 
-    if (cinemaBlocksAnnouncement()) {
+    if (presentationBlocksAnnouncement()) {
       set({ isProcessingAnnouncements: true, currentAnnouncement: null });
       return;
     }
@@ -435,7 +442,7 @@ export const useUnifiedUIStore = create<UnifiedUIStore>((set, get) => ({
       announcementTimer = setTimeout(() => {
         announcementTimer = null;
         get().processNextAnnouncement();
-      }, 150);
+      }, FEEDBACK_CASCADE_GAP_MS);
     }, next.duration || 1800);
   },
 
@@ -589,17 +596,17 @@ export const useUnifiedUIStore = create<UnifiedUIStore>((set, get) => ({
 }));
 
 useCombatFeedbackStore.subscribe((state, previous) => {
-  const wasHeld = (previous?.cinemaHolders.length ?? 0) > 0;
-  const held = state.cinemaHolders.length > 0;
-  if (!wasHeld && held) {
-    useUnifiedUIStore.getState().deferAnnouncementForCinema();
-  }
-  if (wasHeld && !held) {
-    const ui = useUnifiedUIStore.getState();
-    if (!ui.currentAnnouncement && ui.announcements.length > 0) {
-      ui.processNextAnnouncement();
-    }
-  }
+	const wasBusy = presentationBlocksAnnouncements(previous);
+	const busy = presentationBlocksAnnouncements(state);
+	if (!wasBusy && busy) {
+		useUnifiedUIStore.getState().deferAnnouncementForCinema();
+	}
+	if (wasBusy && !busy) {
+		const ui = useUnifiedUIStore.getState();
+		if (!ui.currentAnnouncement && ui.announcements.length > 0) {
+			ui.processNextAnnouncement();
+		}
+	}
 });
 
 export function fireAnnouncement(

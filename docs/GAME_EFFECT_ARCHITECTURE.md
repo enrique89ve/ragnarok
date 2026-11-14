@@ -56,6 +56,18 @@ does not change the gameplay event or its source of truth. Renderers are
 registered through `registerGameFeedbackRenderer`; the current stack is only
 the default implementation for all three visible presentations.
 
+### Presentation cascade
+
+Combat stack chips and `ActionAnnouncement` share one human pacing rule:
+`FEEDBACK_CASCADE_GAP_MS` (1.5s) between successive on-screen messages. The
+stack shows at most one chip (`FEEDBACK_STACK_CAP = 1`); additional copy stays
+in `pending` until the current chip dismisses plus the cascade gap. The
+announcement queue uses the same gap after each toast exits, and defers while
+any stack chip, pending item, suspended chip, or cinema holder is active so the
+flop stack and top-right banner never talk over each other.
+
+Orchestration slices and agent workflow: `docs/PRESENTATION_ORCHESTRATION.md`.
+
 ## No dual authority
 
 - Rules/stores own legality, damage, resources, turns, and outcomes.

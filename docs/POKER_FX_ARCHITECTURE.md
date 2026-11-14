@@ -57,9 +57,36 @@ effects from fighting for the same anchor.
 | flop / turn / river reveal | `community-reveal` | `communityCards` | 160 ms slot stagger for flop |
 | hand rank announced | `hand-rank` | `feedbackStack` | 400/900 ms showdown cadence |
 | showdown damage | `showdown-impact` | target hero | 1400 ms after rank reveal |
-| phase entered | `phase-reveal` | `vfxFocus` | cinema lane |
+| phase entered | `phase-reveal` | `vfxFocus` | decorative VFX only; `PhaseBanner` owns center title hold |
 | Ragnarok / domination / last stand | `streak-announcement` | `vfxFocus` | rare expressive motion |
 | active player changes | `persistent-turn` | `turnBadge` | persistent state transition |
+
+## Center title choreography (AAA-style)
+
+Reference pattern (LoL / Hearthstone / MTGA): **one headline card** owns the seam
+between board rows for the full **enter → read → exit** beat (~3s read). Particle
+shake, audio, and card reveals may run in parallel but must **not** call
+`occupyCinema('poker-cinema')` or preempt the title holder.
+
+Policy lives in `client/src/game/combat/cinemaLanePolicy.ts`:
+
+- `CENTER_TITLE_CINEMA_HOLDERS` — titles that share the center pixel.
+- `phase-reveal` clears stale slams only; `PhaseBanner` uses
+  `PHASE_BANNER_CINEMA_MS` via `occupyCinema('phase-banner', …)`.
+- Decorative timers are **not** center titles; they must not shorten another
+  holder's dwell (no early `releaseCinema` / stack flush triggered by VFX alone).
+
+### Showdown playlist (center → floater)
+
+1. **`hand-rank`** (or `ragnarok-ultimate` / Thor hammer) — owns `poker-cinema` through
+   enter + ~3s read + exit (`cinemaHoldMs`).
+2. **`showdown-impact`** — floater on the hero; scheduled after rank lead + `CENTER_SLAM_GAP_MS`.
+   If center-title or stack is still busy, `schedulePokerMotion` retries every 80ms via
+   `canShowFloater()` (never calls `releaseCinemaHold` on foreign holders).
+3. Board **card combat** floaters use `combatImpactHandler` + damage numbers; they do not
+   occupy the center-title lane.
+
+Decorative zone VFX (`phase-reveal`, shakes, particles) never shorten another holder's dwell.
 
 ## Implementation rules
 

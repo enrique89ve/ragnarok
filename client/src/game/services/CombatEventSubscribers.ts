@@ -7,7 +7,8 @@
 
 import { CombatEventBus, CombatEvent, AttackBlockedEvent } from './CombatEventBus';
 import { debug } from '../config/debugConfig';
-import { showStatus } from '../combat/feedback/combatFeedbackStore';
+import { GAME_MESSAGE_IDS } from '@/game/effects/feedback/gameMessageCatalog';
+import { enqueueGameplayMessage } from '@/game/effects/presentation/presentationOrchestrator';
 import { adaptCombatBusToVisual } from '../combat/vfx/adaptCombatBusToVisual';
 
 let initialized = false;
@@ -86,17 +87,10 @@ function subscribeCombatLog(): () => void {
 function subscribeBlockedAttackNotifications(): () => void {
   return CombatEventBus.subscribe<AttackBlockedEvent>('ATTACK_BLOCKED', (event) => {
     debug.warn(`[AttackBlocked] ${event.message}`);
-    const titles: Record<string, string> = {
-      taunt: 'Blocked by Taunt',
-      summoning_sickness: 'Must wait a turn',
-      stealth: 'Target is Stealthed',
-      immune: 'Target is Immune',
-      invalid_target: 'Invalid Target',
-      no_attack: 'Cannot Attack',
-      already_attacked: 'Already Attacked',
-    };
-    const title = titles[event.reason] ?? 'Attack Blocked';
-    showStatus(`${title}: ${event.message}`, 'warning', 1500);
+    enqueueGameplayMessage({
+      id: GAME_MESSAGE_IDS.COMBAT_ATTACK_BLOCKED,
+      params: { reason: event.reason, detail: event.message },
+    });
   }, 50);
 }
 

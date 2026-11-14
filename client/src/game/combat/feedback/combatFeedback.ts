@@ -21,7 +21,16 @@ export const FEEDBACK_MS_PER_WORD = 80;
 /** One readable chip at a time; subsequent messages stay in the queue. */
 export const FEEDBACK_STACK_CAP = 1;
 export const FEEDBACK_PENDING_CAP = 4;
-export const FEEDBACK_STAGGER_MS = 80;
+/**
+ * Gap between successive stack chips and announcement handoffs so bursts read as
+ * a cascade (~1.5s) instead of a single unreadable flash.
+ */
+export const FEEDBACK_CASCADE_GAP_MS = 1_500;
+/** Floating damage/heal on cards and heroes — hold through read beat after impact. */
+export const COMBAT_DAMAGE_NUMBER_READ_MS = 2_200;
+export const COMBAT_DAMAGE_NUMBER_CRITICAL_READ_MS = 2_400;
+/** @deprecated Prefer FEEDBACK_CASCADE_GAP_MS */
+export const FEEDBACK_STAGGER_MS = FEEDBACK_CASCADE_GAP_MS;
 
 export type FeedbackLane = 'cinema' | 'stack' | 'floater' | 'error';
 export type FeedbackTone = GameFeedbackTone;
