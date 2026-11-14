@@ -5,6 +5,7 @@ import { debug } from '../../config/debugConfig';
 import { GameIcon } from '../../utils/ui/GameIcon';
 import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../arenaVfxTargets';
 import { useArenaVfxRoot } from '../arenaVfxContext';
+import { CINEMA_READ_MS } from '../feedback/combatFeedback';
 
 export type FirstStrikeAnimationProps = {
   readonly target: 'player' | 'opponent';
@@ -14,9 +15,9 @@ export type FirstStrikeAnimationProps = {
   readonly onComplete: () => void;
 };
 
-const FIRST_STRIKE_CHARGE_MS = 1_000;
+const FIRST_STRIKE_CHARGE_MS = CINEMA_READ_MS;
 const FIRST_STRIKE_TRAVEL_MS = 700;
-const FIRST_STRIKE_DAMAGE_MS = 1_800;
+const FIRST_STRIKE_DAMAGE_MS = CINEMA_READ_MS;
 
 export const FirstStrikeAnimation: React.FC<FirstStrikeAnimationProps> = ({
   target,

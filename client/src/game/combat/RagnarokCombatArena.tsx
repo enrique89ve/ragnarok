@@ -24,6 +24,13 @@ import { TargetingOverlay } from '../components/TargetingOverlay';
 import { CardBurnOverlay } from '../components/CardBurnOverlay';
 import { ActionAnnouncement } from '../components/ActionAnnouncement';
 import { CombatFeedbackStack } from './components/CombatFeedbackStack';
+import { useCombatFeedbackStore } from './feedback/combatFeedbackStore';
+import {
+  canStartOpeningMatchup,
+  FIRST_STRIKE_CINEMA_HOLDER,
+  OPENING_BANNER_PHASES,
+  PHASE_BANNER_CINEMA_HOLDER,
+} from './openingReadGate';
 import '../poker/styles/poker.css';
 import AIAttackAnimationProcessor from '../components/AIAttackAnimationProcessor';
 import { PixiParticleCanvas } from '../animations/PixiParticleCanvas';
@@ -92,7 +99,7 @@ import { resolveBattlefieldCardClickIntent, type BattlefieldCardSide } from './c
 import { GameIcon } from '../utils/ui/GameIcon';
 import type { IconName } from '../utils/ui/iconMap';
 
-const OPENING_REALM_HOLD_MS = 2_500;
+const OPENING_REALM_HOLD_MS = 3_700;
 
 const PHASE_LABELS: Partial<Record<CombatPhase, string>> = {
 	[CombatPhase.MULLIGAN]: 'Mulligan',
@@ -419,8 +426,8 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
         if (!snapshot) return null;
         return target.type === 'hero'
           ? {
-              x: snapshot.center.x,
-              y: snapshot.rect.top + snapshot.rect.height * 0.82,
+              x: snapshot.rect.left + snapshot.rect.width * 1.02,
+              y: snapshot.rect.top + snapshot.rect.height * 0.7,
             }
           : {
               x: snapshot.center.x,
@@ -761,6 +768,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
           x={anim.x}
           y={anim.y}
           isHeal={anim.isHeal}
+          aside={anim.targetId === 'player-hero' || anim.targetId === 'opponent-hero'}
           onComplete={() => removeDamageAnimation(anim.id)}
         />
       ))}
@@ -883,18 +891,21 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
     openingNarrativeReadyRef.current = openingNarrativeReady;
   }, [openingNarrativeReady]);
 
+  const openingCinemaHolders = useCombatFeedbackStore((state) => state.cinemaHolders);
+  const openingCenterBusy = openingCinemaHolders.length > 0;
+
   // Combat-start quip — fires once after the opening presentation has made
   // room for readable narrative copy. A phase/threshold quip that arrived
   // during the opening takes precedence so it is not lost or overlapped.
   useEffect(() => {
     if (combatStartQuipFiredRef.current) return;
-    if (!openingNarrativeReady) return;
+    if (!openingNarrativeReady || openingCenterBusy) return;
     const queuedQuip = pendingOpeningQuipsRef.current.shift();
     const openingQuip = queuedQuip ?? bossQuips?.onCombatStart;
     if (!openingQuip) return;
     combatStartQuipFiredRef.current = true;
     presentQuip(openingQuip);
-  }, [bossQuips, openingNarrativeReady, presentQuip]);
+  }, [bossQuips, openingCenterBusy, openingNarrativeReady, presentQuip]);
 
   // Opponent HP for boss quips is read after the combat controller mounts.
 
@@ -995,6 +1006,14 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
     getPokerCombatAdapterState().completeFirstStrike();
   }, [combatState, isActive, openingMulliganGatingPoker]);
 
+  useEffect(() => {
+    if (!firstStrikePresentation) return;
+    useCombatFeedbackStore.getState().holdCinema(FIRST_STRIKE_CINEMA_HOLDER);
+    return () => {
+      useCombatFeedbackStore.getState().releaseCinema(FIRST_STRIKE_CINEMA_HOLDER);
+    };
+  }, [firstStrikePresentation]);
+
   const quipOpponentHp = readViewerCombatHeroHp(combatState, 'opponent');
   const quipOpponentHP = quipOpponentHp?.current ?? 100;
   const quipOpponentMaxHP = quipOpponentHp?.max ?? 100;
@@ -1041,6 +1060,9 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
   const [queuedRealmAnnouncement, setQueuedRealmAnnouncement] = useState<string | null>(null);
   const [visibleRealmAnnouncement, setVisibleRealmAnnouncement] = useState<string | null>(null);
   const matchupBannerShownRef = useRef(false);
+  const openingBannerArmedRef = useRef(false);
+  const openingPhaseRef = useRef<CombatPhase | null>(null);
+  const [openingBannerSeen, setOpeningBannerSeen] = useState(false);
   const openingRealmHandledRef = useRef(false);
   const lastPresentedRealmAnnouncementRef = useRef<string | null>(null);
   const realmAnnouncementTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1052,28 +1074,60 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
 
   useEffect(() => {
     if (!combatState || matchupBannerShownRef.current) return;
-
-    // The initial notices are a readable sequence, not a simultaneous stack.
-    // Keep the elemental matchup behind First Strike until that presentation
-    // completes; gameplay has already committed independently.
-    const firstStrikeIsVisible = firstStrikePresentation !== null;
-    const firstStrikeIsPending = combatState.phase === CombatPhase.FIRST_STRIKE
-      && combatState.firstStrike
-      && !combatState.firstStrike.completed;
-    if (firstStrikeIsVisible || firstStrikeIsPending) return;
-
-    if (combatState) {
-      matchupBannerShownRef.current = true;
-      setShowMatchupBanner(true);
+    const phase = combatState.phase;
+    const previous = openingPhaseRef.current;
+    openingPhaseRef.current = phase;
+    const isBannerPhase = OPENING_BANNER_PHASES.has(phase);
+    if (previous === null) {
+      openingBannerArmedRef.current = isBannerPhase;
+      return;
     }
-  }, [combatState, firstStrikePresentation]);
+    if (previous !== phase && isBannerPhase) {
+      openingBannerArmedRef.current = true;
+      setOpeningBannerSeen(false);
+    }
+  }, [combatState]);
+
+  useEffect(() => {
+    if (!openingBannerArmedRef.current) return;
+    if (!openingCinemaHolders.includes(PHASE_BANNER_CINEMA_HOLDER)) return;
+    setOpeningBannerSeen(true);
+  }, [openingCinemaHolders]);
+
+  useEffect(() => {
+    if (!showdownCelebration) return;
+    setOpeningBannerSeen(true);
+  }, [showdownCelebration]);
+
+  useEffect(() => {
+    if (!combatState || matchupBannerShownRef.current) return;
+
+    // One center notice at a time: First Strike, then the phase title,
+    // then the elemental matchup. The clock is not paused.
+    const firstStrike = combatState.firstStrike;
+    const firstStrikeIsPending = combatState.phase === CombatPhase.FIRST_STRIKE
+      && !!firstStrike
+      && !firstStrike.completed;
+    if (!canStartOpeningMatchup({
+      phase: combatState.phase,
+      firstStrikeVisible: firstStrikePresentation !== null,
+      firstStrikePending: firstStrikeIsPending,
+      cinemaHolders: openingCinemaHolders,
+      bannerArmed: openingBannerArmedRef.current && !showdownCelebration,
+      bannerSeen: openingBannerSeen,
+      matchupAlreadyShown: matchupBannerShownRef.current,
+    })) return;
+
+    matchupBannerShownRef.current = true;
+    setShowMatchupBanner(true);
+  }, [combatState, firstStrikePresentation, openingBannerSeen, openingCinemaHolders, showdownCelebration]);
 
   // Hero feud taunt — waits for the same opening gate as campaign quips.
   // The matchup component owns its readable dwell; no independent timer can
   // race the first-strike or matchup copy anymore.
   useEffect(() => {
     if (feudFiredRef.current) return;
-    if (!openingNarrativeReady) return;
+    if (!openingNarrativeReady || openingCenterBusy) return;
     if (!combatState) return;
     if (bossQuipMissionId) return; // campaign has its own quip system
     const playerHero = combatState.player?.pet?.norseHeroId;
@@ -1084,7 +1138,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
     feudFiredRef.current = true;
     const opponentQuip = playerHero < opponentHero ? feud.bQuip : feud.aQuip;
     presentQuip(opponentQuip);
-  }, [combatState, bossQuipMissionId, openingNarrativeReady, presentQuip]);
+  }, [bossQuipMissionId, combatState, openingCenterBusy, openingNarrativeReady, presentQuip]);
 
   useEffect(() => {
     return () => { resetKingEvents(); };
@@ -1140,6 +1194,14 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
   useEffect(() => () => {
     if (realmAnnouncementTimerRef.current) clearTimeout(realmAnnouncementTimerRef.current);
   }, []);
+
+  useEffect(() => {
+    if (!visibleRealmAnnouncement) return;
+    useCombatFeedbackStore.getState().holdCinema('realm-announcement');
+    return () => {
+      useCombatFeedbackStore.getState().releaseCinema('realm-announcement');
+    };
+  }, [visibleRealmAnnouncement]);
 
   // Prophecy tracker
   const prophecies = useGameStore(state => state.gameState?.prophecies);
@@ -1625,7 +1687,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
       <KingPassivePopup />
       <AIAttackAnimationProcessor />
       {particleCanvasEnabled && (
-        <PixiParticleCanvas realm={activeRealmId || 'midgard'} />
+        <PixiParticleCanvas />
       )}
       <AnimationOverlay />
       
