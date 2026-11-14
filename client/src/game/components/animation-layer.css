@@ -102,3 +102,48 @@
 	background: radial-gradient(circle, rgba(255, 215, 0, 0.2), transparent 70%);
 	z-index: 98;
 }
+
+.arena-outcome-splash {
+	max-width: min(92vw, 28ch);
+	text-align: center;
+	font-family: var(--type-display, 'Cinzel', serif);
+	font-size: clamp(2rem, 7vw, 3.25rem);
+	font-weight: 900;
+	line-height: 1.05;
+	letter-spacing: clamp(0.12em, 1.2vw, 0.2em);
+	text-transform: uppercase;
+	text-wrap: balance;
+}
+
+.arena-outcome-splash--victory {
+	color: #ffd700;
+	text-shadow:
+		0 0 30px rgba(255, 215, 0, 0.8),
+		0 4px 8px rgba(0, 0, 0, 0.8),
+		0 0 60px rgba(255, 215, 0, 0.4);
+}
+
+.arena-outcome-splash--defeat {
+	color: #dc2626;
+	text-shadow:
+		0 0 30px rgba(220, 38, 38, 0.8),
+		0 4px 8px rgba(0, 0, 0, 0.8);
+}
+
+.arena-outcome-splash-sub {
+	max-width: min(90vw, 42ch);
+	padding: 0 12px;
+	text-align: center;
+	font-size: clamp(14px, 2.4vw, 18px);
+	font-weight: 600;
+	line-height: 1.3;
+	letter-spacing: 0.08em;
+	text-wrap: balance;
+	color: #fff;
+	text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.arena-outcome-splash-sub--defeat {
+	color: #fca5a5;
+	text-shadow: 0 0 10px rgba(220, 38, 38, 0.35);
+}

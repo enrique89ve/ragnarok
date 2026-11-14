@@ -17,8 +17,6 @@ import React, { useMemo, useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  DAMAGE_EFFECT_DURATION_MS,
-  HEAL_EFFECT_DURATION_MS,
   useAnimationOrchestrator,
   AnimationEffect,
   AnimationCategory,
@@ -171,103 +169,12 @@ const SummonEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo((
 
 SummonEffectRenderer.displayName = 'SummonEffectRenderer';
 
-const DamageEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo(({ effect }) => {
-  const { position, data } = effect;
-  const damage = data.damage || 0;
-
-  if (!position) return null;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10, scale: 1.15 }}
-      animate={{
-        opacity: [0, 1, 1, 0],
-        y: [10, 0, -20, -56],
-        scale: [1.15, 1.04, 1, 0.92],
-      }}
-      exit={{
-        opacity: 0,
-        y: -65,
-        scale: 0.9,
-        transition: { duration: 0.18, ease: [0.22, 1, 0.36, 1] },
-      }}
-      transition={{
-        duration: DAMAGE_EFFECT_DURATION_MS / 1000,
-        ease: [0.22, 1, 0.36, 1],
-        times: [0, 0.1, 0.86, 1],
-      }}
-      style={{
-        position: 'absolute',
-        left: position.x,
-        top: position.y,
-        transform: 'translate(-50%, -50%)',
-        pointerEvents: 'none',
-        zIndex: 9998,
-      }}
-    >
-      <div
-        style={{
-          fontSize: '32px',
-          fontWeight: 'bold',
-          color: '#ff4444',
-          textShadow: '2px 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(255,0,0,0.5)',
-        }}
-      >
-        -{damage}
-      </div>
-    </motion.div>
-  );
-});
+/** Damage floaters render via DamageIndicator + combatDamageFloater bus. */
+const DamageEffectRenderer: React.FC<{ effect: AnimationEffect }> = () => null;
 
 DamageEffectRenderer.displayName = 'DamageEffectRenderer';
 
-const HealEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo(({ effect }) => {
-  const { position, data } = effect;
-  const amount = data.amount || 0;
-
-  if (!position) return null;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10, scale: 1.15 }}
-      animate={{
-        opacity: [0, 1, 1, 0],
-        y: [10, 0, -20, -56],
-        scale: [1.15, 1.04, 1, 0.92],
-      }}
-      exit={{
-        opacity: 0,
-        y: -62,
-        scale: 0.92,
-        transition: { duration: 0.18, ease: [0.22, 1, 0.36, 1] },
-      }}
-      transition={{
-        duration: HEAL_EFFECT_DURATION_MS / 1000,
-        ease: [0.22, 1, 0.36, 1],
-        times: [0, 0.12, 0.72, 1],
-      }}
-      style={{
-        position: 'absolute',
-        left: position.x,
-        top: position.y,
-        transform: 'translate(-50%, -50%)',
-        pointerEvents: 'none',
-        zIndex: 9998,
-      }}
-    >
-      <div
-        style={{
-          fontSize: '32px',
-          fontWeight: 'bold',
-          color: '#44ff44',
-          textShadow: '2px 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,255,0,0.5)',
-        }}
-      >
-        +{amount}
-      </div>
-    </motion.div>
-  );
-});
+const HealEffectRenderer: React.FC<{ effect: AnimationEffect }> = () => null;
 
 HealEffectRenderer.displayName = 'HealEffectRenderer';
 

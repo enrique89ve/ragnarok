@@ -39,7 +39,7 @@ import { AnimationOverlay } from '../components/AnimationOverlay';
 import { ShowdownCelebration } from './components/ShowdownCelebration';
 import { TargetingPrompt } from './components/TargetingPrompt';
 import { HeroPowerPrompt } from './components/HeroPowerPrompt';
-import { DamageIndicator } from './components/DamageIndicator';
+import { CombatDamageFloaterHost } from './floaters/CombatDamageFloaterHost';
 import { GameOverScreen } from './components/GameOverScreen';
 import { GameHUD } from './components/GameHUD';
 import { HeroDeathAnimation } from './components/HeroDeathAnimation';
@@ -84,7 +84,7 @@ import { PlayerZone } from './zones/PlayerZone';
 import { MinionField } from './zones/MinionField';
 import { ARENA_VFX_LAYERS, arenaVfxLayerProps } from './arenaVfxTargets';
 import { ArenaVfxRootContext } from './arenaVfxContext';
-import { captureVisualSnapshot, presentationTargetForEntityId } from '../effects/presentation/EffectTargetResolver';
+import { damageFloaterPositionForEntity } from './floaters/damageFloaterPosition';
 import { BoardOccupancyOverlay, POKER_VIEWPORT_LAYOUT_STYLE, POKER_VIEWPORT_SAFE_AREA } from '../poker';
 import { useCampaignStore, getMission } from '../campaign';
 import { isBettingPhase } from './modules/PhaseManager';
@@ -260,7 +260,6 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
 	const reconnectCountdown = usePeerStore(s => s.reconnectCountdown);
 	const reconnectAttemptCount = usePeerStore(s => s.reconnectAttemptCount);
 	const competitionPhase = usePeerStore(s => s.battleLifecycle?.phase ?? null);
-	const showDamageNumbers = useSettingsStore(s => s.showDamageNumbers);
 	const openingMulliganGatingPoker = useGameStore(s => isOpeningMulliganGatingPoker(s.gameState));
 
 	const cardGameIsPlayerTurn = gameState?.currentTurn === 'player';
@@ -300,7 +299,6 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
     shakingTargets,
     prevHealthRef,
     triggerDamageAnimation,
-    consumeCanonicalDamageClaim,
     removeDamageAnimation,
     addShakingTarget,
   } = useDamageAnimations();
@@ -417,60 +415,25 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
 
     const prev = prevHealthRef.current;
     if (prev) {
-      const getDamagePos = (targetId: string) => {
-        const target = presentationTargetForEntityId(targetId);
-        const snapshot = captureVisualSnapshot(target);
-        if (!snapshot) return null;
-        return target.type === 'hero'
-          ? {
-              x: snapshot.rect.left + snapshot.rect.width * 1.02,
-              y: snapshot.rect.top + snapshot.rect.height * 0.7,
-            }
-          : {
-              x: snapshot.center.x,
-              y: snapshot.rect.top + snapshot.rect.height * 0.32,
-            };
-      };
-      const triggerHealthDamage = (targetId: string, damage: number) => {
-        const showNumber = !consumeCanonicalDamageClaim(targetId, damage);
-        const pos = getDamagePos(targetId);
-        if (pos) triggerDamageAnimation(targetId, damage, pos.x, pos.y, false, showNumber);
-      };
-      const triggerHeal = (targetId: string, amount: number) => {
-        const pos = getDamagePos(targetId);
+      const triggerHealFromDiff = (targetId: string, amount: number) => {
+        const pos = damageFloaterPositionForEntity(targetId);
         if (pos) triggerDamageAnimation(targetId, amount, pos.x, pos.y, true);
       };
 
       const playerDiff = prev.playerHeroHealth - currentSnapshot.playerHeroHealth;
-      if (playerDiff > 0) {
-        triggerHealthDamage('player-hero', playerDiff);
-      } else if (playerDiff < 0) {
-        triggerHeal('player-hero', Math.abs(playerDiff));
+      if (playerDiff < 0) {
+        triggerHealFromDiff('player-hero', Math.abs(playerDiff));
       }
 
       const opponentDiff = prev.opponentHeroHealth - currentSnapshot.opponentHeroHealth;
-      if (opponentDiff > 0) {
-        triggerHealthDamage('opponent-hero', opponentDiff);
-      } else if (opponentDiff < 0) {
-        triggerHeal('opponent-hero', Math.abs(opponentDiff));
+      if (opponentDiff < 0) {
+        triggerHealFromDiff('opponent-hero', Math.abs(opponentDiff));
       }
 
-      for (const [id, prevHp] of prev.playerMinions) {
-        const currHp = currentSnapshot.playerMinions.get(id);
-        if (currHp !== undefined && prevHp > currHp) {
-          triggerHealthDamage(id, prevHp - currHp);
-        }
-      }
-      for (const [id, prevHp] of prev.opponentMinions) {
-        const currHp = currentSnapshot.opponentMinions.get(id);
-        if (currHp !== undefined && prevHp > currHp) {
-          triggerHealthDamage(id, prevHp - currHp);
-        }
-      }
     }
 
     prevHealthRef.current = currentSnapshot;
-  }, [gameState, combatState, triggerDamageAnimation, consumeCanonicalDamageClaim, prevHealthRef]);
+  }, [gameState, combatState, triggerDamageAnimation, prevHealthRef]);
 
   // Card click handlers (extracted to hook)
   const { handlePlayerCardClick, handleOpponentCardClick, handleCardPlay } = usePokerCardClickHandlers({
@@ -748,19 +711,10 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
         className="wager-activation-mount"
       />
 
-      {/* Damage Animations — gated by showDamageNumbers setting */}
-      {showDamageNumbers && damageAnimations.map(anim => (
-        <DamageIndicator
-          id={anim.id}
-          key={anim.id}
-          damage={anim.damage}
-          x={anim.x}
-          y={anim.y}
-          isHeal={anim.isHeal}
-          aside={anim.targetId === 'player-hero' || anim.targetId === 'opponent-hero'}
-          onComplete={() => removeDamageAnimation(anim.id)}
-        />
-      ))}
+      <CombatDamageFloaterHost
+        damageAnimations={damageAnimations}
+        removeDamageAnimation={removeDamageAnimation}
+      />
 
       {/* Hero Gear Panel - opened from the compact hero dossier */}
       {showGearPanel && gameState?.players?.player && (

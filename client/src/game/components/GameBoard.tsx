@@ -14,6 +14,9 @@ import { useGameNotifications } from '../hooks/useGameNotifications';
 import { useCardPositions } from '../hooks/useCardPositions';
 import { AnimationLayer } from './AnimationLayer';
 import { useAnimations } from './AnimationContainer';
+import { CombatDamageFloaterHost } from '../combat/floaters/CombatDamageFloaterHost';
+import { requestCombatDamageFloater } from '../combat/floaters/combatDamageFloater';
+import { initializeCombatEventSubscribers } from '../services/CombatEventSubscribers';
 import { useAIActionManager } from '../animations/AIActionManager';
 import { isDevBuild } from '../config/buildMode';
 import DebugRenderCheck from './DebugRenderCheck';
@@ -189,7 +192,6 @@ export const GameBoard: React.FC<{}> = () => {
   // Animation system
   const {
     addAttackAnimation,
-    addDamageEffect: _rawAddDamageEffect,
     addHealEffect,
     addBuffEffect,
     addShieldBreakEffect,
@@ -198,12 +200,20 @@ export const GameBoard: React.FC<{}> = () => {
     addOverloadAnimation
   } = useAnimations();
 
-  // Gate damage popups behind showDamageNumbers setting
-  const addDamageEffect = useCallback((...args: Parameters<typeof _rawAddDamageEffect>) => {
-    if (useSettingsStore.getState().showDamageNumbers) {
-      _rawAddDamageEffect(...args);
-    }
-  }, [_rawAddDamageEffect]);
+  const addDamageEffect = useCallback((position: Position, amount: number) => {
+    requestCombatDamageFloater({
+      id: `legacy-board:${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      targetId: 'legacy-board',
+      amount,
+      x: position.x,
+      y: position.y,
+      coordinateSpace: 'viewport',
+    });
+  }, []);
+
+  useEffect(() => {
+    initializeCombatEventSubscribers();
+  }, []);
 
   useEventAnimationBridge();
 
@@ -1969,6 +1979,7 @@ export const GameBoard: React.FC<{}> = () => {
 
         {/* Animation layer for visual effects */}
         <AnimationLayer />
+        <CombatDamageFloaterHost />
 
         {/* Inline status banners (replaces toast popups) */}
         <GameStatusBanner />

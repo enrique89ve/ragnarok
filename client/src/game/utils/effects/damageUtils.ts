@@ -14,6 +14,40 @@ import { debug } from '../../config/debugConfig';
 import { processArtifactOnHeroDamaged, processArtifactOnLethal } from '../artifactTriggerProcessor';
 import { hasKeyword } from '../cards/keywordUtils';
 import { MAX_ARMOR } from '../../constants/gameConstants';
+import { CombatEventBus } from '../../services/CombatEventBus';
+import type { DamageSource } from '../../services/CombatEventBus';
+
+function resolveDamageSource(sourceCardId?: number): DamageSource {
+	return sourceCardId ? 'spell' : 'effect';
+}
+
+function emitEffectDamageResolved(input: {
+	readonly targetId: string;
+	readonly targetType: 'hero' | 'minion';
+	readonly defenderOwner: 'player' | 'opponent';
+	readonly attackerOwner: 'player' | 'opponent';
+	readonly actualDamage: number;
+	readonly healthBefore: number;
+	readonly healthAfter: number;
+	readonly shieldConsumed?: boolean;
+	readonly sourceCardId?: number;
+}): void {
+	if (input.actualDamage <= 0 && !input.shieldConsumed) return;
+	CombatEventBus.emitDamageResolved({
+		sourceId: input.sourceCardId ? String(input.sourceCardId) : 'effect',
+		sourceType: 'effect',
+		targetId: input.targetId,
+		targetType: input.targetType,
+		actualDamage: input.actualDamage,
+		damageSource: resolveDamageSource(input.sourceCardId),
+		attackerOwner: input.attackerOwner,
+		defenderOwner: input.defenderOwner,
+		targetHealthBefore: input.healthBefore,
+		targetHealthAfter: input.healthAfter,
+		targetDied: input.healthAfter <= 0,
+		shieldConsumed: input.shieldConsumed,
+	});
+}
 
 /**
  * Utility function to handle damage dealing to heroes or minions
@@ -55,6 +89,7 @@ export function dealDamageToHero(
   };
   const targetPlayer = { ...newState.players[targetPlayerId] };
   newState.players[targetPlayerId] = targetPlayer;
+  const healthBefore = targetPlayer.heroHealth ?? targetPlayer.health ?? 0;
 
   // First check if player has armor
   const armorAmount = targetPlayer.heroArmor || 0;
@@ -93,6 +128,19 @@ export function dealDamageToHero(
     text: `${sourcePlayerId ? 'Player ' + sourcePlayerId : 'Something'} dealt ${amount} damage to ${targetPlayerId}'s hero${armorAbsorbed > 0 ? ` (${armorAbsorbed} absorbed by armor)` : ''}.`,
     timestamp: Date.now(),
     turn: newState.turnNumber,
+  });
+
+  const healthAfter = targetPlayer.heroHealth ?? targetPlayer.health ?? 0;
+  emitEffectDamageResolved({
+    targetId: `${targetPlayerId}-hero`,
+    targetType: 'hero',
+    defenderOwner: targetPlayerId,
+    attackerOwner: sourcePlayerId ?? (targetPlayerId === 'player' ? 'opponent' : 'player'),
+    actualDamage: Math.max(0, healthBefore - healthAfter),
+    healthBefore,
+    healthAfter,
+    shieldConsumed: remainingDamage <= 0 && amount > 0,
+    sourceCardId,
   });
 
   // Check for game over
@@ -159,6 +207,8 @@ export function dealDamageToMinion(
   }
   amount = modifiedAmount;
 
+  const healthBefore = targetCard.currentHealth ?? getHealth(targetCard.card);
+
   // Check for Divine Shield (prevents damage)
   if (targetCard.hasDivineShield) {
     // Remove Divine Shield instead of taking damage
@@ -174,6 +224,18 @@ export function dealDamageToMinion(
       text: `${targetCard.card.name}'s Divine Shield blocked ${amount} damage.`,
       timestamp: Date.now(),
       turn: newState.turnNumber,
+    });
+
+    emitEffectDamageResolved({
+      targetId: targetInstanceId,
+      targetType: 'minion',
+      defenderOwner: targetPlayerId,
+      attackerOwner: sourcePlayerId ?? (targetPlayerId === 'player' ? 'opponent' : 'player'),
+      actualDamage: 0,
+      healthBefore,
+      healthAfter: healthBefore,
+      shieldConsumed: true,
+      sourceCardId,
     });
 
     return newState;
@@ -201,6 +263,17 @@ export function dealDamageToMinion(
     timestamp: Date.now(),
     turn: newState.turnNumber,
     targetId: targetInstanceId,
+  });
+
+  emitEffectDamageResolved({
+    targetId: targetInstanceId,
+    targetType: 'minion',
+    defenderOwner: targetPlayerId,
+    attackerOwner: sourcePlayerId ?? (targetPlayerId === 'player' ? 'opponent' : 'player'),
+    actualDamage: Math.max(0, healthBefore - (targetCard.currentHealth ?? 0)),
+    healthBefore,
+    healthAfter: targetCard.currentHealth ?? 0,
+    sourceCardId,
   });
 
   // Handle death if health is 0

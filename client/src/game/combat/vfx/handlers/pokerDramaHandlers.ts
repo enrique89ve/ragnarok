@@ -34,6 +34,7 @@ import { useAudio } from '@/lib/stores/useAudio';
 import type { GameAudioCueId } from '@/game/audio/gameAudioCues';
 import { registerVisualEffect, type EffectHandle, type VisualEffectUnregister } from '../registry';
 import { registerCombatImpactVisualEffect } from './combatImpactHandler';
+import { requestCombatDamageFloater } from '../../floaters/combatDamageFloater';
 import {
 	bettingActionMotion,
 	cancelPokerMotionSchedules,
@@ -252,6 +253,12 @@ function handleShowdownDamage(event: ShowdownDamageEvent): EffectHandle | null {
 		showdownFollowMs(showdownContext?.winner ?? event.winner) - 400,
 	);
 	return schedulePokerMotion(showdownImpactMotion(targetOwner), [damageAt], () => {
+		requestCombatDamageFloater({
+			id: event.id,
+			targetId: event.target,
+			amount: event.damage,
+			variant: 'showdown',
+		});
 		playShowdownDamageVFX(event.damage, isPlayerWinner, rankDiff, isLethal);
 	}, `showdown-impact-${targetOwner}`);
 }

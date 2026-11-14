@@ -36,6 +36,8 @@ interface DamageIndicatorProps {
 	y: number;
 	isHeal?: boolean;
 	aside?: boolean;
+	variant?: 'combat' | 'showdown';
+	coordinateSpace?: 'arena' | 'viewport';
 	onComplete: () => void;
 }
 
@@ -46,6 +48,8 @@ export const DamageIndicator: React.FC<DamageIndicatorProps> = ({
 	y,
 	isHeal = false,
 	aside = false,
+	variant = 'combat',
+	coordinateSpace = 'arena',
 	onComplete,
 }) => {
 	const arenaRoot = useArenaVfxRoot();
@@ -80,7 +84,30 @@ export const DamageIndicator: React.FC<DamageIndicatorProps> = ({
 		isBig ? 'damage-big' : '',
 		isCritical ? 'damage-critical' : '',
 		aside ? 'damage-aside' : '',
+		variant === 'showdown' ? 'damage-showdown' : '',
 	].filter(Boolean).join(' ');
+
+	if (coordinateSpace === 'viewport' && typeof document !== 'undefined') {
+		return createPortal(
+			<div
+				className={className}
+				style={{
+					position: 'fixed',
+					left: x + jitter.x,
+					top: y + jitter.y,
+					pointerEvents: 'none',
+					zIndex: 9990,
+					transform: 'translate(-50%, -50%)',
+				}}
+			>
+				<span className={`damage-number-text ${isHeal ? 'combat-heal-number' : 'combat-damage-number'} ${!isHeal && isCrit ? 'crit' : ''}`}>
+					{isHeal ? '+' : '-'}{damage}
+				</span>
+				{isCritical && !isHeal && <span className="damage-crit-label">CRIT!</span>}
+			</div>,
+			document.body,
+		);
+	}
 
 	const portalTarget = getArenaVfxLayer(ARENA_VFX_LAYERS.vfx, arenaRoot);
 	const position = portalTarget ? getArenaLocalPoint({ x, y }, portalTarget) : null;

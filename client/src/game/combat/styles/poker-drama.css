@@ -129,12 +129,22 @@
 
 .cinema-lane-slam__title {
 	font-family: var(--type-display, 'Cinzel', serif);
-	font-size: 1.67rem;
-	line-height: 1;
+	font-size: clamp(1.05rem, 2.2vw, 1.45rem);
+	line-height: 1.15;
 	font-weight: 900;
-	letter-spacing: 0.12em;
+	letter-spacing: 0.08em;
 	text-transform: uppercase;
-	white-space: nowrap;
+	text-align: center;
+	text-wrap: balance;
+	max-inline-size: 100%;
+	white-space: normal;
+	overflow-wrap: normal;
+	word-break: normal;
+}
+
+.cinema-lane-slam__title--compact {
+	font-size: clamp(0.95rem, 1.85vw, 1.28rem);
+	letter-spacing: 0.05em;
 }
 
 /* Dramatic banner box — lives in the cinema lane plate. */
@@ -375,13 +385,17 @@
 	font-family: 'Cinzel', 'Georgia', serif;
 	min-inline-size: 0;
 	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	font-size: clamp(1.22rem, 1.53vw, 1.53rem);
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	font-size: clamp(0.98rem, 1.2vw, 1.22rem);
 	font-weight: 700;
-	letter-spacing: 0.06em;
-	line-height: 1;
-	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	line-height: 1.12;
+	text-transform: none;
+	text-wrap: balance;
+	overflow-wrap: normal;
+	word-break: normal;
 	transition: color 0.3s ease, text-shadow 0.3s ease;
 }
 

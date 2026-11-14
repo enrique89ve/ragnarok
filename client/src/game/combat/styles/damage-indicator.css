@@ -22,6 +22,14 @@
   animation-duration: 2.4s;
 }
 
+.damage-indicator.damage-showdown .damage-number-text {
+  color: #fbbf24;
+  text-shadow:
+    0 0 16px rgba(251, 191, 36, 0.95),
+    0 0 28px rgba(251, 191, 36, 0.55),
+    0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
 .damage-number-text {
   font-family: var(--type-mono), "JetBrains Mono", ui-monospace, monospace;
   font-size: 2.2rem;

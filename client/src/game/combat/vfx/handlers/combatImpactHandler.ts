@@ -1,8 +1,7 @@
 import {
 	DAMAGE_EFFECT_DURATION_MS,
-	scheduleDamageEffect,
-	useAnimationOrchestrator,
 } from '../../../animations/UnifiedAnimationOrchestrator';
+import { requestCombatDamageFloater } from '../../floaters/combatDamageFloater';
 import {
 	spawnDirectionalImpactBurst,
 	spawnImpactRing,
@@ -473,48 +472,25 @@ function scheduleDamageNumber(
 	seed: string,
 ): GameEffectHandle | null {
 	if (phase.impact.outcome !== 'damage' || phase.impact.healthDamage <= 0) return null;
-	const numberPoint = damageNumberPoint(phase.impact.target, targetPoint);
 
 	return scheduleDelayedChild(
 		`${seed}:${phase.id}:damage-number`,
 		delayMs,
 		priority,
 		() => {
-			const effectId = scheduleDamageEffect(
-				numberPoint,
-				phase.impact.healthDamage,
-				event.kind === 'counter' || phase.id === 'counter'
-					? 'combat-counter'
-					: 'combat-damage',
-			);
-			const duration = scheduleVisualWindow(
-				`${seed}:${phase.id}:damage-number:duration`,
+			const floaterId = `${seed}:${phase.id}:damage-number`;
+			requestCombatDamageFloater({
+				id: floaterId,
+				targetId: targetEntityId(phase.impact.target),
+				amount: phase.impact.healthDamage,
+			});
+			return scheduleVisualWindow(
+				`${floaterId}:duration`,
 				DAMAGE_EFFECT_DURATION_MS,
 				priority,
 			);
-			return {
-				cancel: () => {
-					duration.cancel();
-					useAnimationOrchestrator.getState().cancelEffect(effectId);
-				},
-				onComplete: duration.onComplete,
-			};
 		},
 	);
-}
-
-function damageNumberPoint(target: PresentationTarget, impactPoint: Point): Point {
-	if (target.type === 'hero') {
-		return resolveArenaEffectPoint({
-			entityId: `${target.side}-hero`,
-			anchor: 'health-bar',
-		}) ?? { x: impactPoint.x, y: impactPoint.y + 86 };
-	}
-
-	// Keep the number just above a card/field receiver so it does not cover the
-	// card art or collide with the center HUD. The impact burst still lands on
-	// the receiver's center.
-	return { x: impactPoint.x, y: impactPoint.y - 48 };
 }
 
 function scheduleImpactPhase(

@@ -520,17 +520,13 @@ export function playFoldVFX(isPlayer: boolean) {
 export function playHandRankAnnouncement(
 	rankName: string,
 	rank: number,
-	isWinner: boolean,
-	isPlayer: boolean
+	_isWinner: boolean,
+	_isPlayer: boolean
 ) {
 	if (!rankName || rank <= 1) return; // Don't announce High Card
 
 	const container = getOrCreateContainer();
 	if (!container) return;
-
-	// Scale by rank (1-10)
-	const fontSize = Math.min(2 + rank * 0.3, 5);
-	const glowIntensity = Math.min(0.3 + rank * 0.1, 1);
 
 	let color = '#e5e7eb';
 	if (rank >= 3) color = '#38bdf8';
@@ -538,52 +534,39 @@ export function playHandRankAnnouncement(
 	if (rank >= 7) color = '#b7791f';
 	if (rank >= 9) color = '#dc2626';
 
-	const yPos = isPlayer ? '65%' : '35%';
+	const displayName = rankName.toUpperCase();
+	const plate = createCinemaSlamPlate(displayName, color);
+	const title = plate.querySelector('.cinema-lane-slam__title') as HTMLElement | null;
+	if (title && displayName.length > 14) {
+		title.classList.add('cinema-lane-slam__title--compact');
+	}
+	plate.style.zIndex = '10';
+	container.appendChild(plate);
 
-	const text = createDiv({
-		left: '50%',
-		top: yPos,
-		transform: 'translate(-50%, -50%) scale(1.5)',
-		fontSize: `${fontSize}rem`,
-		fontFamily: "'Cinzel', 'Georgia', serif",
-		fontWeight: '900',
-		color,
-		textShadow: `0 0 ${20 * glowIntensity}px ${color}, 0 0 ${40 * glowIntensity}px ${color}88, 0 4px 8px rgba(0,0,0,0.8)`,
-		letterSpacing: '4px',
-		textTransform: 'uppercase',
-		whiteSpace: 'nowrap',
-		zIndex: '10',
-		opacity: '0'
-	});
-	text.textContent = rankName;
-	markCenterSlam(text);
-	container.appendChild(text);
+	const tl = gsap.timeline({ onComplete: () => cleanup(plate) });
+	gsap.set(plate, { opacity: 0, scale: 1.06 });
 
-	const tl = gsap.timeline({ onComplete: () => cleanup(text) });
-
-	// Slam in
-	tl.to(text, {
+	tl.to(plate, {
 		opacity: 1,
 		scale: 1,
 		duration: 0.3,
-		ease: 'back.out(2)'
+		ease: 'back.out(2)',
 	});
 
-	tl.to(text, { duration: 3 });
+	tl.to(plate, { duration: 3 });
 
-	// Fade out
-	tl.to(text, {
+	tl.to(plate, {
 		opacity: 0,
-		y: isPlayer ? -20 : 20,
+		scale: 0.96,
 		duration: 0.4,
-		ease: 'power2.in'
+		ease: 'power2.in',
 	});
 
 	// Screen flash for strong hands
 	if (rank >= 7) {
 		const flash = createDiv({
 			inset: '0',
-			background: `radial-gradient(circle at 50% ${yPos}, ${color}22 0%, transparent 50%)`,
+			background: `radial-gradient(circle at 50% 50%, ${color}22 0%, transparent 50%)`,
 		});
 		container.appendChild(flash);
 		gsap.to(flash, {
@@ -685,59 +668,20 @@ export function playShowdownDamageVFX(
 	const loser = getArenaVfxHeroTarget(isPlayerWinner ? 'opponent' : 'player');
 	if (!winner || !loser) return;
 
-	const winRect = winner.getBoundingClientRect();
 	const loseRect = loser.getBoundingClientRect();
-	const startX = winRect.left + winRect.width / 2;
-	const startY = winRect.top + winRect.height / 2;
 	const endX = loseRect.left + loseRect.width / 2;
 	const endY = loseRect.top + loseRect.height / 2;
 
-	// Scale by hand gap
 	const isCrushing = handRankDiff >= 5;
 	const isSolid = handRankDiff >= 3;
-	const dmgSize = isCrushing ? 4 : isSolid ? 3 : 2;
 	const dmgColor = isCrushing ? '#fbbf24' : '#ef4444';
 
-	// Flying damage number
-	const dmgText = createDiv({
-		left: `${startX}px`,
-		top: `${startY}px`,
-		fontSize: `${dmgSize}rem`,
-		fontWeight: '900',
-		fontFamily: "'Cinzel', 'Georgia', serif",
-		color: dmgColor,
-		textShadow: `0 0 15px ${dmgColor}, 0 4px 8px rgba(0,0,0,0.8)`,
-		zIndex: '15',
-		transform: 'translate(-50%, -50%)'
-	});
-	dmgText.textContent = `-${damage}`;
-	container.appendChild(dmgText);
+	const dmgPalette = isCrushing ? GOLD_PALETTE : RED_PALETTE;
+	spawnImpactRing(endX, endY, dmgPalette);
+	if (isCrushing) {
+		spawnParticleBurst(endX, endY, 20, ELEMENT_PALETTES.fire);
+	}
 
-	const tl = gsap.timeline({ onComplete: () => cleanup(dmgText) });
-
-	tl.to(dmgText, {
-		left: endX,
-		top: endY,
-		duration: 0.5,
-		ease: 'power2.in'
-	});
-
-	// Impact on loser
-	tl.call(() => {
-		const dmgPalette = isCrushing ? GOLD_PALETTE : RED_PALETTE;
-		spawnImpactRing(endX, endY, dmgPalette);
-		if (isCrushing) {
-			spawnParticleBurst(endX, endY, 20, ELEMENT_PALETTES.fire);
-		}
-	});
-
-	tl.to(dmgText, {
-		opacity: 0,
-		scale: 1.5,
-		duration: 0.3
-	});
-
-	// Loser hero shake (scaled by gap)
 	const shakeIntensity = isCrushing ? 8 : isSolid ? 5 : 3;
 	const shakeDuration = isCrushing ? 0.4 : 0.25;
 	gsap.to(loser, {
@@ -745,7 +689,6 @@ export function playShowdownDamageVFX(
 		duration: 0.06,
 		repeat: Math.floor(shakeDuration / 0.06),
 		yoyo: true,
-		delay: 0.5,
 		onComplete: () => { gsap.set(loser, { x: 0 }); }
 	});
 

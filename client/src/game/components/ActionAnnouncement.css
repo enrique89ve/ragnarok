@@ -12,12 +12,20 @@
 .action-announcement {
 	--cinema-accent: var(--rarity-color, var(--gold-300));
   min-height: 0;
+  height: auto;
+  max-height: min(22vh, 132px);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-items: center;
-  gap: 2px;
-  padding: 2px 16px;
+  gap: 4px;
+  padding: 6px 18px;
   overflow: hidden;
+}
+
+.action-announcement-victory,
+.action-announcement-defeat {
+  width: min(44%, 780px);
+  max-height: min(26vh, 156px);
 }
 
 .action-announcement::before {
@@ -145,17 +153,18 @@
 
 .announcement-title {
   font-family: var(--type-display, 'Cinzel', serif);
-  font-size: 18px;
-  line-height: 1;
-  -webkit-line-clamp: 1;
+  font-size: clamp(15px, 1.35vw, 17px);
+  line-height: 1.2;
   font-weight: 800;
   color: var(--text-near-white);
   text-shadow:
     0 0 12px color-mix(in srgb, var(--rarity-color, var(--gold-300)) 42%, transparent),
     0 2px 4px rgba(0, 0, 0, 0.8);
   margin: 0;
-  letter-spacing: 0.01em;
-	overflow-wrap: anywhere;
+  letter-spacing: 0.02em;
+	text-wrap: balance;
+	overflow-wrap: normal;
+	word-break: normal;
 	display: -webkit-box;
 	-webkit-box-orient: vertical;
 	-webkit-line-clamp: 2;
@@ -165,16 +174,26 @@
 .announcement-subtitle {
   max-width: 54ch;
   font-family: var(--font-body, 'Source Sans 3', sans-serif);
-  font-size: 13px;
-  line-height: 1;
-  -webkit-line-clamp: 1;
+  font-size: 12px;
+  line-height: 1.25;
   font-weight: 500;
   color: rgba(229, 231, 235, 0.84);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   margin: 0;
+	text-wrap: pretty;
+	overflow-wrap: normal;
+	word-break: normal;
 	display: -webkit-box;
 	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
 	overflow: hidden;
+}
+
+.action-announcement-defeat .announcement-title,
+.action-announcement-victory .announcement-title {
+  font-size: clamp(16px, 1.5vw, 19px);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 
