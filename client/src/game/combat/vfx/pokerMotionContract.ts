@@ -5,12 +5,44 @@ import {
 	type GameEffectHandle,
 	type GameEffectPriority,
 } from '@/game/effects/core/gameEffectCoordinator';
-import { occupyCinema, releaseCinemaHold, replaceCinemaHold } from '../feedback/combatFeedbackStore';
+import { canShowFloater } from '@/game/effects/presentation/presentationOrchestrator';
+import { occupyCinema, releaseCinemaHold } from '../feedback/combatFeedbackStore';
 import { dismissCenterSlams } from '../animations/PokerDramaVFX';
 import { cinemaHoldMs } from './pokerEventFx';
 
 /** Gap before the next center title. Longer than enter + 3s read + exit. */
 export const CENTER_SLAM_GAP_MS = 3_900;
+
+const FLOATER_LANE_RETRY_MS = 80;
+
+function isFloaterIntent(intent: PokerMotionIntent): boolean {
+	return intent === 'showdown-impact' || intent === 'combat-hit';
+}
+
+function wrapFloaterGatedRun(
+	spec: PokerMotionSpec,
+	effect: (index: number) => void,
+	key: string,
+): (index: number) => void {
+	if (!isFloaterIntent(spec.intent)) return effect;
+	return (index: number) => {
+		const attempt = (): void => {
+			if (canShowFloater()) {
+				effect(index);
+				return;
+			}
+			gameEffectCoordinator.schedule({
+				owner: 'poker',
+				lane: 'impact',
+				key: `${key}:floater-gate`,
+				priority: coordinatorPriority(spec.priority),
+				delayMs: FLOATER_LANE_RETRY_MS,
+				run: attempt,
+			});
+		};
+		attempt();
+	};
+}
 
 /**
  * Stable motion vocabulary for poker feedback. The intent is deliberately
@@ -185,15 +217,15 @@ export function schedulePokerMotion(
 	key: string = spec.zone,
 ): GameEffectHandle {
 	const leadMs = delays.reduce((max, delay) => Math.max(max, delay), 0);
-	if (spec.priority === 'cinema') {
+	if (spec.intent === 'phase-reveal') {
+		// PhaseBanner owns the center title for this beat. Decorative shake /
+		// audio must not grab poker-cinema and cut the title short (see
+		// cinemaLanePolicy.ts).
+		gameEffectCoordinator.cancelOwnerLane('poker', 'cinema');
+		dismissCenterSlams();
+	} else if (spec.priority === 'cinema') {
 		const holdMs = leadMs + cinemaHoldMs(spec.enterMs, spec.exitMs, spec.readMs);
-		if (spec.intent === 'phase-reveal') {
-			gameEffectCoordinator.cancelOwnerLane('poker', 'cinema');
-			dismissCenterSlams();
-			replaceCinemaHold('poker-cinema', holdMs);
-		} else {
-			occupyCinema('poker-cinema', holdMs);
-		}
+		occupyCinema('poker-cinema', holdMs);
 	}
 	const handle = gameEffectCoordinator.scheduleSequence({
 		owner: 'poker',
@@ -201,7 +233,7 @@ export function schedulePokerMotion(
 		key,
 		priority: coordinatorPriority(spec.priority),
 		delaysMs: delays,
-		run: effect,
+		run: wrapFloaterGatedRun(spec, effect, key),
 	});
 	activePokerSchedules.add(handle);
 	handle.onComplete?.then(() => activePokerSchedules.delete(handle));

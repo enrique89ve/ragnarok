@@ -8,10 +8,14 @@ import {
 	SHOWDOWN_PRESENTATION_BUDGET_MS,
 	createOnceRunner,
 } from '../pokerResolutionOutcome';
+import {
+	isCenterTitleBlocked,
+	SHOWDOWN_BADGE_CINEMA_HOLDER,
+} from '../cinemaLanePolicy';
 import { useCombatFeedbackStore } from '../feedback/combatFeedbackStore';
 import '../../poker/styles/poker-showdown.css';
 
-const SHOWDOWN_BADGE_HOLDER = 'showdown-badge';
+const SHOWDOWN_BADGE_HOLDER = SHOWDOWN_BADGE_CINEMA_HOLDER;
 
 interface ShowdownCelebrationProps {
 	resolution: {
@@ -68,7 +72,7 @@ export const ShowdownCelebration: React.FC<ShowdownCelebrationProps> = ({
 	const [ready, setReady] = useState(false);
 	const [combatAnimDone, setCombatAnimDone] = useState(false);
 	const centerBusy = useCombatFeedbackStore((state) =>
-		state.cinemaHolders.some((id) => id !== SHOWDOWN_BADGE_HOLDER),
+		isCenterTitleBlocked(state.cinemaHolders, SHOWDOWN_BADGE_HOLDER),
 	);
 	const showBadge = combatAnimDone && !centerBusy;
 	const finish = useOnceComplete(onComplete);

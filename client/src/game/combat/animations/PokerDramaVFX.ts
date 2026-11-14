@@ -25,6 +25,7 @@ import {
 } from '../arenaVfxTargets';
 import { gameEffectCoordinator } from '@/game/effects/core/gameEffectCoordinator';
 import { stampCardMotionClass } from '../../components/card/applyCardMotion';
+import { cinemaReadingLane } from '../../poker/layout/boardOccupancy';
 
 const DRAMA_CONTAINER_ID = 'poker-drama-vfx-layer';
 const MAX_ORPHAN_AGE_MS = 6000;
@@ -75,6 +76,37 @@ function cleanup(el: HTMLElement) {
 function markCenterSlam(el: HTMLElement): HTMLElement {
 	el.dataset.centerSlam = '1';
 	return el;
+}
+
+function cinemaSlamAnchor(): { top: string; left: string; transform: string } {
+	const lane = cinemaReadingLane();
+	const centerY = lane.y + lane.height / 2;
+	return {
+		left: '50%',
+		top: `${centerY}px`,
+		transform: 'translate(-50%, -50%)',
+	};
+}
+
+function createCinemaSlamPlate(title: string, accentColor: string): HTMLDivElement {
+	const plate = document.createElement('div');
+	plate.className = 'cinema-lane-plate cinema-lane-slam';
+	plate.style.setProperty('--cinema-accent', accentColor);
+	Object.assign(plate.style, {
+		position: 'absolute',
+		pointerEvents: 'none',
+		opacity: '0',
+		...cinemaSlamAnchor(),
+	});
+
+	const label = document.createElement('span');
+	label.className = 'cinema-lane-slam__title';
+	label.style.color = accentColor;
+	label.style.textShadow = `0 0 16px ${accentColor}, 0 0 32px ${accentColor}88, 0 2px 4px rgba(0,0,0,0.85)`;
+	label.textContent = title;
+	plate.appendChild(label);
+	markCenterSlam(plate);
+	return plate;
 }
 
 export function dismissCenterSlams(): void {
@@ -587,36 +619,26 @@ export function playRagnarokVFX() {
 	}, 0.2);
 
 	// RAGNAROK text — same 3.7s window as the other center titles
-	const ragnarokText = createDiv({
-		left: '50%',
-		top: '50%',
-		transform: 'translate(-50%, -50%) scale(3)',
-		fontSize: '6rem',
-		fontFamily: "'Cinzel', 'Georgia', serif",
-		fontWeight: '900',
-		color: '#dc2626',
-		textShadow: '0 0 24px #dc2626, 0 0 48px rgba(220,38,38,0.45), 0 4px 8px rgba(0,0,0,0.8)',
-		letterSpacing: '12px',
-		textTransform: 'uppercase',
-		whiteSpace: 'nowrap',
-		zIndex: '25',
-		opacity: '0'
-	});
-	ragnarokText.textContent = 'RAGNAROK';
-	markCenterSlam(ragnarokText);
-	container.appendChild(ragnarokText);
+	const ragnarokPlate = createCinemaSlamPlate('RAGNAROK', '#dc2626');
+	const ragnarokTitle = ragnarokPlate.querySelector('.cinema-lane-slam__title') as HTMLElement;
+	if (ragnarokTitle) {
+		ragnarokTitle.style.letterSpacing = '0.18em';
+	}
+	ragnarokPlate.style.zIndex = '25';
+	container.appendChild(ragnarokPlate);
 
-	const textTl = gsap.timeline({ onComplete: () => cleanup(ragnarokText) });
-	textTl.to(ragnarokText, {
+	gsap.set(ragnarokPlate, { scale: 1.15 });
+	const textTl = gsap.timeline({ onComplete: () => cleanup(ragnarokPlate) });
+	textTl.to(ragnarokPlate, {
 		opacity: 1,
 		scale: 1,
 		duration: 0.3,
 		ease: 'back.out(1.5)',
 	});
-	textTl.to(ragnarokText, { duration: 3 });
-	textTl.to(ragnarokText, {
+	textTl.to(ragnarokPlate, { duration: 3 });
+	textTl.to(ragnarokPlate, {
 		opacity: 0,
-		scale: 0.8,
+		scale: 0.92,
 		duration: 0.4,
 	});
 
@@ -807,29 +829,14 @@ export function playStreakAnnouncementVFX(
 	const container = getOrCreateContainer();
 	if (!container) return;
 
-	const announcement = createDiv({
-		left: '50%',
-		top: '50%',
-		transform: 'translate(-50%, -50%) scale(1.5)',
-		fontSize: '3rem',
-		fontFamily: "'Cinzel', 'Georgia', serif",
-		fontWeight: '900',
-		color,
-		textShadow: `0 0 20px ${color}, 0 0 40px ${color}88, 0 4px 8px rgba(0,0,0,0.8)`,
-		letterSpacing: '6px',
-		textTransform: 'uppercase',
-		whiteSpace: 'nowrap',
-		zIndex: '15',
-		opacity: '0'
-	});
-	announcement.textContent = text;
-	markCenterSlam(announcement);
+	const announcement = createCinemaSlamPlate(text, color);
 	container.appendChild(announcement);
 
+	gsap.set(announcement, { scale: 1.15 });
 	const tl = gsap.timeline({ onComplete: () => cleanup(announcement) });
 	tl.to(announcement, { opacity: 1, scale: 1, duration: 0.3, ease: 'back.out(2)' });
 	tl.to(announcement, { duration: 3 });
-	tl.to(announcement, { opacity: 0, y: -30, duration: 0.4 });
+	tl.to(announcement, { opacity: 0, y: -8, duration: 0.4 });
 }
 
 

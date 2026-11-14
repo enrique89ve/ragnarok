@@ -3,15 +3,23 @@ import { createPortal } from 'react-dom';
 import { CombatPhase } from '../../types/PokerCombatTypes';
 import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../arenaVfxTargets';
 import { useArenaVfxRoot } from '../arenaVfxContext';
-import { CINEMA_READ_MS } from '../feedback/combatFeedback';
-import { useCombatFeedbackStore } from '../feedback/combatFeedbackStore';
-import { PHASE_BANNER_CINEMA_HOLDER } from '../openingReadGate';
+import {
+	isCenterTitleBlocked,
+	PHASE_BANNER_CINEMA_MS,
+	PHASE_BANNER_CINEMA_HOLDER,
+	PHASE_BANNER_EXIT_MS,
+	PHASE_BANNER_VISIBLE_MS,
+} from '../cinemaLanePolicy';
+import {
+	releaseCinemaHold,
+	useCombatFeedbackStore,
+} from '../feedback/combatFeedbackStore';
+import { requestCenterTitle } from '@/game/effects/presentation/presentationOrchestrator';
 import '../styles/poker-drama.css';
 
+export { PHASE_BANNER_VISIBLE_MS };
+
 const PHASE_CINEMA_HOLDER = PHASE_BANNER_CINEMA_HOLDER;
-const PHASE_BANNER_ENTER_MS = 350;
-/** Entrance plus the sharp read. The exit starts after this. */
-export const PHASE_BANNER_VISIBLE_MS = PHASE_BANNER_ENTER_MS + CINEMA_READ_MS;
 
 interface PhaseBannerProps {
 	phase: CombatPhase;
@@ -35,7 +43,7 @@ export const PhaseBanner: React.FC<PhaseBannerProps> = ({ phase, forceHide = fal
 	const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 	const [queued, setQueued] = useState<{ title: string; subtitle: string; key: string } | null>(null);
 	const centerBlocked = useCombatFeedbackStore((state) =>
-		state.cinemaHolders.some((id) => id !== PHASE_CINEMA_HOLDER),
+		isCenterTitleBlocked(state.cinemaHolders, PHASE_CINEMA_HOLDER),
 	);
 
 	const clearAllTimers = () => {
@@ -44,7 +52,7 @@ export const PhaseBanner: React.FC<PhaseBannerProps> = ({ phase, forceHide = fal
 	};
 
 	const releasePhaseCinema = () => {
-		useCombatFeedbackStore.getState().releaseCinema(PHASE_CINEMA_HOLDER);
+		releaseCinemaHold(PHASE_CINEMA_HOLDER);
 	};
 
 	useEffect(() => {
@@ -71,7 +79,7 @@ export const PhaseBanner: React.FC<PhaseBannerProps> = ({ phase, forceHide = fal
 		setBannerData(config);
 		setShowBanner(true);
 		setIsVisible(true);
-		useCombatFeedbackStore.getState().holdCinema(PHASE_CINEMA_HOLDER);
+		requestCenterTitle(PHASE_CINEMA_HOLDER, PHASE_BANNER_CINEMA_MS);
 
 		const hideTimer = setTimeout(() => {
 			setIsVisible(false);
@@ -79,7 +87,7 @@ export const PhaseBanner: React.FC<PhaseBannerProps> = ({ phase, forceHide = fal
 				setShowBanner(false);
 				setBannerData(null);
 				releasePhaseCinema();
-			}, 160);
+			}, PHASE_BANNER_EXIT_MS);
 			timersRef.current.push(removeTimer);
 		}, PHASE_BANNER_VISIBLE_MS);
 		timersRef.current.push(hideTimer);
@@ -100,7 +108,7 @@ export const PhaseBanner: React.FC<PhaseBannerProps> = ({ phase, forceHide = fal
 	useEffect(() => {
 		return () => {
 			clearAllTimers();
-			useCombatFeedbackStore.getState().releaseCinema(PHASE_CINEMA_HOLDER);
+			releaseCinemaHold(PHASE_CINEMA_HOLDER);
 		};
 	}, []);
 
@@ -128,7 +136,7 @@ export const PhaseBanner: React.FC<PhaseBannerProps> = ({ phase, forceHide = fal
 			aria-live="polite"
 			aria-label={`${bannerData.title}. ${bannerData.subtitle}`}
 		>
-			<div className="phase-banner-content">
+			<div className="phase-banner-content cinema-lane-plate">
 				<div className="phase-banner-line" />
 				<div className="phase-banner-text">
 					<span className="phase-banner-title">{bannerData.title}</span>

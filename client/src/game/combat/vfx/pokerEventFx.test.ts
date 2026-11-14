@@ -27,7 +27,7 @@ describe('poker one-event-one-FX contract', () => {
 		expect(pokerEventFx('showdownDamage').lane).toBe('floater');
 	});
 
-	it('gives each beat its own scale and keeps phase cinema inside the read budget', () => {
+	it('gives each beat its own scale; phase title read lives on PhaseBanner', () => {
 		expect(pokerEventFx('handImproved').motion).toBe('hand-improve');
 		expect(pokerEventFx('spellCast').motion).toBe('spell-cast');
 		expect(pokerEventFx('wagerActivated').motion).toBe('wager-activate');

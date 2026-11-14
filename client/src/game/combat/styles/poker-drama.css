@@ -62,31 +62,84 @@
 	z-index: var(--z-popup, 9000);
 	display: flex;
 	justify-content: center;
-	align-items: center;
+	align-items: flex-start;
+	padding-top: var(--poker-cinema-lane-top);
 	pointer-events: none;
 }
 
-/* Dramatic banner box — restored decoration now that the banner lives
-   inside the bounded `#arena-layer-vfx` (canvas-clipped, can't escape).
-   Width is % of layer = % of arena = % of canvas → scales with game. */
-.phase-banner-content {
+/* Arena center readout — dark plate, accent rails, brush underline. */
+.cinema-lane-plate {
+	--cinema-accent: var(--gold-300);
+	position: relative;
+	box-sizing: border-box;
+	width: min(38%, 730px);
+	height: var(--poker-cinema-lane-height);
+	max-height: var(--poker-cinema-lane-height);
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: 1em;
-	padding: 0.85em 2em;
-	background: linear-gradient(90deg,
+	gap: 0.85em;
+	padding: 0 1.25em;
+	background: linear-gradient(
+		90deg,
 		transparent 0%,
-		color-mix(in srgb, var(--obsidian-950) 88%, transparent) 18%,
-		color-mix(in srgb, var(--obsidian-950) 94%, transparent) 50%,
-		color-mix(in srgb, var(--obsidian-950) 88%, transparent) 82%,
+		color-mix(in srgb, var(--obsidian-950) 50%, transparent) 5%,
+		color-mix(in srgb, var(--obsidian-950) 94%, #040a14 6%) 20%,
+		color-mix(in srgb, var(--obsidian-950) 98%, #000 2%) 50%,
+		color-mix(in srgb, var(--obsidian-950) 94%, #040a14 6%) 80%,
+		color-mix(in srgb, var(--obsidian-950) 50%, transparent) 95%,
 		transparent 100%
 	);
-	border-top: 1px solid color-mix(in srgb, var(--phase-color, var(--gold-300)) 55%, transparent);
-	border-bottom: 1px solid color-mix(in srgb, var(--phase-color, var(--gold-300)) 55%, transparent);
-	width: 38%;
-	max-width: 100%;
-	position: relative;
+	border-top: 1px solid color-mix(in srgb, var(--cinema-accent) 48%, transparent);
+	border-bottom: 1px solid color-mix(in srgb, var(--cinema-accent) 32%, transparent);
+	box-shadow:
+		0 6px 24px rgba(0, 0, 0, 0.52),
+		inset 0 1px 0 color-mix(in srgb, var(--cinema-accent) 16%, transparent);
+}
+
+.cinema-lane-plate::after {
+	content: '';
+	position: absolute;
+	left: 8%;
+	right: 8%;
+	bottom: 0;
+	height: 5px;
+	pointer-events: none;
+	background: linear-gradient(
+		90deg,
+		transparent 0%,
+		color-mix(in srgb, var(--cinema-accent) 22%, transparent) 10%,
+		var(--cinema-accent) 36%,
+		color-mix(in srgb, var(--cinema-accent) 75%, #fff 25%) 50%,
+		var(--cinema-accent) 64%,
+		color-mix(in srgb, var(--cinema-accent) 22%, transparent) 90%,
+		transparent 100%
+	);
+	border-radius: 38% 62% 58% 42% / 52% 48% 52% 48%;
+	transform: translateY(42%);
+	opacity: 0.9;
+	filter: drop-shadow(0 0 7px color-mix(in srgb, var(--cinema-accent) 48%, transparent));
+}
+
+.cinema-lane-slam {
+	position: absolute;
+	pointer-events: none;
+	z-index: 15;
+}
+
+.cinema-lane-slam__title {
+	font-family: var(--type-display, 'Cinzel', serif);
+	font-size: 1.67rem;
+	line-height: 1;
+	font-weight: 900;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+/* Dramatic banner box — lives in the cinema lane plate. */
+.phase-banner-content {
+	--cinema-accent: var(--phase-color, var(--gold-300));
 }
 
 /* Norse knotwork accent lines — fixed % each side, scales with banner. */
@@ -100,7 +153,7 @@
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 4px;
+	gap: 2px;
 	flex: 0 1 auto;
 	min-width: 0;
 }
@@ -109,12 +162,13 @@
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 4px;
+	gap: 2px;
 }
 
 .phase-banner-title {
 	font-family: var(--type-display);
-	font-size: 1.8rem;
+	font-size: 1.32rem;
+	line-height: 1;
 	font-weight: 900;
 	color: var(--phase-color, var(--gold-300));
 	text-shadow:
@@ -128,7 +182,8 @@
 
 .phase-banner-subtitle {
 	font-family: var(--type-display);
-	font-size: 0.85rem;
+	font-size: 0.78rem;
+	line-height: 1;
 	font-weight: 500;
 	color: var(--text-dimmed);
 	letter-spacing: 2px;
@@ -163,7 +218,7 @@
 }
 
 .phase-banner-exit {
-	animation: phaseBannerSlashOut 0.3s ease-in forwards;
+	animation: phaseBannerSlashOut 0.16s ease-in forwards;
 }
 
 /* Dramatic slam — scale-up overshoot + fade in.  Animates the OUTER
