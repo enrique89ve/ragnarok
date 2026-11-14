@@ -12,6 +12,10 @@
 import { debug } from '../config/debugConfig';
 import { create } from 'zustand';
 import {
+	COMBAT_DAMAGE_NUMBER_CRITICAL_READ_MS,
+	COMBAT_DAMAGE_NUMBER_READ_MS,
+} from '@/game/combat/feedback/combatFeedback';
+import {
 	gameEffectCoordinator,
 	type GameEffectHandle,
 } from '@/game/effects/core/gameEffectCoordinator';
@@ -271,9 +275,9 @@ export function scheduleAttackEffect(
 }
 
 // Damage must remain readable after the impact/counter choreography has landed.
-export const DAMAGE_EFFECT_DURATION_MS = 1_400;
-export const DAMAGE_CRITICAL_EFFECT_DURATION_MS = 1_600;
-export const HEAL_EFFECT_DURATION_MS = 1_400;
+export const DAMAGE_EFFECT_DURATION_MS = COMBAT_DAMAGE_NUMBER_READ_MS;
+export const DAMAGE_CRITICAL_EFFECT_DURATION_MS = COMBAT_DAMAGE_NUMBER_CRITICAL_READ_MS;
+export const HEAL_EFFECT_DURATION_MS = COMBAT_DAMAGE_NUMBER_READ_MS;
 
 export function scheduleDamageEffect(
 	position: Position,

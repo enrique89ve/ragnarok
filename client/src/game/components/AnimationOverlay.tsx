@@ -194,7 +194,7 @@ const DamageEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo((
       transition={{
         duration: DAMAGE_EFFECT_DURATION_MS / 1000,
         ease: [0.22, 1, 0.36, 1],
-        times: [0, 0.12, 0.72, 1],
+        times: [0, 0.1, 0.86, 1],
       }}
       style={{
         position: 'absolute',
