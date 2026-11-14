@@ -1,0 +1,61 @@
+.board-occupancy {
+	position: absolute;
+	inset: 0;
+	z-index: 1400;
+	pointer-events: none;
+}
+
+.board-occupancy-box {
+	position: absolute;
+	box-sizing: border-box;
+	border: 1px solid color-mix(in srgb, var(--gold-300) 70%, transparent);
+	background: color-mix(in srgb, var(--gold-300) 8%, transparent);
+}
+
+.board-occupancy-box.is-plate {
+	border-style: dashed;
+	background: transparent;
+}
+
+.board-occupancy-box.is-hit {
+	border: 2px solid var(--danger-400);
+	background: color-mix(in srgb, var(--danger-400) 16%, transparent);
+}
+
+.board-occupancy-label {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	padding: 2px 4px;
+	font-family: var(--type-body, sans-serif);
+	font-size: 10px;
+	line-height: 1.2;
+	color: var(--gold-300);
+	background: color-mix(in srgb, var(--obsidian-950, #07080c) 72%, transparent);
+}
+
+.board-occupancy-label span {
+	color: var(--text-dimmed, #9ca3af);
+}
+
+.board-occupancy-report {
+	position: absolute;
+	left: 1488px;
+	top: 500px;
+	width: 360px;
+	margin: 0;
+	padding: 8px 10px;
+	list-style: none;
+	background: color-mix(in srgb, var(--obsidian-950, #07080c) 88%, transparent);
+	border: 1px solid var(--danger-400);
+	color: var(--text-primary, #e5e7eb);
+	font-family: var(--type-body, sans-serif);
+	font-size: 12px;
+	line-height: 1.4;
+}
+
+.board-occupancy-report span {
+	display: block;
+	color: var(--text-dimmed, #9ca3af);
+	font-size: 10px;
+}

@@ -1,5 +1,12 @@
 import React, { useLayoutEffect, useState } from 'react';
 import { ARENA_VFX_LAYERS, arenaVfxLayerProps } from './arenaVfxTargets';
+import { mulliganIrisDurationStyle } from '../components/mulligan/mulliganLolTiming';
+import {
+  MULLIGAN_EXIT_IRIS_OWNER,
+  MulliganShellProvider,
+} from '../components/mulligan/MulliganShellContext';
+import { useMulliganExitIris } from '../components/mulligan/useMulliganExitIris';
+import '../components/mulligan/mulliganChamber.css';
 import './GameViewport.css';
 
 type GameViewportProps = {
@@ -12,6 +19,10 @@ type GameViewportProps = {
   safeY?: number;
   maxScale?: number;
   extraClassName?: string;
+  /** Letterbox plate while the opening hand is chosen. This plate owns the exit iris. */
+  mulliganChamber?: boolean;
+  /** When false, the plate drops without the iris. */
+  mulliganChamberMotion?: boolean;
 };
 
 export type GameViewportFitInput = {
@@ -157,6 +168,8 @@ export const GameViewport: React.FC<GameViewportProps> = ({
   safeY = 0,
   maxScale,
   extraClassName = '',
+  mulliganChamber = false,
+  mulliganChamberMotion = true,
 }) => {
   // Sync init — first paint already has the correct scale, no flash.
   const [fit, setFit] = useState(() => computeWindowFit(referenceWidth, referenceHeight, safeX, safeY, maxScale));
@@ -192,6 +205,14 @@ export const GameViewport: React.FC<GameViewportProps> = ({
   // inline transform; a CSS animation on it would clobber the scale
   // during the shake. The wrapper has no transform so animating its
   // translate is safe.
+  const exitIris = useMulliganExitIris(mulliganChamber, mulliganChamberMotion);
+  const exitIrisOwner = exitIris.covered
+    ? MULLIGAN_EXIT_IRIS_OWNER.viewport
+    : MULLIGAN_EXIT_IRIS_OWNER.screen;
+  const plateClass = exitIris.irisOpen
+    ? 'mulligan-viewport-plate mulligan-chamber--iris'
+    : 'mulligan-viewport-plate';
+
   const classNames = extraClassName.split(/\s+/).filter(Boolean);
   const shakeClasses = classNames
     .filter((c) => c.startsWith('screen-shake-'))
@@ -201,16 +222,25 @@ export const GameViewport: React.FC<GameViewportProps> = ({
     .join(' ');
 
   return (
-    <div
-      className={`game-viewport-wrapper ${shakeClasses}`.trim()}
-      data-compact-landscape={fit.compactLandscape ? 'true' : 'false'}
-      data-viewport-bars={fit.bars}
-      {...arenaVfxLayerProps(ARENA_VFX_LAYERS.viewportWrapper)}
-    >
-      <div className={`game-viewport ${innerClasses}`.trim()} style={style} {...arenaVfxLayerProps(ARENA_VFX_LAYERS.viewport)}>
-        {children}
+    <MulliganShellProvider exitIrisOwner={exitIrisOwner}>
+      <div
+        className={`game-viewport-wrapper ${shakeClasses}`.trim()}
+        data-compact-landscape={fit.compactLandscape ? 'true' : 'false'}
+        data-viewport-bars={fit.bars}
+        {...arenaVfxLayerProps(ARENA_VFX_LAYERS.viewportWrapper)}
+      >
+        {exitIris.covered && (
+          <div
+            className={plateClass}
+            style={mulliganIrisDurationStyle}
+            aria-hidden="true"
+          />
+        )}
+        <div className={`game-viewport ${innerClasses}`.trim()} style={style} {...arenaVfxLayerProps(ARENA_VFX_LAYERS.viewport)}>
+          {children}
+        </div>
       </div>
-    </div>
+    </MulliganShellProvider>
   );
 };
 

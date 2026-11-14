@@ -61,7 +61,22 @@ body:has(.game-viewport-wrapper) {
 
   This rule only carries the visual styling (background, overflow, etc).
 */
+/* Full-window mulligan plate layout. Fill, seam, and iris live in
+   components/mulligan/mulliganChamber.css so the letterbox matches the chamber. */
+.mulligan-viewport-plate {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Single exit iris: cover the scaled canvas too, so the chamber does not wipe a second time. */
+.mulligan-viewport-plate.mulligan-chamber--iris {
+  z-index: 2;
+}
+
 .game-viewport {
+  z-index: 1;
   overflow: hidden;
   transition: background 1.5s ease-in-out;
   touch-action: none; /* Prevent pinch-zoom/pan during gameplay on mobile */

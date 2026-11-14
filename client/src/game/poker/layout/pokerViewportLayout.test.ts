@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { findBoardOverlaps } from './boardOccupancy';
 import {
 	buildPokerViewportLayoutStyle,
 	POKER_VIEWPORT_LAYOUT,
@@ -80,6 +81,19 @@ describe('pokerViewportLayout', () => {
 		expect(POKER_VIEWPORT_LAYOUT_STYLE['--poker-player-hand-card-rise']).toBe('96px');
 	});
 
+	it('keeps the attack banner off the hourglass', () => {
+		const { hourglass, attackModeBanner } = POKER_VIEWPORT_LAYOUT.zones;
+		const glassLeft = hourglass.x - hourglass.width / 2;
+		const glassRight = hourglass.x + hourglass.width / 2;
+		const glassTop = hourglass.y;
+		const glassBottom = hourglass.y + hourglass.height;
+		const bannerRight = attackModeBanner.x + attackModeBanner.width;
+		const bannerBottom = attackModeBanner.y + attackModeBanner.height;
+		const overlapsX = attackModeBanner.x < glassRight && bannerRight > glassLeft;
+		const overlapsY = attackModeBanner.y < glassBottom && bannerBottom > glassTop;
+		expect(overlapsX && overlapsY).toBe(false);
+	});
+
 	it('raises the hourglass by 25 percent and enlarges its countdown by 50 percent', () => {
 		expect(POKER_VIEWPORT_LAYOUT.zones.hourglass.y).toBe(90);
 		expect(POKER_VIEWPORT_LAYOUT.zones.hourglass.height).toBe(128);
@@ -100,6 +114,14 @@ describe('pokerViewportLayout', () => {
 		expect(opponentHero.x).toBeLessThan(communityCards.x + 1);
 		expect(battleLog.x).toBeGreaterThan(opponentBattlefieldCards.x + opponentBattlefieldCards.width);
 		expect(deckCounters.x + deckCounters.width).toBe(1920 - 32);
+	});
+
+	it('keeps the attack banner off the hourglass even while both can show', () => {
+		const pairs = findBoardOverlaps().map((hit) => `${hit.a}|${hit.b}`);
+		expect(pairs).not.toContain('attackModeBanner|hourglass');
+		expect(pairs).not.toContain('centerTitle|playerBattlefieldCards');
+		expect(pairs).not.toContain('centerTitle|communityCards');
+		expect(pairs).toContain('hourglass|opponentPokerSpellTray');
 	});
 });
 

@@ -31,6 +31,17 @@
    contract as the betting panel and must render above arena cards. */
 .ragnarok-combat-arena {
   --arena-z-hand-strength: 761;
+  /* Seam between the opponent minion row and the community cards. */
+  --poker-cinema-lane-top: calc(
+    var(--poker-zone-opponentBattlefieldCards-y) +
+    var(--poker-zone-opponentBattlefieldCards-h) + 5px
+  );
+  --poker-cinema-lane-height: calc(
+    var(--poker-zone-communityCards-y) -
+    var(--poker-zone-opponentBattlefieldCards-y) -
+    var(--poker-zone-opponentBattlefieldCards-h) -
+    10px
+  );
 }
 
 .unified-combat-arena :is(.poker-spell-tray-mount, .wager-activation-mount) {

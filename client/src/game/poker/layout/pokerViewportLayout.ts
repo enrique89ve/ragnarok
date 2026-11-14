@@ -248,10 +248,10 @@ export const POKER_VIEWPORT_LAYOUT = {
     attackModeBanner: {
       layer: "hud",
       label: "Attack mode targeting banner",
-      x: 696,
-      y: 152,
-      width: 576,
-      height: 56,
+      x: 1184,
+      y: 144,
+      width: 512,
+      height: 72,
       rotation: 0,
     },
     battleIntel: {

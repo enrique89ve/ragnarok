@@ -12,3 +12,12 @@ export {
 	type PokerViewportZones,
 	type PokerViewportLayoutStyle,
 } from './layout/pokerViewportLayout';
+export {
+	boardOccupants,
+	boardGridRequested,
+	findBoardOverlaps,
+	type BoardOccupant,
+	type BoardOverlap,
+	type BoardRect,
+} from './layout/boardOccupancy';
+export { BoardOccupancyOverlay } from './layout/BoardOccupancyOverlay';

@@ -85,7 +85,7 @@ import { MinionField } from './zones/MinionField';
 import { ARENA_VFX_LAYERS, arenaVfxLayerProps } from './arenaVfxTargets';
 import { ArenaVfxRootContext } from './arenaVfxContext';
 import { captureVisualSnapshot, presentationTargetForEntityId } from '../effects/presentation/EffectTargetResolver';
-import { POKER_VIEWPORT_LAYOUT_STYLE, POKER_VIEWPORT_SAFE_AREA } from '../poker';
+import { BoardOccupancyOverlay, POKER_VIEWPORT_LAYOUT_STYLE, POKER_VIEWPORT_SAFE_AREA } from '../poker';
 import { useCampaignStore, getMission } from '../campaign';
 import { isBettingPhase } from './modules/PhaseManager';
 import { resolveHeroPortrait } from '../utils/art/artMapping';
@@ -261,9 +261,6 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
 	const reconnectAttemptCount = usePeerStore(s => s.reconnectAttemptCount);
 	const competitionPhase = usePeerStore(s => s.battleLifecycle?.phase ?? null);
 	const showDamageNumbers = useSettingsStore(s => s.showDamageNumbers);
-	const animationsEnabled = useSettingsStore(s => s.animationsEnabled);
-	const reduceMotion = useSettingsStore(s => s.reduceMotion);
-	const cardGameMulliganActive = useGameStore(s => s.gameState?.mulligan?.active);
 	const openingMulliganGatingPoker = useGameStore(s => isOpeningMulliganGatingPoker(s.gameState));
 
 	const cardGameIsPlayerTurn = gameState?.currentTurn === 'player';
@@ -689,14 +686,6 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
       />
 
       {/* ═══════════ OVERLAY LAYER (absolute, layered on top of zones) ═══════════ */}
-      {isMulligan && !cardGameMulliganActive && (
-        <MulliganApproachOverlay
-          compact
-          disableMotion={!animationsEnabled || reduceMotion}
-          pointerEvents="none"
-        />
-      )}
-
       {attackingCard && (
         <div className="attack-mode-banner">
           <span className="attack-mode-icon" aria-hidden="true">
@@ -941,7 +930,6 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
     heroDeathState,
     heroPowerTargeting,
     weaponUpgraded,
-    mulliganActive,
     gameStateMulligan,
     showdownBackupTimerRef,
     sharedBattlefieldRef,
@@ -963,6 +951,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
     handleWeaponUpgrade,
     handleAction,
     handleCombatEnd,
+    beginNextPokerHandAfterShowdown,
 	    handleHeroDeathComplete,
 	    handleUnifiedEndTurn,
     heroBattlePopups,
@@ -1344,12 +1333,15 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
       safeX={POKER_VIEWPORT_SAFE_AREA.safeX}
       safeY={POKER_VIEWPORT_SAFE_AREA.safeY}
       maxScale={POKER_VIEWPORT_SAFE_AREA.maxScale}
+      mulliganChamber={openingMulliganGatingPoker}
+      mulliganChamberMotion={animationsEnabled && !reduceMotion}
     >
       <div
         ref={setArenaRoot}
         className={`ragnarok-combat-arena arena-scaled viewport-mode bg-transparent ${isPlayerTurn ? 'player-turn' : 'opponent-turn'}`}
         style={POKER_VIEWPORT_LAYOUT_STYLE}
       >
+        <BoardOccupancyOverlay />
         <ArenaVfxRootContext.Provider value={arenaRoot}>
         {/* ═════════════════════════════════════════════════════════════
             LAYERED ARCHITECTURE — see docs/POKER_ARENA_UI.md §Layers
@@ -1631,8 +1623,10 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
               exit={{ opacity: 0, scale: 0.8 }}
               transition={{ duration: 0.5, ease: 'easeOut' }}
             >
-              <div className="realm-announcement-name">{visibleRealmAnnouncement}</div>
-              <div className="realm-announcement-desc">Realm Shift</div>
+              <div className="cinema-lane-plate realm-announcement-plate">
+                <div className="realm-announcement-name">{visibleRealmAnnouncement}</div>
+                <div className="realm-announcement-desc">Realm Shift</div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -1734,14 +1728,19 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
       {/* Hero Power Targeting Prompt */}
       <HeroPowerPrompt targeting={heroPowerTargeting} onCancel={cancelHeroPowerTargeting} />
 
-      {/* Mulligan Screen - rendered as overlay when mulligan is active */}
-      {mulliganActive && gameStateMulligan && (
-        <MulliganScreen
-          mulligan={gameStateMulligan}
-          playerHand={playerHand}
-          onMulliganAction={() => {}}
+      {/* Approach bridge, then the decision screen. Both portal into #arena-layer-modal. The viewport plate owns the single exit iris. */}
+      {(combatState.phase === CombatPhase.MULLIGAN || gamePhase === 'mulligan') && !gameStateMulligan?.active && (
+        <MulliganApproachOverlay
+          compact
+          disableMotion={!animationsEnabled || reduceMotion}
+          pointerEvents="none"
         />
       )}
+      <MulliganScreen
+        mulligan={gameStateMulligan}
+        playerHand={playerHand}
+        onMulliganAction={() => {}}
+      />
 
       {/* Non-blocking Showdown Celebration - replaces old blocking resolution-overlay */}
       {showdownCelebration && !heroDeathState?.isAnimating && (
@@ -1767,7 +1766,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
               showdownBackupTimerRef.current = null;
             }
             setShowdownCelebration(null);
-            handleCombatEnd();
+            beginNextPokerHandAfterShowdown();
           }}
         />
       )}
