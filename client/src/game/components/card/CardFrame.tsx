@@ -136,6 +136,8 @@ const CardFrame: React.FC<CardFrameProps> = ({
 
 	const showPng = effectiveRender === 'png' && !pngFailed;
 	const frameSrc = showPng ? framePathFor(rarity, element, frameAsset) : undefined;
+	const prioritizeAssets =
+		(rest as Record<string, unknown>)['data-card-surface'] === 'mulligan';
 
 	return (
 		<CardFrameContext.Provider value={contextValue}>
@@ -211,7 +213,8 @@ const CardFrame: React.FC<CardFrameProps> = ({
 						src={frameSrc}
 						alt=""
 						decoding="async"
-						loading="lazy"
+						loading={prioritizeAssets ? 'eager' : 'lazy'}
+						fetchPriority={prioritizeAssets ? 'high' : 'auto'}
 						onError={handlePngError}
 					/>
 				)}

@@ -25,6 +25,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePokerCombatAdapter, getActionPermissions, getPokerCombatAdapterState } from '../../hooks/usePokerCombatAdapter';
 import { useGameStore, selectPlayerHand } from '../../stores/gameStore';
+import { isOpeningMulliganGatingPoker } from '../../utils/mulliganUtils';
 import { usePeerStore } from '../../stores/peerStore';
 import { GAME_COMMAND_TYPES, createPokerHandRewardsCommand } from '../../core/commands';
 import { useP2PActions } from '../../context/useP2PActions';
@@ -278,6 +279,7 @@ export function useRagnarokCombatController(
 
   const currentTurn = useGameStore(state => state.gameState?.currentTurn);
   const mulliganActive = useGameStore(state => state.gameState?.mulligan?.active);
+  const openingMulliganGatingPoker = useGameStore(state => isOpeningMulliganGatingPoker(state.gameState));
   const gameStateMulligan = useGameStore(state => state.gameState?.mulligan);
   const playerHand = useGameStore(selectPlayerHand);
   const attackingCard = useGameStore(state => state.attackingCard);
@@ -696,27 +698,32 @@ export function useRagnarokCombatController(
     if (mulliganComplete || mulliganProcessed) {
       return;
     }
-    
+
     if (combatState?.phase !== CombatPhase.MULLIGAN) {
       return;
     }
-    
-    const wasActive = prevMulliganActiveRef.current;
+
+    if (!openingMulliganGatingPoker) {
+      setMulliganProcessed(true);
+      completeMulligan();
+      return;
+    }
+
     const isNowActive = mulliganActive === true;
     const isNowInactive = mulliganActive === false;
-    
+
     prevMulliganActiveRef.current = mulliganActive;
-    
+
     if (isNowActive && !mulliganArmed) {
       setMulliganArmed(true);
       return;
     }
-    
+
     if (mulliganArmed && isNowInactive) {
       setMulliganProcessed(true);
       completeMulligan();
     }
-  }, [mulliganActive, combatState?.phase, completeMulligan, mulliganProcessed, mulliganArmed, mulliganComplete]);
+  }, [mulliganActive, combatState?.phase, completeMulligan, mulliganProcessed, mulliganArmed, mulliganComplete, openingMulliganGatingPoker]);
   
   const commitPokerHandRewards = useCallback((resolved: NonNullable<typeof resolution>) => {
     const pokerState = getPokerCombatAdapterState().combatState;

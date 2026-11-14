@@ -67,6 +67,14 @@ import {
 	type PokerTurnIdentityInput,
 } from '@shared/p2p-wire/pokerTurnClock';
 import { validatePokerActionIntent } from '../../combat/rules/pokerActionRules';
+import { isOpeningMulliganGatingPoker } from '../../utils/mulliganUtils';
+
+function readOpeningMulliganGate(): boolean {
+	const gs = (globalThis as Record<string, unknown>).__ragnarokGameStore as
+		| { getState: () => { gameState?: Parameters<typeof isOpeningMulliganGatingPoker>[0] } }
+		| undefined;
+	return isOpeningMulliganGatingPoker(gs?.getState()?.gameState);
+}
 import { emitCommunityCardRevealed, emitPhaseEntered, emitWagerActivated, isWagerType } from '../../combat/vfx/events';
 
 function findPokerResourceViolation(state: PokerCombatState): ResourceInvariantViolation | null {
@@ -565,6 +573,7 @@ export const createPokerCombatSlice: StateCreator<
 
   completeFirstStrike: () => {
     debug.combat('[PokerCombatSlice] completeFirstStrike called');
+    if (readOpeningMulliganGate()) return;
     const state = get();
     if (!state.pokerCombatState || !state.pokerCombatState.firstStrike) {
       debug.combat('[PokerCombatSlice] No firstStrike state, returning early');
@@ -640,6 +649,7 @@ export const createPokerCombatSlice: StateCreator<
   },
 
   completeMulligan: () => {
+    if (readOpeningMulliganGate()) return;
     const state = get();
     if (!state.pokerCombatState || state.mulliganComplete) return;
     
@@ -691,6 +701,7 @@ export const createPokerCombatSlice: StateCreator<
     origin: PokerActionOrigin = 'player',
     nowMs?: number,
   ) => {
+    if (readOpeningMulliganGate()) return;
     const state = get();
     if (!state.pokerCombatState) return;
 	const beforeResourceViolation = findPokerResourceViolation(state.pokerCombatState);
@@ -980,6 +991,7 @@ export const createPokerCombatSlice: StateCreator<
   },
 
   advancePokerPhase: () => {
+    if (readOpeningMulliganGate()) return;
     const state = get();
     if (!state.pokerCombatState) return;
     

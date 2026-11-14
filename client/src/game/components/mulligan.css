@@ -174,6 +174,9 @@
   .mulligan-portal-flare,
   .mulligan-portal-beam,
   .mulligan-portal-core,
+  .mulligan-deal-row__ghost,
+  .mulligan-deal-row__pulse,
+  .mulligan-deal-row__sweep::after,
   .mulligan-entrance-shell,
   .mulligan-entrance-header,
   .mulligan-entrance-card,
@@ -255,18 +258,18 @@
 }
 
 .mulligan-card-flip-stage--cinematic .mulligan-card-flip-face--back {
-  animation-duration: 560ms;
+  animation-duration: 180ms;
   animation-delay: var(--mulligan-card-reveal-delay, 0s);
-  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-timing-function: cubic-bezier(0.2, 0.95, 0.25, 1);
   animation-fill-mode: both;
   animation-iteration-count: 1;
   animation-name: mulligan-card-back-exit;
 }
 
 .mulligan-card-flip-stage--cinematic .mulligan-card-flip-face--front {
-  animation-duration: 560ms;
+  animation-duration: 180ms;
   animation-delay: var(--mulligan-card-reveal-delay, 0s);
-  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-timing-function: cubic-bezier(0.2, 0.95, 0.25, 1);
   animation-fill-mode: both;
   animation-iteration-count: 1;
   animation-name: mulligan-card-front-enter;
@@ -326,6 +329,210 @@
   transform: none !important;
   filter: none !important;
   opacity: 1 !important;
+}
+
+.mulligan-approach-overlay {
+  overflow: hidden;
+}
+
+.mulligan-approach-deal-row .mulligan-deal-row__prime {
+  position: relative;
+  inset: auto;
+}
+
+.mulligan-approach-portal-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(72vw, 560px);
+  aspect-ratio: 1;
+  margin: -min(36vw, 280px) 0 0 -min(36vw, 280px);
+  border-radius: 50%;
+  border: 1px solid rgba(251, 191, 36, 0.22);
+  box-shadow:
+    0 0 48px rgba(251, 191, 36, 0.18),
+    inset 0 0 40px rgba(255, 248, 200, 0.06);
+  animation: mulligan-approach-ring-spin 9s linear infinite;
+  pointer-events: none;
+}
+
+.mulligan-approach-sweep {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 55% 45% at 50% 58%,
+    rgba(251, 191, 36, 0.14) 0%,
+    transparent 68%
+  );
+  animation: mulligan-deal-pulse 960ms ease-in-out infinite;
+}
+
+.mulligan-approach-fallback .mulligan-approach-overlay {
+  position: fixed;
+  inset: 0;
+}
+
+@keyframes mulligan-approach-ring-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Deal lane — holds space + priming FX before real cards mount */
+.mulligan-deal-row {
+  position: relative;
+  width: 100%;
+  min-height: calc(var(--mulligan-card-width, 280px) * 10 / 7 + 12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mulligan-deal-row__cards {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+}
+
+.mulligan-deal-row__prime {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.mulligan-deal-row__ghosts {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+  width: 100%;
+}
+
+.mulligan-deal-row__ghost {
+  width: var(--mulligan-card-width, 280px);
+  aspect-ratio: 7 / 10;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.55),
+    0 0 24px rgba(251, 191, 36, 0.22);
+  animation: mulligan-deal-ghost-enter 200ms cubic-bezier(0.2, 0.95, 0.25, 1) both;
+  animation-delay: calc(var(--mulligan-ghost-i, 0) * 28ms);
+}
+
+.mulligan-deal-row__ghost .card-card-back {
+  width: 100%;
+  height: 100%;
+}
+
+.mulligan-deal-row__pulse {
+  position: absolute;
+  width: min(92%, 920px);
+  height: 72%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(251, 191, 36, 0.22) 0%,
+    rgba(56, 189, 248, 0.08) 38%,
+    transparent 72%
+  );
+  animation: mulligan-deal-pulse 720ms ease-in-out infinite;
+}
+
+.mulligan-deal-row__channel {
+  position: absolute;
+  width: min(88%, 880px);
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(251, 191, 36, 0.35) 22%,
+    rgba(255, 248, 220, 0.85) 50%,
+    rgba(251, 191, 36, 0.35) 78%,
+    transparent 100%
+  );
+  opacity: 0.75;
+  filter: blur(0.4px);
+}
+
+.mulligan-deal-row__sweep {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.mulligan-deal-row__sweep::after {
+  content: '';
+  position: absolute;
+  top: 18%;
+  left: -40%;
+  width: 34%;
+  height: 64%;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(255, 253, 235, 0.05) 38%,
+    rgba(255, 248, 200, 0.45) 50%,
+    rgba(255, 253, 235, 0.05) 62%,
+    transparent 100%
+  );
+  transform: skewX(-12deg);
+  animation: mulligan-deal-sweep 820ms ease-in-out infinite;
+}
+
+@keyframes mulligan-deal-ghost-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(36px) scale(0.86);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes mulligan-deal-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.94);
+  }
+
+  50% {
+    opacity: 0.9;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes mulligan-deal-sweep {
+  0% {
+    left: -45%;
+    opacity: 0;
+  }
+
+  18% {
+    opacity: 1;
+  }
+
+  100% {
+    left: 115%;
+    opacity: 0;
+  }
+}
+
+.mulligan-entrance-card {
+  position: relative;
+  z-index: 2;
 }
 
 /* Card placeholder while data loads */

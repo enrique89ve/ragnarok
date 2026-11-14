@@ -9,6 +9,7 @@ import {
   processOpponentSpellPetSetup
 } from '../utils/gameUtils';
 import { cryptoRng, cryptoIdGen, createSeededRng, createSeededIdGen, seededRngFromString } from '../utils/seededRng';
+import { preloadMulliganHandArt } from '../utils/preloadMulliganHandArt';
 import type { SeededRng } from '@shared/p2p-wire/rng';
 import type { HiveCardAsset } from '../../data/schemas/HiveTypes';
 import { useMulliganStore } from './mulliganStore';
@@ -325,16 +326,19 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     const hiveCollection = readHiveCollection();
     cardsRng = null;
 
+    const gameState = initializeGameSeeded({
+      rng: cryptoRng,
+      playerIdGen: cryptoIdGen,
+      opponentIdGen: cryptoIdGen,
+      selectedDeckId: selectedDeck ?? undefined,
+      selectedHeroClass: selectedHero ?? undefined,
+      selectedHeroId: selectedHeroId ?? undefined,
+      hiveCollection,
+    });
+    preloadMulliganHandArt(gameState.players.player.hand);
+
     set({
-      gameState: initializeGameSeeded({
-        rng: cryptoRng,
-        playerIdGen: cryptoIdGen,
-        opponentIdGen: cryptoIdGen,
-        selectedDeckId: selectedDeck ?? undefined,
-        selectedHeroClass: selectedHero ?? undefined,
-        selectedHeroId: selectedHeroId ?? undefined,
-        hiveCollection,
-      }),
+      gameState,
       // SP convention: human is always first-mover globally → 'player'.
       // P2P sets this from `deriveCanonicalSide` after seed_reveal instead;
       // SP never goes through that path.
@@ -362,17 +366,20 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     const opponentIdGen = createSeededIdGen(matchSeed, 'p2');
     get().bindCardsRng(matchSeed);
 
+    const gameState = initializeGameSeeded({
+      rng,
+      playerIdGen,
+      opponentIdGen,
+      selectedDeckId: selectedDeck ?? undefined,
+      selectedHeroClass: selectedHero ?? undefined,
+      selectedHeroId: selectedHeroId ?? undefined,
+      hiveCollection,
+    });
+    preloadMulliganHandArt(gameState.players.player.hand);
+
     set({
       matchSeed,
-      gameState: initializeGameSeeded({
-        rng,
-        playerIdGen,
-        opponentIdGen,
-        selectedDeckId: selectedDeck ?? undefined,
-        selectedHeroClass: selectedHero ?? undefined,
-        selectedHeroId: selectedHeroId ?? undefined,
-        hiveCollection,
-      }),
+      gameState,
       selectedCard: null,
       hoveredCard: null,
       attackingCard: null,
@@ -391,10 +398,13 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     if (attackWatchdogTimer) { clearTimeout(attackWatchdogTimer); attackWatchdogTimer = null; }
 
     get().bindCardsRng(input.matchSeed);
+    const gameState = buildHandshakeGameState(input);
+    preloadMulliganHandArt(gameState.players.player.hand);
+
     set({
       matchSeed: input.matchSeed,
       myCanonicalSide: input.myCanonicalSide,
-      gameState: buildHandshakeGameState(input),
+      gameState,
       selectedCard: null,
       hoveredCard: null,
       attackingCard: null,

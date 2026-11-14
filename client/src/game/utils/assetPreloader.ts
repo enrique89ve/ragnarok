@@ -29,12 +29,16 @@ function processQueue() {
 	next();
 }
 
-export function preloadImages(paths: string[]) {
+export function preloadImages(paths: string[], options?: { urgent?: boolean }) {
 	for (const p of paths) {
 		const url = p.startsWith('/') ? assetPath(p) : p;
 		if (!preloaded.has(url)) {
 			preloadQueue.push(url);
 		}
+	}
+	if (options?.urgent) {
+		processQueue();
+		return;
 	}
 	if (typeof requestIdleCallback !== 'undefined') {
 		requestIdleCallback(() => processQueue());

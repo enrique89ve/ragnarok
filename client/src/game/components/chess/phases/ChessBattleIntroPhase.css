@@ -170,30 +170,43 @@
 
 .chess-battle-intro-footer {
 	position: absolute;
+	right: 0;
 	bottom: clamp(1rem, 4vh, 3.2rem);
-	left: 50%;
+	left: 0;
 	z-index: 4;
+	display: flex;
+	justify-content: center;
 	color: rgba(226, 232, 240, 0.58);
 	font-family: var(--type-numeric, 'JetBrains Mono', monospace);
 	font-size: clamp(0.44rem, 0.58vw, 0.6rem);
 	font-weight: 700;
 	letter-spacing: 0.22em;
 	text-transform: uppercase;
-	transform: translateX(-50%);
 }
 
 .chess-battle-intro-status {
 	display: inline-flex;
 	align-items: center;
-	gap: 0.45rem;
+	justify-content: center;
+	gap: 0.55rem;
+	margin: 0;
 }
 
-.chess-battle-intro-status__dot {
+.chess-battle-intro-status__spinner {
 	display: block;
-	width: 5px;
-	height: 5px;
+	flex-shrink: 0;
+	width: 0.65rem;
+	height: 0.65rem;
+	border: 1.5px solid rgba(245, 197, 66, 0.28);
+	border-top-color: var(--intro-gold);
 	border-radius: 50%;
-	background: var(--intro-gold);
+	animation: chess-intro-status-spin 0.85s linear infinite;
+}
+
+@keyframes chess-intro-status-spin {
+	to {
+		transform: rotate(360deg);
+	}
 }
 
 [data-motion='on'] .chess-battle-intro-header {
@@ -289,6 +302,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+	.chess-battle-intro-status__spinner {
+		animation: none;
+		border-top-color: var(--intro-gold);
+		opacity: 0.92;
+	}
+
 	.chess-battle-intro-overlay[data-motion='on'] .chess-battle-intro-header,
 	.chess-battle-intro-overlay[data-motion='on'] .chess-battle-intro-eyebrow,
 	.chess-battle-intro-overlay[data-motion='on'] .chess-battle-intro-crest,

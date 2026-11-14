@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { CombatPhase, PokerCombatState, PokerCard, PokerHandRank } from '../../types/PokerCombatTypes';
 import { initializeCombatEventSubscribers, cleanupCombatEventSubscribers } from '../../services/CombatEventSubscribers';
 import { useGameStore } from '../../stores/gameStore';
+import { isOpeningMulliganGatingPoker } from '../../utils/mulliganUtils';
 import {
 	emitHandRankAnnounced,
 	emitRagnarokTriggered,
@@ -45,7 +46,7 @@ interface UseCombatEventsOptions {
 export function useCombatEvents(options: UseCombatEventsOptions): void {
   const { combatState, isActive, onShowdownCelebration, onHeroDeath, resolveCombat, setResolution } = options;
 
-  const cardGameMulliganActive = useGameStore(state => state.gameState?.mulligan?.active);
+  const openingMulliganGatingPoker = useGameStore(state => isOpeningMulliganGatingPoker(state.gameState));
   const hasResolvedRef = useRef(false);
 
   useEffect(() => {
@@ -72,7 +73,7 @@ export function useCombatEvents(options: UseCombatEventsOptions): void {
     if (hasResolvedRef.current) return;
     if (!combatState || !isActive) return;
     if (combatState.phase !== CombatPhase.RESOLUTION) return;
-    if (cardGameMulliganActive) return;
+    if (openingMulliganGatingPoker) return;
 
     const hasFold = !!combatState.foldWinner;
     if (!hasFold && (!combatState.player.isReady || !combatState.opponent.isReady)) {
@@ -152,5 +153,5 @@ export function useCombatEvents(options: UseCombatEventsOptions): void {
         });
       }
     }
-  }, [combatState?.phase, combatState?.player?.isReady, combatState?.opponent?.isReady, isActive, resolveCombat, onShowdownCelebration, onHeroDeath, setResolution, cardGameMulliganActive]);
+  }, [combatState?.phase, combatState?.player?.isReady, combatState?.opponent?.isReady, isActive, resolveCombat, onShowdownCelebration, onHeroDeath, setResolution, openingMulliganGatingPoker]);
 }

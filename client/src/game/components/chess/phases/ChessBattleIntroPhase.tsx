@@ -71,10 +71,10 @@ const ChessBattleIntroPhase: React.FC<ChessBattleIntroPhaseProps> = ({ onComplet
 			</main>
 
 			<footer className="chess-battle-intro-footer">
-				<span className="chess-battle-intro-status">
-					<span className="chess-battle-intro-status__dot" aria-hidden="true" />
+				<p className="chess-battle-intro-status" aria-busy="true">
+					<span className="chess-battle-intro-status__spinner" aria-hidden="true" />
 					BATTLEFIELD INITIALIZING
-				</span>
+				</p>
 			</footer>
 		</div>
 	);

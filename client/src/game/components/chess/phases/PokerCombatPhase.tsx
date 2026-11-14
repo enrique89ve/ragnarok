@@ -21,6 +21,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import RagnarokCombatArena from '../../../combat/RagnarokCombatArena';
 import type { CombatHandoff } from '../../../flow/round/types';
+import { useGameStore } from '../../../stores/gameStore';
+import { MulliganApproachOverlay } from '../../mulligan/MulliganApproachOverlay';
 
 export type PokerCombatOutcome = 'player' | 'opponent' | 'draw';
 
@@ -30,16 +32,24 @@ export type PokerCombatPhaseProps = {
 };
 
 const PokerCombatPhase: React.FC<PokerCombatPhaseProps> = ({ onCombatEnd }) => {
+	const gamePhase = useGameStore(state => state.gameState?.gamePhase);
+	const mulliganActive = useGameStore(state => state.gameState?.mulligan?.active);
+
 	return (
-		<motion.div
-			key="poker"
-			initial={{ opacity: 0 }}
-			animate={{ opacity: 1 }}
-			exit={{ opacity: 0 }}
-			className="w-full h-full"
-		>
-			<RagnarokCombatArena onCombatEnd={onCombatEnd} />
-		</motion.div>
+		<>
+			{gamePhase === 'mulligan' && !mulliganActive && (
+				<MulliganApproachOverlay compact pointerEvents="none" />
+			)}
+			<motion.div
+				key="poker"
+				initial={{ opacity: 0 }}
+				animate={{ opacity: 1 }}
+				exit={{ opacity: 0 }}
+				className="w-full h-full"
+			>
+				<RagnarokCombatArena onCombatEnd={onCombatEnd} />
+			</motion.div>
+		</>
 	);
 };
 

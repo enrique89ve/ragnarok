@@ -195,6 +195,9 @@ function invertMulliganActor(actor: MulliganActor): MulliganActor {
 }
 
 const isPlayerCommandAllowed = (state: GameState, deps: ApplyGameCommandDeps): boolean => {
+	if (state.gamePhase === 'mulligan' && state.mulligan?.active) {
+		return false;
+	}
 	if (deps.pokerCombat) {
 		return deps.pokerCombat.activePlayerId === deps.pokerCombat.playerId;
 	}

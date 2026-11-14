@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { CombatPhase, CombatAction, PokerCombatState } from '../../types/PokerCombatTypes';
 import { getPokerCombatAdapterState } from '../../hooks/usePokerCombatAdapter';
 import { useGameStore } from '../../stores/gameStore';
+import { isOpeningMulliganGatingPoker } from '../../utils/mulliganUtils';
 import { usePeerStore } from '../../stores/peerStore';
 import { debug } from '../../config/debugConfig';
 import { proceduralAudio } from '../../audio/proceduralAudio';
@@ -81,6 +82,7 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
   addHeroBattlePopupRef.current = addHeroBattlePopup;
 
   const cardGameMulliganActive = useGameStore(state => state.gameState?.mulligan?.active);
+  const openingMulliganGatingPoker = useGameStore(state => isOpeningMulliganGatingPoker(state.gameState));
 
   useEffect(() => {
     if (!combatState || !isActive) return;
@@ -100,7 +102,7 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
       return () => clearInterval(timer);
     }
     mulliganDeadlineRef.current = null;
-    if (cardGameMulliganActive) return;
+    if (openingMulliganGatingPoker) return;
 
     if (combatState.isAllInShowdown) {
       debug.combat('[Timer] SKIP: All-in showdown in progress - auto-advance handles phases');
@@ -162,8 +164,7 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
     if (!turnPolicy.shouldTickTimer) return;
 
     const timer = setInterval(() => {
-      const mulliganStillActive = useGameStore.getState().gameState?.mulligan?.active;
-      if (mulliganStillActive) return;
+      if (isOpeningMulliganGatingPoker(useGameStore.getState().gameState)) return;
 
       const freshState = getPokerCombatAdapterState().combatState;
       if (!freshState) return;
@@ -370,5 +371,6 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
     opponentKind,
     p2pTransportConnected,
     cardGameMulliganActive,
+    openingMulliganGatingPoker,
 	]);
 }

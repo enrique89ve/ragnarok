@@ -111,7 +111,12 @@ export function CollectionCardRenderer({
       style={{ width: "100%", height: "auto", ...frameStyle }}
     >
       {fields?.showArt !== false && (
-        <CardArt src={getCardArtPath(card.id) ?? undefined} alt={card.name} />
+        <CardArt
+          src={getCardArtPath(card.id) ?? undefined}
+          alt={card.name}
+          loading={dataCardSurface === 'mulligan' ? 'eager' : 'lazy'}
+          fetchPriority={dataCardSurface === 'mulligan' ? 'high' : 'auto'}
+        />
       )}
       {masteryTier >= 2 && (
         <div className={`mastery-badge mastery-tier-${masteryTier}`}>

@@ -2504,6 +2504,7 @@ export function useWireSync() {
 			&& gs.pokerRewardIds?.includes(wireCommand.rewardId) === true;
 		const isActiveMulligan = gs.gamePhase === 'mulligan' && gs.mulligan?.active === true;
 		if (gs.gamePhase === 'game_over'
+			|| (isActiveMulligan && !isMulliganCommand && !isPokerRewardCommand)
 			|| (!isMulliganCommand && !isPokerRewardCommand && !remoteOwnsPokerTurn && gs.currentTurn !== 'opponent')
 			|| (isMulliganCommand && !isActiveMulligan)) {
 								rejectCanonicalCommand('not_opponent_turn_or_game_over');

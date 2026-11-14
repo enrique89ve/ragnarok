@@ -171,18 +171,21 @@
  * so the black name plate can never cover attack or health. */
 .collection-card-frame.norse-card-frame--surface-mulligan {
   --norse-card-rarity-mark-bottom: 0px;
+  /* Combat gems may paint slightly below the card edge; reserve that overhang
+   * before the name plate so long names never collide with attack/health. */
+  --norse-card-stat-badge-bottom: calc(-3px * var(--norse-card-ui-scale));
+  --norse-card-stat-overhang: calc(3px * var(--norse-card-ui-scale));
   /* Double the existing 24px keyword socket and reserve that same height in
    * the fixed row so the icon can grow without being clipped. */
   --norse-card-mulligan-keyword-size: calc(16px * 3);
   --norse-card-keyword-row-height: var(--norse-card-mulligan-keyword-size);
   --norse-card-keyword-rail-height: var(--norse-card-keyword-row-height);
-  /* Lift the name by about 10% of its existing lower-slot offset. The
-   * keyword rail is derived from this value, so both slots stay anchored
-   * instead of shifting based on their content. */
+  /* Name sits above the full stat stack (badge height + overhang + gap). The
+   * keyword rail is derived from this value so slots stay anchored. */
   --norse-card-name-bottom: calc(
     var(--norse-card-stat-badge-height) +
-      calc(4px * var(--norse-card-ui-scale)) +
-      calc(2.1px * var(--norse-card-ui-scale))
+      var(--norse-card-stat-overhang) +
+      calc(7px * var(--norse-card-ui-scale))
   );
   --norse-card-keyword-bottom: calc(
     var(--norse-card-name-bottom) +

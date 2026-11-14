@@ -3,6 +3,7 @@ import { CombatAction, CombatPhase, PokerCombatState } from '../../types/PokerCo
 import { getPokerCombatAdapterState } from '../../hooks/usePokerCombatAdapter';
 import { getSmartAIAction } from '../modules/SmartAI';
 import { useGameStore } from '../../stores/gameStore';
+import { isOpeningMulliganGatingPoker } from '../../utils/mulliganUtils';
 import { COMBAT_DEBUG } from '../debugConfig';
 import { debug } from '../../config/debugConfig';
 import { ALL_NORSE_HEROES } from '../../data/norseHeroes';
@@ -48,7 +49,7 @@ export function usePokerAI(options: UsePokerAIOptions): void {
   const aiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const watchdogTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const cardGameMulliganActive = useGameStore(state => state.gameState?.mulligan?.active);
+  const openingMulliganGatingPoker = useGameStore(state => isOpeningMulliganGatingPoker(state.gameState));
   const opponentPlayerId = combatState?.opponent.playerId;
   const activePlayerId = combatState?.activePlayerId;
   const combatPhase = combatState?.phase;
@@ -128,8 +129,8 @@ export function usePokerAI(options: UsePokerAIOptions): void {
   useEffect(() => {
     if (!opponentPlayerId || !combatPhase || !isActive) return;
 
-    if (cardGameMulliganActive) {
-      if (COMBAT_DEBUG.AI) debug.ai('[AI Effect] Blocked: card game mulligan still active');
+    if (openingMulliganGatingPoker) {
+      if (COMBAT_DEBUG.AI) debug.ai('[AI Effect] Blocked: opening mulligan still pending');
       return;
     }
 
@@ -309,7 +310,7 @@ export function usePokerAI(options: UsePokerAIOptions): void {
     activePlayerId,
     actionsThisRound,
     aiResponseInProgressRef,
-    cardGameMulliganActive,
+    openingMulliganGatingPoker,
     combatPhase,
     currentBet,
     foldWinner,

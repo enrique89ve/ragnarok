@@ -15,6 +15,16 @@ export type MulliganActor = 'player' | 'opponent';
 
 export type MulliganActorOrder = readonly [MulliganActor, MulliganActor];
 
+type OpeningMulliganGateState = Pick<GameState, 'gamePhase' | 'mulliganCompleted' | 'mulligan'>;
+
+/** Opening hand mulligan must finish before poker combat advances. */
+export function isOpeningMulliganGatingPoker(state: OpeningMulliganGateState | null | undefined): boolean {
+	if (!state) return false;
+	if (state.mulliganCompleted) return false;
+	if (state.gamePhase === 'mulligan') return true;
+	return Boolean(state.mulligan?.active);
+}
+
 /**
  * Initialize the mulligan phase at the start of the game
  */

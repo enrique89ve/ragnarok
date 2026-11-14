@@ -13,9 +13,16 @@ import { useCardFrame } from '../CardFrameContext';
 export interface CardArtProps {
 	src?: string;
 	alt: string;
+	loading?: 'lazy' | 'eager';
+	fetchPriority?: 'high' | 'low' | 'auto';
 }
 
-const CardArt: React.FC<CardArtProps> = ({ src, alt }) => {
+const CardArt: React.FC<CardArtProps> = ({
+	src,
+	alt,
+	loading = 'lazy',
+	fetchPriority = 'auto',
+}) => {
 	const { shape } = useCardFrame();
 
 	if (!src) {
@@ -31,8 +38,9 @@ const CardArt: React.FC<CardArtProps> = ({ src, alt }) => {
 			className="card-frame__art"
 			src={src}
 			alt={alt}
-			loading="lazy"
+			loading={loading}
 			decoding="async"
+			fetchPriority={fetchPriority}
 		/>
 	);
 };

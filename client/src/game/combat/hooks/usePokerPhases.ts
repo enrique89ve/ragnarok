@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { CombatPhase, PokerCombatState } from '../../types/PokerCombatTypes';
 import { getPokerCombatAdapterState } from '../../hooks/usePokerCombatAdapter';
 import { useGameStore } from '../../stores/gameStore';
+import { isOpeningMulliganGatingPoker } from '../../utils/mulliganUtils';
 import { debug } from '../../config/debugConfig';
 import { shouldAutoAdvanceAllIn, type PokerTurnProcessMode } from '../decision/pokerTurnPolicy';
 import { shouldPrepareLocalAiCards } from '../decision/pokerAiCardSetup';
@@ -17,20 +18,20 @@ export function usePokerPhases(options: UsePokerPhasesOptions): void {
   const allInAdvanceInProgressRef = useRef(false);
   const opponentSpellPetSetupKeyRef = useRef<string | null>(null);
 
-  const cardGameMulliganActive = useGameStore(state => state.gameState?.mulligan?.active);
+  const openingMulliganGatingPoker = useGameStore(state => isOpeningMulliganGatingPoker(state.gameState));
 
   useEffect(() => {
     if (!combatState || !isActive) return;
     if (combatState.phase === CombatPhase.MULLIGAN) return;
-    if (cardGameMulliganActive) {
-      debug.combat('[Poker auxiliary phase] Blocked: card game mulligan still active');
+    if (openingMulliganGatingPoker) {
+      debug.combat('[Poker auxiliary phase] Blocked: opening mulligan still pending');
       return;
     }
 	const setupKey = `${combatState.combatId}:${combatState.handNumber}:${combatState.phase}:${combatState.actionsThisRound}`;
     if (!shouldPrepareLocalAiCards({
       phase: combatState.phase,
       isActive,
-      isMulliganActive: Boolean(cardGameMulliganActive),
+      isMulliganActive: openingMulliganGatingPoker,
       processMode,
       setupAlreadyApplied: opponentSpellPetSetupKeyRef.current === setupKey,
     })) {
@@ -45,12 +46,12 @@ export function usePokerPhases(options: UsePokerPhasesOptions): void {
     if (!freshState || freshState.combatId !== combatState.combatId) {
       return;
     }
-  }, [combatState?.combatId, combatState?.handNumber, combatState?.phase, isActive, cardGameMulliganActive, processMode]);
+  }, [combatState?.combatId, combatState?.handNumber, combatState?.phase, isActive, openingMulliganGatingPoker, processMode]);
 
   useEffect(() => {
     if (!combatState) return;
     if (combatState.phase === CombatPhase.MULLIGAN) return;
-    if (cardGameMulliganActive) return;
+    if (openingMulliganGatingPoker) return;
 
 	// An opening low-health hand can enter showdown mode before either side
 	// has authored a betting action. Let the store promote that deterministic
@@ -67,13 +68,13 @@ export function usePokerPhases(options: UsePokerPhasesOptions): void {
     }
 
     getPokerCombatAdapterState().maybeCloseBettingRound();
-  }, [combatState?.phase, combatState?.player?.isReady, combatState?.opponent?.isReady, cardGameMulliganActive]);
+  }, [combatState?.phase, combatState?.player?.isReady, combatState?.opponent?.isReady, openingMulliganGatingPoker]);
 
     useEffect(() => {
       if (!combatState || !isActive) return;
       if (!shouldAutoAdvanceAllIn(processMode)) return;
       if (!combatState.isAllInShowdown) return;
-      if (cardGameMulliganActive) return;
+      if (openingMulliganGatingPoker) return;
 
       debug.combat('[All-In Showdown] Active - phase:', combatState.phase, 'playerReady:', combatState.player.isReady, 'opponentReady:', combatState.opponent.isReady);
 
@@ -94,8 +95,7 @@ export function usePokerPhases(options: UsePokerPhasesOptions): void {
 
       const currentPhase = combatState.phase;
       const autoAdvanceTimer = setTimeout(() => {
-        const mulliganStillActive = useGameStore.getState().gameState?.mulligan?.active;
-        if (mulliganStillActive) {
+        if (isOpeningMulliganGatingPoker(useGameStore.getState().gameState)) {
           allInAdvanceInProgressRef.current = false;
           return;
         }
@@ -123,5 +123,5 @@ export function usePokerPhases(options: UsePokerPhasesOptions): void {
         clearTimeout(autoAdvanceTimer);
         allInAdvanceInProgressRef.current = false;
       };
-    }, [combatState?.phase, combatState?.isAllInShowdown, isActive, cardGameMulliganActive, processMode]);
+    }, [combatState?.phase, combatState?.isAllInShowdown, isActive, openingMulliganGatingPoker, processMode]);
 }

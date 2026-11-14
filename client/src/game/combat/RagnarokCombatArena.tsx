@@ -16,6 +16,8 @@ import {
 } from '../types/PokerCombatTypes';
 import { evaluatePokerHand } from '../stores/combat/pokerCombatSlice';
 import { MulliganScreen } from '../components/MulliganScreen';
+import { MulliganApproachOverlay } from '../components/mulligan/MulliganApproachOverlay';
+import { isOpeningMulliganGatingPoker } from '../utils/mulliganUtils';
 import { adaptCardInstance } from '../utils/cards/cardInstanceAdapter';
 import { Position } from '../types/Position';
 import { TargetingOverlay } from '../components/TargetingOverlay';
@@ -252,6 +254,10 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
 	const reconnectAttemptCount = usePeerStore(s => s.reconnectAttemptCount);
 	const competitionPhase = usePeerStore(s => s.battleLifecycle?.phase ?? null);
 	const showDamageNumbers = useSettingsStore(s => s.showDamageNumbers);
+	const animationsEnabled = useSettingsStore(s => s.animationsEnabled);
+	const reduceMotion = useSettingsStore(s => s.reduceMotion);
+	const cardGameMulliganActive = useGameStore(s => s.gameState?.mulligan?.active);
+	const openingMulliganGatingPoker = useGameStore(s => isOpeningMulliganGatingPoker(s.gameState));
 
 	const cardGameIsPlayerTurn = gameState?.currentTurn === 'player';
 	const isP2PCombat = activeMatch?.opponent.kind === 'peer';
@@ -385,7 +391,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
     [competitionPhase, connectionState, disconnectSide, integrityError, isP2PCombat, reconnectAttemptCount, reconnectCountdown],
   );
   const isPlayerTurn = combatState
-    ? pokerDecisionView.localCanAct && !pauseView
+    ? pokerDecisionView.localCanAct && !pauseView && !openingMulliganGatingPoker
     : cardGameIsPlayerTurn;
 
   // Health change detection — triggers floating damage/heal numbers
@@ -472,7 +478,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
   });
 
 	const isCardInteractionDisabled = gameState?.gamePhase === 'game_over';
-	const isHandInteractionDisabled = isCardInteractionDisabled || !pokerDecisionView.localCanAct;
+	const isHandInteractionDisabled = isCardInteractionDisabled || !pokerDecisionView.localCanAct || openingMulliganGatingPoker;
 	useEffect(() => {
 		if (isPlayerTurn) return;
 		if (selectedHandCard) selectCard(null);
@@ -524,7 +530,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
   const isMulligan = combatPhase === CombatPhase.MULLIGAN;
   const isBettingRound = combatPhase ? isBettingPhase(combatPhase) : false;
   const showBettingControls = combatState
-    ? !isMulligan && isBettingRound && !combatState.isAllInShowdown
+    ? !isMulligan && isBettingRound && !combatState.isAllInShowdown && !openingMulliganGatingPoker
     : false;
   const showBettingInteraction = showBettingControls && Boolean(basePermissions?.isMyTurnToAct);
 	const phaseAllowsFaith = Boolean(combatPhase) && !isMulligan && combatPhase !== CombatPhase.PRE_FLOP;
@@ -676,11 +682,12 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
       />
 
       {/* ═══════════ OVERLAY LAYER (absolute, layered on top of zones) ═══════════ */}
-      {isMulligan && (
-        <div className="mulligan-notice absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none flex flex-col items-center gap-1">
-          <span className="mulligan-text">Waiting for Mulligan...</span>
-          <span className="mulligan-subtext">Complete your card selection first</span>
-        </div>
+      {isMulligan && !cardGameMulliganActive && (
+        <MulliganApproachOverlay
+          compact
+          disableMotion={!animationsEnabled || reduceMotion}
+          pointerEvents="none"
+        />
       )}
 
       {attackingCard && (
@@ -910,6 +917,8 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
   */
   const feudFiredRef = useRef(false);
 
+  const openingMulliganGatingPoker = useGameStore(s => isOpeningMulliganGatingPoker(s.gameState));
+
   const {
     combatState,
     isActive,
@@ -967,6 +976,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
 
     const firstStrike = combatState.firstStrike;
     if (combatState.phase !== CombatPhase.FIRST_STRIKE || !firstStrike || firstStrike.completed) return;
+    if (openingMulliganGatingPoker) return;
 
     setFirstStrikePresentation(current => {
       if (current?.target === firstStrike.target && current.damage === firstStrike.damage) return current;
@@ -983,7 +993,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
     });
 
     getPokerCombatAdapterState().completeFirstStrike();
-  }, [combatState, isActive]);
+  }, [combatState, isActive, openingMulliganGatingPoker]);
 
   const quipOpponentHp = readViewerCombatHeroHp(combatState, 'opponent');
   const quipOpponentHP = quipOpponentHp?.current ?? 100;
