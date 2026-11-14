@@ -5,8 +5,12 @@ import {
 	type GameEffectHandle,
 	type GameEffectPriority,
 } from '@/game/effects/core/gameEffectCoordinator';
-import { occupyCinema } from '../feedback/combatFeedbackStore';
+import { occupyCinema, releaseCinemaHold, replaceCinemaHold } from '../feedback/combatFeedbackStore';
+import { dismissCenterSlams } from '../animations/PokerDramaVFX';
 import { cinemaHoldMs } from './pokerEventFx';
+
+/** Gap before the next center title. Longer than enter + 3s read + exit. */
+export const CENTER_SLAM_GAP_MS = 3_900;
 
 /**
  * Stable motion vocabulary for poker feedback. The intent is deliberately
@@ -16,10 +20,15 @@ import { cinemaHoldMs } from './pokerEventFx';
 export type PokerMotionIntent =
 	| 'phase-reveal'
 	| 'betting-action'
+	| 'spell-cast'
+	| 'wager-activate'
 	| 'community-reveal'
+	| 'hand-improve'
 	| 'hand-rank'
 	| 'showdown-impact'
+	| 'combat-hit'
 	| 'streak-announcement'
+	| 'ragnarok-ultimate'
 	| 'persistent-turn';
 
 export type PokerMotionZone =
@@ -39,6 +48,8 @@ export interface PokerMotionSpec {
 	readonly owner?: ArenaVfxOwner;
 	readonly enterMs: number;
 	readonly exitMs: number;
+	/** Quiet read after the hit, before the lane is free again. */
+	readonly readMs?: number;
 	readonly staggerMs?: number;
 	readonly action?: CombatAction;
 }
@@ -50,13 +61,28 @@ export const POKER_MOTION_SPECS: Readonly<Record<PokerMotionIntent, PokerMotionS
 		priority: 'cinema',
 		enterMs: 220,
 		exitMs: 160,
+		readMs: 620,
 	},
 	'betting-action': {
 		intent: 'betting-action',
 		zone: 'feedbackStack',
 		priority: 'feedback',
+		enterMs: 140,
+		exitMs: 120,
+	},
+	'spell-cast': {
+		intent: 'spell-cast',
+		zone: 'feedbackStack',
+		priority: 'feedback',
 		enterMs: 160,
-		exitMs: 160,
+		exitMs: 140,
+	},
+	'wager-activate': {
+		intent: 'wager-activate',
+		zone: 'feedbackStack',
+		priority: 'feedback',
+		enterMs: 180,
+		exitMs: 140,
 	},
 	'community-reveal': {
 		intent: 'community-reveal',
@@ -66,12 +92,20 @@ export const POKER_MOTION_SPECS: Readonly<Record<PokerMotionIntent, PokerMotionS
 		exitMs: 160,
 		staggerMs: 160,
 	},
+	'hand-improve': {
+		intent: 'hand-improve',
+		zone: 'communityCards',
+		priority: 'feedback',
+		enterMs: 160,
+		exitMs: 140,
+	},
 	'hand-rank': {
 		intent: 'hand-rank',
 		zone: 'vfxFocus',
 		priority: 'cinema',
-		enterMs: 220,
-		exitMs: 180,
+		enterMs: 300,
+		exitMs: 400,
+		readMs: 3_000,
 	},
 	'showdown-impact': {
 		intent: 'showdown-impact',
@@ -80,12 +114,28 @@ export const POKER_MOTION_SPECS: Readonly<Record<PokerMotionIntent, PokerMotionS
 		enterMs: 180,
 		exitMs: 180,
 	},
+	'combat-hit': {
+		intent: 'combat-hit',
+		zone: 'playerHero',
+		priority: 'impact',
+		enterMs: 120,
+		exitMs: 120,
+	},
 	'streak-announcement': {
 		intent: 'streak-announcement',
 		zone: 'vfxFocus',
 		priority: 'cinema',
-		enterMs: 240,
-		exitMs: 220,
+		enterMs: 300,
+		exitMs: 400,
+		readMs: 3_000,
+	},
+	'ragnarok-ultimate': {
+		intent: 'ragnarok-ultimate',
+		zone: 'vfxFocus',
+		priority: 'cinema',
+		enterMs: 300,
+		exitMs: 400,
+		readMs: 3_000,
 	},
 	'persistent-turn': {
 		intent: 'persistent-turn',
@@ -134,9 +184,16 @@ export function schedulePokerMotion(
 	effect: (index: number) => void,
 	key: string = spec.zone,
 ): GameEffectHandle {
+	const leadMs = delays.reduce((max, delay) => Math.max(max, delay), 0);
 	if (spec.priority === 'cinema') {
-		gameEffectCoordinator.cancelOwnerLane('poker', 'cinema');
-		occupyCinema('poker-cinema', cinemaHoldMs(spec.enterMs, spec.exitMs));
+		const holdMs = leadMs + cinemaHoldMs(spec.enterMs, spec.exitMs, spec.readMs);
+		if (spec.intent === 'phase-reveal') {
+			gameEffectCoordinator.cancelOwnerLane('poker', 'cinema');
+			dismissCenterSlams();
+			replaceCinemaHold('poker-cinema', holdMs);
+		} else {
+			occupyCinema('poker-cinema', holdMs);
+		}
 	}
 	const handle = gameEffectCoordinator.scheduleSequence({
 		owner: 'poker',
@@ -154,4 +211,6 @@ export function schedulePokerMotion(
 export function cancelPokerMotionSchedules(): void {
 	gameEffectCoordinator.cancelOwner('poker');
 	activePokerSchedules.clear();
+	dismissCenterSlams();
+	releaseCinemaHold('poker-cinema');
 }

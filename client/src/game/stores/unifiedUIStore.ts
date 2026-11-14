@@ -7,7 +7,8 @@
 
 import { create } from 'zustand';
 import type { IconName } from '../utils/ui/iconMap';
-import { overlayHoldMs } from '../combat/feedback/combatFeedback';
+import { CINEMA_READ_MS, overlayHoldMs } from '../combat/feedback/combatFeedback';
+import { useCombatFeedbackStore } from '../combat/feedback/combatFeedbackStore';
 import { debug } from '../config/debugConfig';
 
 export type AnimationType = 
@@ -79,6 +80,19 @@ const ANNOUNCEMENT_TEXT_LIMITS = {
 	title: 64,
 	subtitle: 120,
 } as const;
+
+let announcementTimer: ReturnType<typeof setTimeout> | null = null;
+
+function clearAnnouncementTimer(): void {
+	if (announcementTimer !== null) {
+		clearTimeout(announcementTimer);
+		announcementTimer = null;
+	}
+}
+
+function cinemaBlocksAnnouncement(): boolean {
+	return useCombatFeedbackStore.getState().cinemaHolders.length > 0;
+}
 
 function clampAnnouncementText(value: string, limit: number): string {
 	const normalized = value.trim().replace(/\s+/g, ' ');
@@ -208,6 +222,7 @@ interface UnifiedUIStore {
   addAnnouncement: (announcement: Omit<ActionAnnouncement, 'id'>) => void;
   removeAnnouncement: (id: string) => void;
   processNextAnnouncement: () => void;
+  deferAnnouncementForCinema: () => void;
   clearAnnouncements: () => void;
   
   startTargeting: (sourceId: string, sourceType: TargetingState['sourceType'], validTargets: string[], mode: TargetingState['targetingMode']) => void;
@@ -353,8 +368,11 @@ export const useUnifiedUIStore = create<UnifiedUIStore>((set, get) => ({
       subtitle: announcement.subtitle
         ? clampAnnouncementText(announcement.subtitle, ANNOUNCEMENT_TEXT_LIMITS.subtitle)
         : undefined,
-      duration: announcement.duration ?? overlayHoldMs(
-        [announcement.title, announcement.subtitle].filter(Boolean).join(' '),
+      duration: Math.max(
+        CINEMA_READ_MS,
+        announcement.duration ?? overlayHoldMs(
+          [announcement.title, announcement.subtitle].filter(Boolean).join(' '),
+        ),
       ),
     };
     
@@ -375,11 +393,30 @@ export const useUnifiedUIStore = create<UnifiedUIStore>((set, get) => ({
     }));
   },
 
+  deferAnnouncementForCinema: () => {
+    clearAnnouncementTimer();
+    const current = get().currentAnnouncement;
+    if (!current) {
+      set({ isProcessingAnnouncements: get().announcements.length > 0 });
+      return;
+    }
+    set((state) => ({
+      currentAnnouncement: null,
+      announcements: [current, ...state.announcements.filter((item) => item.id !== current.id)],
+      isProcessingAnnouncements: true,
+    }));
+  },
+
   processNextAnnouncement: () => {
     const state = get();
     
     if (state.announcements.length === 0) {
       set({ isProcessingAnnouncements: false, currentAnnouncement: null });
+      return;
+    }
+
+    if (cinemaBlocksAnnouncement()) {
+      set({ isProcessingAnnouncements: true, currentAnnouncement: null });
       return;
     }
     
@@ -391,9 +428,12 @@ export const useUnifiedUIStore = create<UnifiedUIStore>((set, get) => ({
       announcements: rest
     });
     
-    setTimeout(() => {
+    clearAnnouncementTimer();
+    announcementTimer = setTimeout(() => {
+      announcementTimer = null;
       set({ currentAnnouncement: null });
-      setTimeout(() => {
+      announcementTimer = setTimeout(() => {
+        announcementTimer = null;
         get().processNextAnnouncement();
       }, 150);
     }, next.duration || 1800);
@@ -547,6 +587,20 @@ export const useUnifiedUIStore = create<UnifiedUIStore>((set, get) => ({
     });
   },
 }));
+
+useCombatFeedbackStore.subscribe((state, previous) => {
+  const wasHeld = (previous?.cinemaHolders.length ?? 0) > 0;
+  const held = state.cinemaHolders.length > 0;
+  if (!wasHeld && held) {
+    useUnifiedUIStore.getState().deferAnnouncementForCinema();
+  }
+  if (wasHeld && !held) {
+    const ui = useUnifiedUIStore.getState();
+    if (!ui.currentAnnouncement && ui.announcements.length > 0) {
+      ui.processNextAnnouncement();
+    }
+  }
+});
 
 export function fireAnnouncement(
   type: AnnouncementType,

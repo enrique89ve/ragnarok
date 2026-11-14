@@ -55,7 +55,7 @@ export const POKER_EVENT_FX: Readonly<Record<VisualEventType, PokerEventFxSpec>>
 	ragnarokTriggered: {
 		event: 'ragnarokTriggered',
 		lane: 'cinema',
-		motion: 'streak-announcement',
+		motion: 'ragnarok-ultimate',
 		zone: 'vfxFocus',
 		priority: 'cinema',
 	},
@@ -69,28 +69,28 @@ export const POKER_EVENT_FX: Readonly<Record<VisualEventType, PokerEventFxSpec>>
 	handImproved: {
 		event: 'handImproved',
 		lane: 'zone',
-		motion: 'betting-action',
+		motion: 'hand-improve',
 		zone: 'communityCards',
 		priority: 'feedback',
 	},
 	spellCast: {
 		event: 'spellCast',
 		lane: 'stack',
-		motion: 'betting-action',
+		motion: 'spell-cast',
 		zone: 'feedbackStack',
 		priority: 'feedback',
 	},
 	wagerActivated: {
 		event: 'wagerActivated',
 		lane: 'zone',
-		motion: 'betting-action',
+		motion: 'wager-activate',
 		zone: 'feedbackStack',
 		priority: 'feedback',
 	},
 	combatImpact: {
 		event: 'combatImpact',
 		lane: 'floater',
-		motion: 'showdown-impact',
+		motion: 'combat-hit',
 		zone: 'playerHero',
 		priority: 'impact',
 	},
@@ -109,6 +109,6 @@ export function shouldAnnounceHandRank(event: {
 	return event.winner === event.side;
 }
 
-export function cinemaHoldMs(enterMs: number, exitMs: number): number {
-	return enterMs + 1200 + exitMs;
+export function cinemaHoldMs(enterMs: number, exitMs: number, readMs = 720): number {
+	return enterMs + readMs + exitMs;
 }

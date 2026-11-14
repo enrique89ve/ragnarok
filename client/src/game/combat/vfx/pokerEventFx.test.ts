@@ -5,7 +5,7 @@ import {
 	pokerEventFx,
 	shouldAnnounceHandRank,
 } from './pokerEventFx';
-import { POKER_MOTION_SPECS } from './pokerMotionContract';
+import { CENTER_SLAM_GAP_MS, POKER_MOTION_SPECS } from './pokerMotionContract';
 
 describe('poker one-event-one-FX contract', () => {
 	it('maps every visual event to exactly one overlay lane', () => {
@@ -25,6 +25,22 @@ describe('poker one-event-one-FX contract', () => {
 		expect(pokerEventFx('bettingAction').lane).toBe('zone');
 		expect(pokerEventFx('spellCast').lane).toBe('stack');
 		expect(pokerEventFx('showdownDamage').lane).toBe('floater');
+	});
+
+	it('gives each beat its own scale and keeps phase cinema inside the read budget', () => {
+		expect(pokerEventFx('handImproved').motion).toBe('hand-improve');
+		expect(pokerEventFx('spellCast').motion).toBe('spell-cast');
+		expect(pokerEventFx('wagerActivated').motion).toBe('wager-activate');
+		expect(pokerEventFx('ragnarokTriggered').motion).toBe('ragnarok-ultimate');
+		expect(pokerEventFx('combatImpact').motion).toBe('combat-hit');
+		expect(POKER_MOTION_SPECS['hand-improve'].zone).toBe('communityCards');
+		const phase = POKER_MOTION_SPECS['phase-reveal'];
+		expect(phase.enterMs + (phase.readMs ?? 0) + phase.exitMs).toBeLessThanOrEqual(1200);
+		for (const intent of ['hand-rank', 'streak-announcement', 'ragnarok-ultimate'] as const) {
+			const spec = POKER_MOTION_SPECS[intent];
+			expect(spec.readMs).toBeGreaterThanOrEqual(3_000);
+			expect(spec.enterMs + (spec.readMs ?? 0) + spec.exitMs).toBeLessThan(CENTER_SLAM_GAP_MS);
+		}
 	});
 
 	it('announces only the winning hand rank (player line on a draw)', () => {

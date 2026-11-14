@@ -8,7 +8,10 @@ import {
 	SHOWDOWN_PRESENTATION_BUDGET_MS,
 	createOnceRunner,
 } from '../pokerResolutionOutcome';
+import { useCombatFeedbackStore } from '../feedback/combatFeedbackStore';
 import '../../poker/styles/poker-showdown.css';
+
+const SHOWDOWN_BADGE_HOLDER = 'showdown-badge';
 
 interface ShowdownCelebrationProps {
 	resolution: {
@@ -64,6 +67,10 @@ export const ShowdownCelebration: React.FC<ShowdownCelebrationProps> = ({
 	const isShowdown = resolution.resolutionType === 'showdown';
 	const [ready, setReady] = useState(false);
 	const [combatAnimDone, setCombatAnimDone] = useState(false);
+	const centerBusy = useCombatFeedbackStore((state) =>
+		state.cinemaHolders.some((id) => id !== SHOWDOWN_BADGE_HOLDER),
+	);
+	const showBadge = combatAnimDone && !centerBusy;
 	const finish = useOnceComplete(onComplete);
 
 	useEffect(() => {
@@ -85,10 +92,18 @@ export const ShowdownCelebration: React.FC<ShowdownCelebrationProps> = ({
 		return () => clearTimeout(t);
 	}, [ready, resolution.winner]);
 
-	// Keep the verdict visible long enough for both peers to read the winner
-	// and hand comparison before the next poker hand starts.
 	useEffect(() => {
-		if (!combatAnimDone) return;
+		useCombatFeedbackStore.getState().holdCinema(SHOWDOWN_BADGE_HOLDER);
+		return () => {
+			useCombatFeedbackStore.getState().releaseCinema(SHOWDOWN_BADGE_HOLDER);
+		};
+	}, []);
+
+	// Keep the verdict visible long enough for both peers to read the winner
+	// and hand comparison before the next poker hand starts. The badge waits
+	// until the center titles have left that pixel.
+	useEffect(() => {
+		if (!showBadge) return;
 		if (resolution.winner === 'draw') {
 			proceduralAudio.play('sword_clash');
 		} else if (resolution.winner === 'player') {
@@ -100,7 +115,7 @@ export const ShowdownCelebration: React.FC<ShowdownCelebrationProps> = ({
 			finish();
 		}, BADGE_DISPLAY_MS);
 		return () => clearTimeout(timer);
-	}, [combatAnimDone, resolution.winner, finish]);
+	}, [showBadge, resolution.winner, finish]);
 
 	// Determine attacker/defender and damage for the combat animation
 	const getAnimationProps = () => {
@@ -181,7 +196,7 @@ export const ShowdownCelebration: React.FC<ShowdownCelebrationProps> = ({
 				)}
 
 				{/* Phase 2: Winner badge slides in after combat animation */}
-				{combatAnimDone && (
+				{showBadge && (
 					<motion.div
 						className={`winner-badge ${resolution.winner === 'player' ? 'player-side' : resolution.winner === 'opponent' ? 'opponent-side' : 'center'}`}
 						initial={{ opacity: 0, scale: 0.5, y: resolution.winner === 'player' ? 50 : resolution.winner === 'opponent' ? -50 : 0 }}

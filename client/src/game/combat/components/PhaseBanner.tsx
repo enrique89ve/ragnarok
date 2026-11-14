@@ -3,11 +3,15 @@ import { createPortal } from 'react-dom';
 import { CombatPhase } from '../../types/PokerCombatTypes';
 import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../arenaVfxTargets';
 import { useArenaVfxRoot } from '../arenaVfxContext';
+import { CINEMA_READ_MS } from '../feedback/combatFeedback';
 import { useCombatFeedbackStore } from '../feedback/combatFeedbackStore';
+import { PHASE_BANNER_CINEMA_HOLDER } from '../openingReadGate';
 import '../styles/poker-drama.css';
 
-const PHASE_CINEMA_HOLDER = 'phase-banner';
-export const PHASE_BANNER_VISIBLE_MS = 2_600;
+const PHASE_CINEMA_HOLDER = PHASE_BANNER_CINEMA_HOLDER;
+const PHASE_BANNER_ENTER_MS = 350;
+/** Entrance plus the sharp read. The exit starts after this. */
+export const PHASE_BANNER_VISIBLE_MS = PHASE_BANNER_ENTER_MS + CINEMA_READ_MS;
 
 interface PhaseBannerProps {
 	phase: CombatPhase;
@@ -27,22 +31,43 @@ export const PhaseBanner: React.FC<PhaseBannerProps> = ({ phase, forceHide = fal
 	const [isVisible, setIsVisible] = useState(false);
 	const [bannerData, setBannerData] = useState<{ title: string; subtitle: string; key: string } | null>(null);
 	const prevPhaseRef = useRef<CombatPhase>(phase);
+	const openedRef = useRef(false);
 	const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+	const [queued, setQueued] = useState<{ title: string; subtitle: string; key: string } | null>(null);
+	const centerBlocked = useCombatFeedbackStore((state) =>
+		state.cinemaHolders.some((id) => id !== PHASE_CINEMA_HOLDER),
+	);
 
 	const clearAllTimers = () => {
 		timersRef.current.forEach(t => clearTimeout(t));
 		timersRef.current = [];
 	};
 
+	const releasePhaseCinema = () => {
+		useCombatFeedbackStore.getState().releaseCinema(PHASE_CINEMA_HOLDER);
+	};
+
+	useEffect(() => {
+		if (openedRef.current) return;
+		openedRef.current = true;
+		const config = PHASE_CONFIG[phase];
+		if (!config) return;
+		setQueued(config);
+	}, [phase]);
+
 	useEffect(() => {
 		if (phase === prevPhaseRef.current) return;
 		prevPhaseRef.current = phase;
-
 		const config = PHASE_CONFIG[phase];
 		if (!config) return;
+		setQueued(config);
+	}, [phase]);
 
+	useEffect(() => {
+		if (!queued || forceHide || centerBlocked) return;
+		const config = queued;
+		setQueued(null);
 		clearAllTimers();
-
 		setBannerData(config);
 		setShowBanner(true);
 		setIsVisible(true);
@@ -53,25 +78,24 @@ export const PhaseBanner: React.FC<PhaseBannerProps> = ({ phase, forceHide = fal
 			const removeTimer = setTimeout(() => {
 				setShowBanner(false);
 				setBannerData(null);
-				useCombatFeedbackStore.getState().releaseCinema(PHASE_CINEMA_HOLDER);
+				releasePhaseCinema();
 			}, 160);
 			timersRef.current.push(removeTimer);
 		}, PHASE_BANNER_VISIBLE_MS);
 		timersRef.current.push(hideTimer);
-	}, [phase]);
+	}, [queued, forceHide, centerBlocked]);
 
 	useEffect(() => {
-		if (forceHide && showBanner) {
-			clearAllTimers();
-			setIsVisible(false);
-			const t = setTimeout(() => {
-				setShowBanner(false);
-				setBannerData(null);
-				useCombatFeedbackStore.getState().releaseCinema(PHASE_CINEMA_HOLDER);
-			}, 160);
-			timersRef.current.push(t);
-		}
-	}, [forceHide, showBanner]);
+		if (forceHide) setQueued(null);
+		if (!showBanner) return;
+		if (!forceHide && !centerBlocked) return;
+		clearAllTimers();
+		setIsVisible(false);
+		setShowBanner(false);
+		setBannerData(null);
+		releasePhaseCinema();
+		if (centerBlocked && !forceHide && bannerData) setQueued(bannerData);
+	}, [forceHide, centerBlocked, showBanner, bannerData]);
 
 	useEffect(() => {
 		return () => {

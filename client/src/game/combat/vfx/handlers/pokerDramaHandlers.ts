@@ -38,6 +38,7 @@ import {
 	bettingActionMotion,
 	cancelPokerMotionSchedules,
 	POKER_MOTION_SPECS,
+	CENTER_SLAM_GAP_MS,
 	schedulePokerMotion,
 	showdownImpactMotion,
 	} from '@/game/effects/poker';
@@ -59,6 +60,22 @@ import type { ArenaVfxOwner } from '../../arenaVfxTargets';
 
 const COMPLETED_HANDLE: EffectHandle = { cancel() {} };
 
+const FX_GOLD = '#f5c542';
+const FX_BLOOD = '#dc2626';
+const FX_INK = '#e5e7eb';
+const SHOWDOWN_RANK_LEAD_MS = 400;
+const SHOWDOWN_OPPONENT_RANK_LEAD_MS = 900;
+/** One center title finishes (enter + 3s read + exit) before the next begins. */
+const SHOWDOWN_READ_GAP_MS = CENTER_SLAM_GAP_MS;
+
+function showdownRankLeadMs(winner: ArenaVfxOwner | 'draw'): number {
+	return winner === 'opponent' ? SHOWDOWN_OPPONENT_RANK_LEAD_MS : SHOWDOWN_RANK_LEAD_MS;
+}
+
+function showdownFollowMs(winner: ArenaVfxOwner | 'draw'): number {
+	return showdownRankLeadMs(winner) + SHOWDOWN_READ_GAP_MS;
+}
+
 const PHASE_AUDIO_CUE: Partial<Record<CombatPhase, GameAudioCueId>> = {
 	[CombatPhase.FAITH]: 'new_phase_sting',
 	[CombatPhase.FORESIGHT]: 'new_phase_sting',
@@ -75,6 +92,37 @@ let showdownContext: {
 	opponentRank: PokerHandRank;
 	winner: ArenaVfxOwner | 'draw';
 } | null = null;
+let showdownBannerSlot = 0;
+let pendingRagnarok = false;
+let pendingDomination: { color: string } | null = null;
+
+function placeCenterBanner(winner: ArenaVfxOwner | 'draw'): number {
+	const at = showdownRankLeadMs(winner) + SHOWDOWN_READ_GAP_MS * showdownBannerSlot;
+	showdownBannerSlot += 1;
+	return at;
+}
+
+function flushDeferredCenterBanners(winner: ArenaVfxOwner | 'draw'): void {
+	if (pendingRagnarok) {
+		pendingRagnarok = false;
+		schedulePokerMotion(
+			POKER_MOTION_SPECS['ragnarok-ultimate'],
+			[placeCenterBanner(winner)],
+			() => playRagnarokVFX(),
+			'ragnarok',
+		);
+	}
+	if (pendingDomination) {
+		const color = pendingDomination.color;
+		pendingDomination = null;
+		schedulePokerMotion(
+			POKER_MOTION_SPECS['streak-announcement'],
+			[placeCenterBanner(winner)],
+			() => playStreakAnnouncementVFX('DOMINATION', color),
+			'domination',
+		);
+	}
+}
 const lastThorHammerPlayedAt: Partial<Record<ArenaVfxOwner, number>> = {};
 
 export function resetPokerBettingPressure(): void {
@@ -128,11 +176,10 @@ function handleCommunityCardRevealed(event: CommunityCardRevealedEvent): EffectH
 }
 
 // ── Showdown choreography ─────────────────────────────────────────────
-// The RESOLUTION events (handRankAnnounced x2, showdownDamage,
-// ragnarokTriggered, streakAnnounced) arrive as one synchronous burst
-// emitted post-commit. The handlers below re-create the legacy rhythm
-// (0 / 400 / 900 / 1400 / 2000 / 2200ms) with the delays living HERE,
-// so the choreography stays in one place.
+// The RESOLUTION events arrive as one synchronous burst. Visible center
+// titles take successive slots of CENTER_SLAM_GAP_MS so none share the
+// pixel. DOMINATION and a leftover RAGNAROK wait until both ranks have
+// claimed their slot.
 // ──────────────────────────────────────────────────────────────────────
 
 function updateShowdownStreaks(winner: ArenaVfxOwner | 'draw'): void {
@@ -141,17 +188,13 @@ function updateShowdownStreaks(winner: ArenaVfxOwner | 'draw'): void {
 		opponentStreak = 0;
 		emitStreakAnnounced({ side: 'player', streak: playerStreak, kind: 'win' });
 		emitStreakAnnounced({ side: 'opponent', streak: 0, kind: 'win' });
-		if (playerStreak === 3) {
-			schedulePokerMotion(POKER_MOTION_SPECS['streak-announcement'], [2000], () => playStreakAnnouncementVFX('DOMINATION', '#fbbf24'), 'domination');
-		}
+		if (playerStreak === 3) pendingDomination = { color: FX_GOLD };
 	} else if (winner === 'opponent') {
 		opponentStreak += 1;
 		playerStreak = 0;
 		emitStreakAnnounced({ side: 'opponent', streak: opponentStreak, kind: 'win' });
 		emitStreakAnnounced({ side: 'player', streak: 0, kind: 'win' });
-		if (opponentStreak === 3) {
-			schedulePokerMotion(POKER_MOTION_SPECS['streak-announcement'], [2000], () => playStreakAnnouncementVFX('DOMINATION', '#ef4444'), 'domination');
-		}
+		if (opponentStreak === 3) pendingDomination = { color: FX_BLOOD };
 	}
 }
 
@@ -161,22 +204,39 @@ function handleHandRankAnnounced(event: HandRankAnnouncedEvent): EffectHandle | 
 	if (isPlayer) {
 		cancelPokerMotionSchedules();
 		showdownContext = { playerRank: event.rank, opponentRank: event.rank, winner: event.winner };
+		showdownBannerSlot = 0;
+		pendingDomination = null;
 		updateShowdownStreaks(event.winner);
 	} else if (showdownContext) {
 		showdownContext.opponentRank = event.rank;
 	}
 
-	if (!shouldAnnounceHandRank(event)) {
-		return COMPLETED_HANDLE;
+	let handle: EffectHandle = COMPLETED_HANDLE;
+	if (shouldAnnounceHandRank(event) && event.rank > PokerHandRank.HIGH_CARD) {
+		const at = placeCenterBanner(event.winner);
+		if (event.rank === PokerHandRank.RAGNAROK) {
+			pendingRagnarok = false;
+			handle = schedulePokerMotion(
+				POKER_MOTION_SPECS['ragnarok-ultimate'],
+				[at],
+				() => playRagnarokVFX(),
+				'ragnarok',
+			);
+		} else if (event.rank === PokerHandRank.THORS_HAMMER) {
+			handle = schedulePokerMotion(POKER_MOTION_SPECS['hand-rank'], [at], () => {
+				playThorHammerIfNeeded(event.side, event.id, event.timestamp);
+			}, 'hand-rank');
+		} else {
+			handle = schedulePokerMotion(POKER_MOTION_SPECS['hand-rank'], [at], () => {
+				playHandRankAnnouncement(rankName, event.rank, true, isPlayer);
+			}, 'hand-rank');
+		}
 	}
 
-	return schedulePokerMotion(POKER_MOTION_SPECS['hand-rank'], [isPlayer ? 400 : 900], () => {
-		if (event.rank === PokerHandRank.THORS_HAMMER) {
-			playThorHammerIfNeeded(event.side, event.id, event.timestamp);
-			return;
-		}
-		playHandRankAnnouncement(rankName, event.rank, true, isPlayer);
-	}, 'hand-rank');
+	if (!isPlayer) {
+		flushDeferredCenterBanners(showdownContext?.winner ?? event.winner);
+	}
+	return handle;
 }
 
 function handleShowdownDamage(event: ShowdownDamageEvent): EffectHandle | null {
@@ -187,14 +247,18 @@ function handleShowdownDamage(event: ShowdownDamageEvent): EffectHandle | null {
 	const isPlayerWinner = event.winner === 'player';
 	const isLethal = event.isLethal ?? false;
 	const targetOwner = event.target === 'player-hero' ? 'player' : 'opponent';
-	return schedulePokerMotion(showdownImpactMotion(targetOwner), [1400], () => {
+	const damageAt = Math.max(
+		SHOWDOWN_RANK_LEAD_MS,
+		showdownFollowMs(showdownContext?.winner ?? event.winner) - 400,
+	);
+	return schedulePokerMotion(showdownImpactMotion(targetOwner), [damageAt], () => {
 		playShowdownDamageVFX(event.damage, isPlayerWinner, rankDiff, isLethal);
 	}, `showdown-impact-${targetOwner}`);
 }
 
 function handleSpellCast(event: SpellCastEvent): EffectHandle | null {
 	return schedulePokerMotion(
-		POKER_MOTION_SPECS['betting-action'],
+		POKER_MOTION_SPECS['spell-cast'],
 		[0],
 		() => playPokerSpellCast(event.effectType, event.side),
 		`spell-cast-${event.side}`,
@@ -203,7 +267,7 @@ function handleSpellCast(event: SpellCastEvent): EffectHandle | null {
 
 function handleWagerActivated(event: WagerActivatedEvent): EffectHandle | null {
 	return schedulePokerMotion(
-		POKER_MOTION_SPECS['betting-action'],
+		POKER_MOTION_SPECS['wager-activate'],
 		[0],
 		() => playWagerActivate(event.wagerType, event.side),
 		`wager-activate-${event.side}`,
@@ -211,12 +275,22 @@ function handleWagerActivated(event: WagerActivatedEvent): EffectHandle | null {
 }
 
 function handleRagnarokTriggered(_event: RagnarokTriggeredEvent): EffectHandle | null {
-	return schedulePokerMotion(POKER_MOTION_SPECS['streak-announcement'], [0], () => playRagnarokVFX(), 'ragnarok');
+	pendingRagnarok = true;
+	return {
+		cancel() {
+			pendingRagnarok = false;
+		},
+	};
 }
 
 function handleStreakAnnounced(event: StreakAnnouncedEvent): EffectHandle | null {
 	if (event.kind === 'last_stand') {
-		return schedulePokerMotion(POKER_MOTION_SPECS['streak-announcement'], [2200], () => playStreakAnnouncementVFX('LAST STAND', '#e2e8f0'), 'last-stand');
+		return schedulePokerMotion(
+			POKER_MOTION_SPECS['streak-announcement'],
+			[placeCenterBanner(showdownContext?.winner ?? 'player')],
+			() => playStreakAnnouncementVFX('LAST STAND', FX_INK),
+			'last-stand',
+		);
 	}
 	return COMPLETED_HANDLE;
 }
@@ -245,7 +319,7 @@ function handleHandImproved(event: HandImprovedEvent): EffectHandle | null {
 		playThorHammerIfNeeded(event.side, event.id, event.timestamp);
 		return COMPLETED_HANDLE;
 	}
-	return schedulePokerMotion(POKER_MOTION_SPECS['betting-action'], [0], () => playHandImprovementVFX(event.tier), 'hand-improved');
+	return schedulePokerMotion(POKER_MOTION_SPECS['hand-improve'], [0], () => playHandImprovementVFX(event.tier), 'hand-improved');
 }
 
 export function registerPokerDramaVisualEffects(): VisualEffectUnregister {
@@ -255,6 +329,9 @@ export function registerPokerDramaVisualEffects(): VisualEffectUnregister {
 	opponentStreak = 0;
 	phaseAudioCueCancel = null;
 	showdownContext = null;
+	showdownBannerSlot = 0;
+	pendingRagnarok = false;
+	pendingDomination = null;
 	delete lastThorHammerPlayedAt.player;
 	delete lastThorHammerPlayedAt.opponent;
 

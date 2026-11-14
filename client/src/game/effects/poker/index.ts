@@ -5,6 +5,7 @@
  */
 export {
 	bettingActionMotion,
+	CENTER_SLAM_GAP_MS,
 	cancelPokerMotionSchedules,
 	POKER_MOTION_SPECS,
 	schedulePokerMotion,

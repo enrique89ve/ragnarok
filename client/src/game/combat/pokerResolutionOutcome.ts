@@ -1,4 +1,5 @@
-export const SHOWDOWN_PRESENTATION_BUDGET_MS = 8000;
+/** Ceiling for rank + domination + ragnarok + last stand, then the verdict badge. */
+export const SHOWDOWN_PRESENTATION_BUDGET_MS = 21_000;
 export const SHOWDOWN_BACKUP_MS = 9000;
 export const HERO_DEATH_PRESENTATION_BUDGET_MS = 4000;
 

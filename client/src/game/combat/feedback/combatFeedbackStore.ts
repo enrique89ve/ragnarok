@@ -44,6 +44,7 @@ let chipSeq = 0;
 let sessionGeneration = 0;
 const dismissTimers = new Map<string, GameEffectHandle>();
 const cinemaHoldTimers = new Map<string, GameEffectHandle>();
+const cinemaDeadlines = new Map<string, number>();
 let flushTimer: GameEffectHandle | null = null;
 
 function nextChipId(): string {
@@ -116,6 +117,7 @@ export const useCombatFeedbackStore = create<CombatFeedbackState>((set, get) => 
 		dismissTimers.clear();
 		cinemaHoldTimers.forEach((timer) => timer.cancel());
 		cinemaHoldTimers.clear();
+		cinemaDeadlines.clear();
 		cancelFlushTimer();
 		return sessionGeneration;
 	};
@@ -194,6 +196,9 @@ export const useCombatFeedbackStore = create<CombatFeedbackState>((set, get) => 
 
 		releaseCinema: (holder) => {
 			const state = get();
+			cinemaDeadlines.delete(holder);
+			cinemaHoldTimers.get(holder)?.cancel();
+			cinemaHoldTimers.delete(holder);
 			if (!state.cinemaHolders.includes(holder)) return;
 			const cinemaHolders = state.cinemaHolders.filter((id) => id !== holder);
 			set({ cinemaHolders });
@@ -282,10 +287,25 @@ export function showStatus(
 	});
 }
 
+/** Drop a cinema deadline so the next occupant does not inherit it. */
+export function replaceCinemaHold(holder: string, holdMs: number): void {
+	cinemaHoldTimers.get(holder)?.cancel();
+	cinemaHoldTimers.delete(holder);
+	cinemaDeadlines.delete(holder);
+	occupyCinema(holder, holdMs);
+}
+
+export function releaseCinemaHold(holder: string): void {
+	useCombatFeedbackStore.getState().releaseCinema(holder);
+}
+
 /** Cinema occupancy for GSAP slams so the stack waits on the same pixel. */
 export function occupyCinema(holder: string, holdMs: number): void {
 	const store = useCombatFeedbackStore.getState();
 	store.holdCinema(holder);
+	const nextDeadline = Date.now() + Math.max(0, holdMs);
+	const deadline = Math.max(cinemaDeadlines.get(holder) ?? 0, nextDeadline);
+	cinemaDeadlines.set(holder, deadline);
 	cinemaHoldTimers.get(holder)?.cancel();
 	const generation = sessionGeneration;
 	let handle: GameEffectHandle;
@@ -294,10 +314,11 @@ export function occupyCinema(holder: string, holdMs: number): void {
 		lane: 'cinema-hold',
 		key: holder,
 		priority: 'critical',
-		delayMs: Math.max(0, holdMs),
+		delayMs: Math.max(0, deadline - Date.now()),
 		run: () => {
 			if (cinemaHoldTimers.get(holder) !== handle) return;
 			cinemaHoldTimers.delete(holder);
+			cinemaDeadlines.delete(holder);
 			if (generation !== sessionGeneration) return;
 			useCombatFeedbackStore.getState().releaseCinema(holder);
 		},

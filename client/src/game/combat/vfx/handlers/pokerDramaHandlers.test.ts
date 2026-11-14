@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CombatPhase, PokerHandRank } from '../../../types/PokerCombatTypes';
-import { emitHandRankAnnounced, emitPhaseEntered, emitSpellCast, emitWagerActivated } from '../events';
+import { emitHandRankAnnounced, emitPhaseEntered, emitRagnarokTriggered, emitSpellCast, emitStreakAnnounced, emitWagerActivated } from '../events';
 import { setVisualEventRendererEnabled } from '../emitter';
 import { resetVisualEffectRegistry } from '../registry';
 import { useCombatFeedbackStore } from '../../feedback/combatFeedbackStore';
@@ -12,6 +12,8 @@ const playPhaseDramaVFX = vi.fn();
 const playThorHammerVFX = vi.fn();
 const playPokerSpellCast = vi.fn();
 const playWagerActivate = vi.fn();
+const playRagnarokVFX = vi.fn();
+const playStreakAnnouncementVFX = vi.fn();
 
 vi.mock('../../../animations/ThorHammerVFX', () => ({
 	playThorHammerVFX: (...args: unknown[]) => playThorHammerVFX(...args),
@@ -29,11 +31,12 @@ vi.mock('../../animations/PokerDramaVFX', () => ({
 	playCardDealVFX: vi.fn(),
 	playCardSlamSound: vi.fn(),
 	playShowdownDamageVFX: vi.fn(),
-	playRagnarokVFX: vi.fn(),
-	playStreakAnnouncementVFX: vi.fn(),
+	playRagnarokVFX: (...args: unknown[]) => playRagnarokVFX(...args),
+	playStreakAnnouncementVFX: (...args: unknown[]) => playStreakAnnouncementVFX(...args),
 	playHandImprovementVFX: vi.fn(),
 	playPokerSpellCast: (...args: unknown[]) => playPokerSpellCast(...args),
 	playWagerActivate: (...args: unknown[]) => playWagerActivate(...args),
+	dismissCenterSlams: vi.fn(),
 }));
 
 describe('poker drama handlers — one event one FX', () => {
@@ -49,6 +52,8 @@ describe('poker drama handlers — one event one FX', () => {
 		playThorHammerVFX.mockReset();
 		playPokerSpellCast.mockReset();
 		playWagerActivate.mockReset();
+		playRagnarokVFX.mockReset();
+		playStreakAnnouncementVFX.mockReset();
 		unregister = registerPokerDramaVisualEffects();
 	});
 
@@ -76,6 +81,52 @@ describe('poker drama handlers — one event one FX', () => {
 		expect(playHandRankAnnouncement).toHaveBeenCalledTimes(1);
 		expect(playHandRankAnnouncement).toHaveBeenCalledWith('Odin\'s Eye', PokerHandRank.ODINS_EYE, true, true);
 		expect(playThorHammerVFX).not.toHaveBeenCalled();
+	});
+
+	it('lets RAGNAROK own the rank slot and starts LAST STAND after that read', () => {
+		emitRagnarokTriggered({ side: 'player' });
+		emitHandRankAnnounced({
+			side: 'player',
+			rank: PokerHandRank.RAGNAROK,
+			winner: 'player',
+		});
+		emitHandRankAnnounced({
+			side: 'opponent',
+			rank: PokerHandRank.HIGH_CARD,
+			winner: 'player',
+		});
+		emitStreakAnnounced({ side: 'player', streak: 0, kind: 'last_stand' });
+
+		vi.advanceTimersByTime(1_000);
+		expect(playRagnarokVFX).toHaveBeenCalledTimes(1);
+		expect(playHandRankAnnouncement).not.toHaveBeenCalled();
+		expect(playStreakAnnouncementVFX).not.toHaveBeenCalled();
+
+		vi.advanceTimersByTime(3_400);
+		expect(playRagnarokVFX).toHaveBeenCalledTimes(1);
+		expect(playStreakAnnouncementVFX).toHaveBeenCalledWith('LAST STAND', '#e5e7eb');
+	});
+
+	it('starts DOMINATION only after the winning rank has had its slot', () => {
+		for (let hand = 0; hand < 3; hand += 1) {
+			emitHandRankAnnounced({
+				side: 'player',
+				rank: PokerHandRank.RUNE_MARK,
+				winner: 'player',
+			});
+			emitHandRankAnnounced({
+				side: 'opponent',
+				rank: PokerHandRank.HIGH_CARD,
+				winner: 'player',
+			});
+		}
+
+		vi.advanceTimersByTime(1_000);
+		expect(playHandRankAnnouncement).toHaveBeenCalledTimes(1);
+		expect(playStreakAnnouncementVFX).not.toHaveBeenCalled();
+
+		vi.advanceTimersByTime(3_400);
+		expect(playStreakAnnouncementVFX).toHaveBeenCalledWith('DOMINATION', '#f5c542');
 	});
 
 	it('holds cinema so the stack waits during a phase slam', () => {

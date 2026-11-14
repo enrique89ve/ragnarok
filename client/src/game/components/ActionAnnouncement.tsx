@@ -1,12 +1,8 @@
-import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getAnnouncementConfig } from '../stores/unifiedUIStore';
 import { useAnimationAdapter } from '../hooks';
 import { GameIcon } from '../utils/ui/GameIcon';
-import { useCombatFeedbackStore } from '../combat/feedback/combatFeedbackStore';
 import './ActionAnnouncement.css';
-
-const ANNOUNCEMENT_CINEMA_HOLDER = 'action-announcement';
 
 const ANNOUNCEMENT_LABELS: Record<string, string> = {
   battlecry: 'Battlecry',
@@ -33,16 +29,6 @@ function getAnnouncementLabel(type: string): string {
 
 export function ActionAnnouncement() {
   const { currentAnnouncement } = useAnimationAdapter();
-
-  useEffect(() => {
-    const store = useCombatFeedbackStore.getState();
-    if (currentAnnouncement) {
-      store.holdCinema(ANNOUNCEMENT_CINEMA_HOLDER);
-      return () => store.releaseCinema(ANNOUNCEMENT_CINEMA_HOLDER);
-    }
-    store.releaseCinema(ANNOUNCEMENT_CINEMA_HOLDER);
-    return undefined;
-  }, [currentAnnouncement]);
 
   return (
     <div className="action-announcement-container">

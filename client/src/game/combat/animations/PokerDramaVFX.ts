@@ -72,6 +72,21 @@ function cleanup(el: HTMLElement) {
 	if (el.parentNode) el.parentNode.removeChild(el);
 }
 
+function markCenterSlam(el: HTMLElement): HTMLElement {
+	el.dataset.centerSlam = '1';
+	return el;
+}
+
+export function dismissCenterSlams(): void {
+	if (typeof document === 'undefined') return;
+	const container = document.getElementById(DRAMA_CONTAINER_ID);
+	if (!container) return;
+	container.querySelectorAll<HTMLElement>('[data-center-slam]').forEach((node) => {
+		gsap.killTweensOf(node);
+		node.remove();
+	});
+}
+
 /* Helper — screen-shake target.  `.game-viewport` carries the inline
    `transform: translate(offsetX, offsetY) scale(scale)` set by
    GameViewport.tsx for responsive canvas scaling. GSAP animations on
@@ -117,7 +132,7 @@ export function stopPokerOrphanSweep() {
 
 // Suit → element color mapping for card impacts
 const SUIT_PALETTES: Record<string, ParticleColor> = {
-	spades:   { primary: '#a855f7', secondary: '#c084fc', glow: 'rgba(168,85,247,0.6)' },
+	spades:   { primary: '#334155', secondary: '#e5e7eb', glow: 'rgba(51,65,85,0.55)' },
 	hearts:   { primary: '#ef4444', secondary: '#fca5a5', glow: 'rgba(239,68,68,0.6)' },
 	diamonds: { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
 	clubs:    { primary: '#22c55e', secondary: '#86efac', glow: 'rgba(34,197,94,0.6)' },
@@ -296,7 +311,7 @@ export function playReraiseVFX(isPlayer: boolean, reraiseLevel: number = 1) {
 	const shakeTarget = getShakeTarget();
 
 	// --- Tension vignette ---
-	const vignetteIntensity = Math.min(0.4 + reraiseLevel * 0.1, 0.7);
+	const vignetteIntensity = Math.min(0.16 + reraiseLevel * 0.04, 0.28);
 	const vignette = createDiv({
 		inset: '0',
 		background: `radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,${vignetteIntensity}) 100%)`,
@@ -305,7 +320,7 @@ export function playReraiseVFX(isPlayer: boolean, reraiseLevel: number = 1) {
 	container.appendChild(vignette);
 	gsap.fromTo(vignette,
 		{ opacity: 0 },
-		{ opacity: 1, duration: 0.3, yoyo: true, repeat: 1, repeatDelay: 0.6, onComplete: () => cleanup(vignette) }
+		{ opacity: 1, duration: 0.16, yoyo: true, repeat: 1, repeatDelay: 0.12, onComplete: () => cleanup(vignette) }
 	);
 
 	// --- Pressure shake (low frequency, not damage-like) ---
@@ -509,6 +524,7 @@ export function playHandRankAnnouncement(
 		opacity: '0'
 	});
 	text.textContent = rankName;
+	markCenterSlam(text);
 	container.appendChild(text);
 
 	const tl = gsap.timeline({ onComplete: () => cleanup(text) });
@@ -521,8 +537,7 @@ export function playHandRankAnnouncement(
 		ease: 'back.out(2)'
 	});
 
-	// Hold
-	tl.to(text, { duration: 1.2 });
+	tl.to(text, { duration: 3 });
 
 	// Fade out
 	tl.to(text, {
@@ -555,33 +570,23 @@ export function playRagnarokVFX() {
 	const container = getOrCreateContainer();
 	if (!container) return;
 
-	// White-out flash
-	const whiteout = createDiv({
+	const flash = createDiv({
 		inset: '0',
-		background: 'rgba(255, 255, 255, 0.6)',
-		zIndex: '20'
+		background: 'radial-gradient(circle at 50% 50%, rgba(220,38,38,0.45) 0%, rgba(245,197,66,0.18) 28%, transparent 62%)',
+		zIndex: '20',
 	});
-	container.appendChild(whiteout);
+	container.appendChild(flash);
 
-	const tl = gsap.timeline();
-
-	// Flash in
-	tl.fromTo(whiteout,
-		{ opacity: 0 },
-		{ opacity: 1, duration: 0.15 }
-	);
-
-	// Hold white
-	tl.to(whiteout, { duration: 0.5 });
-
-	// Fade to reveal RAGNAROK text
-	tl.to(whiteout, {
+	markCenterSlam(flash);
+	const flashTl = gsap.timeline();
+	flashTl.fromTo(flash, { opacity: 0 }, { opacity: 1, duration: 0.12 });
+	flashTl.to(flash, {
 		opacity: 0,
-		duration: 0.5,
-		onComplete: () => cleanup(whiteout)
-	});
+		duration: 0.28,
+		onComplete: () => cleanup(flash),
+	}, 0.2);
 
-	// RAGNAROK text
+	// RAGNAROK text — same 3.7s window as the other center titles
 	const ragnarokText = createDiv({
 		left: '50%',
 		top: '50%',
@@ -589,8 +594,8 @@ export function playRagnarokVFX() {
 		fontSize: '6rem',
 		fontFamily: "'Cinzel', 'Georgia', serif",
 		fontWeight: '900',
-		color: '#ef4444',
-		textShadow: '0 0 40px #ef4444, 0 0 80px #ef444488, 0 0 120px #ef444444, 0 6px 12px rgba(0,0,0,0.9)',
+		color: '#dc2626',
+		textShadow: '0 0 24px #dc2626, 0 0 48px rgba(220,38,38,0.45), 0 4px 8px rgba(0,0,0,0.8)',
 		letterSpacing: '12px',
 		textTransform: 'uppercase',
 		whiteSpace: 'nowrap',
@@ -598,44 +603,21 @@ export function playRagnarokVFX() {
 		opacity: '0'
 	});
 	ragnarokText.textContent = 'RAGNAROK';
+	markCenterSlam(ragnarokText);
 	container.appendChild(ragnarokText);
 
-	tl.to(ragnarokText, {
+	const textTl = gsap.timeline({ onComplete: () => cleanup(ragnarokText) });
+	textTl.to(ragnarokText, {
 		opacity: 1,
 		scale: 1,
-		duration: 0.4,
+		duration: 0.3,
 		ease: 'back.out(1.5)',
-		delay: 0.3
 	});
-
-	// Hold
-	tl.to(ragnarokText, { duration: 1.5 });
-
-	// Fade away
-	tl.to(ragnarokText, {
+	textTl.to(ragnarokText, { duration: 3 });
+	textTl.to(ragnarokText, {
 		opacity: 0,
 		scale: 0.8,
-		duration: 0.5,
-		onComplete: () => cleanup(ragnarokText)
-	});
-
-	// Particle explosions — anchored to the arena canvas, not the window
-	gameEffectCoordinator.scheduleSequence({
-		owner: 'poker-renderer',
-		lane: 'ragnarok-particles',
-		key: 'ragnarok',
-		priority: 'critical',
-		delaysMs: [800, 1_000, 1_200],
-		run: (stepIndex) => {
-			const center = getDramaContainerPoint(container);
-			if (stepIndex === 0) {
-				spawnParticleBurst(center.x, center.y, 25, ELEMENT_PALETTES.fire);
-				spawnImpactRing(center.x, center.y, RED_PALETTE);
-			} else {
-				const direction = stepIndex === 1 ? -1 : 1;
-				spawnParticleBurst(center.x + direction * 100, center.y, 20, ELEMENT_PALETTES.fire);
-			}
-		},
+		duration: 0.4,
 	});
 
 	// Heavy screen shake — wrapper, not viewport (see getShakeTarget)
@@ -645,7 +627,7 @@ export function playRagnarokVFX() {
 			x: 'random(-6, 6)',
 			y: 'random(-4, 4)',
 			duration: 0.1,
-			repeat: 8,
+			repeat: 4,
 			yoyo: true,
 			ease: 'none',
 			delay: 0.8,
@@ -775,7 +757,7 @@ export function playShowdownDamageVFX(
  * Phase-specific screen effects triggered when a new phase banner shows
  */
 export function playPhaseDramaVFX(phase: string) {
-	const SHAKE_PHASES = new Set(['pre_flop', 'faith', 'foresight', 'destiny']);
+	const SHAKE_PHASES = new Set(['destiny']);
 	if (!SHAKE_PHASES.has(phase)) return;
 
 	/*
@@ -841,11 +823,12 @@ export function playStreakAnnouncementVFX(
 		opacity: '0'
 	});
 	announcement.textContent = text;
+	markCenterSlam(announcement);
 	container.appendChild(announcement);
 
 	const tl = gsap.timeline({ onComplete: () => cleanup(announcement) });
 	tl.to(announcement, { opacity: 1, scale: 1, duration: 0.3, ease: 'back.out(2)' });
-	tl.to(announcement, { duration: 1 });
+	tl.to(announcement, { duration: 3 });
 	tl.to(announcement, { opacity: 0, y: -30, duration: 0.4 });
 }
 
@@ -864,21 +847,20 @@ export function playHandImprovementVFX(tier: 'low' | 'mid' | 'high' | 'godly') {
 		high: '#f5c542',
 		godly: '#b7791f',
 	};
-	const color = colors[tier] || '#e2e8f0';
+	const color = colors[tier] || '#e5e7eb';
+	const glow = tier === 'godly' || tier === 'high' ? 16 : 8;
 
-	// Edge glow for high+ improvements
-	if (tier === 'high' || tier === 'godly') {
-		const container = getOrCreateContainer();
-		if (!container) return;
-		const glow = createDiv({
-			inset: '0',
-			boxShadow: `inset 0 0 40px ${color}33`,
-		});
-		container.appendChild(glow);
-		gsap.to(glow, {
-			opacity: 0,
-			duration: 0.6,
-			onComplete: () => cleanup(glow)
+	for (let slotIndex = 0; slotIndex < 5; slotIndex += 1) {
+		const slot = getArenaVfxCommunitySlot(slotIndex);
+		if (!slot) continue;
+		gsap.fromTo(slot, {
+			boxShadow: `0 0 0px ${color}`,
+		}, {
+			boxShadow: `0 0 ${glow}px ${color}`,
+			duration: 0.16,
+			yoyo: true,
+			repeat: 1,
+			onComplete: () => { gsap.set(slot, { boxShadow: 'none' }); },
 		});
 	}
 
@@ -1078,7 +1060,7 @@ export function playPokerSpellCast(
 	const palette = POKER_SPELL_PALETTES[effectType] || POKER_SPELL_PALETTES.bluff_rune;
 	const burst = getDramaContainerPoint(container, caster === 'player' ? 0.75 : 0.25);
 
-	spawnParticleBurst(burst.x, burst.y, 22, palette);
+	spawnParticleBurst(burst.x, burst.y, 8, palette);
 	spawnImpactRing(burst.x, burst.y, palette);
 
 	getArenaVfxSpellTrayCards().forEach((el, index) => {
@@ -1091,15 +1073,15 @@ export function playPokerSpellCast(
 			lane: 'spell-state',
 			key: `spell-cast:${index}`,
 			priority: 'normal',
-			delayMs: 1_500,
+			delayMs: 640,
 			run: () => stampCardMotionClass(el, 'is-casting', false),
 		});
 	});
 }
 
 /**
- * Activate a wager effect. Gold/amber palette, rotate-pulse keyframe
- * on the wager-bearing minion frame, gold vignette fade.
+ * Activate a wager effect on the minion that carries it.
+ * The pulse stays on that frame. The board does not dim.
  */
 export function playWagerActivate(
 	wagerType: WagerType,
@@ -1110,16 +1092,8 @@ export function playWagerActivate(
 	const palette = WAGER_PALETTES[wagerType] || WAGER_PALETTES.showdown_win_armor;
 	const burst = getDramaContainerPoint(container, side === 'player' ? 0.7 : 0.3);
 
-	spawnParticleBurst(burst.x, burst.y, 14, palette);
+	spawnParticleBurst(burst.x, burst.y, 6, palette);
 	spawnImpactRing(burst.x, burst.y, palette);
-
-	const vignette = createDiv({
-		inset: '0',
-		background: `radial-gradient(ellipse at center, ${palette.primary}22 0%, transparent 55%)`,
-		zIndex: '1',
-	});
-	container.appendChild(vignette);
-	gsap.to(vignette, { opacity: 0, duration: 0.8, onComplete: () => cleanup(vignette) });
 
 	getArenaVfxWagerTargets(side).forEach((el, index) => {
 		stampCardMotionClass(el, 'is-activating', false);
@@ -1130,7 +1104,7 @@ export function playWagerActivate(
 			lane: 'wager-state',
 			key: `wager-activate:${side}:${index}`,
 			priority: 'normal',
-			delayMs: 1_100,
+			delayMs: 600,
 			run: () => stampCardMotionClass(el, 'is-activating', false),
 		});
 	});
