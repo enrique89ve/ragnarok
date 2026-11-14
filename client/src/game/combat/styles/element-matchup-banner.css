@@ -4,23 +4,35 @@
 	position: absolute;
 	inset: 0;
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	justify-content: center;
+	padding-top: var(--poker-cinema-lane-top);
 	z-index: var(--z-cinematic);
 	pointer-events: none;
-	background: radial-gradient(ellipse at center, rgba(0,0,0,0.5) 0%, transparent 70%);
+	background: linear-gradient(
+		to bottom,
+		transparent 0,
+		transparent calc(var(--poker-cinema-lane-top) - 8px),
+		rgba(0, 0, 0, 0.45) var(--poker-cinema-lane-top),
+		rgba(0, 0, 0, 0.45) calc(var(--poker-cinema-lane-top) + var(--poker-cinema-lane-height)),
+		transparent calc(var(--poker-cinema-lane-top) + var(--poker-cinema-lane-height) + 8px)
+	);
 }
 
 .element-matchup-banner {
 	display: flex;
-	flex-direction: column;
+	flex-direction: row;
 	align-items: center;
-	gap: 8px;
-	padding: 24px 48px;
+	justify-content: center;
+	gap: 12px;
+	padding: 0 20px;
 	background: linear-gradient(180deg, rgba(10,10,20,0.95) 0%, rgba(20,15,30,0.92) 100%);
 	border-top: 2px solid rgba(255,255,255,0.15);
 	border-bottom: 2px solid rgba(255,255,255,0.15);
-	min-width: 420px;
+	width: min(38%, 730px);
+	height: var(--poker-cinema-lane-height);
+	max-height: var(--poker-cinema-lane-height);
+	box-sizing: border-box;
 	position: relative;
 	overflow: hidden;
 }

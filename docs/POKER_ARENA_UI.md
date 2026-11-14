@@ -101,13 +101,13 @@ Gameplay events write `gameLogStore` always (practice, campaign, P2P). Overlay i
 
 | Lane | Occupant | Rule |
 |---|---|---|
-| Cinema | `PhaseBanner`, winner hand-rank slam, Ragnarok/streak slam | Exclusive. Stack waits. One visual event occupies this pixel. |
-| Stack | `CombatFeedbackStack` chips | Max 3, horizontal above the flop. Spells, blocked attacks, status. Reading dwell = enter 200ms + words + exit 160ms. |
+| Cinema | `PhaseBanner`, winner hand-rank slam, Ragnarok/streak slam | One **center title** at a time (`cinemaLanePolicy.ts`). Phase VFX shake does not cut the banner short; stack waits until the title holder releases. |
+| Stack | `CombatFeedbackStack` chips | One chip at a time above the flop; extras queue with `FEEDBACK_CASCADE_GAP_MS` (1.5s) between appearances. Reading dwell = enter 200ms + min 3s read + exit 160ms. |
 | Floater | `HeroBattlePopup`, `DamageIndicator`, showdown HP hit | On the actor, not the center. |
 | Zone | hole/community/hero motion | Lives on the card or hero that changed. |
 | Log | `GameLog` dock | Persistent. If the flash is missed, the dock still has it. |
 
-Mapping: `client/src/game/combat/vfx/pokerEventFx.ts`. `showStatus` / `NOTIFICATION` enqueue the stack, not Sonner. Sonner stays out of the poker canvas. `ActionAnnouncement` is not a poker-lane occupant.
+Mapping: `client/src/game/combat/vfx/pokerEventFx.ts`. `showStatus` / `NOTIFICATION` enqueue the stack, not Sonner. Sonner stays out of the poker canvas. `ActionAnnouncement` queues on the same 1.5s cascade and yields while stack/cinema presentation is busy.
 
 ### Clock / FX isolation
 

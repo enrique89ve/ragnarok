@@ -36,7 +36,7 @@ export function ActionAnnouncement() {
         {currentAnnouncement && (
           <motion.div
             key={currentAnnouncement.id}
-            className={`action-announcement action-announcement-${currentAnnouncement.type}`}
+            className={`action-announcement cinema-lane-plate action-announcement-${currentAnnouncement.type}`}
             initial={{
               opacity: 0,
               scale: 0.95,

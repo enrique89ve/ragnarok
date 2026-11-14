@@ -76,6 +76,7 @@ function readOpeningMulliganGate(): boolean {
 	return isOpeningMulliganGatingPoker(gs?.getState()?.gameState);
 }
 import { emitCommunityCardRevealed, emitPhaseEntered, emitWagerActivated, isWagerType } from '../../combat/vfx/events';
+import { POST_SHOWDOWN_HAND_BUFFER_MS } from '../../combat/pokerResolutionOutcome';
 
 function findPokerResourceViolation(state: PokerCombatState): ResourceInvariantViolation | null {
 	for (const participant of [state.player, state.opponent]) {
@@ -1989,7 +1990,7 @@ export const createPokerCombatSlice: StateCreator<
         debug.error('[startNextHandDelayed] startNextHand threw:', err);
         set({ isTransitioningHand: false });
       }
-    }, 2000);
+    }, POST_SHOWDOWN_HAND_BUFFER_MS);
   },
 
   cancelPendingPokerHandTransition,

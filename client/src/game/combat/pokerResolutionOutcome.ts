@@ -1,6 +1,8 @@
 /** Ceiling for rank + domination + ragnarok + last stand, then the verdict badge. */
 export const SHOWDOWN_PRESENTATION_BUDGET_MS = 21_000;
 export const SHOWDOWN_BACKUP_MS = 9000;
+/** Brief cushion after presentation/UI before FSM advances (replaces the old fixed 2s hand hop). */
+export const POST_SHOWDOWN_HAND_BUFFER_MS = 350;
 export const HERO_DEATH_PRESENTATION_BUDGET_MS = 4000;
 
 export type PokerCombatWinner = 'player' | 'opponent' | 'draw';

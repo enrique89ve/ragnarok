@@ -2,46 +2,22 @@
   position: absolute;
   inset: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  padding-top: var(--poker-cinema-lane-top);
   pointer-events: none;
   z-index: var(--z-cinematic);
 }
 
 .action-announcement {
-	width: min(38%, 620px);
-	max-height: 168px;
-  min-height: 116px;
-  box-sizing: border-box;
+	--cinema-accent: var(--rarity-color, var(--gold-300));
+  min-height: 0;
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
-  gap: 16px;
-  padding: 16px 24px 16px 16px;
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--surface-overlay-mid, #1f3d62) 96%, var(--rarity-color, var(--gold-300))) 0%,
-    color-mix(in srgb, var(--surface-overlay-deep, #0b1628) 98%, #000 2%) 100%
-  );
-  border: 1px solid color-mix(in srgb, var(--rarity-color, var(--gold-300)) 78%, #e5e7eb 22%);
-  border-radius: 0;
-  clip-path: polygon(
-    8px 0,
-    calc(100% - 8px) 0,
-    100% 8px,
-    100% calc(100% - 8px),
-    calc(100% - 8px) 100%,
-    8px 100%,
-    0 calc(100% - 8px),
-    0 8px
-  );
-  box-shadow:
-    0 0 28px color-mix(in srgb, var(--rarity-color, var(--gold-300)) 24%, transparent),
-    0 14px 30px rgba(0, 0, 0, 0.48),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    inset 0 0 0 1px rgba(3, 8, 16, 0.38);
-	position: relative;
-	overflow: hidden;
+  gap: 2px;
+  padding: 2px 16px;
+  overflow: hidden;
 }
 
 .action-announcement::before {
@@ -93,8 +69,14 @@
   left: 17px;
 }
 
+.announcement-icon-column,
+.announcement-rune,
+.announcement-kicker {
+  display: none;
+}
+
 .announcement-icon-column {
-  display: flex;
+  display: none;
   flex-direction: column;
   align-items: center;
   gap: 6px;
@@ -135,9 +117,9 @@
 .announcement-content {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 1px;
   min-width: 0;
-  padding-top: 2px;
+  padding-top: 0;
 }
 
 .announcement-kicker {
@@ -163,7 +145,9 @@
 
 .announcement-title {
   font-family: var(--type-display, 'Cinzel', serif);
-  font-size: clamp(18px, 1.25vw, 24px);
+  font-size: 18px;
+  line-height: 1;
+  -webkit-line-clamp: 1;
   font-weight: 800;
   color: var(--text-near-white);
   text-shadow:
@@ -171,7 +155,6 @@
     0 2px 4px rgba(0, 0, 0, 0.8);
   margin: 0;
   letter-spacing: 0.01em;
-  line-height: 1.08;
 	overflow-wrap: anywhere;
 	display: -webkit-box;
 	-webkit-box-orient: vertical;
@@ -182,15 +165,15 @@
 .announcement-subtitle {
   max-width: 54ch;
   font-family: var(--font-body, 'Source Sans 3', sans-serif);
-  font-size: clamp(12px, 0.78vw, 15px);
+  font-size: 13px;
+  line-height: 1;
+  -webkit-line-clamp: 1;
   font-weight: 500;
   color: rgba(229, 231, 235, 0.84);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   margin: 0;
-	line-height: 1.35;
 	display: -webkit-box;
 	-webkit-box-orient: vertical;
-	-webkit-line-clamp: 2;
 	overflow: hidden;
 }
 

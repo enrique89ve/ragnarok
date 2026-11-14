@@ -135,6 +135,7 @@ export interface UseRagnarokCombatControllerReturn {
   handleWeaponUpgrade: () => void;
   handleAction: (action: CombatAction, hp?: number) => void;
   handleCombatEnd: () => void;
+  beginNextPokerHandAfterShowdown: () => void;
 	handleHeroDeathComplete: () => void;
 	handleUnifiedEndTurn: () => void;
   
@@ -725,7 +726,10 @@ export function useRagnarokCombatController(
     }
   }, [mulliganActive, combatState?.phase, completeMulligan, mulliganProcessed, mulliganArmed, mulliganComplete, openingMulliganGatingPoker]);
   
+  const lastCommittedResolutionRef = useRef<NonNullable<typeof resolution>>(null);
+
   const commitPokerHandRewards = useCallback((resolved: NonNullable<typeof resolution>) => {
+    lastCommittedResolutionRef.current = resolved;
     const pokerState = getPokerCombatAdapterState().combatState;
     if (!pokerState) return;
     const gameStore = useGameStore.getState();
@@ -738,10 +742,16 @@ export function useRagnarokCombatController(
     });
     p2pActions.dispatchGameCommand(command, () => {
       advanceTurnPhase();
-      getPokerCombatAdapterState().startNextHandDelayed(resolved);
       setResolution(null);
     });
   }, [advanceTurnPhase, p2pActions]);
+
+  const beginNextPokerHandAfterShowdown = useCallback(() => {
+    const resolved = lastCommittedResolutionRef.current;
+    if (!resolved) return;
+    getPokerCombatAdapterState().startNextHandDelayed(resolved);
+    lastCommittedResolutionRef.current = null;
+  }, []);
 
   const handleAction = useCallback(async (action: CombatAction, hp?: number) => {
     if (combatState && !isPlayerTurn) return;
@@ -956,6 +966,11 @@ export function useRagnarokCombatController(
     handleCombatEndRef.current = handleCombatEnd;
   }, [handleCombatEnd]);
 
+  const beginNextPokerHandAfterShowdownRef = useRef(beginNextPokerHandAfterShowdown);
+  useEffect(() => {
+    beginNextPokerHandAfterShowdownRef.current = beginNextPokerHandAfterShowdown;
+  }, [beginNextPokerHandAfterShowdown]);
+
   useEffect(() => {
     if (showdownCelebration && !heroDeathState?.isAnimating) {
       // Commit the resolved hand immediately. The celebration is a retained
@@ -974,6 +989,7 @@ export function useRagnarokCombatController(
         debug.warn('[RagnarokCombatArena] Showdown backup timer fired - forcing combat end', { hasResolution: !!resolution });
         setShowdownCelebration(null);
         handleCombatEndRef.current();
+        beginNextPokerHandAfterShowdownRef.current();
       }, SHOWDOWN_BACKUP_MS);
     }
     
@@ -1008,6 +1024,7 @@ export function useRagnarokCombatController(
           cardPositionsRef.current.clear();
           adapter.setTransitioning(false);
           commitPokerHandRewards(resolution);
+          beginNextPokerHandAfterShowdown();
         }
       }, 3000);
     } else {
@@ -1136,6 +1153,7 @@ export function useRagnarokCombatController(
     handleWeaponUpgrade,
     handleAction,
     handleCombatEnd,
+    beginNextPokerHandAfterShowdown,
 	    handleHeroDeathComplete,
 	    handleUnifiedEndTurn,
     
