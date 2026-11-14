@@ -1,9 +1,5 @@
 export const MULLIGAN_OVERLAY_CLASS =
-	'absolute inset-0 z-10 pointer-events-auto flex flex-col items-center justify-center ' +
-	'bg-[radial-gradient(ellipse_45%_60%_at_center,transparent_0%,rgba(0,0,0,0.45)_75%,rgba(0,0,0,0.78)_100%),' +
-	'radial-gradient(ellipse_65%_85%_at_center,rgba(251,191,36,0.12)_0%,transparent_55%),' +
-	'radial-gradient(ellipse_at_center,rgba(10,15,30,0.88)_0%,rgba(0,0,0,0.96)_100%)] ' +
-	'backdrop-blur-xl backdrop-saturate-[0.85]';
+	'mulligan-chamber absolute inset-0 z-10 pointer-events-auto flex flex-col items-center justify-center overflow-hidden';
 
 export const MULLIGAN_TITLE_CLASS =
 	'font-display font-black text-white uppercase leading-none ' +

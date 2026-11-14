@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+
 /** Shared LoL-style opening-hand timing (one snappy deal beat). */
 export const MULLIGAN_LOL = {
 	dealStaggerS: 0.03,
@@ -9,4 +11,11 @@ export const MULLIGAN_LOL = {
 	ghostStaggerMs: 28,
 	ghostEnterMs: 200,
 	approachFadeS: 0.12,
+	/** Chamber iris that reveals the arena once the hand is committed. */
+	irisOpenMs: 480,
 } as const;
+
+/** Pins `.mulligan-chamber--iris` to `MULLIGAN_LOL.irisOpenMs`. */
+export const mulliganIrisDurationStyle = {
+	'--mulligan-iris-ms': `${MULLIGAN_LOL.irisOpenMs}ms`,
+} as CSSProperties;

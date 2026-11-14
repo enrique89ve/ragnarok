@@ -1,0 +1,96 @@
+/* Decision chamber and the letterbox plate share one obsidian fill and seam.
+   `--mulligan-iris-ms` is written from MULLIGAN_LOL.irisOpenMs. The 480ms
+   fallback matches that constant when the inline style is absent. */
+@property --mulligan-iris {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+
+:is(.mulligan-chamber, .mulligan-viewport-plate) {
+  /* DESIGN.md — Obsidian 950, Gold 300, Rune Cyan */
+  --mulligan-plate: #05070d;
+  --mulligan-gold: #f5c542;
+  --mulligan-rune: #38bdf8;
+  background-color: var(--mulligan-plate);
+}
+
+.mulligan-chamber {
+  background-image:
+    radial-gradient(
+      ellipse 48% 36% at 50% 54%,
+      color-mix(in srgb, var(--mulligan-gold) 5%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 130% 100% at 50% 50%,
+      transparent 36%,
+      var(--mulligan-plate) 74%
+    );
+}
+
+:is(.mulligan-chamber, .mulligan-viewport-plate)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    color-mix(in srgb, var(--mulligan-gold) 16%, transparent) 14%,
+    color-mix(in srgb, white 80%, var(--mulligan-gold)) 46%,
+    color-mix(in srgb, var(--mulligan-rune) 42%, transparent) 58%,
+    color-mix(in srgb, var(--mulligan-gold) 14%, transparent) 84%,
+    transparent 100%
+  );
+  box-shadow:
+    0 0 16px color-mix(in srgb, var(--mulligan-gold) 42%, transparent),
+    0 0 48px color-mix(in srgb, var(--mulligan-rune) 16%, transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.mulligan-chamber--iris {
+  pointer-events: none;
+  --mulligan-iris: 0%;
+  -webkit-mask-image: radial-gradient(
+    circle at 50% 48%,
+    transparent var(--mulligan-iris),
+    #000 calc(var(--mulligan-iris) + 2.4%)
+  );
+  mask-image: radial-gradient(
+    circle at 50% 48%,
+    transparent var(--mulligan-iris),
+    #000 calc(var(--mulligan-iris) + 2.4%)
+  );
+  animation-name: mulligan-iris-open;
+  animation-duration: var(--mulligan-iris-ms, 480ms);
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: forwards;
+}
+
+@keyframes mulligan-iris-open {
+  0% {
+    --mulligan-iris: 0%;
+    opacity: 1;
+  }
+
+  72% {
+    opacity: 1;
+  }
+
+  100% {
+    --mulligan-iris: 145%;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mulligan-chamber--iris {
+    will-change: auto;
+    animation: none;
+  }
+}

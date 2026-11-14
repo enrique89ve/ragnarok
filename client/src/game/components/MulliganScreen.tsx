@@ -13,7 +13,9 @@ import {
 	MULLIGAN_SUBTITLE_CLASS,
 	MULLIGAN_TITLE_CLASS,
 } from './mulligan/mulliganOverlayTokens';
-import { MULLIGAN_LOL } from './mulligan/mulliganLolTiming';
+import { MULLIGAN_LOL, mulliganIrisDurationStyle } from './mulligan/mulliganLolTiming';
+import { MULLIGAN_EXIT_IRIS_OWNER, useMulliganShell } from './mulligan/MulliganShellContext';
+import { useMulliganExitIris } from './mulligan/useMulliganExitIris';
 import { useArenaVfxRoot } from '../combat/arenaVfxContext';
 import { collectMountedMulliganCardTargets } from './mulligan/mulliganEntranceTargets';
 import { preloadMulliganHandArt } from '../utils/preloadMulliganHandArt';
@@ -24,7 +26,7 @@ import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../combat/arenaVfxTargets';
 import './mulligan.css';
 
 interface MulliganScreenProps {
-  mulligan: MulliganState;
+  mulligan: MulliganState | null | undefined;
   playerHand: ReadonlyArray<CardInstance>;
   onMulliganAction: (newState: any) => void;
 }
@@ -38,8 +40,6 @@ const MULLIGAN_CARD_STAGGER = MULLIGAN_LOL.dealStaggerS;
 const MULLIGAN_CARD_TRAVEL_DURATION = MULLIGAN_LOL.dealTravelS;
 const MULLIGAN_CARD_REVEAL_OFFSET = MULLIGAN_LOL.flipRevealOffsetS;
 const MULLIGAN_ACTION_SETTLE_DELAY = MULLIGAN_LOL.actionSettleS;
-
-const CINEMATIC_EASE = [0.16, 1, 0.3, 1] as const;
 
 export const MulliganScreen: React.FC<MulliganScreenProps> = ({
   mulligan,
@@ -62,9 +62,7 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
   const enhancedVFX = useSettingsStore(state => state.enhancedVFX);
   const reduceMotionSetting = useSettingsStore(state => state.reduceMotion);
   const arenaRoot = useArenaVfxRoot();
-  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(
-    () => (typeof document !== 'undefined' ? document.body : null),
-  );
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const mulliganCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const firstButtonRef = useRef<HTMLButtonElement>(null);
@@ -72,6 +70,18 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
   const [hoveredCardAnchor, setHoveredCardAnchor] = useState<HTMLElement | null>(null);
   const [hoveredCardRect, setHoveredCardRect] = useState<DOMRect | null>(null);
   const [dealRowPriming, setDealRowPriming] = useState(true);
+  const mulliganLive = Boolean(mulligan?.active);
+  const disableMotion = useMemo(() => {
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    return !animationsEnabled || reduceMotionSetting || prefersReducedMotion;
+  }, [animationsEnabled, reduceMotionSetting]);
+  const viewportOwnsExit = useMulliganShell().exitIrisOwner === MULLIGAN_EXIT_IRIS_OWNER.viewport;
+  const exitIris = useMulliganExitIris(mulliganLive, !disableMotion && !viewportOwnsExit);
+  const frozenHandRef = useRef(playerHand);
+  if (mulliganLive) frozenHandRef.current = playerHand;
+  const displayedHand = mulliganLive ? playerHand : frozenHandRef.current;
   const handleCardHoverChange = useCallback((card: CardInstance | null, anchor?: HTMLElement) => {
     setHoveredCard(card);
     setHoveredCardAnchor(anchor ?? null);
@@ -97,28 +107,25 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
   }, [hoveredCardAnchor]);
 
   useLayoutEffect(() => {
-    if (!mulligan?.active) return;
+    if (!exitIris.covered) {
+      setPortalTarget(null);
+      return;
+    }
     const modal = arenaRoot
       ? getArenaVfxLayer(ARENA_VFX_LAYERS.modal, arenaRoot)
-      : getArenaVfxLayer(ARENA_VFX_LAYERS.modal);
-    setPortalTarget(modal ?? (typeof document !== 'undefined' ? document.body : null));
-  }, [arenaRoot, mulligan?.active]);
+      : null;
+    setPortalTarget(modal);
+  }, [arenaRoot, exitIris.covered]);
 
-  const disableMotion = useMemo(() => {
-    const prefersReducedMotion =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    return !animationsEnabled || reduceMotionSetting || prefersReducedMotion;
-  }, [animationsEnabled, reduceMotionSetting]);
   const disableCardFx = disableMotion || !enhancedVFX;
 
   const selectedCount = useMemo(
-    () => Object.values(mulligan.playerSelections).filter(Boolean).length,
-    [mulligan.playerSelections]
+    () => Object.values(mulligan?.playerSelections ?? {}).filter(Boolean).length,
+    [mulligan?.playerSelections]
   );
   const validPlayerHand = useMemo(
-    () => playerHand.filter(card => card && card.card),
-    [playerHand]
+    () => displayedHand.filter(card => card && card.card),
+    [displayedHand]
   );
 
   useEffect(() => {
@@ -242,7 +249,7 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
     </div>
   );
 
-  if (!mulligan || !mulligan.active || !portalTarget) return null;
+  if (!exitIris.covered || !mulligan || !portalTarget) return null;
 
   const isWaiting = mulligan.playerReady;
   const cardRow = validPlayerHand.map((card, i) => {
@@ -314,36 +321,6 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
         Select cards to replace
       </motion.p>
     </motion.div>
-  );
-
-  const rings = disableMotion ? (
-    <>
-      <div className="mulligan-ring mulligan-ring-large" />
-      <div className="mulligan-ring mulligan-ring-small" />
-    </>
-  ) : (
-    <>
-      <motion.div
-        className="mulligan-ring mulligan-ring-large"
-        initial={{ opacity: 0, scale: 0.72, rotate: -12 }}
-        animate={{ opacity: 1, scale: 1, rotate: 360 }}
-        transition={{
-          opacity: { delay: 0.08, duration: 0.52, ease: 'easeOut' },
-          scale: { delay: 0.08, duration: 0.9, ease: CINEMATIC_EASE },
-          rotate: { duration: 60, repeat: Infinity, ease: 'linear' },
-        }}
-      />
-      <motion.div
-        className="mulligan-ring mulligan-ring-small"
-        initial={{ opacity: 0, scale: 0.82, rotate: 16 }}
-        animate={{ opacity: 1, scale: 1, rotate: -360 }}
-        transition={{
-          opacity: { delay: 0.18, duration: 0.52, ease: 'easeOut' },
-          scale: { delay: 0.18, duration: 0.9, ease: CINEMATIC_EASE },
-          rotate: { duration: 40, repeat: Infinity, ease: 'linear' },
-        }}
-      />
-    </>
   );
 
   const waitingIndicator = isWaiting ? (
@@ -419,98 +396,27 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
     </motion.div>
   );
 
-  const portal = disableMotion ? (
-    <div className="mulligan-portal-layer" aria-hidden="true">
-      <div className="mulligan-portal-aura" />
-      <div className="mulligan-portal-flare" />
-      <div className="mulligan-portal-beam mulligan-portal-beam-horizontal" />
-      <div className="mulligan-portal-beam mulligan-portal-beam-diagonal" />
-      <div className="mulligan-portal-core" />
-    </div>
-  ) : (
-    <div className="mulligan-portal-layer" aria-hidden="true">
-      <motion.div
-        className="mulligan-portal-aura"
-        initial={{ opacity: 0, scale: 0.34 }}
-        animate={{ opacity: [0, 0.72, 0.36], scale: [0.34, 1.08, 1] }}
-        transition={{ duration: 0.55, times: [0, 0.5, 1], ease: 'easeOut' }}
-      />
-      <motion.div
-        className="mulligan-portal-flare"
-        initial={{ opacity: 0, scale: 0.3, rotate: -18 }}
-        animate={{ opacity: [0, 0.65, 0.18], scale: [0.3, 1.06, 1], rotate: 0 }}
-        transition={{ duration: 0.48, times: [0, 0.48, 1], ease: 'easeOut' }}
-      />
-      <motion.div
-        className="mulligan-portal-beam mulligan-portal-beam-horizontal"
-        initial={{ opacity: 0, scaleX: 0.12 }}
-        animate={{ opacity: [0, 0.92, 0.08], scaleX: [0.12, 1.08, 1] }}
-        transition={{ duration: 0.42, times: [0, 0.45, 1], ease: 'easeOut' }}
-      />
-      <motion.div
-        className="mulligan-portal-beam mulligan-portal-beam-diagonal"
-        initial={{ opacity: 0, scaleX: 0.12, rotate: -24 }}
-        animate={{ opacity: [0, 0.72, 0.06], scaleX: [0.12, 1.02, 1], rotate: -24 }}
-        transition={{ duration: 0.45, times: [0, 0.42, 1], ease: 'easeOut' }}
-      />
-      <motion.div
-        className="mulligan-portal-core"
-        initial={{ opacity: 0, scale: 0.08 }}
-        animate={{ opacity: [0, 1, 0.16], scale: [0.08, 1.18, 0.82] }}
-        transition={{ duration: 0.4, times: [0, 0.45, 1], ease: 'easeOut' }}
-      />
-    </div>
-  );
-
-  const atmosphere = (
-    <>
-      <EmberField disableMotion={disableMotion} />
-      <div className="mulligan-atmosphere-layers absolute inset-0 pointer-events-none overflow-hidden">
-        {portal}
-        {rings}
-      </div>
-    </>
-  );
+  const atmosphere = <EmberField disableMotion={disableMotion} />;
+  const overlayClass = `${OVERLAY_CLASS}${exitIris.irisOpen ? ' mulligan-chamber--iris' : ''}`;
 
   const overlay = (
-    disableMotion ? (
-      <div
-        ref={containerRef}
-        className={OVERLAY_CLASS}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="mulligan-title"
-        aria-describedby="mulligan-subtitle"
-      >
-        {atmosphere}
-        {panel}
-        <MulliganDetailPanel hoveredCard={hoveredCard} anchorRect={hoveredCardRect} disableMotion />
-      </div>
-    ) : (
-      <AnimatePresence>
-      <motion.div
-        key="mulligan-overlay"
-        ref={containerRef}
-        className={OVERLAY_CLASS}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="mulligan-title"
-        aria-describedby="mulligan-subtitle"
-        initial={{ opacity: 0.72 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.22 }}
-      >
-        {atmosphere}
-        {panel}
-        <MulliganDetailPanel
-          hoveredCard={hoveredCard}
-          anchorRect={hoveredCardRect}
-          disableMotion={disableMotion}
-        />
-      </motion.div>
-      </AnimatePresence>
-    )
+    <div
+      ref={containerRef}
+      className={overlayClass}
+      style={exitIris.irisOpen ? mulliganIrisDurationStyle : undefined}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="mulligan-title"
+      aria-describedby="mulligan-subtitle"
+    >
+      {atmosphere}
+      {panel}
+      <MulliganDetailPanel
+        hoveredCard={hoveredCard}
+        anchorRect={hoveredCardRect}
+        disableMotion={disableMotion}
+      />
+    </div>
   );
 
   return createPortal(overlay, portalTarget);

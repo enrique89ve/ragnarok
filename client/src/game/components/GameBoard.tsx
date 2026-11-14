@@ -4,8 +4,6 @@ import SimpleBattlefield from './SimpleBattlefield';
 import Hand from './Hand';
 import { Graveyard } from './Graveyard';
 import { DiscoveryModal } from './DiscoveryModal';
-import { MulliganScreen } from './MulliganScreen';
-import { MulliganApproachOverlay } from './mulligan/MulliganApproachOverlay';
 import { CardInstance, CardData } from '../types';
 import { CardInstanceWithCardData } from '../types/interfaceExtensions';
 import { adaptCardInstance, reverseAdaptCardInstance } from '../utils/cards/cardInstanceAdapter';
@@ -2013,22 +2011,6 @@ export const GameBoard: React.FC<{}> = () => {
               </div>
             </div>
           </div>
-        )}
-
-        {gamePhase === 'mulligan' && gameState.mulligan && !gameState.mulligan.active && (
-          <MulliganApproachOverlay compact />
-        )}
-
-        {/* Mulligan Screen - only show during mulligan phase */}
-        {gamePhase === 'mulligan' && gameState.mulligan?.active && (
-          <MulliganScreen
-            mulligan={gameState.mulligan}
-            playerHand={player.hand}
-            onMulliganAction={() => {
-              // This is now handled directly by the store methods
-              // We leave this prop for compatibility, but don't need to do anything here
-            }}
-          />
         )}
 
         {/* New Attack System integration */}

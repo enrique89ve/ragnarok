@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { EmberField } from '../transitions/EmberField';
@@ -10,7 +10,6 @@ import {
 } from './mulliganOverlayTokens';
 import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../../combat/arenaVfxTargets';
 import { useArenaVfxRoot } from '../../combat/arenaVfxContext';
-import { MULLIGAN_LOL } from './mulliganLolTiming';
 import '../mulligan.css';
 
 export type MulliganApproachOverlayProps = {
@@ -35,9 +34,8 @@ const MulliganApproachOverlaySurface: React.FC<MulliganApproachOverlayProps> = (
 		role="status"
 		aria-live="polite"
 		aria-busy="true"
-		initial={disableMotion ? false : { opacity: 0.88 }}
+		initial={false}
 		animate={{ opacity: 1 }}
-		transition={{ duration: MULLIGAN_LOL.approachFadeS, ease: 'easeOut' }}
 	>
 		<EmberField disableMotion={disableMotion} />
 		{!compact && <div className="mulligan-approach-portal-ring" aria-hidden="true" />}
@@ -54,44 +52,12 @@ const MulliganApproachOverlaySurface: React.FC<MulliganApproachOverlayProps> = (
 	</motion.div>
 );
 
-/** Full-screen bridge while card mulligan assets / arena modal layer spin up. */
+/** Deal-bridge overlay. Portals only into `#arena-layer-modal`; skip if that layer is not mounted. */
 export const MulliganApproachOverlay: React.FC<MulliganApproachOverlayProps> = (props) => {
 	const arenaRoot = useArenaVfxRoot();
-	const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
-
-	useEffect(() => {
-		const resolve = () => {
-			const modal = arenaRoot
-				? getArenaVfxLayer(ARENA_VFX_LAYERS.modal, arenaRoot)
-				: getArenaVfxLayer(ARENA_VFX_LAYERS.modal);
-			if (modal) {
-				setPortalTarget(modal);
-				return;
-			}
-			if (typeof document !== 'undefined') {
-				setPortalTarget(document.body);
-			}
-		};
-		resolve();
-		const raf = window.requestAnimationFrame(resolve);
-		const retry = window.setTimeout(resolve, 48);
-		return () => {
-			window.cancelAnimationFrame(raf);
-			window.clearTimeout(retry);
-		};
-	}, [arenaRoot]);
-
+	const portalTarget = arenaRoot
+		? getArenaVfxLayer(ARENA_VFX_LAYERS.modal, arenaRoot)
+		: null;
 	if (!portalTarget) return null;
-
-	const surface = <MulliganApproachOverlaySurface {...props} />;
-	const useBodyFallback = portalTarget === document.body;
-
-	if (useBodyFallback) {
-		return createPortal(
-			<div className="mulligan-approach-fallback fixed inset-0 z-[1200]">{surface}</div>,
-			portalTarget,
-		);
-	}
-
-	return createPortal(surface, portalTarget);
+	return createPortal(<MulliganApproachOverlaySurface {...props} />, portalTarget);
 };
