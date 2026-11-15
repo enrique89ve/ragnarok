@@ -51,7 +51,7 @@ import {
   settleResolvedPokerHp,
   uncommitPokerHp,
 } from '../../combat/pokerCombatHp';
-import { notifyOpponentHpDebit } from '../../combat/notifyCombatHp';
+import { notifyHeroHpCredit, notifyOpponentHpDebit } from '../../combat/notifyCombatHp';
 import { compareHands } from '../../combat/modules/HandEvaluator';
 import { debug } from '../../config/debugConfig';
 import { applyStaminaShield, getExtraFoldPenalty } from '../../utils/poker/pokerSpellUtils';
@@ -1712,14 +1712,20 @@ export const createPokerCombatSlice: StateCreator<
     const state = get();
     if (!state.pokerCombatState) return;
     const healed = applyPokerHpDeltaOnSlot(state.pokerCombatState, 'player', amount);
-    if (healed) set({ pokerCombatState: healed.state });
+    if (healed) {
+      notifyHeroHpCredit(healed.state, healed, 'poker-heal-player');
+      set({ pokerCombatState: healed.state });
+    }
   },
 
   healOpponentHero: (amount: number) => {
     const state = get();
     if (!state.pokerCombatState) return;
     const healed = applyPokerHpDeltaOnSlot(state.pokerCombatState, 'opponent', amount);
-    if (healed) set({ pokerCombatState: healed.state });
+    if (healed) {
+      notifyHeroHpCredit(healed.state, healed, 'poker-heal-opponent');
+      set({ pokerCombatState: healed.state });
+    }
   },
 
   setPlayerHeroBuffs: (buffs: { attack?: number; health?: number; armor?: number }) => {

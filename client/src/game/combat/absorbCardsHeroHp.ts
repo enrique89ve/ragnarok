@@ -1,6 +1,7 @@
 import type { GameState } from '../types';
 import { useUnifiedCombatStore } from '../stores/unifiedCombatStore';
 import { readCardsHeroHp } from './combatHeroHp';
+import { notifyHeroHpCredit } from './notifyCombatHp';
 import { applyPokerHpDelta, pokerHpChannelId } from './pokerCombatHp';
 import { isPokerHeroHpProjectionLocked } from './hpProjectionLock';
 
@@ -21,6 +22,9 @@ export function absorbCardsHeroHpDelta(before: GameState, after: GameState): voi
 		if (delta === 0) continue;
 		const write = applyPokerHpDelta(next, pokerHpChannelId(next, slot), delta);
 		if (!write) continue;
+		if (delta > 0) {
+			notifyHeroHpCredit(write.state, write, 'cards-hero-hp-sync');
+		}
 		next = write.state;
 		changed = true;
 	}

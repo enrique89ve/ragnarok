@@ -217,17 +217,19 @@ export function useAnimations() {
     });
   };
   
-  // Add heal effect
   const addHealEffect = (
-    position: Position, 
-    amount: number, 
-    duration = 1
+    position: Position,
+    amount: number,
+    _duration = 1
   ) => {
-    return addAnimation({
-      type: 'heal',
-      position,
+    requestCombatDamageFloater({
+      id: `legacy-heal:${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      targetId: 'legacy-board',
       amount,
-      duration
+      x: position.x,
+      y: position.y,
+      coordinateSpace: 'viewport',
+      isHeal: true,
     });
   };
   

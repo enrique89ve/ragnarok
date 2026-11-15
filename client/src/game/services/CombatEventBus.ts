@@ -241,6 +241,18 @@ class CombatEventBusImpl {
     return event;
   }
 
+  emitHealResolved(data: Omit<HealResolvedEvent, 'type' | 'id' | 'timestamp' | 'turn'>): HealResolvedEvent {
+    const event: HealResolvedEvent = {
+      ...data,
+      type: 'HEAL_RESOLVED',
+      id: this.generateEventId(),
+      timestamp: Date.now(),
+      turn: this.currentTurn,
+    };
+    this.emit(event);
+    return event;
+  }
+
   emitAttackBlocked(data: Omit<AttackBlockedEvent, 'type' | 'id' | 'timestamp' | 'turn'>): AttackBlockedEvent {
     const event: AttackBlockedEvent = {
       ...data,

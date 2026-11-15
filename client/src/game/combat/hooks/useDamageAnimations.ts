@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { playSound } from '../../utils/soundUtils';
-import { CombatEventBus, type DamageResolvedEvent, type ImpactPhaseEvent } from '../../services/CombatEventBus';
+import { CombatEventBus, type DamageResolvedEvent, type HealResolvedEvent, type ImpactPhaseEvent } from '../../services/CombatEventBus';
 import {
 	presentationTargetForCombatant,
 } from '@/game/effects/presentation/CombatPresentation';
@@ -190,11 +190,21 @@ export function useDamageAnimations() {
 				amount: event.actualDamage,
 			});
 		});
+		const unsubHeal = CombatEventBus.subscribe<HealResolvedEvent>('HEAL_RESOLVED', (event) => {
+			if (event.actualHeal <= 0) return;
+			presentFloaterRequest({
+				id: `heal-resolved:${event.id}`,
+				targetId: event.targetId,
+				amount: event.actualHeal,
+				isHeal: true,
+			});
+		});
 
 		return () => {
 			unsubImpact();
 			unsubFloater();
 			unsubDamage();
+			unsubHeal();
 			claims.clear();
 		};
 	}, [presentFloaterRequest]);

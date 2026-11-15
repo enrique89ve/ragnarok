@@ -21,6 +21,23 @@ function resolveDamageSource(sourceCardId?: number): DamageSource {
 	return sourceCardId ? 'spell' : 'effect';
 }
 
+function emitEffectHealResolved(input: {
+	readonly targetId: string;
+	readonly actualHeal: number;
+	readonly healthBefore: number;
+	readonly healthAfter: number;
+	readonly sourceCardId?: number;
+}): void {
+	if (input.actualHeal <= 0) return;
+	CombatEventBus.emitHealResolved({
+		sourceId: input.sourceCardId ? String(input.sourceCardId) : 'effect',
+		targetId: input.targetId,
+		actualHeal: input.actualHeal,
+		targetHealthBefore: input.healthBefore,
+		targetHealthAfter: input.healthAfter,
+	});
+}
+
 function emitEffectDamageResolved(input: {
 	readonly targetId: string;
 	readonly targetType: 'hero' | 'minion';
@@ -623,6 +640,14 @@ export function healHero(
   // Apply healing
   targetPlayer.heroHealth = (targetPlayer.heroHealth ?? 0) + actualHealing;
 
+  emitEffectHealResolved({
+    targetId: `${targetPlayerId}-hero`,
+    actualHeal: actualHealing,
+    healthBefore: currentHealth,
+    healthAfter: targetPlayer.heroHealth ?? 0,
+    sourceCardId,
+  });
+
   newState.gameLog.push({
     id: uuidv4(),
     type: 'heal',
@@ -687,6 +712,14 @@ export function healMinion(
 
   // Update the card in the battlefield
   battlefield[targetIndex] = targetCard;
+
+  emitEffectHealResolved({
+    targetId: targetInstanceId,
+    actualHeal: actualHealing,
+    healthBefore: oldHealth,
+    healthAfter: targetCard.currentHealth,
+    sourceCardId,
+  });
 
   newState.gameLog.push({
     id: uuidv4(),
