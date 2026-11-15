@@ -35,7 +35,6 @@ import '../poker/styles/poker.css';
 import AIAttackAnimationProcessor from '../components/AIAttackAnimationProcessor';
 import { PixiParticleCanvas } from '../animations/PixiParticleCanvas';
 
-import { AnimationOverlay } from '../components/AnimationOverlay';
 import { ShowdownCelebration } from './components/ShowdownCelebration';
 import { TargetingPrompt } from './components/TargetingPrompt';
 import { HeroPowerPrompt } from './components/HeroPowerPrompt';
@@ -84,7 +83,6 @@ import { PlayerZone } from './zones/PlayerZone';
 import { MinionField } from './zones/MinionField';
 import { ARENA_VFX_LAYERS, arenaVfxLayerProps } from './arenaVfxTargets';
 import { ArenaVfxRootContext } from './arenaVfxContext';
-import { damageFloaterPositionForEntity } from './floaters/damageFloaterPosition';
 import { BoardOccupancyOverlay, POKER_VIEWPORT_LAYOUT_STYLE, POKER_VIEWPORT_SAFE_AREA } from '../poker';
 import { useCampaignStore, getMission } from '../campaign';
 import { isBettingPhase } from './modules/PhaseManager';
@@ -298,7 +296,6 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
     damageAnimations,
     shakingTargets,
     prevHealthRef,
-    triggerDamageAnimation,
     removeDamageAnimation,
     addShakingTarget,
   } = useDamageAnimations();
@@ -396,7 +393,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
     ? pokerDecisionView.localCanAct && !pauseView && !openingMulliganGatingPoker
     : cardGameIsPlayerTurn;
 
-  // Health change detection — triggers floating damage/heal numbers
+  // Health snapshot for VFX hooks; damage/heal numbers come from CombatEventBus only.
   useEffect(() => {
     if (!gameState) return;
     const player = gameState.players.player;
@@ -413,27 +410,8 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
       opponentMinions: new Map(opponent.battlefield.map(m => [m.instanceId, getCombatUnitHealth(m)]))
     };
 
-    const prev = prevHealthRef.current;
-    if (prev) {
-      const triggerHealFromDiff = (targetId: string, amount: number) => {
-        const pos = damageFloaterPositionForEntity(targetId);
-        if (pos) triggerDamageAnimation(targetId, amount, pos.x, pos.y, true);
-      };
-
-      const playerDiff = prev.playerHeroHealth - currentSnapshot.playerHeroHealth;
-      if (playerDiff < 0) {
-        triggerHealFromDiff('player-hero', Math.abs(playerDiff));
-      }
-
-      const opponentDiff = prev.opponentHeroHealth - currentSnapshot.opponentHeroHealth;
-      if (opponentDiff < 0) {
-        triggerHealFromDiff('opponent-hero', Math.abs(opponentDiff));
-      }
-
-    }
-
     prevHealthRef.current = currentSnapshot;
-  }, [gameState, combatState, triggerDamageAnimation, prevHealthRef]);
+  }, [gameState, combatState, prevHealthRef]);
 
   // Card click handlers (extracted to hook)
   const { handlePlayerCardClick, handleOpponentCardClick, handleCardPlay } = usePokerCardClickHandlers({
@@ -750,7 +728,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
 	} as const;
 
   useGameLogIntegration();
-  useEventAnimationBridge();
+  useEventAnimationBridge('card_burn_only');
   const resetKingEvents = useKingPassiveEventStore(s => s.reset);
 
   /*
@@ -1637,8 +1615,6 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
       {particleCanvasEnabled && (
         <PixiParticleCanvas />
       )}
-      <AnimationOverlay />
-      
       {/* First Strike is a presentation snapshot; gameplay was committed above. */}
       {firstStrikePresentation && (
         <FirstStrikeAnimation

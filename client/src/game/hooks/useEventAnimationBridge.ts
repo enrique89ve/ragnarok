@@ -25,13 +25,18 @@ function screenCenter(): { x: number; y: number } {
 	return { x: window.innerWidth / 2, y: window.innerHeight * 0.4 };
 }
 
-export function useEventAnimationBridge() {
+export type EventAnimationBridgeMode = 'full' | 'card_burn_only';
+
+export function useEventAnimationBridge(mode: EventAnimationBridgeMode = 'full') {
 	const store = useAnimationStore();
 
 	useEffect(() => {
 		const subscriber = getAnimationSubscriber();
 
 		const unsub = subscriber.onAnimation((queued) => {
+			if (mode === 'card_burn_only' && queued.type !== 'card_burn') {
+				return;
+			}
 			const sourcePos = resolvePosition(queued.sourceId);
 			const targetPos = resolvePosition(queued.targetId);
 			const params = (queued.params || {}) as Record<string, any>;
@@ -213,5 +218,5 @@ export function useEventAnimationBridge() {
 		});
 
 		return unsub;
-	}, []);
+	}, [mode, store]);
 }
