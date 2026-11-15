@@ -9,7 +9,6 @@
  * - Proper lifecycle management
  */
 
-import { debug } from '../config/debugConfig';
 import { create } from 'zustand';
 import {
 	COMBAT_DAMAGE_NUMBER_CRITICAL_READ_MS,
@@ -239,112 +238,9 @@ export const useAnimationOrchestrator = create<AnimationOrchestratorState>((set,
   },
 }));
 
-export function scheduleSummonEffect(
-  position: Position,
-  cardName: string,
-  rarity: 'common' | 'rare' | 'epic' | 'mythic',
-  phase?: string
-): string {
-  const duration = rarity === 'mythic' ? 2000 : 1200;
-
-  return useAnimationOrchestrator.getState().scheduleEffect({
-    category: 'summon',
-    priority: rarity === 'mythic' ? 'high' : 'normal',
-    position,
-    duration,
-    phase,
-    data: { cardName, rarity },
-  });
-}
-
-export function scheduleAttackEffect(
-  sourcePosition: Position,
-  targetPosition: Position,
-  damage: number,
-  phase?: string
-): string {
-  return useAnimationOrchestrator.getState().scheduleEffect({
-    category: 'attack',
-    priority: 'high',
-    sourcePosition,
-    targetPosition,
-    duration: 600,
-    phase,
-    data: { damage },
-  });
-}
-
 // Damage must remain readable after the impact/counter choreography has landed.
 export const DAMAGE_EFFECT_DURATION_MS = COMBAT_DAMAGE_NUMBER_READ_MS;
 export const DAMAGE_CRITICAL_EFFECT_DURATION_MS = COMBAT_DAMAGE_NUMBER_CRITICAL_READ_MS;
-
-export function scheduleAnnouncementEffect(
-  title: string,
-  type: string,
-  options?: {
-    subtitle?: string;
-    rarity?: string;
-    duration?: number;
-  }
-): string {
-  return useAnimationOrchestrator.getState().scheduleEffect({
-    category: 'announcement',
-    priority: 'high',
-    duration: options?.duration || 1800,
-    data: { title, type, ...options },
-  });
-}
-
-export type SpellEffectType = 'damage' | 'heal' | 'buff' | 'debuff' | 'summon' | 'aoe' | 'draw' | 'quest' | 'transform' | 'void' | 'default';
-
-export function scheduleSpellEffect(
-  spellName: string,
-  description: string,
-  spellType: SpellEffectType = 'default',
-  options?: {
-    duration?: number;
-    phase?: string;
-  }
-): string {
-  debug.animation(`[Animation] Scheduling spell effect: ${spellName} (${spellType})`);
-  return useAnimationOrchestrator.getState().scheduleEffect({
-    category: 'spell',
-    priority: 'high',
-    duration: options?.duration || 2000,
-    phase: options?.phase,
-    data: { spellName, description, spellType },
-  });
-}
-
-export function scheduleShuffleEffect(
-  heroName: string,
-  cardCount: number = 10,
-  sourcePosition?: Position,
-  targetPosition?: Position,
-  phase?: string
-): string {
-  if (typeof window === 'undefined') {
-    debug.warn('[Animation] scheduleShuffleEffect called in non-browser context');
-    return '';
-  }
-  
-  const calculatedDuration = 1500 + (cardCount * 80);
-  const defaultSource = { x: window.innerWidth / 2 - 200, y: window.innerHeight / 2 };
-  const defaultTarget = { x: window.innerWidth / 2 + 100, y: window.innerHeight / 2 };
-  
-  return useAnimationOrchestrator.getState().scheduleEffect({
-    category: 'shuffle',
-    priority: 'high',
-    duration: calculatedDuration,
-    phase,
-    data: { 
-      heroName, 
-      cardCount,
-      sourcePosition: sourcePosition || defaultSource,
-      targetPosition: targetPosition || defaultTarget
-    },
-  });
-}
 
 export function cancelAllAnimations(): void {
   useAnimationOrchestrator.getState().cancelAll();

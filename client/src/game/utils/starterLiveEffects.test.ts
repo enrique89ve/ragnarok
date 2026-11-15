@@ -18,9 +18,6 @@ import { debug } from '../config/debugConfig';
 vi.mock('../animations/AnimationManager', () => ({
 	useAnimationStore: { getState: () => ({ addAnimation: vi.fn() }) },
 }));
-vi.mock('../animations/UnifiedAnimationOrchestrator', () => ({
-	scheduleSpellEffect: vi.fn(),
-}));
 vi.mock('../stores/activityLogStore', () => ({ logActivity: vi.fn() }));
 
 const weaponCard: WeaponCardData = {

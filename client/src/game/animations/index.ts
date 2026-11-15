@@ -6,19 +6,12 @@
  *
  * Migration Guide:
  * ----------------
- * Old: import { useSummonEffectStore } from '../stores/summonEffectStore'
- * New: import { scheduleSummonEffect, useAnimationOrchestrator } from '../animations'
- * Damage and heal numbers use combat/floaters/combatDamageFloater, not this orchestrator.
- *
- * Old: import CardSummonEffect from '../components/CardSummonEffect'
- * New: Use <AnimationOverlay /> component which renders all effects via portal
+ * New code should use useAnimationOrchestrator for queued overlay effects (legacy board)
+ * or combat VFX handlers for poker. Damage and heal numbers use combatDamageFloater.
  */
 
 export {
   useAnimationOrchestrator,
-  scheduleSummonEffect,
-  scheduleAttackEffect,
-  scheduleAnnouncementEffect,
   cancelAllAnimations,
   cancelAnimationsByPhase,
   cancelAnimationsByCategory,
