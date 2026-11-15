@@ -8,6 +8,7 @@
  * ----------------
  * Old: import { useSummonEffectStore } from '../stores/summonEffectStore'
  * New: import { scheduleSummonEffect, useAnimationOrchestrator } from '../animations'
+ * Damage and heal numbers use combat/floaters/combatDamageFloater, not this orchestrator.
  *
  * Old: import CardSummonEffect from '../components/CardSummonEffect'
  * New: Use <AnimationOverlay /> component which renders all effects via portal
@@ -17,8 +18,6 @@ export {
   useAnimationOrchestrator,
   scheduleSummonEffect,
   scheduleAttackEffect,
-  scheduleDamageEffect,
-  scheduleHealEffect,
   scheduleAnnouncementEffect,
   cancelAllAnimations,
   cancelAnimationsByPhase,

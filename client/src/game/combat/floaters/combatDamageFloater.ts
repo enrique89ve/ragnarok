@@ -1,7 +1,10 @@
 /**
  * Single authority for combat damage/heal floater requests.
  * Presentation dedupes by stable event id before scheduling DamageIndicator.
+ * Listener failures stay inside this bus and never roll back gameplay.
  */
+
+import { debug } from '../../config/debugConfig';
 
 export type CombatDamageFloaterVariant = 'combat' | 'showdown';
 export type CombatDamageFloaterCoordinateSpace = 'arena' | 'viewport';
@@ -37,7 +40,11 @@ export function requestCombatDamageFloater(request: CombatDamageFloaterRequest):
 	if (request.amount <= 0) return false;
 	seenIds.set(request.id, now + SEEN_TTL_MS);
 	for (const listener of listeners) {
-		listener(request);
+		try {
+			listener(request);
+		} catch (error) {
+			debug.error('[combatDamageFloater] listener failed', error);
+		}
 	}
 	return true;
 }

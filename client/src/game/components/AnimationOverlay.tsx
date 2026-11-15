@@ -5,12 +5,9 @@
  * effects outside of transformed containers. This ensures correct fixed positioning
  * relative to the viewport regardless of parent transforms.
  *
- * This component consolidates rendering for:
- * - Summon effects
- * - Damage indicators
- * - Heal effects
- * - Attack trails
- * - Buff/debuff indicators
+ * This component consolidates rendering for summon, attack, spell, and shuffle
+ * effects queued on the orchestrator. Damage and heal numbers render only
+ * through DamageIndicator.
  */
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -168,15 +165,6 @@ const SummonEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo((
 });
 
 SummonEffectRenderer.displayName = 'SummonEffectRenderer';
-
-/** Damage floaters render via DamageIndicator + combatDamageFloater bus. */
-const DamageEffectRenderer: React.FC<{ effect: AnimationEffect }> = () => null;
-
-DamageEffectRenderer.displayName = 'DamageEffectRenderer';
-
-const HealEffectRenderer: React.FC<{ effect: AnimationEffect }> = () => null;
-
-HealEffectRenderer.displayName = 'HealEffectRenderer';
 
 const AttackEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo(({ effect }) => {
   const { sourcePosition, targetPosition } = effect;
@@ -372,10 +360,6 @@ const EffectRenderer: React.FC<{ effect: AnimationEffect }> = ({ effect }) => {
   switch (effect.category) {
     case 'summon':
       return <SummonEffectRenderer effect={effect} />;
-    case 'damage':
-      return <DamageEffectRenderer effect={effect} />;
-    case 'heal':
-      return <HealEffectRenderer effect={effect} />;
     case 'attack':
       return <AttackEffectRenderer effect={effect} />;
     case 'spell':
@@ -387,7 +371,7 @@ const EffectRenderer: React.FC<{ effect: AnimationEffect }> = ({ effect }) => {
   }
 };
 
-const RENDERED_CATEGORIES: AnimationCategory[] = ['summon', 'damage', 'heal', 'attack', 'spell', 'shuffle'];
+const RENDERED_CATEGORIES: AnimationCategory[] = ['summon', 'attack', 'spell', 'shuffle'];
 
 function isPoint(value: unknown): value is { x: number; y: number } {
   if (!value || typeof value !== 'object') return false;

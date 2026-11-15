@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Position } from '../types';
+import { requestCombatDamageFloater } from '../combat/floaters/combatDamageFloater';
 import { 
   AttackAnimation, 
   DamageEffect, 
@@ -200,17 +201,19 @@ export function useAnimations() {
     });
   };
   
-  // Add damage effect
+  // Damage numbers go through the floater bus. This hook must not enqueue a second renderer.
   const addDamageEffect = (
-    position: Position, 
-    amount: number, 
-    duration = 1
+    position: Position,
+    amount: number,
+    _duration = 1
   ) => {
-    return addAnimation({
-      type: 'damage',
-      position,
+    requestCombatDamageFloater({
+      id: `legacy-hook:${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      targetId: 'legacy-board',
       amount,
-      duration
+      x: position.x,
+      y: position.y,
+      coordinateSpace: 'viewport',
     });
   };
   

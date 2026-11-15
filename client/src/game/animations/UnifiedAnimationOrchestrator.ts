@@ -277,37 +277,6 @@ export function scheduleAttackEffect(
 // Damage must remain readable after the impact/counter choreography has landed.
 export const DAMAGE_EFFECT_DURATION_MS = COMBAT_DAMAGE_NUMBER_READ_MS;
 export const DAMAGE_CRITICAL_EFFECT_DURATION_MS = COMBAT_DAMAGE_NUMBER_CRITICAL_READ_MS;
-export const HEAL_EFFECT_DURATION_MS = COMBAT_DAMAGE_NUMBER_READ_MS;
-
-export function scheduleDamageEffect(
-	position: Position,
-	damage: number,
-	phase?: string
-): string {
-  return useAnimationOrchestrator.getState().scheduleEffect({
-    category: 'damage',
-    priority: 'normal',
-    position,
-		duration: DAMAGE_EFFECT_DURATION_MS,
-    phase,
-    data: { damage },
-  });
-}
-
-export function scheduleHealEffect(
-  position: Position,
-  amount: number,
-  phase?: string
-): string {
-  return useAnimationOrchestrator.getState().scheduleEffect({
-    category: 'heal',
-    priority: 'normal',
-    position,
-		duration: HEAL_EFFECT_DURATION_MS,
-    phase,
-    data: { amount },
-  });
-}
 
 export function scheduleAnnouncementEffect(
   title: string,

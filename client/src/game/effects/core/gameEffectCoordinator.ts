@@ -1,3 +1,5 @@
+import { debug } from '../../config/debugConfig';
+
 export type GameEffectPriority = 'low' | 'normal' | 'high' | 'critical';
 
 export interface GameEffectHandle {
@@ -130,6 +132,7 @@ export function createGameEffectCoordinator(
 				try {
 					sequence.run(index);
 				} catch (error) {
+					debug.error('[GameEffectCoordinator] effect step failed', error);
 					sequence.onError?.(error);
 				}
 				if (index === delays.length - 1) settleEntry(entry);

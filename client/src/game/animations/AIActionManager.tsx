@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { CardInstance, GameState } from '../types';
 import { useAnimation, useAnimationStore } from './AnimationManager';
+import { requestCombatDamageFloater } from '../combat/floaters/combatDamageFloater';
 import { debug } from '../config/debugConfig';
 import { assetPath } from '../utils/assetPath';
 
@@ -366,14 +367,14 @@ export const useAIActionManager = ({
                       duration: 300
                     });
                     
-                    // Add damage animation on target
-                    addAnimation({
-                      id: `damage-${action.targetId}`,
-                      type: 'damage',
-                      position: targetPosition,
-                      startTime: Date.now() + 300, // Slightly delayed
-                      duration: 800,
-                      value: attackerDamage
+                    requestCombatDamageFloater({
+                      id: `legacy-ai:${action.targetId}:${Date.now()}`,
+                      targetId: 'legacy-board',
+                      amount: attackerDamage,
+                      x: targetPosition.x,
+                      y: targetPosition.y,
+                      coordinateSpace: 'viewport',
+                      delayMs: 300,
                     });
                     
                     // Add particle burst for dramatic effect
@@ -397,14 +398,14 @@ export const useAIActionManager = ({
                         duration: 300
                       });
                       
-                      // Counter-attack damage number
-                      addAnimation({
-                        id: `damage-${action.cardId}`,
-                        type: 'damage',
-                        position: attackerPosition,
-                        startTime: Date.now() + 400, // Slightly more delayed
-                        duration: 800,
-                        value: defenderDamage
+                      requestCombatDamageFloater({
+                        id: `legacy-ai-counter:${action.cardId}:${Date.now()}`,
+                        targetId: 'legacy-board',
+                        amount: defenderDamage,
+                        x: attackerPosition.x,
+                        y: attackerPosition.y,
+                        coordinateSpace: 'viewport',
+                        delayMs: 400,
                       });
                       
                       // Counter-attack particles
