@@ -134,13 +134,47 @@ that need to be animated expose a stable attribute, for example:
 - `data-vfx-target="community-slot"` for each board card slot.
 - `data-vfx-slot-index="0"` through `data-vfx-slot-index="4"` for ordered
   board cards.
-- `data-vfx-target="risk-display"` for the current wager/risk display.
+- `data-vfx-target="risk-display"` for the HUD stakes chip (numeric feedback only).
+- `data-vfx-target="stake-sink"` on the hourglass timer — travel target for Bet/Raise particles.
 - `data-vfx-layer="game-viewport"` and
   `data-vfx-layer="game-viewport-wrapper"` for viewport-level effects.
 
 Imperative animation modules may query these attributes through the helper
 functions. They should not fall back to `.community-slot`, `.risk-display`,
 `.pot-display`, `.game-viewport`, or broad `[class*="..."]` selectors.
+
+### Intentional motion grammar (LoR-style)
+
+Poker arena VFX must answer **who changed** and **who received** the effect.
+Three motion kinds cover all betting, wager, and spell beats:
+
+| Motion | Meaning | Typical anchors | Must not imitate |
+|---|---|---|---|
+| `stake-to-pot` | HP committed to the pot (Bet/Raise) | caster hero → `stake-sink` (hourglass); HUD `risk-display` only micro-pulse | damage to opponent, screen vignette |
+| `travel-impact` | Hostile or cross-actor effect | wager card → defender hero; spell → target hero | anonymous center burst |
+| `local-pulse` | Buff or passive on the owning card | same wager minion frame | fullscreen flash |
+
+**Data contract** (`client/src/game/combat/vfx/events.ts`):
+
+- `emitWagerActivatedFromMinion` attaches `source` (wager `card-body`) and
+  `target` from `resolveWagerActivatedTarget`.
+- `emitBettingAction` may include `hpCommitment` for stack copy; VFX motion
+  stays `stake-to-pot` regardless of amount. The same event drives a **stake**
+  damage floater (`variant: 'stake'`, gold typography) on the committing hero —
+  no shake, distinct from combat damage.
+- `emitSpellCast` should carry `source`/`sourceInstanceId` when cast from a
+  known card frame.
+
+**Resolver / renderer**:
+
+- `client/src/game/combat/animations/pokerVfxCatalog.ts` — motion + palette +
+  arena points (`resolveArenaEffectPoint`).
+- `client/src/game/combat/animations/pokerVfxMotion.ts` — Pixi/GSAP execution.
+- Card frame glow (`.is-activating` / `.is-casting`) stamps **only** the
+  `sourceInstanceId` minion when provided, not every wager on the row.
+
+Minion combat (chess phase) keeps the separate directional `combatImpact`
+pipeline; do not route battlefield attacks through poker stake motion.
 
 ### Anti-patterns historically encountered
 

@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { CombatPhase } from '../../types/PokerCombatTypes';
-import { ARENA_VFX_TARGETS, arenaVfxTargetProps } from '../arenaVfxTargets';
 
 type CombatPhaseDirectorMode = 'setup' | 'wager' | 'resolution';
 
@@ -146,7 +145,6 @@ export const CombatPhaseDirector: React.FC<CombatPhaseDirectorProps> = ({
 						<span
 							key={`${metric.label}-${metric.value}-${index}`}
 							className={`combat-phase-director-pill tone-${metric.tone}`}
-							{...(metric.tone === 'risk' ? arenaVfxTargetProps(ARENA_VFX_TARGETS.riskDisplay) : {})}
 						>
 							<span className="combat-phase-director-pill-label">{metric.label}</span>
 							<span className="combat-phase-director-pill-value">{metric.value}</span>

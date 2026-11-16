@@ -20,6 +20,8 @@ export const ARENA_VFX_TARGETS = {
 	opponentHero: 'opponent-hero',
 	communitySlot: 'community-slot',
 	riskDisplay: 'risk-display',
+	/** Board-center stake sink (hourglass / pot focal point) — not the HUD stakes chip. */
+	stakeSink: 'stake-sink',
 	playerMinion: 'player-minion',
 	opponentMinion: 'opponent-minion',
 	spellTrayCard: 'spell-tray-card',
@@ -35,6 +37,17 @@ export type ArenaVfxCommunitySlotProps = ArenaVfxTargetProps & Record<typeof ARE
 export type ArenaVfxWagerMinionProps = ArenaVfxTargetProps & Record<typeof ARENA_VFX_OWNER_ATTRIBUTE, ArenaVfxOwner>;
 
 export type QueryRoot = Document | Element;
+
+/** Active poker arena subtree — avoids duplicate `data-vfx-target` hits elsewhere in the document. */
+let boundArenaVfxQueryRoot: QueryRoot | null = null;
+
+export function bindArenaVfxQueryRoot(root: QueryRoot | null): void {
+	boundArenaVfxQueryRoot = root;
+}
+
+export function getBoundArenaVfxQueryRoot(): QueryRoot | null {
+	return boundArenaVfxQueryRoot;
+}
 
 export function arenaVfxLayerProps(layer: ArenaVfxLayer): ArenaVfxLayerProps {
 	return { [ARENA_VFX_LAYER_ATTRIBUTE]: layer } as ArenaVfxLayerProps;
@@ -68,8 +81,18 @@ export function arenaVfxTargetSelector(target: ArenaVfxTarget): string {
 
 function getQueryRoot(root?: QueryRoot | null): QueryRoot | null {
 	if (root) return root;
+	if (boundArenaVfxQueryRoot) return boundArenaVfxQueryRoot;
 	if (typeof document === 'undefined') return null;
 	return document;
+}
+
+/** Coordinate space for Pixi/DOM VFX — the full-size layer, not nested overlays. */
+export function getArenaVfxCoordinateLayer(root?: QueryRoot | null): HTMLElement | null {
+	const queryRoot = getQueryRoot(root);
+	if (!queryRoot) return null;
+	const byId = queryRoot.querySelector<HTMLElement>('#arena-layer-vfx');
+	if (byId) return byId;
+	return queryRoot.querySelector<HTMLElement>(arenaVfxLayerSelector(ARENA_VFX_LAYERS.vfx));
 }
 
 export function getArenaVfxLayer(layer: ArenaVfxLayer, root?: QueryRoot | null): HTMLElement | null {
@@ -91,7 +114,14 @@ export function getArenaLocalPoint(
 }
 
 export function getArenaVfxTarget(target: ArenaVfxTarget, root?: QueryRoot | null): HTMLElement | null {
-	return getQueryRoot(root)?.querySelector<HTMLElement>(arenaVfxTargetSelector(target)) ?? null;
+	const queryRoot = getQueryRoot(root);
+	if (!queryRoot) return null;
+	if (target === ARENA_VFX_TARGETS.riskDisplay) {
+		return queryRoot.querySelector<HTMLElement>(
+			`${arenaVfxTargetSelector(target)}.hud-status-pot`,
+		) ?? queryRoot.querySelector<HTMLElement>(arenaVfxTargetSelector(target));
+	}
+	return queryRoot.querySelector<HTMLElement>(arenaVfxTargetSelector(target)) ?? null;
 }
 
 export function getArenaVfxTargets(target: ArenaVfxTarget, root?: QueryRoot | null): HTMLElement[] {
@@ -132,6 +162,27 @@ export function getArenaVfxSpellTrayCards(root?: QueryRoot | null): HTMLElement[
 export function getArenaVfxWagerTargets(owner: ArenaVfxOwner, root?: QueryRoot | null): HTMLElement[] {
 	return getArenaVfxTargets(ARENA_VFX_TARGETS.wagerMinion, root)
 		.filter(element => element.getAttribute(ARENA_VFX_OWNER_ATTRIBUTE) === owner);
+}
+
+/** Minion cards currently rendered inside a player's battlefield row. */
+export function getArenaVfxMinionCardElements(
+	owner: ArenaVfxOwner,
+	root?: QueryRoot | null,
+): HTMLElement[] {
+	const field = getArenaVfxMinionFieldTarget(owner, root);
+	if (!field) return [];
+	return Array.from(field.querySelectorAll<HTMLElement>('[data-instance-id]'));
+}
+
+export function minionCardCenterPoints(
+	owner: ArenaVfxOwner,
+	root?: QueryRoot | null,
+	yRatio = 0.5,
+): Array<{ readonly element: HTMLElement; readonly x: number; readonly y: number }> {
+	return getArenaVfxMinionCardElements(owner, root).map(element => {
+		const center = getElementCenter(element, yRatio);
+		return { element, x: center.x, y: center.y };
+	});
 }
 
 function hasTargetIdentity(element: HTMLElement, targetId: string): boolean {

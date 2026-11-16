@@ -81,7 +81,13 @@ import { OpponentZone } from './zones/OpponentZone';
 import { BoardZone } from './zones/BoardZone';
 import { PlayerZone } from './zones/PlayerZone';
 import { MinionField } from './zones/MinionField';
-import { ARENA_VFX_LAYERS, arenaVfxLayerProps } from './arenaVfxTargets';
+import {
+	ARENA_VFX_LAYERS,
+	ARENA_VFX_TARGETS,
+	arenaVfxLayerProps,
+	arenaVfxTargetProps,
+	bindArenaVfxQueryRoot,
+} from './arenaVfxTargets';
 import { ArenaVfxRootContext } from './arenaVfxContext';
 import { BoardOccupancyOverlay, POKER_VIEWPORT_LAYOUT_STYLE, POKER_VIEWPORT_SAFE_AREA } from '../poker';
 import { useCampaignStore, getMission } from '../campaign';
@@ -715,6 +721,11 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
 
 export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onCombatEnd }) => {
   const [arenaRoot, setArenaRoot] = useState<HTMLDivElement | null>(null);
+
+	useEffect(() => {
+		bindArenaVfxQueryRoot(arenaRoot);
+		return () => bindArenaVfxQueryRoot(null);
+	}, [arenaRoot]);
 	const hourglassPrefix = useId().replace(/[^a-zA-Z0-9_-]/g, '');
 	const hourglassIds = {
 		gold: `hourglass-${hourglassPrefix}-gold`,
@@ -1298,7 +1309,10 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
           const topH = pct * 30;
           const botH = (1 - pct) * 30;
           return (
-            <div className={`hourglass-timer ${outerDecisionView.hasClock && outerDecisionView.timerTone === 'low' ? 'low-time' : ''} ${outerDecisionView.hasClock && (outerDecisionView.timerTone === 'critical' || outerDecisionView.timerTone === 'expired') ? 'critical' : ''} ${outerDecisionView.hasClock ? '' : 'hourglass-timer--parked'}`}>
+            <div
+              className={`hourglass-timer ${outerDecisionView.hasClock && outerDecisionView.timerTone === 'low' ? 'low-time' : ''} ${outerDecisionView.hasClock && (outerDecisionView.timerTone === 'critical' || outerDecisionView.timerTone === 'expired') ? 'critical' : ''} ${outerDecisionView.hasClock ? '' : 'hourglass-timer--parked'}`}
+              {...arenaVfxTargetProps(ARENA_VFX_TARGETS.stakeSink)}
+            >
               <svg className="hourglass-svg" viewBox="0 0 60 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <defs>
                   <linearGradient id={hourglassIds.gold} x1="0" y1="0" x2="1" y2="1">
