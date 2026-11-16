@@ -75,7 +75,12 @@ function readOpeningMulliganGate(): boolean {
 		| undefined;
 	return isOpeningMulliganGatingPoker(gs?.getState()?.gameState);
 }
-import { emitCommunityCardRevealed, emitPhaseEntered, emitWagerActivated, isWagerType } from '../../combat/vfx/events';
+import {
+	emitCommunityCardRevealed,
+	emitPhaseEntered,
+	emitWagerActivatedFromMinion,
+	isShowdownResolvedWagerType,
+} from '../../combat/vfx/events';
 import { POST_SHOWDOWN_HAND_BUFFER_MS } from '../../combat/pokerResolutionOutcome';
 
 function findPokerResourceViolation(state: PokerCombatState): ResourceInvariantViolation | null {
@@ -1057,16 +1062,18 @@ export const createPokerCombatSlice: StateCreator<
               if (hit) {
                 notifyOpponentHpDebit(phasedCombat, hit, 'betting_round_damage');
                 phasedCombat = hit.state;
+                emitWagerActivatedFromMinion('betting_round_damage', 'player', m.instanceId);
               }
-				  emitWagerActivated({ wagerType: 'betting_round_damage', side: 'player' });
             }
           }
           for (const m of (gs.players?.opponent?.battlefield || [])) {
             const w = (m.card as any)?.wagerEffect;
             if (w?.type === 'betting_round_damage') {
               const hit = applyPokerHpDelta(phasedCombat, phasedCombat.player.playerId, -(w.value || 0));
-              if (hit) phasedCombat = hit.state;
-				  emitWagerActivated({ wagerType: 'betting_round_damage', side: 'opponent' });
+              if (hit) {
+                phasedCombat = hit.state;
+                emitWagerActivatedFromMinion('betting_round_damage', 'opponent', m.instanceId);
+              }
             }
           }
         }
@@ -1240,7 +1247,7 @@ export const createPokerCombatSlice: StateCreator<
             if (w?.type === 'on_opponent_fold_heal') {
               if (winner === 'player') playerFinalHealth = Math.min(playerFinalHealth + (w.value || 0), playerMaxHP);
               else opponentFinalHealth = Math.min(opponentFinalHealth + (w.value || 0), opponentMaxHP);
-			      emitWagerActivated({ wagerType: 'on_opponent_fold_heal', side: winner });
+              emitWagerActivatedFromMinion('on_opponent_fold_heal', winner, m.instanceId);
             }
           }
           // fold_penalty_to_healing: loser's minion converts fold HP loss into healing
@@ -1250,7 +1257,7 @@ export const createPokerCombatSlice: StateCreator<
               const loserCommittedHP = winner === 'player' ? opponentCommitted : playerCommitted;
               if (winner === 'player') opponentFinalHealth = Math.min(opponentCurrentHP + loserCommittedHP, opponentMaxHP);
               else playerFinalHealth = Math.min(playerCurrentHP + loserCommittedHP, playerMaxHP);
-			      emitWagerActivated({ wagerType: 'fold_penalty_to_healing', side: loserSide });
+              emitWagerActivatedFromMinion('fold_penalty_to_healing', loserSide, m.instanceId);
             }
           }
         }
@@ -1384,7 +1391,12 @@ export const createPokerCombatSlice: StateCreator<
         const playerBf = gameState.players?.player?.battlefield || [];
         const opponentBf = gameState.players?.opponent?.battlefield || [];
 
-        const applyShowdownWager = (wager: any, side: 'player' | 'opponent', hand: EvaluatedHand) => {
+        const applyShowdownWager = (
+          wager: any,
+          side: 'player' | 'opponent',
+          hand: EvaluatedHand,
+          sourceInstanceId: string,
+        ) => {
           const isWinner = winner === side;
           const isAllIn = side === 'player'
             ? combatState.player.pet.stats.currentHealth === 0
@@ -1448,20 +1460,22 @@ export const createPokerCombatSlice: StateCreator<
               break;
           }
 
-		  // 3-family separation: emit the typed presentation event for
-		  // Family 3 (nft) wager-bearing frames. Gameplay remains local here.
-		  if (isWagerType(wager.type)) {
-		    emitWagerActivated({ wagerType: wager.type, side });
-		  }
+          if (wager.type === 'all_in_buff_minions' && isAllIn) {
+            emitWagerActivatedFromMinion(wager.type, side, sourceInstanceId);
+          }
+          // Family 3 (nft) wager VFX: one emit per minion that resolves at showdown.
+          if (isShowdownResolvedWagerType(wager.type)) {
+            emitWagerActivatedFromMinion(wager.type, side, sourceInstanceId);
+          }
         };
 
         for (const m of playerBf) {
           const wager = (m.card as any)?.wagerEffect;
-          if (wager) applyShowdownWager(wager, 'player', playerHand);
+          if (wager) applyShowdownWager(wager, 'player', playerHand, m.instanceId);
         }
         for (const m of opponentBf) {
           const wager = (m.card as any)?.wagerEffect;
-          if (wager) applyShowdownWager(wager, 'opponent', opponentHand);
+          if (wager) applyShowdownWager(wager, 'opponent', opponentHand, m.instanceId);
         }
       }
     } catch { /* game state unavailable during pure poker — safe to skip */ }

@@ -23,7 +23,7 @@ import {
   getExtraFoldPenalty as utilGetExtraFoldPenalty,
   clearCombatSpellEffects
 } from '../../utils/poker/pokerSpellUtils';
-import { emitSpellCast } from '../../combat/vfx/events';
+import { emitSpellCast, wagerMinionSource } from '../../combat/vfx/events';
 
 const initialState: PokerSpellSliceState = {
   pokerSpellState: null,
@@ -120,7 +120,13 @@ export const createPokerSpellSlice: StateCreator<
 
 			// Presentation is emitted after the complete gameplay commit. The poker
 			// VFX registry owns scheduling and rendering; this slice owns state only.
-			emitSpellCast({ effectType: spell.pokerSpellEffect.effectType, side: caster });
+			const spellSourceId = String(spell.id);
+			emitSpellCast({
+				effectType: spell.pokerSpellEffect.effectType,
+				side: caster,
+				sourceInstanceId: spellSourceId,
+				source: wagerMinionSource(spellSourceId),
+			});
     }
     
     return result;

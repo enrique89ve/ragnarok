@@ -7,7 +7,7 @@ import {
 import { emitVisualEvent } from './emitter';
 import type { PokerSpellEffectType } from '../../types/CardTypes';
 import type { CombatAction, CombatPhase, PokerCard, PokerHandRank } from '../../types/PokerCombatTypes';
-import type { AttackEffectIntent } from '@/game/effects/core/effectIntentTypes';
+import type { AttackEffectIntent, EffectAnchor, EffectEndpoint } from '@/game/effects/core/effectIntentTypes';
 import type { CombatPresentation } from '@/game/effects/presentation/types';
 import type { ResolvedAttack } from '@/game/services/AttackResolutionService';
 
@@ -122,12 +122,70 @@ export interface SpellCastEvent extends VisualEventBase {
 	type: 'spellCast';
 	effectType: PokerSpellEffectType;
 	side: ArenaVfxOwner;
+	sourceInstanceId?: string;
+	source?: EffectEndpoint;
 }
 
 export interface WagerActivatedEvent extends VisualEventBase {
 	type: 'wagerActivated';
 	wagerType: WagerType;
 	side: ArenaVfxOwner;
+	sourceInstanceId?: string;
+	source?: EffectEndpoint;
+	target?: EffectEndpoint;
+}
+
+export const WAGER_TYPES_RESOLVED_AT_SHOWDOWN = [
+	'showdown_win_armor',
+	'showdown_coin_flip',
+	'showdown_win_rank_damage',
+	'showdown_aoe_damage',
+	'showdown_hand_rank_draw',
+	'showdown_win_draw_and_damage',
+	'double_showdown_multiplier',
+	'all_in_bonus_with_cost',
+] as const satisfies readonly WagerType[];
+
+export function isShowdownResolvedWagerType(wagerType: WagerType): boolean {
+	return WAGER_TYPES_RESOLVED_AT_SHOWDOWN.some(type => type === wagerType);
+}
+
+function heroEntityIdForOwner(owner: ArenaVfxOwner): string {
+	return owner === 'player' ? ARENA_VFX_TARGETS.playerHero : ARENA_VFX_TARGETS.opponentHero;
+}
+
+function heroEndpoint(owner: ArenaVfxOwner, anchor: EffectAnchor): EffectEndpoint {
+	return { entityId: heroEntityIdForOwner(owner), anchor };
+}
+
+export function wagerMinionSource(instanceId: string): EffectEndpoint {
+	return { entityId: instanceId, anchor: 'card-body' };
+}
+
+/** Default hero-anchored target for a wager VFX beat (presentation only). */
+export function resolveWagerActivatedTarget(
+	wagerType: WagerType,
+	side: ArenaVfxOwner,
+): EffectEndpoint | undefined {
+	switch (wagerType) {
+		case 'betting_round_damage':
+		case 'showdown_win_rank_damage':
+		case 'showdown_aoe_damage':
+		case 'showdown_win_draw_and_damage':
+			return heroEndpoint(side === 'player' ? 'opponent' : 'player', 'health-bar');
+		case 'on_opponent_fold_heal':
+		case 'fold_penalty_to_healing':
+		case 'showdown_win_armor':
+		case 'showdown_hand_rank_draw':
+			return heroEndpoint(side, 'health-bar');
+		case 'showdown_coin_flip':
+		case 'all_in_bonus_with_cost':
+			return heroEndpoint(side === 'player' ? 'opponent' : 'player', 'health-bar');
+		case 'double_showdown_multiplier':
+			return heroEndpoint(side, 'hero-body');
+		default:
+			return undefined;
+	}
 }
 
 export interface CombatImpactEvent extends VisualEventBase {
@@ -274,6 +332,21 @@ export function emitWagerActivated(data: Omit<WagerActivatedEvent, 'type' | 'id'
 	const event: WagerActivatedEvent = { type: 'wagerActivated', ...baseEventFields(), ...data };
 	emitVisualEvent(event);
 	return event;
+}
+
+export function emitWagerActivatedFromMinion(
+	wagerType: WagerType,
+	side: ArenaVfxOwner,
+	sourceInstanceId: string,
+): WagerActivatedEvent {
+	const target = resolveWagerActivatedTarget(wagerType, side);
+	return emitWagerActivated({
+		wagerType,
+		side,
+		sourceInstanceId,
+		source: wagerMinionSource(sourceInstanceId),
+		...(target ? { target } : {}),
+	});
 }
 
 export function emitCombatImpact(

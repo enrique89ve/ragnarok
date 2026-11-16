@@ -901,7 +901,7 @@ export function useRagnarokCombatController(
 	}
 
     // Trigger poker drama VFX for the betting action (post-commit)
-    emitBettingAction({ phase: freshState.phase, action, side: 'player' });
+    emitBettingAction({ phase: freshState.phase, action, side: 'player', hpCommitment: hp });
 
     if (action === CombatAction.BRACE && !connectedP2P) {
       endTurn();
