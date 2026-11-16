@@ -6,7 +6,7 @@
 
 import { debug } from '../../config/debugConfig';
 
-export type CombatDamageFloaterVariant = 'combat' | 'showdown';
+export type CombatDamageFloaterVariant = 'combat' | 'showdown' | 'stake';
 export type CombatDamageFloaterCoordinateSpace = 'arena' | 'viewport';
 
 export interface CombatDamageFloaterRequest {

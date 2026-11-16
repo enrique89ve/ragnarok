@@ -36,7 +36,7 @@ interface DamageIndicatorProps {
 	y: number;
 	isHeal?: boolean;
 	aside?: boolean;
-	variant?: 'combat' | 'showdown';
+	variant?: 'combat' | 'showdown' | 'stake';
 	coordinateSpace?: 'arena' | 'viewport';
 	onComplete: () => void;
 }
@@ -85,6 +85,7 @@ export const DamageIndicator: React.FC<DamageIndicatorProps> = ({
 		isCritical ? 'damage-critical' : '',
 		aside ? 'damage-aside' : '',
 		variant === 'showdown' ? 'damage-showdown' : '',
+		variant === 'stake' ? 'damage-stake' : '',
 	].filter(Boolean).join(' ');
 
 	if (coordinateSpace === 'viewport' && typeof document !== 'undefined') {

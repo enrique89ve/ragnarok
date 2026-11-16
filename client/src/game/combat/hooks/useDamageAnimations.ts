@@ -20,7 +20,7 @@ export interface DamageAnimation {
 	y: number;
 	timestamp: number;
 	isHeal?: boolean;
-	variant?: 'combat' | 'showdown';
+	variant?: 'combat' | 'showdown' | 'stake';
 	coordinateSpace?: 'arena' | 'viewport';
 }
 
@@ -76,7 +76,7 @@ export function useDamageAnimations() {
 		isHeal?: boolean,
 		showNumber?: boolean,
 		animationId?: string,
-		variant?: 'combat' | 'showdown',
+		variant?: 'combat' | 'showdown' | 'stake',
 		coordinateSpace?: 'arena' | 'viewport',
 	) => void>(() => {});
 
@@ -88,7 +88,7 @@ export function useDamageAnimations() {
 		isHeal = false,
 		showNumber = true,
 		animationId?: string,
-		variant: 'combat' | 'showdown' = 'combat',
+		variant: 'combat' | 'showdown' | 'stake' = 'combat',
 		coordinateSpace: 'arena' | 'viewport' = 'arena',
 	) => {
 		if (showNumber) {
@@ -107,7 +107,9 @@ export function useDamageAnimations() {
 		}
 		const isHeroTarget = targetId === 'player-hero' || targetId === 'opponent-hero';
 		if (!isHeal) {
-			if (isHeroTarget) {
+			if (variant === 'stake') {
+				// Stake commits are economic, not combat hits — number only.
+			} else if (isHeroTarget) {
 				setShakingTargets(prev => new Set(prev).add(targetId));
 				const t = setTimeout(() => {
 					shakeTimersRef.current.delete(t);
@@ -176,7 +178,7 @@ export function useDamageAnimations() {
 		});
 
 		const unsubFloater = subscribeCombatDamageFloater((request) => {
-			if (!request.isHeal && request.amount > 0) {
+			if (!request.isHeal && request.amount > 0 && request.variant !== 'stake') {
 				addClaim(request.targetId, request.amount);
 			}
 			presentFloaterRequest(request);
