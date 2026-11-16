@@ -6,9 +6,8 @@ import { debug } from '../config/debugConfig';
 import { createEffectRandom } from '@/game/effects/core/effectRandom';
 import {
 	ARENA_CANVAS_SIZE,
-	ARENA_VFX_LAYERS,
 	getArenaLocalPoint,
-	getArenaVfxLayer,
+	getArenaVfxCoordinateLayer,
 	type QueryRoot,
 } from '../combat/arenaVfxTargets';
 import { useArenaVfxRoot } from '../combat/arenaVfxContext';
@@ -81,7 +80,7 @@ function clearAmbientTimers() {
 }
 
 function toArenaPoint(x: number, y: number): { x: number; y: number } | null {
-	const layer = getArenaVfxLayer(ARENA_VFX_LAYERS.vfx, activeArenaVfxRoot);
+	const layer = getArenaVfxCoordinateLayer(activeArenaVfxRoot);
 	return layer ? getArenaLocalPoint({ x, y }, layer) : null;
 }
 
@@ -365,37 +364,202 @@ export function spawnDirectionalImpactBurst(
 	}
 }
 
+export type ImpactRingVariant = 'standard' | 'luminous';
+
 export function spawnImpactRing(
 	cx: number, cy: number,
-	palette: ParticleColor
+	palette: ParticleColor,
+	variant: ImpactRingVariant = 'standard',
 ) {
 	if (!pixiApp || !burstContainer) return;
 	const center = toArenaPoint(cx, cy);
 	if (!center) return;
 
+	const luminous = variant === 'luminous';
+	const baseRadius = luminous ? 36 : 20;
+	const strokeWidth = luminous ? 5 : 3;
+	const endScale = luminous ? 4.4 : 2.5;
+	const animDuration = luminous ? 0.5 : 0.35;
+
+	if (luminous) {
+		const bloom = new Graphics();
+		bloom.circle(0, 0, baseRadius * 0.9);
+		bloom.fill({ color: hexToNum(palette.primary), alpha: 0.28 });
+		bloom.position.set(center.x, center.y);
+		bloom.alpha = 0.95;
+		bloom.scale.set(0.15);
+		burstContainer.addChild(bloom);
+		gsap.to(bloom, {
+			alpha: 0,
+			duration: motionDuration(animDuration),
+			ease: 'power2.out',
+			onComplete: () => {
+				burstContainer?.removeChild(bloom);
+				bloom.destroy();
+			},
+		});
+		gsap.to(bloom.scale, {
+			x: endScale,
+			y: endScale,
+			duration: motionDuration(animDuration),
+			ease: 'power2.out',
+		});
+	}
+
 	const ring = new Graphics();
-	ring.circle(0, 0, 20);
-	ring.stroke({ width: 3, color: hexToNum(palette.primary) });
+	if (luminous) {
+		ring.circle(0, 0, baseRadius);
+		ring.stroke({ width: 2, color: hexToNum(palette.secondary), alpha: 0.65 });
+		ring.circle(0, 0, baseRadius * 0.72);
+		ring.stroke({ width: strokeWidth, color: hexToNum(palette.primary), alpha: 1 });
+	} else {
+		ring.circle(0, 0, baseRadius);
+		ring.stroke({ width: strokeWidth, color: hexToNum(palette.primary) });
+	}
 	ring.position.set(center.x, center.y);
-	ring.alpha = 0.9;
+	ring.alpha = luminous ? 1 : 0.9;
 	ring.scale.set(0.2);
 	burstContainer.addChild(ring);
 
 	gsap.to(ring, {
 		alpha: 0,
-		duration: motionDuration(0.35),
+		duration: motionDuration(animDuration),
 		ease: 'power2.out',
 		onComplete: () => {
 			burstContainer?.removeChild(ring);
 			ring.destroy();
-		}
+		},
 	});
 	gsap.to(ring.scale, {
-		x: 2.5,
-		y: 2.5,
-		duration: motionDuration(0.35),
-		ease: 'power2.out',
+		x: endScale,
+		y: endScale,
+		duration: motionDuration(animDuration),
+		ease: luminous ? 'power3.out' : 'power2.out',
 	});
+}
+
+/** Bright ring glides from source to target (poker stake / travel). */
+export function spawnTravelingGlowRing(
+	sx: number,
+	sy: number,
+	tx: number,
+	ty: number,
+	palette: ParticleColor,
+	durationMs = 360,
+) {
+	if (!pixiApp || !trailContainer) return;
+	const start = toArenaPoint(sx, sy);
+	const end = toArenaPoint(tx, ty);
+	if (!start || !end) return;
+
+	const travelSec = motionDuration(Math.max(1, durationMs) / 1000);
+	const orb = new Container();
+	orb.position.set(start.x, start.y);
+	orb.alpha = 0.95;
+
+	const outerHalo = new Graphics();
+	outerHalo.circle(0, 0, 30);
+	outerHalo.stroke({ width: 2, color: hexToNum(palette.secondary), alpha: 0.55 });
+	const mainRing = new Graphics();
+	mainRing.circle(0, 0, 24);
+	mainRing.stroke({ width: 4, color: hexToNum(palette.primary), alpha: 1 });
+	const coreGlow = new Graphics();
+	coreGlow.circle(0, 0, 14);
+	coreGlow.fill({ color: hexToNum(palette.primary), alpha: 0.38 });
+
+	orb.addChild(outerHalo);
+	orb.addChild(mainRing);
+	orb.addChild(coreGlow);
+	orb.scale.set(0.65);
+	trailContainer.addChild(orb);
+
+	gsap.to(orb, {
+		x: end.x,
+		y: end.y,
+		duration: travelSec,
+		ease: 'power2.in',
+	});
+	gsap.to(orb.scale, {
+		x: 1.15,
+		y: 1.15,
+		duration: travelSec * 0.45,
+		yoyo: true,
+		repeat: 1,
+		ease: 'sine.inOut',
+	});
+	gsap.to(orb, {
+		alpha: 0.25,
+		duration: travelSec * 0.25,
+		delay: travelSec * 0.72,
+		ease: 'power1.in',
+		onComplete: () => {
+			trailContainer?.removeChild(orb);
+			orb.destroy({ children: true });
+			spawnImpactRing(tx, ty, palette, 'luminous');
+		},
+	});
+}
+
+export function spawnPokerTravelTrail(
+	sx: number,
+	sy: number,
+	tx: number,
+	ty: number,
+	palette: ParticleColor,
+	seed?: string,
+	durationMs = 360,
+) {
+	spawnSlashTrail(sx, sy, tx, ty, 18, palette, seed, durationMs);
+	if (!pixiApp || !trailContainer) return;
+	const start = toArenaPoint(sx, sy);
+	const end = toArenaPoint(tx, ty);
+	if (!start || !end) return;
+	const random = seed ? createEffectRandom(`poker-trail:${seed}`) : null;
+	const next = random?.next ?? Math.random;
+	const dx = end.x - start.x;
+	const dy = end.y - start.y;
+	const len = Math.sqrt(dx * dx + dy * dy);
+	const nx = len > 0 ? -dy / len : 0;
+	const ny = len > 0 ? dx / len : 0;
+	const travelMs = Math.max(1, durationMs) * (prefersReducedMotion() ? 0.25 : 1);
+
+	for (let i = 0; i < 10; i += 1) {
+		const t = (i + 0.5) / 10;
+		const spread = (next() - 0.5) * 48;
+		const x = start.x + dx * t + nx * spread;
+		const y = start.y + dy * t + ny * spread;
+		const r = 4 + next() * 7;
+
+		const g = new Graphics();
+		g.circle(0, 0, r);
+		g.fill({ color: pickColor(palette, next), alpha: 0.85 });
+		g.position.set(x, y);
+		g.alpha = 0;
+		trailContainer.addChild(g);
+
+		gsap.to(g, {
+			alpha: 0.95,
+			duration: 0.08,
+			delay: (t * travelMs) / 1000,
+			onComplete: () => {
+				gsap.to(g, {
+					alpha: 0,
+					duration: motionDuration(0.38),
+					ease: 'power2.out',
+					onComplete: () => {
+						trailContainer?.removeChild(g);
+						g.destroy();
+					},
+				});
+				gsap.to(g.scale, {
+					x: 0.2,
+					y: 0.2,
+					duration: motionDuration(0.38),
+					ease: 'power2.out',
+				});
+			},
+		});
+	}
 }
 
 export function spawnEmbers(
@@ -530,7 +694,7 @@ export const PixiParticleCanvas: React.FC<{ realm?: string }> = ({ realm }) => {
 
 	useEffect(() => {
 		activeArenaVfxRoot = arenaRoot;
-		setPortalTarget(arenaRoot ? getArenaVfxLayer(ARENA_VFX_LAYERS.vfx, arenaRoot) : null);
+		setPortalTarget(arenaRoot ? getArenaVfxCoordinateLayer(arenaRoot) : null);
 		return () => {
 			if (activeArenaVfxRoot === arenaRoot) activeArenaVfxRoot = null;
 		};

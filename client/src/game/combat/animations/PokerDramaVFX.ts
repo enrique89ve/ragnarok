@@ -19,13 +19,27 @@ import {
 	getArenaVfxHeroTarget,
 	getArenaVfxLayer,
 	getArenaVfxSpellTrayCards,
-	getArenaVfxTarget,
 	getArenaVfxTargets,
+	getArenaVfxMinionCardElements,
 	getArenaVfxWagerTargets,
 } from '../arenaVfxTargets';
 import { gameEffectCoordinator } from '@/game/effects/core/gameEffectCoordinator';
 import { stampCardMotionClass } from '../../components/card/applyCardMotion';
 import { cinemaReadingLane } from '../../poker/layout/boardOccupancy';
+import {
+	resolveCallClashEndpoints,
+	resolvePokerVfxIntentForCall,
+	resolvePokerVfxIntentForRaise,
+	resolvePokerVfxIntentForSpell,
+	resolvePokerVfxIntentForWager,
+	type PokerVfxResolvedIntent,
+} from './pokerVfxCatalog';
+import {
+	playCallClashVfx,
+	playLocalPulseOnMinionRow,
+	playPokerVfxIntent,
+	playShowdownAoeWagerVfx,
+} from './pokerVfxMotion';
 
 const DRAMA_CONTAINER_ID = 'poker-drama-vfx-layer';
 const MAX_ORPHAN_AGE_MS = 6000;
@@ -172,7 +186,6 @@ const SUIT_PALETTES: Record<string, ParticleColor> = {
 
 const GOLD_PALETTE: ParticleColor = { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' };
 const RED_PALETTE: ParticleColor = { primary: '#ef4444', secondary: '#fca5a5', glow: 'rgba(239,68,68,0.6)' };
-const WHITE_PALETTE: ParticleColor = { primary: '#ffffff', secondary: '#e2e8f0', glow: 'rgba(255,255,255,0.6)' };
 const LIGHT_PALETTE: ParticleColor = ELEMENT_PALETTES.lightning || GOLD_PALETTE;
 
 // ═══════════════════════════════════════════════════
@@ -292,43 +305,34 @@ export function playCardDealVFX(
 // ═══════════════════════════════════════════════════
 
 /**
- * ATTACK (raise) — hero lunges forward, gold flash
+ * ATTACK (raise) — hero lunge + stake travels to board pot sink (hourglass), not HUD chrome.
  */
-export function playRaiseVFX(isPlayer: boolean) {
-	const hero = getArenaVfxHeroTarget(isPlayer ? 'player' : 'opponent');
+export function playRaiseVFX(isPlayer: boolean, intent?: PokerVfxResolvedIntent) {
+	const side = isPlayer ? 'player' : 'opponent';
+	const hero = getArenaVfxHeroTarget(side);
 	if (!hero) return;
 
-	const tl = gsap.timeline();
+	const resolved = intent ?? resolvePokerVfxIntentForRaise(side);
 
-	// Hero lunge forward
+	const tl = gsap.timeline();
 	tl.to(hero, {
 		y: isPlayer ? -8 : 8,
 		scale: 1.03,
 		duration: 0.2,
-		ease: 'power2.out'
+		ease: 'power2.out',
 	});
 	tl.to(hero, {
 		y: 0,
 		scale: 1,
 		duration: 0.4,
-		ease: 'power2.inOut'
+		ease: 'power2.inOut',
 	});
 
-	// Gold flash behind hero
-	const rect = hero.getBoundingClientRect();
-	const cx = rect.left + rect.width / 2;
-	const cy = rect.top + rect.height / 2;
-	spawnImpactRing(cx, cy, GOLD_PALETTE);
-
-	// Dim opponent side slightly
-	const otherHero = getArenaVfxHeroTarget(isPlayer ? 'opponent' : 'player');
-	if (otherHero) {
-		gsap.to(otherHero, {
-			filter: 'brightness(0.85)',
-			duration: 0.3,
-			yoyo: true,
-			repeat: 1
-		});
+	if (resolved.targetPoint) {
+		playPokerVfxIntent(resolved);
+	} else {
+		const rect = hero.getBoundingClientRect();
+		spawnImpactRing(rect.left + rect.width / 2, rect.top + rect.height / 2, GOLD_PALETTE);
 	}
 }
 
@@ -337,128 +341,78 @@ export function playRaiseVFX(isPlayer: boolean) {
  * Time dilation, pressure shake, hero slam forward, risk pulse.
  * Escalates with reraise level (1st, 2nd, 3rd+).
  */
-export function playReraiseVFX(isPlayer: boolean, reraiseLevel: number = 1) {
-	const container = getOrCreateContainer();
-	if (!container) return;
+export function playReraiseVFX(
+	isPlayer: boolean,
+	reraiseLevel: number = 1,
+	intent?: PokerVfxResolvedIntent,
+) {
+	const side = isPlayer ? 'player' : 'opponent';
+	const resolved = intent ?? resolvePokerVfxIntentForRaise(side);
 	const shakeTarget = getShakeTarget();
 
-	// --- Tension vignette ---
-	const vignetteIntensity = Math.min(0.16 + reraiseLevel * 0.04, 0.28);
-	const vignette = createDiv({
-		inset: '0',
-		background: `radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,${vignetteIntensity}) 100%)`,
-		zIndex: '1'
-	});
-	container.appendChild(vignette);
-	gsap.fromTo(vignette,
-		{ opacity: 0 },
-		{ opacity: 1, duration: 0.16, yoyo: true, repeat: 1, repeatDelay: 0.12, onComplete: () => cleanup(vignette) }
-	);
-
-	// --- Pressure shake (low frequency, not damage-like) ---
-	if (shakeTarget) {
+	// Pressure shake only at high commitment — kept separate from stake motion.
+	if (shakeTarget && reraiseLevel >= 3) {
 		const shakeIntensity = Math.min(2 + reraiseLevel, 5);
-		const shakeDuration = 0.15;
-		const repeats = 2 + reraiseLevel;
 		gsap.to(shakeTarget, {
 			x: `random(-${shakeIntensity}, ${shakeIntensity})`,
 			y: `random(-${shakeIntensity * 0.4}, ${shakeIntensity * 0.4})`,
-			duration: shakeDuration,
-			repeat: repeats,
+			duration: 0.15,
+			repeat: 2 + reraiseLevel,
 			yoyo: true,
 			ease: 'sine.inOut',
-			onComplete: () => { gsap.set(shakeTarget, { x: 0, y: 0 }); }
+			onComplete: () => { gsap.set(shakeTarget, { x: 0, y: 0 }); },
 		});
 	}
 
-	// --- Hero SLAM forward ---
-	const hero = getArenaVfxHeroTarget(isPlayer ? 'player' : 'opponent');
+	const hero = getArenaVfxHeroTarget(side);
 	if (hero) {
 		const tl = gsap.timeline();
 		tl.to(hero, {
 			y: isPlayer ? -16 : 16,
 			scale: 1.08,
 			duration: 0.15,
-			ease: 'power3.out'
+			ease: 'power3.out',
 		});
 		tl.to(hero, {
 			y: 0,
 			scale: 1,
 			duration: 0.5,
-			ease: 'elastic.out(1, 0.5)'
+			ease: 'elastic.out(1, 0.5)',
 		});
 
-		// Red/gold aura flash
 		const rect = hero.getBoundingClientRect();
 		const cx = rect.left + rect.width / 2;
 		const cy = rect.top + rect.height / 2;
-		spawnParticleBurst(cx, cy, 15, ELEMENT_PALETTES.fire);
-		spawnImpactRing(cx, cy, RED_PALETTE);
+		spawnParticleBurst(cx, cy, 12, ELEMENT_PALETTES.fire);
+		spawnImpactRing(cx, cy, GOLD_PALETTE);
 	}
 
-	// --- Opponent recoil ---
-	const otherHero = getArenaVfxHeroTarget(isPlayer ? 'opponent' : 'player');
-	if (otherHero) {
-		gsap.to(otherHero, {
-			y: isPlayer ? 4 : -4,
-			filter: 'brightness(0.85)',
-			duration: 0.2,
-			yoyo: true,
-			repeat: 1
-		});
-	}
-
-	// --- Risk badge pulse ---
-	const riskBadge = getArenaVfxTarget(ARENA_VFX_TARGETS.riskDisplay);
-	if (riskBadge) {
-		gsap.fromTo(riskBadge,
-			{ scale: 1 },
-			{ scale: 1.3, duration: 0.15, yoyo: true, repeat: 1, ease: 'power2.out' }
-		);
-	}
-
-	// --- Screen edge glow on 2nd+ reraise ---
-	if (reraiseLevel >= 2) {
-		const edgeGlow = createDiv({
-			inset: '0',
-			boxShadow: `inset 0 0 ${30 + reraiseLevel * 15}px rgba(239, 68, 68, ${0.15 + reraiseLevel * 0.05})`,
-			zIndex: '2'
-		});
-		container.appendChild(edgeGlow);
-		gsap.to(edgeGlow, {
-			opacity: 0,
-			duration: 1.2,
-			onComplete: () => cleanup(edgeGlow)
-		});
-	}
-
-	// --- Bass hit (procedural audio) ---
+	playPokerVfxIntent(resolved, { stakeStrength: 'firm' });
 	playPressureBassHit(reraiseLevel);
 }
 
 /**
- * ENGAGE (call) — clash spark at center
+ * ENGAGE (call) — dual travel-impact clash at the lane midpoint.
  */
-export function playCallVFX() {
-	const container = getOrCreateContainer();
-	if (!container) return;
+export function playCallVFX(intent?: PokerVfxResolvedIntent) {
+	const resolved = intent ?? resolvePokerVfxIntentForCall();
 
-	// Both heroes flash white briefly
 	const heroes = [
 		...getArenaVfxTargets(ARENA_VFX_TARGETS.playerHero),
 		...getArenaVfxTargets(ARENA_VFX_TARGETS.opponentHero),
 	];
 	heroes.forEach(hero => {
-		gsap.fromTo(hero,
-			{ filter: 'brightness(1.6)' },
-			{ filter: 'brightness(1)', duration: 0.2 }
+		gsap.fromTo(
+			hero,
+			{ filter: 'brightness(1.35)' },
+			{ filter: 'brightness(1)', duration: 0.2 },
 		);
 	});
 
-	// Center clash spark — anchored to the arena canvas, not the window
-	const center = getDramaContainerPoint(container);
-	spawnParticleBurst(center.x, center.y, 15, LIGHT_PALETTE);
-	spawnImpactRing(center.x, center.y, WHITE_PALETTE);
+	const endpoints = resolveCallClashEndpoints();
+	if (endpoints.center) {
+		playCallClashVfx(endpoints, resolved.palette);
+	}
 }
 
 /**
@@ -957,61 +911,25 @@ export function playClashSound() {
 import type { PokerSpellEffectType } from '../../types/CardTypes';
 import type { WagerType } from '../vfx/events';
 
-const POKER_SPELL_PALETTES: Record<PokerSpellEffectType, ParticleColor> = {
-	bluff_rune:       { primary: '#38bdf8', secondary: '#7dd3fc', glow: 'rgba(56,189,248,0.55)' },
-	fate_peek:        { primary: '#38bdf8', secondary: '#e5e7eb', glow: 'rgba(56,189,248,0.55)' },
-	stamina_shield:   { primary: '#38bdf8', secondary: '#7dd3fc', glow: 'rgba(56,189,248,0.55)' },
-	hole_swap:        { primary: '#f5c542', secondary: '#b7791f', glow: 'rgba(245,197,66,0.5)' },
-	echo_bet:         { primary: '#38bdf8', secondary: '#7dd3fc', glow: 'rgba(56,189,248,0.5)' },
-	shadow_fold:      { primary: '#334155', secondary: '#111827', glow: 'rgba(51,65,85,0.55)' },
-	run_twice:        { primary: '#38bdf8', secondary: '#e5e7eb', glow: 'rgba(56,189,248,0.45)' },
-	river_rewrite:    { primary: '#38bdf8', secondary: '#7dd3fc', glow: 'rgba(56,189,248,0.55)' },
-	norns_glimpse:    { primary: '#f5c542', secondary: '#f59e0b', glow: 'rgba(245,197,66,0.5)' },
-	fold_curse:       { primary: '#dc2626', secondary: '#fca5a5', glow: 'rgba(220,38,38,0.55)' },
-	blood_bet:        { primary: '#dc2626', secondary: '#fca5a5', glow: 'rgba(220,38,38,0.6)' },
-	void_stare:       { primary: '#05070d', secondary: '#38bdf8', glow: 'rgba(56,189,248,0.4)' },
-	all_in_aura:      { primary: '#f5c542', secondary: '#fde68a', glow: 'rgba(245,197,66,0.55)' },
-	ragnarok_gambit:  { primary: '#dc2626', secondary: '#fca5a5', glow: 'rgba(220,38,38,0.6)' },
-	destiny_override: { primary: '#f5c542', secondary: '#fef3c7', glow: 'rgba(245,197,66,0.55)' },
-};
-
-const WAGER_PALETTES: Record<WagerType, ParticleColor> = {
-	showdown_win_armor:             { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
-	showdown_coin_flip:             { primary: '#facc15', secondary: '#fef9c3', glow: 'rgba(250,204,21,0.6)' },
-	showdown_win_rank_damage:       { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
-	showdown_aoe_damage:            { primary: '#f59e0b', secondary: '#fcd34d', glow: 'rgba(245,158,11,0.6)' },
-	showdown_hand_rank_draw:        { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
-	showdown_win_draw_and_damage:   { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
-	double_showdown_multiplier:     { primary: '#fde047', secondary: '#fef08a', glow: 'rgba(253,224,71,0.6)' },
-	all_in_bonus_with_cost:         { primary: '#dc2626', secondary: '#fca5a5', glow: 'rgba(220,38,38,0.6)' },
-	on_opponent_fold_heal:          { primary: '#84cc16', secondary: '#bef264', glow: 'rgba(132,204,22,0.6)' },
-	fold_penalty_to_healing:        { primary: '#84cc16', secondary: '#bef264', glow: 'rgba(132,204,22,0.6)' },
-	all_in_buff_minions:            { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
-	reveal_opponent_hole_cards:     { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
-	peek_next_community_card:       { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
-	hide_bet_actions:               { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
-	increase_min_bet:               { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
-	reduce_fold_penalty:            { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
-	double_blinds_bonus_multiplier: { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
-	betting_round_damage:           { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
-	hand_rank_upgrade:              { primary: '#facc15', secondary: '#fef9c3', glow: 'rgba(250,204,21,0.6)' },
-};
-
 /**
- * Cast a poker spell. Indigo palette per effect type, scale-punch
- * keyframe on the spell tray frames, indigo vignette fade.
+ * Cast a poker spell — travel-impact from caster hero to spell tray + frame glow.
  */
 export function playPokerSpellCast(
 	effectType: PokerSpellEffectType,
-	caster: 'player' | 'opponent'
+	caster: 'player' | 'opponent',
+	intent?: PokerVfxResolvedIntent,
 ): void {
-	const container = getOrCreateContainer();
-	if (!container) return;
-	const palette = POKER_SPELL_PALETTES[effectType] || POKER_SPELL_PALETTES.bluff_rune;
-	const burst = getDramaContainerPoint(container, caster === 'player' ? 0.75 : 0.25);
-
-	spawnParticleBurst(burst.x, burst.y, 8, palette);
-	spawnImpactRing(burst.x, burst.y, palette);
+	const resolved = intent ?? resolvePokerVfxIntentForSpell(effectType, caster);
+	if (resolved.sourcePoint || resolved.targetPoint) {
+		playPokerVfxIntent(resolved, { seed: `spell-${effectType}` });
+	} else {
+		const container = getOrCreateContainer();
+		if (container) {
+			const burst = getDramaContainerPoint(container, caster === 'player' ? 0.75 : 0.25);
+			spawnParticleBurst(burst.x, burst.y, 8, resolved.palette);
+			spawnImpactRing(burst.x, burst.y, resolved.palette);
+		}
+	}
 
 	getArenaVfxSpellTrayCards().forEach((el, index) => {
 		stampCardMotionClass(el, 'is-casting', false);
@@ -1035,17 +953,40 @@ export function playPokerSpellCast(
  */
 export function playWagerActivate(
 	wagerType: WagerType,
-	side: 'player' | 'opponent'
+	side: 'player' | 'opponent',
+	intent?: PokerVfxResolvedIntent,
 ): void {
-	const container = getOrCreateContainer();
-	if (!container) return;
-	const palette = WAGER_PALETTES[wagerType] || WAGER_PALETTES.showdown_win_armor;
-	const burst = getDramaContainerPoint(container, side === 'player' ? 0.7 : 0.3);
+	const resolved = intent ?? resolvePokerVfxIntentForWager(wagerType, side);
+	if (wagerType === 'showdown_aoe_damage') {
+		playShowdownAoeWagerVfx(resolved, side);
+	} else if (wagerType === 'all_in_buff_minions') {
+		playLocalPulseOnMinionRow(side, resolved.palette);
+		if (resolved.sourcePoint) {
+			playPokerVfxIntent(resolved, { seed: `wager-${wagerType}` });
+		}
+	} else if (resolved.targetPoint) {
+		playPokerVfxIntent(resolved, { seed: `wager-${wagerType}` });
+	} else {
+		const container = getOrCreateContainer();
+		if (container) {
+			const burst = getDramaContainerPoint(container, side === 'player' ? 0.7 : 0.3);
+			spawnParticleBurst(burst.x, burst.y, 6, resolved.palette);
+			spawnImpactRing(burst.x, burst.y, resolved.palette);
+		}
+	}
 
-	spawnParticleBurst(burst.x, burst.y, 6, palette);
-	spawnImpactRing(burst.x, burst.y, palette);
+	const wagerFrames = wagerType === 'all_in_buff_minions'
+		? getArenaVfxMinionCardElements(side)
+		: resolved.sourceInstanceId
+			? (() => {
+				const el = document.querySelector<HTMLElement>(
+					`[data-instance-id="${resolved.sourceInstanceId}"]`,
+				);
+				return el ? [el] : getArenaVfxWagerTargets(side);
+			})()
+			: getArenaVfxWagerTargets(side);
 
-	getArenaVfxWagerTargets(side).forEach((el, index) => {
+	wagerFrames.forEach((el, index) => {
 		stampCardMotionClass(el, 'is-activating', false);
 		void el.offsetWidth;
 		stampCardMotionClass(el, 'is-activating', true);

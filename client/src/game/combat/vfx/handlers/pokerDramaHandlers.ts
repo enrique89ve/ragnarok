@@ -44,6 +44,11 @@ import {
 	showdownImpactMotion,
 	} from '@/game/effects/poker';
 import { shouldAnnounceHandRank } from '../pokerEventFx';
+import { publishArenaVfxBeat } from '../../../qa/arenaVfxQa';
+import {
+	resolvePokerVfxIntent,
+	resolvePokerVfxIntentForBettingAction,
+} from '../../animations/pokerVfxCatalog';
 import {
 	emitStreakAnnounced,
 	type BettingActionEvent,
@@ -130,21 +135,56 @@ export function resetPokerBettingPressure(): void {
 	bettingPressureLevel = 0;
 }
 
+const STAKE_ACTIONS = new Set([
+	CombatAction.ATTACK,
+	CombatAction.COUNTER_ATTACK,
+	CombatAction.ENGAGE,
+]);
+
+function maybePublishStakeFloater(event: BettingActionEvent): void {
+	const hp = event.hpCommitment ?? 0;
+	if (hp <= 0 || !STAKE_ACTIONS.has(event.action)) return;
+	const targetId = event.side === 'player' ? 'player-hero' : 'opponent-hero';
+	requestCombatDamageFloater({
+		id: `${event.id}:stake`,
+		targetId,
+		amount: hp,
+		variant: 'stake',
+	});
+}
+
 function handleBettingAction(event: BettingActionEvent): EffectHandle | null {
 	const isPlayer = event.side === 'player';
 	const motion = bettingActionMotion(event.action, event.side);
+	const bettingIntent = resolvePokerVfxIntentForBettingAction(event.action, event.side);
 	return schedulePokerMotion(motion, [0], () => {
+		maybePublishStakeFloater(event);
 		switch (event.action) {
 			case CombatAction.ATTACK:
-				playRaiseVFX(isPlayer);
+				playRaiseVFX(isPlayer, bettingIntent ?? undefined);
+				publishArenaVfxBeat({
+					source: 'bettingAction',
+					detail: event.action,
+					motion: bettingIntent?.motion,
+				});
 				break;
 			case CombatAction.COUNTER_ATTACK:
 				bettingPressureLevel += 1;
-				playReraiseVFX(isPlayer, bettingPressureLevel);
+				playReraiseVFX(isPlayer, bettingPressureLevel, bettingIntent ?? undefined);
+				publishArenaVfxBeat({
+					source: 'bettingAction',
+					detail: event.action,
+					motion: bettingIntent?.motion,
+				});
 				break;
 			case CombatAction.ENGAGE:
-				playCallVFX();
+				playCallVFX(bettingIntent ?? undefined);
 				playClashSound();
+				publishArenaVfxBeat({
+					source: 'bettingAction',
+					detail: event.action,
+					motion: bettingIntent?.motion,
+				});
 				break;
 			case CombatAction.DEFEND:
 				playCheckVFX(isPlayer);
@@ -267,7 +307,15 @@ function handleSpellCast(event: SpellCastEvent): EffectHandle | null {
 	return schedulePokerMotion(
 		POKER_MOTION_SPECS['spell-cast'],
 		[0],
-		() => playPokerSpellCast(event.effectType, event.side),
+		() => {
+			const intent = resolvePokerVfxIntent('spell', event) ?? undefined;
+			playPokerSpellCast(event.effectType, event.side, intent);
+			publishArenaVfxBeat({
+				source: 'spellCast',
+				detail: event.effectType,
+				motion: intent?.motion,
+			});
+		},
 		`spell-cast-${event.side}`,
 	);
 }
@@ -276,7 +324,15 @@ function handleWagerActivated(event: WagerActivatedEvent): EffectHandle | null {
 	return schedulePokerMotion(
 		POKER_MOTION_SPECS['wager-activate'],
 		[0],
-		() => playWagerActivate(event.wagerType, event.side),
+		() => {
+			const intent = resolvePokerVfxIntent('wager', event) ?? undefined;
+			playWagerActivate(event.wagerType, event.side, intent);
+			publishArenaVfxBeat({
+				source: 'wagerActivated',
+				detail: event.wagerType,
+				motion: intent?.motion,
+			});
+		},
 		`wager-activate-${event.side}`,
 	);
 }

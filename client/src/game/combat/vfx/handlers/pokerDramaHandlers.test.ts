@@ -1,17 +1,32 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CombatPhase, PokerHandRank } from '../../../types/PokerCombatTypes';
-import { emitHandRankAnnounced, emitPhaseEntered, emitRagnarokTriggered, emitSpellCast, emitStreakAnnounced, emitWagerActivated } from '../events';
+import { CombatAction, CombatPhase, PokerHandRank } from '../../../types/PokerCombatTypes';
+import {
+	emitBettingAction,
+	emitHandRankAnnounced,
+	emitPhaseEntered,
+	emitRagnarokTriggered,
+	emitSpellCast,
+	emitStreakAnnounced,
+	emitWagerActivatedFromMinion,
+} from '../events';
 import { setVisualEventRendererEnabled } from '../emitter';
 import { resetVisualEffectRegistry } from '../registry';
 import { useCombatFeedbackStore } from '../../feedback/combatFeedbackStore';
 import { cancelPokerMotionSchedules } from '@/game/effects/poker';
 import { registerPokerDramaVisualEffects } from './pokerDramaHandlers';
 
+const requestCombatDamageFloater = vi.fn();
+vi.mock('../../floaters/combatDamageFloater', () => ({
+	requestCombatDamageFloater: (...args: unknown[]) => requestCombatDamageFloater(...args),
+	subscribeCombatDamageFloater: () => () => {},
+}));
+
 const playHandRankAnnouncement = vi.fn();
 const playPhaseDramaVFX = vi.fn();
 const playThorHammerVFX = vi.fn();
 const playPokerSpellCast = vi.fn();
 const playWagerActivate = vi.fn();
+const playRaiseVFX = vi.fn();
 const playRagnarokVFX = vi.fn();
 const playStreakAnnouncementVFX = vi.fn();
 
@@ -22,7 +37,7 @@ vi.mock('../../../animations/ThorHammerVFX', () => ({
 vi.mock('../../animations/PokerDramaVFX', () => ({
 	playHandRankAnnouncement: (...args: unknown[]) => playHandRankAnnouncement(...args),
 	playPhaseDramaVFX: (...args: unknown[]) => playPhaseDramaVFX(...args),
-	playRaiseVFX: vi.fn(),
+	playRaiseVFX: (...args: unknown[]) => playRaiseVFX(...args),
 	playReraiseVFX: vi.fn(),
 	playCallVFX: vi.fn(),
 	playClashSound: vi.fn(),
@@ -52,6 +67,8 @@ describe('poker drama handlers — one event one FX', () => {
 		playThorHammerVFX.mockReset();
 		playPokerSpellCast.mockReset();
 		playWagerActivate.mockReset();
+		playRaiseVFX.mockReset();
+		requestCombatDamageFloater.mockReset();
 		playRagnarokVFX.mockReset();
 		playStreakAnnouncementVFX.mockReset();
 		unregister = registerPokerDramaVisualEffects();
@@ -129,19 +146,51 @@ describe('poker drama handlers — one event one FX', () => {
 		expect(playStreakAnnouncementVFX).toHaveBeenCalledWith('DOMINATION', '#f5c542');
 	});
 
-	it('holds cinema so the stack waits during a phase slam', () => {
+	it('runs decorative phase VFX without grabbing the center-title cinema slot', () => {
 		emitPhaseEntered({ phase: CombatPhase.FAITH });
-		expect(useCombatFeedbackStore.getState().cinemaHolders).toContain('poker-cinema');
+		expect(useCombatFeedbackStore.getState().cinemaHolders).not.toContain('poker-cinema');
 		vi.advanceTimersByTime(50);
 		expect(playPhaseDramaVFX).toHaveBeenCalledWith(CombatPhase.FAITH);
 	});
 
-	it('routes spell and wager visuals through typed events', () => {
+	it('routes spell and wager visuals with resolved presentation intent', () => {
 		emitSpellCast({ effectType: 'bluff_rune', side: 'player' });
-		emitWagerActivated({ wagerType: 'betting_round_damage', side: 'opponent' });
+		emitWagerActivatedFromMinion('betting_round_damage', 'opponent', 'minion-9');
 
 		vi.advanceTimersByTime(50);
-		expect(playPokerSpellCast).toHaveBeenCalledWith('bluff_rune', 'player');
-		expect(playWagerActivate).toHaveBeenCalledWith('betting_round_damage', 'opponent');
+		expect(playPokerSpellCast).toHaveBeenCalledWith(
+			'bluff_rune',
+			'player',
+			expect.objectContaining({ motion: 'travel-impact', side: 'player' }),
+		);
+		expect(playWagerActivate).toHaveBeenCalledWith(
+			'betting_round_damage',
+			'opponent',
+			expect.objectContaining({
+				motion: 'travel-impact',
+				sourceInstanceId: 'minion-9',
+			}),
+		);
+	});
+
+	it('stakes bets toward the risk display instead of a damage idiom', () => {
+		emitBettingAction({
+			phase: CombatPhase.FAITH,
+			action: CombatAction.ATTACK,
+			side: 'player',
+			hpCommitment: 15,
+		});
+		vi.advanceTimersByTime(50);
+		expect(playRaiseVFX).toHaveBeenCalledWith(
+			true,
+			expect.objectContaining({ motion: 'stake-to-pot', side: 'player' }),
+		);
+		expect(requestCombatDamageFloater).toHaveBeenCalledWith(
+			expect.objectContaining({
+				targetId: 'player-hero',
+				amount: 15,
+				variant: 'stake',
+			}),
+		);
 	});
 });
