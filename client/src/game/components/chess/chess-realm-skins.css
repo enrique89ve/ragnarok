@@ -4,7 +4,7 @@
    Each campaign mission has a `realm` field. The mission realm
    maps to a "visual realm" (Norse art proxy for non-Norse
    mythologies — see REALM_VISUAL_MAP in RagnarokGameCoordinator.tsx)
-   and the chess root container gets `.realm-{visualRealm}`.
+   and `.chess-phase-scene` gets `.realm-{visualRealm}` (not the coordinator root).
 
    These rules give every chess board a thematic background drawn
    from the same realm art used by the combat arena
@@ -18,7 +18,7 @@
         Ginnungagap/Svartalfheim which have no art file)
    ============================================================ */
 
-.ragnarok-chess-game[class*="realm-"] {
+.chess-phase-scene[class*="realm-"] {
 	position: relative;
 	min-height: 100dvh;
 	background-color: #050810;
@@ -31,7 +31,7 @@
 /* Universal dim layer — fades the realm art so chess pieces
    and the board grid stay legible. Sits behind the chess UI but
    above the background image. */
-.ragnarok-chess-game[class*="realm-"]::before {
+.chess-phase-scene[class*="realm-"]::before {
 	content: '';
 	position: absolute;
 	inset: 0;
@@ -47,7 +47,7 @@
 
 /* Realm vignette — soft dark frame at the edges, lets the
    center breathe while focusing the eye on the chess board. */
-.ragnarok-chess-game[class*="realm-"]::after {
+.chess-phase-scene[class*="realm-"]::after {
 	content: '';
 	position: absolute;
 	inset: 0;
@@ -61,7 +61,7 @@
 }
 
 /* Make sure all chess UI children sit above the overlays. */
-.ragnarok-chess-game[class*="realm-"] > * {
+.chess-phase-scene[class*="realm-"] > * {
 	position: relative;
 	z-index: 1;
 }
@@ -70,7 +70,7 @@
    PER-REALM BACKGROUNDS
    ============================================================ */
 
-.ragnarok-chess-game.realm-midgard {
+.chess-phase-scene.realm-midgard {
 	background-image: url('/art/chess/ragnarok-arena-base-v2.webp');
 }
 
@@ -152,37 +152,37 @@
 	opacity: 0.58;
 }
 
-.ragnarok-chess-game.realm-asgard {
+.chess-phase-scene.realm-asgard {
 	background-image: url('/art/realms/asgard.webp');
 }
 
-.ragnarok-chess-game.realm-niflheim {
+.chess-phase-scene.realm-niflheim {
 	background-image: url('/art/realms/niflheim.webp');
 }
 
-.ragnarok-chess-game.realm-muspelheim {
+.chess-phase-scene.realm-muspelheim {
 	background-image: url('/art/realms/muspelheim.webp');
 }
 
-.ragnarok-chess-game.realm-helheim {
+.chess-phase-scene.realm-helheim {
 	background-image: url('/art/realms/helheim.webp');
 }
 
-.ragnarok-chess-game.realm-jotunheim {
+.chess-phase-scene.realm-jotunheim {
 	background-image: url('/art/realms/jotunheim.webp');
 }
 
-.ragnarok-chess-game.realm-alfheim {
+.chess-phase-scene.realm-alfheim {
 	background-image: url('/art/realms/alfheim.webp');
 }
 
-.ragnarok-chess-game.realm-vanaheim {
+.chess-phase-scene.realm-vanaheim {
 	background-image: url('/art/realms/vanaheim.webp');
 }
 
 /* Ginnungagap — primordial void. No art file; procedural cosmic
    gradient with deep purple and starfield-like noise. */
-.ragnarok-chess-game.realm-ginnungagap {
+.chess-phase-scene.realm-ginnungagap {
 	background-image:
 		radial-gradient(ellipse at 30% 20%, rgba(140, 100, 220, 0.18) 0%, transparent 50%),
 		radial-gradient(ellipse at 70% 75%, rgba(80, 60, 180, 0.14) 0%, transparent 55%),
@@ -191,7 +191,7 @@
 
 /* Svartalfheim — dark elf forge realm. No art file; procedural
    bronze-on-obsidian with warm forge glow. */
-.ragnarok-chess-game.realm-svartalfheim {
+.chess-phase-scene.realm-svartalfheim {
 	background-image:
 		radial-gradient(ellipse at 50% 70%, rgba(255, 140, 30, 0.22) 0%, transparent 55%),
 		radial-gradient(ellipse at 20% 30%, rgba(200, 100, 20, 0.14) 0%, transparent 60%),
@@ -205,7 +205,7 @@
    These are subtle — just a hint of color on top of the base art.
    ============================================================ */
 
-.ragnarok-chess-game.realm-asgard::before {
+.chess-phase-scene.realm-asgard::before {
 	background: linear-gradient(
 		180deg,
 		rgba(40, 28, 8, 0.50) 0%,
@@ -214,7 +214,7 @@
 	);
 }
 
-.ragnarok-chess-game.realm-muspelheim::before {
+.chess-phase-scene.realm-muspelheim::before {
 	background: linear-gradient(
 		180deg,
 		rgba(40, 8, 4, 0.55) 0%,
@@ -223,7 +223,7 @@
 	);
 }
 
-.ragnarok-chess-game.realm-niflheim::before {
+.chess-phase-scene.realm-niflheim::before {
 	background: linear-gradient(
 		180deg,
 		rgba(8, 14, 28, 0.55) 0%,
@@ -232,7 +232,7 @@
 	);
 }
 
-.ragnarok-chess-game.realm-helheim::before {
+.chess-phase-scene.realm-helheim::before {
 	background: linear-gradient(
 		180deg,
 		rgba(8, 18, 12, 0.55) 0%,
@@ -242,7 +242,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.ragnarok-chess-game[class*="realm-"] {
+	.chess-phase-scene[class*="realm-"] {
 		transition: none;
 	}
 
@@ -254,14 +254,14 @@
 /* ============================================================
    CHAPTER FINALE TREATMENT
    ============================================================
-   Applied via .mission-finale class on the chess root when
+   Applied via .mission-finale on `.chess-phase-scene` when
    campaignMission.isChapterFinale === true. Adds:
      - Pulsing crimson edge glow (inset box-shadow on the dim layer)
      - Slightly stronger overall vignette so the eye focuses harder
    The pulse uses opacity-only animation so the GPU can composite it
    without paint cost.
    ============================================================ */
-.ragnarok-chess-game.mission-finale::before {
+.chess-phase-scene.mission-finale::before {
 	background: linear-gradient(
 		180deg,
 		rgba(40, 4, 4, 0.62) 0%,
@@ -270,7 +270,7 @@
 	);
 }
 
-.ragnarok-chess-game.mission-finale::after {
+.chess-phase-scene.mission-finale::after {
 	background: radial-gradient(
 		ellipse 75% 65% at 50% 50%,
 		transparent 38%,
@@ -286,7 +286,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.ragnarok-chess-game.mission-finale::after {
+	.chess-phase-scene.mission-finale::after {
 		animation: none;
 	}
 }
+

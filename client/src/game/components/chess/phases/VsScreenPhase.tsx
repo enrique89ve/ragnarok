@@ -15,14 +15,19 @@ import React from 'react';
 import type { ChessPiece } from '../../../types/ChessTypes';
 import VSScreen from '../VSScreen';
 import type { PokerEntryApprovalView } from '../../../p2p/usePokerEntryApproval';
-
-const DEFAULT_VS_DURATION_MS = 3800;
+import {
+	VS_DURATION_RANKED_MS,
+	VS_MIN_DURATION_RANKED_MS,
+	VS_DURATION_SINGLE_MS,
+	VS_MIN_DURATION_SINGLE_MS,
+} from '../vsScreenTiming';
 
 export type VsScreenPhaseProps = {
 	readonly attacker: ChessPiece;
 	readonly defender: ChessPiece;
 	readonly onTimeout: () => void;
 	readonly durationMs?: number;
+	readonly minDurationMs?: number;
 	readonly approval?: PokerEntryApprovalView | null;
 };
 
@@ -30,7 +35,8 @@ const VsScreenPhase: React.FC<VsScreenPhaseProps> = ({
 	attacker,
 	defender,
 	onTimeout,
-	durationMs = DEFAULT_VS_DURATION_MS,
+	durationMs = VS_DURATION_RANKED_MS,
+	minDurationMs = VS_MIN_DURATION_RANKED_MS,
 	approval = null,
 }) => {
 	return (
@@ -40,9 +46,15 @@ const VsScreenPhase: React.FC<VsScreenPhaseProps> = ({
 			defender={defender}
 			onComplete={onTimeout}
 			duration={durationMs}
+			minDurationMs={minDurationMs}
 			approval={approval}
 		/>
 	);
+};
+
+export {
+	VS_DURATION_SINGLE_MS,
+	VS_MIN_DURATION_SINGLE_MS,
 };
 
 export default VsScreenPhase;

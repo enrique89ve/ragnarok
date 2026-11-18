@@ -16,6 +16,7 @@ import {
   resolveVisualRealm,
   shouldTriggerChessCombatFlow,
 } from './gameCoordinatorRules';
+import { buildChessPhaseSceneShellClass, resolveMatchSceneId } from './matchSceneOwnership';
 
 function makeHero(id: string, name: string, norseHeroId?: string): ChessPieceHero {
   return {
@@ -108,6 +109,17 @@ const campaignData: { readonly mission: CampaignMission; readonly chapter: Campa
 };
 
 describe('gameCoordinatorRules', () => {
+  it('scopes match scene ids and chess shell classes to the chess phase only', () => {
+    expect(resolveMatchSceneId('chess')).toBe('chess');
+    expect(resolveMatchSceneId('vs_screen')).toBe('vs');
+    expect(resolveMatchSceneId('poker_combat')).toBe('poker-combat');
+    expect(buildChessPhaseSceneShellClass({
+      chessRealmClass: 'realm-midgard',
+      finaleClass: 'mission-finale',
+      chessRootMotionClass: 'chess-motion-on',
+    })).toBe('chess-phase-scene realm-midgard mission-finale chess-motion-on');
+  });
+
   it('maps open campaign realms into canonical visual realm ids', () => {
     expect(resolveVisualRealm('olympus')).toBe('asgard');
     expect(resolveVisualRealm('unknown-realm')).toBe('midgard');

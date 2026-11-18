@@ -21,3 +21,21 @@ export {
 	type BoardRect,
 } from './layout/boardOccupancy';
 export { BoardOccupancyOverlay } from './layout/BoardOccupancyOverlay';
+export {
+	POKER_BOARD_SURFACE_DEFAULT_ID,
+	POKER_BOARD_SURFACE_IDS,
+	POKER_BOARD_SURFACE_SCHEMA,
+	POKER_BOARD_SURFACES,
+	type PokerBoardSurfaceId,
+} from './visuals/pokerBoardSurfaces';
+export {
+	adaptPokerBoardSurfaceToArenaStyle,
+	buildPokerBoardSurfaceSessionSeed,
+	pickPokerBoardSurfaceId,
+} from './visuals/pokerBoardSurfaceAdapter';
+export {
+	beginPokerBoardSurfaceSession,
+	endPokerBoardSurfaceSession,
+	getActivePokerBoardSurfaceArenaStyle,
+	getActivePokerBoardSurfaceId,
+} from './visuals/pokerBoardSurfaceSession';

@@ -46,6 +46,8 @@ import { markCampaignRunAbandoned } from '../../data/blockchain/replayDB';
 import { shouldEnableRagnarokSceneFx } from '../components/chess/chessSceneFxModel';
 import { P2PMatchPauseOverlay } from '../components/multiplayer/P2PMatchPauseOverlay';
 import './matchExitControls.css';
+import './match-scene-shell.css';
+import { buildChessPhaseSceneShellClass, resolveMatchSceneId } from './matchSceneOwnership';
 import {
   getChessRealmClass,
   getFinaleClass,
@@ -59,6 +61,21 @@ import {
   bindResumePokerHandoff,
   isResumeHandoffCurrent,
 } from '../p2p/p2pResumePokerHandoff';
+import {
+	flushPokerCombatChunkPrefetch,
+	prefetchPokerCombatChunk,
+	prefetchPokerCombatChunkDeferred,
+} from '../combat/prefetchPokerCombatChunk';
+import { shouldDeferArenaChunkPrefetch } from '../combat/openingHandPresentationPolicy';
+import { isOpeningMulliganGatingPoker } from '../utils/mulliganUtils';
+import {
+	VS_DURATION_SINGLE_MS,
+	VS_MIN_DURATION_SINGLE_MS,
+} from '../components/chess/vsScreenTiming';
+import { preloadMulliganHandArt } from '../utils/preloadMulliganHandArt';
+import { OPENING_HAND_BACKDROP_PATH } from '../components/openingHandBackdropArt';
+import { preloadImages } from '../utils/assetPreloader';
+import { CombatPhasesLazyFallback } from '../components/chess/phases/PokerCombatPhaseSuspenseFallback';
 import {
   GAME_END_DELAY_MS,
   createMatchEndController,
@@ -564,13 +581,44 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     if (flowState?.tag !== 'vs_screen') return;
 
     playBackgroundMusic('runes_first_move_transition');
+    const gameState = useGameStore.getState().gameState;
+    const isPeerMatch = ctx?.opponent.kind === 'peer';
+    if (isPeerMatch) {
+      prefetchPokerCombatChunk();
+    } else if (shouldDeferArenaChunkPrefetch(isPeerMatch, isOpeningMulliganGatingPoker(gameState))) {
+      prefetchPokerCombatChunkDeferred();
+    } else {
+      prefetchPokerCombatChunk();
+    }
+    void import('../components/chess/phases/PokerCombatPhase');
+    preloadImages([OPENING_HAND_BACKDROP_PATH], { urgent: true });
+    const hand = useGameStore.getState().gameState?.players?.player?.hand;
+    if (hand?.length) preloadMulliganHandArt(hand);
     return () => {
       // Do not stop a newer combat track if the child arena mounted first.
       if (useAudio.getState().currentMusicTrack === 'runes_first_move_transition') {
         stopBackgroundMusic();
       }
     };
-  }, [flowState?.tag, playBackgroundMusic, stopBackgroundMusic]);
+  }, [ctx?.opponent.kind, flowState?.tag, playBackgroundMusic, stopBackgroundMusic]);
+
+  const openingMulliganGatingPoker = useGameStore(state =>
+    isOpeningMulliganGatingPoker(state.gameState),
+  );
+
+  const prevOpeningGateRef = useRef(openingMulliganGatingPoker);
+  useEffect(() => {
+    const wasGate = prevOpeningGateRef.current;
+    prevOpeningGateRef.current = openingMulliganGatingPoker;
+    if (openingMulliganGatingPoker) return;
+    if (wasGate) {
+      flushPokerCombatChunkPrefetch();
+      return;
+    }
+    if (flowState?.tag === 'poker_combat' || flowState?.tag === 'vs_screen') {
+      flushPokerCombatChunkPrefetch();
+    }
+  }, [flowState?.tag, openingMulliganGatingPoker]);
 
   useBossRuleEffects({
     campaignData,
@@ -594,6 +642,15 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   }, [ctx?.matchId, flowState?.tag]);
 
   const handleCombatTriggered = useCallback((attackerId: string, defenderId: string) => {
+    const gameState = useGameStore.getState().gameState;
+    const isPeerMatch = ctx?.opponent.kind === 'peer';
+    if (isPeerMatch) {
+      prefetchPokerCombatChunk();
+    } else if (shouldDeferArenaChunkPrefetch(isPeerMatch, isOpeningMulliganGatingPoker(gameState))) {
+      prefetchPokerCombatChunkDeferred();
+    } else {
+      prefetchPokerCombatChunk();
+    }
 
     if (lastMineTriggered) {
       if (delayedCombatTimerRef.current) clearTimeout(delayedCombatTimerRef.current);
@@ -617,7 +674,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       dispatchFlow({ type: 'COMBAT_TRIGGERED', pieces: { attacker, defender } });
       playSoundEffect('card_draw');
     }
-  }, [boardState.pieces, playSoundEffect, lastMineTriggered, dispatchFlow, ctx?.matchId, flowState?.tag]);
+  }, [boardState.pieces, playSoundEffect, lastMineTriggered, dispatchFlow, ctx?.matchId, ctx?.opponent.kind, flowState?.tag]);
 
   const handleVsScreenComplete = useCallback(() => {
     // VS pieces now live in flowState.pieces (FSM owns vs_screen). Bail
@@ -1161,16 +1218,17 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     playSoundEffect('card_draw');
   }, [boardState.pieces, myCanonicalSide, enemyCanonicalSide, playSoundEffect, dispatchFlow]);
 
-  // Chess root carries the realm-{id} class so the chess phase board can
-  // get its own thematic background per mission. CSS rules live in
-  // chess-realm-skins.css. Chapter finale missions also get the
-  // .mission-finale class which adds a pulsing crimson border + slower
-  // music. CSS for finale lives in chess-realm-skins.css.
   const animationsEnabled = useSettingsStore(s => s.animationsEnabled);
   const reduceMotion = useSettingsStore(s => s.reduceMotion);
   const chessRootMotionClass = (animationsEnabled && !reduceMotion) ? 'chess-motion-on' : 'chess-motion-off';
   const chessRealmClass = getChessRealmClass({ missionRealm, visualRealm });
   const finaleClass = getFinaleClass(campaignData);
+  const chessPhaseSceneShellClass = buildChessPhaseSceneShellClass({
+    chessRealmClass,
+    finaleClass,
+    chessRootMotionClass,
+  });
+  const matchSceneId = resolveMatchSceneId(flowState?.tag);
   const canLeaveActiveMatch = flowState?.tag === 'chess'
     || flowState?.tag === 'vs_screen'
     || flowState?.tag === 'poker_combat';
@@ -1187,13 +1245,22 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
 		});
 	}, [handleConfirmExit, isP2PMatch]);
 
+  useEffect(() => {
+    if (!import.meta.env.DEV || !flowState?.tag) return;
+    performance.mark(`ragnarok-flow:${flowState.tag}`);
+  }, [flowState?.tag]);
+
   // Guard: arriving at a gameplay route with no warband and not in campaign -> redirect to picker
   if (!effectiveInitialArmy && !playerArmy && flow?.mode !== 'campaign') {
     return <Navigate to={getWarbandEntryRoute('single')} replace />;
   }
 
   return (
-    <div className={`ragnarok-chess-game relative w-full min-h-dvh h-dvh overflow-hidden ${chessRealmClass} ${finaleClass} ${chessRootMotionClass}`.trim()}>
+    <div
+      className="ragnarok-chess-game relative w-full min-h-dvh h-dvh overflow-hidden"
+      data-flow-tag={flowState?.tag ?? undefined}
+      data-scene={matchSceneId}
+    >
 		{isP2PMatch && flowState?.tag !== 'game_over' ? <P2PMatchPauseOverlay /> : null}
 		<MatchExitControls
 			visible={canLeaveActiveMatch}
@@ -1223,7 +1290,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
         )}
       </Suspense>
 
-      <Suspense fallback={null}>
+      <Suspense fallback={<CombatPhasesLazyFallback />}>
         <AnimatePresence mode="wait">
           {flowState !== null && flowState.tag === 'chess' && (
             <ChessPhase
@@ -1232,6 +1299,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
               opponentArmy={opponentArmy}
               onCombatTriggered={handleCombatTriggered}
               onBattleMode={handleBattleMode}
+              sceneShellClass={chessPhaseSceneShellClass}
               sceneFxEnabled={shouldEnableRagnarokSceneFx(chessRealmClass)}
               motionEnabled={animationsEnabled && !reduceMotion}
             />
@@ -1243,6 +1311,8 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
               defender={flowState.pieces.defender}
               onTimeout={handleVsScreenComplete}
               approval={pokerEntryApproval}
+              durationMs={isP2PMatch ? undefined : VS_DURATION_SINGLE_MS}
+              minDurationMs={isP2PMatch ? undefined : VS_MIN_DURATION_SINGLE_MS}
             />
           )}
 

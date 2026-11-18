@@ -47,7 +47,6 @@ const SPARK_BG =
 const PARTICLE_BASE: React.CSSProperties = {
 	backgroundSize: '100% 100%',
 	backgroundRepeat: 'no-repeat',
-	willChange: 'transform',
 };
 
 export const EmberField: React.FC<EmberFieldProps> = ({ disableMotion }) => {
@@ -82,6 +81,7 @@ export const EmberField: React.FC<EmberFieldProps> = ({ disableMotion }) => {
 				style={{
 					...PARTICLE_BASE,
 					backgroundImage: GOLDEN_BG,
+					willChange: 'transform',
 					animation: 'ember-drift-up 16s linear infinite',
 				}}
 			/>
@@ -91,6 +91,7 @@ export const EmberField: React.FC<EmberFieldProps> = ({ disableMotion }) => {
 				style={{
 					...PARTICLE_BASE,
 					backgroundImage: SPARK_BG,
+					willChange: 'transform',
 					animation: 'ember-drift-diagonal 24s linear infinite',
 				}}
 			/>

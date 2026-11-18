@@ -1211,6 +1211,7 @@ function EnvironmentBanner() {
 	);
 }
 
+/** Portrait lock for touch phones; CSS uses aspect-ratio, not orientation media alone. */
 function GameOrientationGate({ children }: { children: React.ReactNode }) {
 	return (
 		<div className="game-orientation-gate">

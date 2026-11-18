@@ -1,26 +1,25 @@
 /*
-  PokerCombatPhase — duel arena that runs while the FSM is in
-  poker_combat. Owns the framer-motion mount/unmount choreography of
-  the arena container and forwards the combat result up to the
-  coordinator's resolution handler (which projects the poker outcome
-  back onto the chess board and dispatches COMBAT_RESOLVED).
+  PokerCombatPhase — duel arena while the FSM is in poker_combat.
 
-  The CombatHandoff carrying chess context — attacker / defender /
-  armies / slotsSwapped / firstStrikeTarget — is built by the
-  coordinator at VS_COMPLETE time and lives in flowState.handoff. The
-  arena itself reads its own combat state from useUnifiedCombatStore;
-  this phase does not pass the handoff through. Keeping the prop on
-  this component ensures the FSM contract is honoured even when the
-  arena is later refactored to consume it directly.
-
-  Lazy-loaded by the coordinator so non-combat surface area never
-  bundles the arena, its sub-components, or its store wiring.
+  Local opening hand: OpeningHandMulliganHost until gate + iris + chunk.
+  P2P: full arena immediately (prefetch on VS); presentation shell defer only.
 */
 
-import React from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import RagnarokCombatArena from '../../../combat/RagnarokCombatArena';
 import type { CombatHandoff } from '../../../flow/round/types';
+import { isOpeningMulliganGatingPoker } from '../../../utils/mulliganUtils';
+import { useGameStore } from '../../../stores/gameStore';
+import { useMatchStore } from '../../../match';
+import { OpeningHandMulliganHost } from '../../../combat/OpeningHandMulliganHost';
+import {
+	flushPokerCombatChunkPrefetch,
+	whenPokerCombatChunkReady,
+} from '../../../combat/prefetchPokerCombatChunk';
+import { shouldUseOpeningHandMulliganHost } from '../../../combat/openingHandPresentationPolicy';
+import { useSettingsStore } from '../../../stores/settingsStore';
+
+const RagnarokCombatArena = lazy(() => import('../../../combat/RagnarokCombatArena'));
 
 export type PokerCombatOutcome = 'player' | 'opponent' | 'draw';
 
@@ -30,6 +29,54 @@ export type PokerCombatPhaseProps = {
 };
 
 const PokerCombatPhase: React.FC<PokerCombatPhaseProps> = ({ onCombatEnd }) => {
+	const isPeerMatch = useMatchStore(state => state.activeMatch?.opponent.kind === 'peer');
+	const openingMulliganGatingPoker = useGameStore(state =>
+		isOpeningMulliganGatingPoker(state.gameState),
+	);
+	const useOpeningHost = shouldUseOpeningHandMulliganHost(isPeerMatch, openingMulliganGatingPoker);
+
+	const sawOpeningGateRef = useRef(useOpeningHost);
+	const [retainOpeningHost, setRetainOpeningHost] = useState(useOpeningHost);
+	const [chunkReady, setChunkReady] = useState(false);
+	const [irisSettled, setIrisSettled] = useState(false);
+	const animationsEnabled = useSettingsStore(state => state.animationsEnabled);
+	const reduceMotion = useSettingsStore(state => state.reduceMotion);
+	const arenaRevealMotion = animationsEnabled && !reduceMotion;
+
+	useEffect(() => {
+		if (useOpeningHost) {
+			sawOpeningGateRef.current = true;
+			setRetainOpeningHost(true);
+		}
+	}, [useOpeningHost]);
+
+	useEffect(() => {
+		if (!sawOpeningGateRef.current || useOpeningHost) return;
+		flushPokerCombatChunkPrefetch();
+		let cancelled = false;
+		void whenPokerCombatChunkReady().then(() => {
+			if (!cancelled) setChunkReady(true);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, [useOpeningHost]);
+
+	const handleChamberExitSettled = useCallback(() => {
+		setIrisSettled(true);
+	}, []);
+
+	useEffect(() => {
+		if (!retainOpeningHost || !irisSettled || !chunkReady) return;
+		setRetainOpeningHost(false);
+	}, [chunkReady, irisSettled, retainOpeningHost]);
+
+	const arena = (
+		<Suspense fallback={null}>
+			<RagnarokCombatArena onCombatEnd={onCombatEnd} />
+		</Suspense>
+	);
+
 	return (
 		<motion.div
 			key="poker"
@@ -38,7 +85,28 @@ const PokerCombatPhase: React.FC<PokerCombatPhaseProps> = ({ onCombatEnd }) => {
 			exit={{ opacity: 0 }}
 			className="w-full h-full"
 		>
-			<RagnarokCombatArena onCombatEnd={onCombatEnd} />
+			{isPeerMatch ? (
+				arena
+			) : (
+				<div className="poker-combat-phase-stack">
+					{retainOpeningHost ? (
+						<OpeningHandMulliganHost
+							chamberActive={openingMulliganGatingPoker}
+							onChamberExitSettled={handleChamberExitSettled}
+						/>
+					) : null}
+					{!retainOpeningHost ? (
+						<div
+							className={[
+								'poker-combat-phase-arena',
+								arenaRevealMotion ? 'poker-combat-phase-arena--reveal' : 'poker-combat-phase-arena--instant',
+							].join(' ')}
+						>
+							{arena}
+						</div>
+					) : null}
+				</div>
+			)}
 		</motion.div>
 	);
 };

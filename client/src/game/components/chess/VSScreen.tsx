@@ -7,34 +7,43 @@ import { PieceGlyph } from './PieceGlyph';
 import { ChessHealthIcon } from './ChessIconsSVG';
 import './VSScreen.css';
 import type { PokerEntryApprovalView } from '../../p2p/usePokerEntryApproval';
+import {
+	VS_DURATION_RANKED_MS,
+	VS_MIN_DURATION_RANKED_MS,
+	VS_ENTER_DELAY_MS,
+	VS_EXIT_LEAD_MS,
+	resolveVsScreenDurationMs,
+} from './vsScreenTiming';
 
 interface VSScreenProps {
   attacker: ChessPiece;
   defender: ChessPiece;
   onComplete: () => void;
   duration?: number;
+  minDurationMs?: number;
   approval?: PokerEntryApprovalView | null;
 }
-
-const VS_DEFAULT_DURATION_MS = 3800;
-const VS_ENTER_DELAY_MS = 320;
-const VS_EXIT_LEAD_MS = 620;
-const VS_MIN_DURATION_MS = 3400;
 
 const VSScreen: React.FC<VSScreenProps> = ({ 
   attacker, 
   defender, 
   onComplete,
-  duration = VS_DEFAULT_DURATION_MS,
+  duration = VS_DURATION_RANKED_MS,
+  minDurationMs = VS_MIN_DURATION_RANKED_MS,
   approval = null,
 }) => {
   const [phase, setPhase] = useState<'enter' | 'vs' | 'exit'>('enter');
   const reducedMotion = useReducedMotion();
   // Viewer-relative labeling: "PLAYER" = me locally regardless of canonical side.
   const myCanonicalSide = useGameStore(s => s.myCanonicalSide) ?? 'player';
-  const safeDuration = Math.max(VS_MIN_DURATION_MS, duration);
+  const safeDuration = resolveVsScreenDurationMs(duration, minDurationMs);
+  const snapPresentation = safeDuration <= 1200;
   const exitAt = Math.max(VS_EXIT_LEAD_MS + VS_ENTER_DELAY_MS, safeDuration - VS_EXIT_LEAD_MS);
   const visualPhase = reducedMotion ? 'vs' : phase;
+  const fighterTweenS = reducedMotion ? 0 : snapPresentation ? 0.28 : 0.68;
+  const centerTweenS = reducedMotion ? 0 : snapPresentation ? 0.32 : 0.72;
+  const barDelayS = reducedMotion ? 0 : snapPresentation ? 0.18 : 0.72;
+  const barTweenS = reducedMotion ? 0 : snapPresentation ? 0.22 : 0.38;
 
   useEffect(() => {
     const enterTimer = setTimeout(() => setPhase('vs'), VS_ENTER_DELAY_MS);
@@ -62,7 +71,7 @@ const VSScreen: React.FC<VSScreenProps> = ({
         exit={{ opacity: 0 }}
         transition={{ duration: 0.55, ease: 'easeOut' }}
       >
-        <div className="vs-screen-backdrop" />
+        <div className="vs-screen-backdrop opening-hand-backdrop-layer" />
         
         <div className="vs-screen-content">
           <motion.div 
@@ -75,7 +84,7 @@ const VSScreen: React.FC<VSScreenProps> = ({
             }}
             transition={{ 
               type: 'tween',
-              duration: reducedMotion ? 0 : 0.68,
+              duration: fighterTweenS,
               ease: [0.16, 1, 0.3, 1]
             }}
           >
@@ -116,7 +125,7 @@ const VSScreen: React.FC<VSScreenProps> = ({
               rotate: visualPhase === 'vs' ? 0 : -4,
             }}
             transition={{ 
-              duration: reducedMotion ? 0 : 0.72,
+              duration: centerTweenS,
               ease: [0.16, 1, 0.3, 1]
             }}
           >
@@ -140,7 +149,7 @@ const VSScreen: React.FC<VSScreenProps> = ({
             transition={{ 
               type: 'tween',
               delay: reducedMotion ? 0 : 0.05,
-              duration: reducedMotion ? 0 : 0.68,
+              duration: fighterTweenS,
               ease: [0.16, 1, 0.3, 1]
             }}
           >
@@ -177,7 +186,7 @@ const VSScreen: React.FC<VSScreenProps> = ({
           className={`vs-bottom-bar${approval ? ' vs-bottom-bar-approval' : ''}`}
           initial={reducedMotion ? false : { y: 40, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: reducedMotion ? 0 : 0.72, duration: reducedMotion ? 0 : 0.38, ease: 'easeOut' }}
+          transition={{ delay: barDelayS, duration: barTweenS, ease: 'easeOut' }}
         >
           {approval ? <PokerEntryApprovalPanel approval={approval} /> : (
             <span className="vs-battle-text">PREPARE FOR BATTLE</span>

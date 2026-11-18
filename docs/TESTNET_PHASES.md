@@ -60,8 +60,9 @@ and does not prompt again. Anonymous progress sentinels (`guest`, legacy
 never writes RUNE, ELO, SeasonScore or CardXP under those ids.
 
 On phones, every live match route (`single`, `campaign` and `multiplayer`) uses
-the shared `GameOrientationGate`: portrait mode hides and disables the combat
-surface and asks the player to rotate the device; landscape mode exposes the
+the shared `GameOrientationGate`: touch-first portrait viewports (taller than
+wide, ≤820px) hide and disable the combat surface and ask the player to rotate;
+landscape geometry exposes the
 single 1920x1080 virtual battlefield. Battle preparation is landscape-first as
 well: warband/hero selection and the deck builder ask the player to rotate, so
 the choice grid, selected army and launch action remain visible together.

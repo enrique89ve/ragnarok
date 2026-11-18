@@ -9,11 +9,18 @@ import { MulliganDetailPanel } from './mulligan/MulliganDetailPanel';
 import { MulliganActionBar } from './mulligan/MulliganActionBar';
 import { MulliganDealRowFx } from './mulligan/MulliganDealRowFx';
 import {
+	MULLIGAN_FULLSCREEN_SHELL_CLASS,
 	MULLIGAN_OVERLAY_CLASS,
 	MULLIGAN_SUBTITLE_CLASS,
 	MULLIGAN_TITLE_CLASS,
 } from './mulligan/mulliganOverlayTokens';
-import { MULLIGAN_LOL, mulliganIrisDurationStyle } from './mulligan/mulliganLolTiming';
+import { resolveMulliganPortalTarget } from './mulligan/resolveMulliganPortalTarget';
+import {
+	MULLIGAN_LOL,
+	MULLIGAN_OPENING_SNAP,
+	mulliganIrisDurationStyle,
+	type MulliganDealTiming,
+} from './mulligan/mulliganLolTiming';
 import { MULLIGAN_EXIT_IRIS_OWNER, useMulliganShell } from './mulligan/MulliganShellContext';
 import { useMulliganExitIris } from './mulligan/useMulliganExitIris';
 import { useArenaVfxRoot } from '../combat/arenaVfxContext';
@@ -22,13 +29,14 @@ import { preloadMulliganHandArt } from '../utils/preloadMulliganHandArt';
 import { GAME_COMMAND_TYPES } from '../core/commands';
 import { useP2PActions } from '../context/useP2PActions';
 import { useSettingsStore } from '../stores/settingsStore';
-import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../combat/arenaVfxTargets';
 import './mulligan.css';
 
 interface MulliganScreenProps {
   mulligan: MulliganState | null | undefined;
   playerHand: ReadonlyArray<CardInstance>;
   onMulliganAction: (newState: any) => void;
+  /** Local opening hand: skip ghost prime, flip, and button settle beats. */
+  snapEntrance?: boolean;
 }
 
 const OVERLAY_CLASS = MULLIGAN_OVERLAY_CLASS;
@@ -36,14 +44,11 @@ const TITLE_CLASS = MULLIGAN_TITLE_CLASS;
 const SUBTITLE_CLASS = MULLIGAN_SUBTITLE_CLASS;
 
 const MULLIGAN_CARD_START_DELAY = 0;
-const MULLIGAN_CARD_STAGGER = MULLIGAN_LOL.dealStaggerS;
-const MULLIGAN_CARD_TRAVEL_DURATION = MULLIGAN_LOL.dealTravelS;
-const MULLIGAN_CARD_REVEAL_OFFSET = MULLIGAN_LOL.flipRevealOffsetS;
-const MULLIGAN_ACTION_SETTLE_DELAY = MULLIGAN_LOL.actionSettleS;
 
 export const MulliganScreen: React.FC<MulliganScreenProps> = ({
   mulligan,
   playerHand,
+  snapEntrance = false,
 }) => {
   const p2pActions = useP2PActions();
   const toggleMulliganCard = useCallback(
@@ -77,6 +82,8 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     return !animationsEnabled || reduceMotionSetting || prefersReducedMotion;
   }, [animationsEnabled, reduceMotionSetting]);
+  const dealTiming: MulliganDealTiming = snapEntrance ? MULLIGAN_OPENING_SNAP : MULLIGAN_LOL;
+  const entranceMotionOff = disableMotion || snapEntrance;
   const viewportOwnsExit = useMulliganShell().exitIrisOwner === MULLIGAN_EXIT_IRIS_OWNER.viewport;
   const exitIris = useMulliganExitIris(mulliganLive, !disableMotion && !viewportOwnsExit);
   const frozenHandRef = useRef(playerHand);
@@ -111,11 +118,8 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
       setPortalTarget(null);
       return;
     }
-    const modal = arenaRoot
-      ? getArenaVfxLayer(ARENA_VFX_LAYERS.modal, arenaRoot)
-      : null;
-    setPortalTarget(modal);
-  }, [arenaRoot, exitIris.covered]);
+    setPortalTarget(resolveMulliganPortalTarget(arenaRoot, viewportOwnsExit));
+  }, [arenaRoot, exitIris.covered, viewportOwnsExit]);
 
   const disableCardFx = disableMotion || !enhancedVFX;
 
@@ -131,8 +135,8 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
   useEffect(() => {
     if (!mulligan?.active) return;
     preloadMulliganHandArt(validPlayerHand);
-    setDealRowPriming(true);
-  }, [mulligan?.active, validPlayerHand]);
+    setDealRowPriming(!snapEntrance);
+  }, [mulligan?.active, snapEntrance, validPlayerHand]);
 
   useEffect(() => {
     if (!mulligan?.active || disableMotion) {
@@ -145,15 +149,16 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
     const fallback = window.setTimeout(() => setDealRowPriming(false), 450);
     return () => window.clearTimeout(fallback);
   }, [dealRowPriming, disableMotion, mulligan?.active]);
-  const actionEntranceDelay =
-    MULLIGAN_CARD_START_DELAY +
-    Math.max(validPlayerHand.length - 1, 0) * MULLIGAN_CARD_STAGGER +
-    MULLIGAN_ACTION_SETTLE_DELAY;
+  const actionEntranceDelay = snapEntrance
+    ? 0
+    : MULLIGAN_CARD_START_DELAY +
+      Math.max(validPlayerHand.length - 1, 0) * MULLIGAN_LOL.dealStaggerS +
+      MULLIGAN_LOL.actionSettleS;
 
   const cardEntranceKey = validPlayerHand.map(card => card.instanceId).join('|');
 
   useLayoutEffect(() => {
-    if (!mulligan?.active || disableMotion) return;
+    if (!mulligan?.active || entranceMotionOff) return;
 
     const cards = collectMountedMulliganCardTargets(
       validPlayerHand.map(card => card.instanceId),
@@ -169,16 +174,16 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
       const timeline = gsap.timeline({ delay: MULLIGAN_CARD_START_DELAY });
 
       timeline.eventCallback('onStart', () => {
-        window.setTimeout(() => setDealRowPriming(false), MULLIGAN_LOL.primingHandoffMs);
+        setDealRowPriming(false);
       });
 
       timeline.fromTo(
         cards,
         {
           opacity: 1,
-          x: index => (centerIndex - index) * 56,
-          y: 48,
-          scale: 0.92,
+          x: index => (centerIndex - index) * (snapEntrance ? 28 : 56),
+          y: snapEntrance ? 20 : 48,
+          scale: snapEntrance ? 0.96 : 0.92,
           rotation: 0,
           transformOrigin: '50% 100%',
         },
@@ -188,16 +193,16 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
           y: 0,
           scale: 1,
           rotation: 0,
-          duration: MULLIGAN_CARD_TRAVEL_DURATION,
-          ease: 'power3.out',
-          stagger: MULLIGAN_CARD_STAGGER,
+          duration: dealTiming.dealTravelS,
+          ease: snapEntrance ? 'power2.out' : 'power3.out',
+          stagger: dealTiming.dealStaggerS,
           overwrite: 'auto',
         }
       );
     }, containerRef.current ?? undefined);
 
     return () => context.revert();
-  }, [cardEntranceKey, disableMotion, mulligan?.active, validPlayerHand]);
+  }, [cardEntranceKey, dealTiming.dealStaggerS, dealTiming.dealTravelS, entranceMotionOff, mulligan?.active, snapEntrance, validPlayerHand]);
 
   // Focus the first available action on mount so keyboard users land on a real
   // decision control instead of having to tab through the atmospheric layer.
@@ -241,7 +246,7 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
     <div className="mulligan-deal-row">
       <MulliganDealRowFx
         slotCount={validPlayerHand.length}
-        visible={!disableMotion && dealRowPriming}
+        visible={!entranceMotionOff && dealRowPriming}
       />
       <div className="mulligan-deal-row__cards flex justify-center items-center gap-8 overflow-visible">
         {cards}
@@ -259,13 +264,13 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
         isSelected={!!mulligan.playerSelections[card.instanceId]}
         onClick={() => toggleMulliganCard(card.instanceId)}
         onHoverChange={handleCardHoverChange}
-        disableMotion={disableMotion}
+        disableMotion={entranceMotionOff}
         disableCardFx={disableCardFx}
-        entranceRevealDelay={MULLIGAN_CARD_START_DELAY + i * MULLIGAN_CARD_STAGGER + MULLIGAN_CARD_REVEAL_OFFSET}
+        entranceRevealDelay={MULLIGAN_CARD_START_DELAY + i * dealTiming.dealStaggerS + dealTiming.flipRevealOffsetS}
       />
     );
 
-    if (disableMotion) {
+    if (entranceMotionOff) {
       return (
         <div key={card.instanceId}>
           {cardNode}
@@ -286,7 +291,7 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
     );
   });
 
-  const header = disableMotion ? (
+  const header = entranceMotionOff ? (
     <div className="text-center mb-8">
       <h2 id="mulligan-title" className={TITLE_CLASS}>
         Mulligan
@@ -358,7 +363,7 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
     )
   ) : null;
 
-  const panel = disableMotion ? (
+  const panel = entranceMotionOff ? (
     <div className="relative z-2 w-full max-w-255 px-4">
       {header}
       <div className="mb-10 py-4">
@@ -389,15 +394,22 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
         selectedCount={selectedCount}
         onKeepAll={skipMulliganChoice}
         onConfirm={confirmMulliganChoice}
-        disableMotion={disableMotion}
+        disableMotion={entranceMotionOff}
         entranceDelay={actionEntranceDelay}
       />
       {waitingIndicator}
     </motion.div>
   );
 
-  const atmosphere = <EmberField disableMotion={disableMotion} />;
-  const overlayClass = `${OVERLAY_CLASS}${exitIris.irisOpen ? ' mulligan-chamber--iris' : ''}`;
+  const atmosphere = viewportOwnsExit ? null : (
+    <EmberField disableMotion={disableMotion} />
+  );
+  const useFullscreenShell = viewportOwnsExit;
+  const overlayClass = useFullscreenShell
+    ? MULLIGAN_FULLSCREEN_SHELL_CLASS
+    : `${OVERLAY_CLASS} mulligan-chamber--backdrop-host${
+        exitIris.irisOpen ? ' mulligan-chamber--iris' : ''
+      }`;
 
   const overlay = (
     <div

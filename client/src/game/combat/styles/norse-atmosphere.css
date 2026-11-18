@@ -9,6 +9,10 @@
    Subtle dark smoky gradient at the bottom
    ======================================== */
 
+.ragnarok-combat-arena--opening-mulligan::before {
+  display: none;
+}
+
 .ragnarok-combat-arena.arena-scaled::before {
   content: '';
   position: absolute;
@@ -85,7 +89,10 @@
       transparent 62%,
       rgba(0, 0, 0, 0.08) 100%
     ),
-    url("/art/realms/poker-viewpoint-background.png");
+    var(
+      --poker-board-surface-image,
+      url("/art/poker/boards/frost-rune-slate.webp")
+    );
   background-position: center, center, center, center;
   background-repeat: no-repeat;
   background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%;

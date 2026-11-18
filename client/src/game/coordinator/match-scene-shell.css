@@ -1,0 +1,9 @@
+/* Coordinator shell — no mission realm art here. Phase components own plates. */
+
+.ragnarok-chess-game[data-scene='vs'],
+.ragnarok-chess-game[data-scene='poker-combat'],
+.ragnarok-chess-game[data-scene='intro'],
+.ragnarok-chess-game[data-scene='game-over'],
+.ragnarok-chess-game[data-scene='neutral'] {
+	background-color: #05070d;
+}

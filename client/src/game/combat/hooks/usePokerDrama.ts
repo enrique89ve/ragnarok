@@ -39,6 +39,8 @@ export interface PokerDramaState {
 interface UsePokerDramaOptions {
 	combatState: PokerCombatState | null;
 	isActive: boolean;
+	/** When false, skip orphan-sweep / kill lifecycle (e.g. opening mulligan gate). */
+	vfxLifecycleEnabled?: boolean;
 }
 
 function getHandTier(rank: PokerHandRank): 'low' | 'mid' | 'high' | 'godly' {
@@ -49,19 +51,20 @@ function getHandTier(rank: PokerHandRank): 'low' | 'mid' | 'high' | 'godly' {
 }
 
 export function usePokerDrama(options: UsePokerDramaOptions): PokerDramaState {
-	const { combatState, isActive } = options;
+	const { combatState, isActive, vfxLifecycleEnabled = true } = options;
 
 	const prevHandRankRef = useRef<PokerHandRank>(PokerHandRank.HIGH_CARD);
 	const [streaks, setStreaks] = useState({ player: 0, opponent: 0 });
 
 	// Start/stop orphan sweep with mount
 	useEffect(() => {
+		if (!vfxLifecycleEnabled) return;
 		startPokerOrphanSweep();
 		return () => {
 			stopPokerOrphanSweep();
 			killAllPokerVFX();
 		};
-	}, []);
+	}, [vfxLifecycleEnabled]);
 
 	// Streak counters are owned by the showdown choreography handler, which
 	// re-emits them as streakAnnounced events; mirror them into React state

@@ -16,8 +16,8 @@ import {
 } from '../types/PokerCombatTypes';
 import { evaluatePokerHand } from '../stores/combat/pokerCombatSlice';
 import { MulliganScreen } from '../components/MulliganScreen';
-import { MulliganApproachOverlay } from '../components/mulligan/MulliganApproachOverlay';
 import { isOpeningMulliganGatingPoker } from '../utils/mulliganUtils';
+import { shouldMulliganSnapEntrance } from './openingHandPresentationPolicy';
 import { adaptCardInstance } from '../utils/cards/cardInstanceAdapter';
 import { Position } from '../types/Position';
 import { TargetingOverlay } from '../components/TargetingOverlay';
@@ -89,7 +89,12 @@ import {
 	bindArenaVfxQueryRoot,
 } from './arenaVfxTargets';
 import { ArenaVfxRootContext } from './arenaVfxContext';
-import { BoardOccupancyOverlay, POKER_VIEWPORT_LAYOUT_STYLE, POKER_VIEWPORT_SAFE_AREA } from '../poker';
+import {
+	BoardOccupancyOverlay,
+	getActivePokerBoardSurfaceArenaStyle,
+	POKER_VIEWPORT_LAYOUT_STYLE,
+	POKER_VIEWPORT_SAFE_AREA,
+} from '../poker';
 import { useCampaignStore, getMission } from '../campaign';
 import { isBettingPhase } from './modules/PhaseManager';
 import { resolveHeroPortrait } from '../utils/art/artMapping';
@@ -861,6 +866,11 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
   const feudFiredRef = useRef(false);
 
   const openingMulliganGatingPoker = useGameStore(s => isOpeningMulliganGatingPoker(s.gameState));
+  /** Opening mulligan owns the screen — defer the full poker DOM until the chamber opens. */
+  const deferPokerPresentationShell = openingMulliganGatingPoker;
+  const [presentationShellRevealed, setPresentationShellRevealed] = useState(
+    () => !openingMulliganGatingPoker,
+  );
 
   const {
     combatState,
@@ -976,13 +986,18 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
     setQuipKey(k => k + 1);
   }, [bossQuips, quipOpponentHP, quipOpponentMaxHP, requestQuipText]);
 
-  const pokerDrama = usePokerDrama({ combatState, isActive });
+  const pokerDrama = usePokerDrama({
+    combatState,
+    isActive,
+    vfxLifecycleEnabled: !openingMulliganGatingPoker,
+  });
 
   // Register poker drama VisualEvent handlers once per arena mount.
   useEffect(() => {
+    if (openingMulliganGatingPoker) return;
     const unregister = registerPokerDramaVisualEffects();
     return unregister;
-  }, []);
+  }, [openingMulliganGatingPoker]);
 
   const elementalBuff = useElementalBuff();
 
@@ -1147,7 +1162,23 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
   const gamePhase = useGameStore(state => state.gameState?.gamePhase);
   const animationsEnabled = useSettingsStore(state => state.animationsEnabled);
   const reduceMotion = useSettingsStore(state => state.reduceMotion);
-  const particleCanvasEnabled = animationsEnabled && !reduceMotion && gamePhase !== 'game_over';
+  const particleCanvasEnabled = animationsEnabled && !reduceMotion && gamePhase !== 'game_over'
+    && !openingMulliganGatingPoker;
+
+  useEffect(() => {
+    if (deferPokerPresentationShell) {
+      setPresentationShellRevealed(false);
+      return;
+    }
+    if (!animationsEnabled || reduceMotion) {
+      setPresentationShellRevealed(true);
+      return;
+    }
+    const frame = requestAnimationFrame(() => {
+      setPresentationShellRevealed(true);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [animationsEnabled, deferPokerPresentationShell, reduceMotion]);
   const gameWinner = useGameStore(state => state.gameState?.winner);
   const turnNumber = useGameStore(state => state.gameState?.turnNumber ?? 1);
   const p2pDecisionConnectionState = usePeerStore(state => state.connectionState);
@@ -1272,7 +1303,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
 
   return (
     <GameViewport
-      extraClassName={`${outerShakeClass} ${realmClass}`.trim()}
+      extraClassName={`${outerShakeClass} ${openingMulliganGatingPoker ? '' : realmClass}`.trim()}
       safeX={POKER_VIEWPORT_SAFE_AREA.safeX}
       safeY={POKER_VIEWPORT_SAFE_AREA.safeY}
       maxScale={POKER_VIEWPORT_SAFE_AREA.maxScale}
@@ -1281,10 +1312,12 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
     >
       <div
         ref={setArenaRoot}
-        className={`ragnarok-combat-arena arena-scaled viewport-mode bg-transparent ${isPlayerTurn ? 'player-turn' : 'opponent-turn'}`}
-        style={POKER_VIEWPORT_LAYOUT_STYLE}
+        className={`ragnarok-combat-arena arena-scaled viewport-mode bg-transparent${
+          deferPokerPresentationShell ? ' ragnarok-combat-arena--opening-mulligan' : ''
+        } ${isPlayerTurn ? 'player-turn' : 'opponent-turn'}`}
+        style={{ ...POKER_VIEWPORT_LAYOUT_STYLE, ...getActivePokerBoardSurfaceArenaStyle() }}
       >
-        <BoardOccupancyOverlay />
+        {!deferPokerPresentationShell && <BoardOccupancyOverlay />}
         <ArenaVfxRootContext.Provider value={arenaRoot}>
         {/* ═════════════════════════════════════════════════════════════
             LAYERED ARCHITECTURE — see docs/POKER_ARENA_UI.md §Layers
@@ -1296,11 +1329,19 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
               .layer-hud         z 700-899 pointer-events: auto (opt-in)
               .layer-modal       z 900+   pointer-events: auto (blockers)
             ═════════════════════════════════════════════════════════════ */}
-        <div className="layer-background" />
+        {!deferPokerPresentationShell && (
+          <div
+            className={`layer-background${
+              presentationShellRevealed ? ' layer-background--scene-reveal' : ''
+            }`}
+          />
+        )}
         <div id="arena-layer-vfx" className="layer-vfx" {...arenaVfxLayerProps(ARENA_VFX_LAYERS.vfx)} />
         <div className="arena-notice-layer" />
         <div id="arena-layer-modal" className="layer-modal" {...arenaVfxLayerProps(ARENA_VFX_LAYERS.modal)} />
 
+        {!deferPokerPresentationShell && (
+        <>
         {/* Hourglass Timer at Top Center */}
         {(() => {
           const t = outerDecisionView.remainingSeconds;
@@ -1672,18 +1713,17 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
       {/* Hero Power Targeting Prompt */}
       <HeroPowerPrompt targeting={heroPowerTargeting} onCancel={cancelHeroPowerTargeting} />
 
-      {/* Approach bridge, then the decision screen. Both portal into #arena-layer-modal. The viewport plate owns the single exit iris. */}
-      {(combatState.phase === CombatPhase.MULLIGAN || gamePhase === 'mulligan') && !gameStateMulligan?.active && (
-        <MulliganApproachOverlay
-          compact
-          disableMotion={!animationsEnabled || reduceMotion}
-          pointerEvents="none"
-        />
-      )}
+        </>
+        )}
+
       <MulliganScreen
         mulligan={gameStateMulligan}
         playerHand={playerHand}
         onMulliganAction={() => {}}
+        snapEntrance={
+          shouldMulliganSnapEntrance(p2pDecisionMatch?.opponent.kind === 'peer')
+          && openingMulliganGatingPoker
+        }
       />
 
       {/* Non-blocking Showdown Celebration - replaces old blocking resolution-overlay */}
@@ -1726,6 +1766,8 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
         )}
       </AnimatePresence>
 
+      {!deferPokerPresentationShell && (
+        <>
       <GameHUD
         turnNumber={turnNumber}
         playerDeckCount={playerDeckCount}
@@ -1744,6 +1786,10 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
         opponentHasAdvantage={elementalBuff.opponentHasAdvantage}
       />
 
+      <GameLog />
+        </>
+      )}
+
       {gamePhase === 'game_over' && (
         <GameOverScreen
           isVisible
@@ -1759,8 +1805,6 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
           onMainMenu={() => { window.location.hash = '/'; }}
         />
       )}
-
-      <GameLog />
 
         </ArenaVfxRootContext.Provider>
 

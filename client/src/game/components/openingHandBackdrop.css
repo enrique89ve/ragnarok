@@ -1,0 +1,38 @@
+/* Shared VS → mulligan plate (aurora ruins). Keep scrims aligned so the cut feels continuous. */
+:root {
+	--opening-hand-backdrop-image: url('/art/chess/opening-hand-aurora-ruins-v1.webp');
+	--opening-hand-backdrop-scrim: linear-gradient(
+		180deg,
+		rgba(3, 5, 11, 0.42) 0%,
+		rgba(3, 5, 10, 0.55) 48%,
+		rgba(2, 4, 9, 0.68) 100%
+	);
+}
+
+.opening-hand-backdrop-layer {
+	background-color: #05070d;
+	background-image: var(--opening-hand-backdrop-scrim), var(--opening-hand-backdrop-image);
+	background-position: center;
+	background-size: cover;
+	background-repeat: no-repeat;
+}
+
+@keyframes ember-drift-up {
+	from {
+		transform: translate3d(0, 0, 0);
+	}
+
+	to {
+		transform: translate3d(0, -12%, 0);
+	}
+}
+
+@keyframes ember-drift-diagonal {
+	from {
+		transform: translate3d(0, 0, 0);
+	}
+
+	to {
+		transform: translate3d(4%, -10%, 0);
+	}
+}

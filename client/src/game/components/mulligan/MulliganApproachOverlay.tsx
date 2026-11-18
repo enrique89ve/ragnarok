@@ -21,7 +21,7 @@ export type MulliganApproachOverlayProps = {
 	readonly compact?: boolean;
 };
 
-const MulliganApproachOverlaySurface: React.FC<MulliganApproachOverlayProps> = ({
+export const MulliganApproachOverlaySurface: React.FC<MulliganApproachOverlayProps> = ({
 	subtitle = 'Dealing your opening hand…',
 	slotCount = 3,
 	disableMotion = false,
@@ -29,7 +29,7 @@ const MulliganApproachOverlaySurface: React.FC<MulliganApproachOverlayProps> = (
 	compact = true,
 }) => (
 	<motion.div
-		className={`mulligan-approach-overlay ${compact ? 'mulligan-approach-overlay--compact' : ''} ${MULLIGAN_OVERLAY_CLASS}`}
+		className={`mulligan-approach-overlay mulligan-chamber--backdrop-host ${compact ? 'mulligan-approach-overlay--compact' : ''} ${MULLIGAN_OVERLAY_CLASS}`}
 		style={{ pointerEvents }}
 		role="status"
 		aria-live="polite"
@@ -45,9 +45,11 @@ const MulliganApproachOverlaySurface: React.FC<MulliganApproachOverlayProps> = (
 			{!compact && (
 				<p className={`${MULLIGAN_SUBTITLE_CLASS} mb-8`}>{subtitle}</p>
 			)}
-			<div className={`mulligan-deal-row mulligan-approach-deal-row ${compact ? 'mt-2' : ''}`}>
-				<MulliganDealRowFx slotCount={slotCount} visible />
-			</div>
+			{!compact && (
+				<div className="mulligan-deal-row mulligan-approach-deal-row">
+					<MulliganDealRowFx slotCount={slotCount} visible />
+				</div>
+			)}
 		</div>
 	</motion.div>
 );

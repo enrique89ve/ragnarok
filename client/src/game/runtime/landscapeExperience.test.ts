@@ -25,7 +25,7 @@ describe('landscape-first mobile experience contract', () => {
 		expect(routedGameplay).toContain('path={routes.multiplayer}');
 
 		const responsive = source('client/src/styles/landscape-responsive.css');
-		expect(responsive).toContain('@media (orientation: portrait) and (max-width: 820px)');
+		expect(responsive).toContain('@media (max-aspect-ratio: 1/1) and (max-width: 820px) and (pointer: coarse) and (hover: none)');
 		expect(responsive).toMatch(/\.game-orientation-content\s*\{[^}]*pointer-events:\s*none;[^}]*visibility:\s*hidden;/s);
 		expect(responsive).toMatch(/\.game-orientation-lock\s*\{[^}]*display:\s*grid;/s);
 		expect(responsive).toMatch(/\.game-orientation-card\s*\{[^}]*max-width:\s*100%;[^}]*box-sizing:\s*border-box;/s);

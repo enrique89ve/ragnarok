@@ -68,8 +68,8 @@ Every visual element in the arena belongs to exactly **one** logical layer. Back
 
 ### Hard rules
 
-1. **No `position: fixed` in gameplay code.** Use `position: absolute` inside the appropriate layer. `fixed` escapes the canvas scale.
-2. **No `document.body` mounts.** All portals + imperative DOM creation target `#arena-layer-vfx` or `#arena-layer-modal`.
+1. **No `position: fixed` in gameplay code.** Use `position: absolute` inside the appropriate layer. `fixed` escapes the canvas scale. **Exception:** opening-hand mulligan (`MulliganShellContext` viewport owner) portals to `[data-vfx-layer="game-viewport-wrapper"]` with a `fixed inset-0` LoL-style shell — full physical viewport, not the 1920 canvas.
+2. **No `document.body` mounts.** All portals + imperative DOM creation target `#arena-layer-vfx`, `#arena-layer-modal`, or (opening mulligan only) `game-viewport-wrapper`.
 3. **Z-index inside the reserved range.** A VFX overlay never uses `z: 800` (HUD range).
 4. **`pointer-events: none` by default** on VFX + modal containers — children opt-in. Prevents accidental click-blocking.
 5. **GSAP shakes target `.game-viewport-wrapper`** (no transform). Targeting `.game-viewport` overwrites the responsive scale and breaks the canvas.
@@ -87,13 +87,28 @@ Every visual element in the arena belongs to exactly **one** logical layer. Back
 |---|---|---|
 | `PokerDramaVFX` container | `#arena-layer-vfx` | Imperative GSAP/DOM injection — needs bounded layer |
 | `PhaseBanner` (portal) | `#arena-layer-vfx` | Transitions between phases, fades in centered |
-| `MulliganScreen` (portal) | `#arena-layer-modal` | Blocks input until mulligan committed |
+| `MulliganScreen` (portal) | `#arena-layer-modal` | Blocks input until mulligan committed (in-hand / P2P). |
+| `MulliganScreen` (opening hand) | `game-viewport-wrapper` | Fullscreen fixed shell; backdrop + iris on viewport plate (`GameViewport`). |
 | `ShowdownCelebration` (portal) | `#arena-layer-modal` | Blocks input during resolution |
 | `GameOverScreen` (portal) | `#arena-layer-modal` | Terminal modal. Mounts only when `gamePhase === 'game_over'`. |
 | `CombatFeedbackStack` | `feedbackStack` HUD zone above community cards | Spell/status chips. Waits while PhaseBanner or ActionAnnouncement occupies cinema. Game log always records the same event. |
 | `BettingPanel` | `[data-zone="betting-panel"]` in HUD z-range | Persistent control surface. Actions show **Bet/Raise/Call/Check/Fold/All in** plus HP, not icon-only. Disabled buttons keep the same label and explain why in `title`. |
 | `GameHUD` | `[data-vfx-target="risk-display"]` on stakes chip | Only turn/phase/stakes rail |
 | Particle bursts (Pixi) | `#arena-layer-vfx` | Canvas-bounded particles. `PixiParticleCanvas` mounts only while animations are on, reduced motion is off, and the phase is not `game_over`. |
+
+### Opening hand: local vs P2P
+
+Authoritative split lives in `client/src/game/combat/openingHandPresentationPolicy.ts`. **Gameplay authority** (mulligan commands, poker phase, first strike, turn clock) is identical; **presentation** diverges so LoL polish does not delay P2P mounts.
+
+| Concern | Local / single / AI | P2P / ranked (`opponent.kind === 'peer'`) |
+|---|---|---|
+| Arena chunk prefetch | Deferred until opening gate clears (VS + combat trigger use `prefetchPokerCombatChunkDeferred`) | Immediate (`prefetchPokerCombatChunk`) on VS and combat trigger |
+| `PokerCombatPhase` shell | `OpeningHandMulliganHost` until gate off + exit iris settled + arena chunk ready, then lazy `RagnarokCombatArena` | Lazy `RagnarokCombatArena` from first `poker_combat` frame (no host / no iris handoff) |
+| Mulligan deal motion | `snapEntrance` (`MULLIGAN_OPENING_SNAP`) when opening gate active | Standard `MULLIGAN_LOL` timing — no snap |
+| Fullscreen backdrop | Aurora only on **VS** + **opening-mulligan** `GameViewport` plate/letterbox. Coordinator root stays obsidian (`data-scene`). Poker forest lives in **arena** `.layer-background` only. Chess mission realm lives on **`ChessPhase` `.chess-phase-scene`** only — never on coordinator during poker. | Same aurora on VS; arena mount unchanged |
+| `deferPokerPresentationShell` | Hides heavy board layers while opening gate active (host or arena) | Same gate flag; arena stays mounted for wire + timers |
+
+**Editing rule:** any new opening-hand animation, defer, or portal that delays mounting `RagnarokCombatArena` must go through the policy helpers. Default for P2P is **do not defer mount**. See `docs/QA_OPENING_HAND_P2P.md` for the manual regression checklist.
 
 ### Feedback lanes (log + overlay)
 

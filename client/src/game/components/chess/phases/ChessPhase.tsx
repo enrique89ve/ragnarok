@@ -448,6 +448,8 @@ export type ChessPhaseProps = {
 	readonly opponentArmy: ArmySelectionType;
 	readonly onCombatTriggered: (attackerId: string, defenderId: string) => void;
 	readonly onBattleMode: () => void;
+	/** Mission realm + finale + motion — owns chess backdrop (not coordinator root). */
+	readonly sceneShellClass: string;
 	readonly sceneFxEnabled: boolean;
 	readonly motionEnabled: boolean;
 };
@@ -458,6 +460,7 @@ const ChessPhase: React.FC<ChessPhaseProps> = ({
 	opponentArmy,
 	onCombatTriggered,
 	onBattleMode,
+	sceneShellClass,
 	sceneFxEnabled,
 	motionEnabled,
 }) => {
@@ -476,7 +479,7 @@ const ChessPhase: React.FC<ChessPhaseProps> = ({
 			initial={{ opacity: 0, scale: 0.9 }}
 			animate={{ opacity: 1, scale: 1 }}
 			exit={{ opacity: 0, scale: 0.9 }}
-			className="relative w-full h-full flex flex-col items-center justify-center p-4 gap-3"
+			className={`${sceneShellClass} relative w-full h-full min-h-dvh flex flex-col items-center justify-center p-4 gap-3`}
 		>
 			<ChessSceneLayers fxEnabled={sceneFxEnabled} motionEnabled={motionEnabled} />
 

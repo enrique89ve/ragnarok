@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ARENA_VFX_LAYERS, arenaVfxLayerProps } from './arenaVfxTargets';
 import { mulliganIrisDurationStyle } from '../components/mulligan/mulliganLolTiming';
 import {
@@ -8,6 +8,7 @@ import {
 import { useMulliganExitIris } from '../components/mulligan/useMulliganExitIris';
 import '../components/mulligan/mulliganChamber.css';
 import './GameViewport.css';
+import './styles/poker-entry-scene-handoff.css';
 
 type GameViewportProps = {
   children: React.ReactNode;
@@ -23,6 +24,8 @@ type GameViewportProps = {
   mulliganChamber?: boolean;
   /** When false, the plate drops without the iris. */
   mulliganChamberMotion?: boolean;
+  /** Fires once when the chamber drops and the exit iris finishes (or reduce-motion skip). */
+  onMulliganChamberExitSettled?: () => void;
 };
 
 export type GameViewportFitInput = {
@@ -170,6 +173,7 @@ export const GameViewport: React.FC<GameViewportProps> = ({
   extraClassName = '',
   mulliganChamber = false,
   mulliganChamberMotion = true,
+  onMulliganChamberExitSettled,
 }) => {
   // Sync init — first paint already has the correct scale, no flash.
   const [fit, setFit] = useState(() => computeWindowFit(referenceWidth, referenceHeight, safeX, safeY, maxScale));
@@ -206,12 +210,26 @@ export const GameViewport: React.FC<GameViewportProps> = ({
   // during the shake. The wrapper has no transform so animating its
   // translate is safe.
   const exitIris = useMulliganExitIris(mulliganChamber, mulliganChamberMotion);
+  const chamberExitSettledRef = useRef(false);
+  useEffect(() => {
+    if (mulliganChamber) {
+      chamberExitSettledRef.current = false;
+      return;
+    }
+    if (exitIris.covered || chamberExitSettledRef.current) return;
+    chamberExitSettledRef.current = true;
+    onMulliganChamberExitSettled?.();
+  }, [exitIris.covered, mulliganChamber, onMulliganChamberExitSettled]);
   const exitIrisOwner = exitIris.covered
     ? MULLIGAN_EXIT_IRIS_OWNER.viewport
     : MULLIGAN_EXIT_IRIS_OWNER.screen;
-  const plateClass = exitIris.irisOpen
-    ? 'mulligan-viewport-plate mulligan-chamber--iris'
-    : 'mulligan-viewport-plate';
+  const plateClass = [
+    'mulligan-viewport-plate',
+    exitIris.irisOpen ? 'mulligan-chamber--iris' : '',
+    exitIris.covered && !exitIris.irisOpen ? 'mulligan-viewport-plate--photo-deferred' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   const classNames = extraClassName.split(/\s+/).filter(Boolean);
   const shakeClasses = classNames
@@ -224,7 +242,7 @@ export const GameViewport: React.FC<GameViewportProps> = ({
   return (
     <MulliganShellProvider exitIrisOwner={exitIrisOwner}>
       <div
-        className={`game-viewport-wrapper ${shakeClasses}`.trim()}
+        className={`game-viewport-wrapper${mulliganChamber ? ' game-viewport-wrapper--opening-mulligan' : ''} ${shakeClasses}`.trim()}
         data-compact-landscape={fit.compactLandscape ? 'true' : 'false'}
         data-viewport-bars={fit.bars}
         {...arenaVfxLayerProps(ARENA_VFX_LAYERS.viewportWrapper)}

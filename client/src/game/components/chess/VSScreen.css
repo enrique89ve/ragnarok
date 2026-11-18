@@ -1,3 +1,5 @@
+@import '../openingHandBackdrop.css';
+
 .vs-screen-overlay {
 	position: fixed;
 	inset: 0;
@@ -31,15 +33,15 @@
 	position: absolute;
 	inset: -2%;
 	z-index: 0;
-	background-color: #05070d;
-	background-image:
-		linear-gradient(180deg, rgba(3, 5, 11, 0.32), rgba(3, 5, 10, 0.5)),
-		url('/art/chess/vs-ragnarok-battlefield-v1.png');
-	background-position: center;
-	background-size: cover;
-	background-repeat: no-repeat;
-	filter: saturate(0.86) contrast(1.08);
+	filter: saturate(1.02) contrast(1.06) brightness(0.94);
 	transform: scale(1.02);
+}
+
+.vs-screen-backdrop.opening-hand-backdrop-layer {
+	background-image:
+		var(--opening-hand-backdrop-scrim),
+		radial-gradient(ellipse 52% 38% at 50% 42%, rgba(2, 5, 12, 0.12), rgba(2, 4, 9, 0.55) 72%),
+		var(--opening-hand-backdrop-image);
 }
 
 .vs-screen-backdrop::after {

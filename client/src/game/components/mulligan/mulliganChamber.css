@@ -1,3 +1,5 @@
+@import '../openingHandBackdrop.css';
+
 /* Decision chamber and the letterbox plate share one obsidian fill and seam.
    `--mulligan-iris-ms` is written from MULLIGAN_LOL.irisOpenMs. The 480ms
    fallback matches that constant when the inline style is absent. */
@@ -12,10 +14,51 @@
   --mulligan-plate: #05070d;
   --mulligan-gold: #f5c542;
   --mulligan-rune: #38bdf8;
+}
+
+/* One photographic plate — viewport letterbox or standalone host (Suspense bridge). */
+.mulligan-chamber--fullscreen {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  contain: layout paint;
+  isolation: isolate;
+}
+
+/* Fullscreen shell owns the photo; plate stays obsidian until iris exit. */
+.mulligan-viewport-plate--photo-deferred {
+  background-image: none;
   background-color: var(--mulligan-plate);
 }
 
-.mulligan-chamber {
+.mulligan-viewport-plate--photo-deferred::before {
+  display: none;
+}
+
+.mulligan-chamber--fullscreen.mulligan-chamber--backdrop-host {
+  background-color: var(--mulligan-plate);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-image:
+    radial-gradient(
+      ellipse 52% 40% at 50% 48%,
+      color-mix(in srgb, var(--mulligan-gold) 4%, transparent),
+      transparent 74%
+    ),
+    radial-gradient(
+      ellipse 140% 110% at 50% 50%,
+      transparent 38%,
+      rgba(5, 7, 13, 0.35) 72%,
+      rgba(5, 7, 13, 0.55) 100%
+    ),
+    var(--opening-hand-backdrop-scrim),
+    var(--opening-hand-backdrop-image);
+}
+
+:is(.mulligan-viewport-plate, .mulligan-chamber--backdrop-host:not(.mulligan-chamber--fullscreen)) {
+  background-color: var(--mulligan-plate);
   background-image:
     radial-gradient(
       ellipse 48% 36% at 50% 54%,
@@ -24,12 +67,42 @@
     ),
     radial-gradient(
       ellipse 130% 100% at 50% 50%,
-      transparent 36%,
-      var(--mulligan-plate) 74%
-    );
+      transparent 32%,
+      rgba(5, 7, 13, 0.72) 68%,
+      var(--mulligan-plate) 88%
+    ),
+    var(--opening-hand-backdrop-scrim),
+    var(--opening-hand-backdrop-image);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
 }
 
-:is(.mulligan-chamber, .mulligan-viewport-plate)::before {
+/* Decision UI over the arena — vignette only; photo comes from `.mulligan-viewport-plate`. */
+.mulligan-chamber.mulligan-chamber--viewport-backdrop {
+  background-color: transparent;
+  background-image:
+    radial-gradient(
+      ellipse 48% 36% at 50% 54%,
+      color-mix(in srgb, var(--mulligan-gold) 6%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 115% 92% at 50% 50%,
+      transparent 28%,
+      rgba(5, 7, 13, 0.45) 62%,
+      rgba(5, 7, 13, 0.62) 100%
+    );
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.mulligan-chamber.mulligan-chamber--viewport-backdrop::before {
+  display: none;
+}
+
+:is(.mulligan-viewport-plate, .mulligan-chamber--backdrop-host)::before {
   content: '';
   position: absolute;
   top: 0;

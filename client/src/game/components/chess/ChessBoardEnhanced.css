@@ -4,7 +4,7 @@
 
 /* 0. DEFAULT MIDGARD BACKGROUND for non-campaign game routes.
    Campaign realm art is owned by chess-realm-skins.css. */
-.ragnarok-chess-game:not([class*="realm-"]) {
+.chess-phase-scene:not([class*="realm-"]) {
   background: #05070d url('/art/chess/ragnarok-arena-base-v2.webp') center center / cover no-repeat;
   position: relative;
   min-height: 100dvh;
@@ -48,7 +48,7 @@
 
 /* Deep vignette overlay for non-realm chess routes. Campaign realm skins
    own these pseudo-elements, so keep this base layer out of realm screens. */
-.ragnarok-chess-game:not([class*="realm-"])::before {
+.chess-phase-scene:not([class*="realm-"])::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -58,7 +58,7 @@
 }
 
 /* Falling ember particles for non-realm chess routes. */
-.ragnarok-chess-game:not([class*="realm-"])::after {
+.chess-phase-scene:not([class*="realm-"])::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -75,7 +75,7 @@
   animation: chess-root-ember-drift 20s linear infinite;
 }
 
-.ragnarok-chess-game.chess-motion-off:not([class*="realm-"])::after {
+.chess-phase-scene.chess-motion-off:not([class*="realm-"])::after {
   animation: none !important;
   opacity: 0 !important;
 }
@@ -604,12 +604,12 @@
     animation-name: chess-turn-toast-fade-only;
   }
 
-  .ragnarok-chess-game:not([class*="realm-"])::after {
+  .chess-phase-scene:not([class*="realm-"])::after {
     animation: none !important;
     opacity: 0 !important;
   }
 
-  .ragnarok-chess-game.chess-motion-off:not([class*="realm-"])::after {
+  .chess-phase-scene.chess-motion-off:not([class*="realm-"])::after {
     animation: none !important;
     opacity: 0 !important;
   }
