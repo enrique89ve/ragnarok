@@ -1,5 +1,5 @@
 import { debug } from '../../config/debugConfig';
-import { subscribeAllVisualEvents } from './emitter';
+import { discardPendingVisualEvents, subscribeAllVisualEvents } from './emitter';
 import type { VisualEvent, VisualEventMap, VisualEventType } from './events';
 import type { GameEffectHandle } from '@/game/effects/core/gameEffectCoordinator';
 
@@ -22,6 +22,7 @@ export const VISUAL_EVENT_TYPES: readonly VisualEventType[] = [
 	'handImproved',
 	'spellCast',
 	'wagerActivated',
+	'staminaChanged',
 	'combatImpact',
 ];
 
@@ -113,6 +114,7 @@ export function registerVisualEffect<T extends VisualEventType>(
 }
 
 export function cancelAllActiveVisualEffects(): void {
+	discardPendingVisualEvents();
 	const pending = activeEffects;
 	activeEffects = [];
 	for (const entry of pending) {

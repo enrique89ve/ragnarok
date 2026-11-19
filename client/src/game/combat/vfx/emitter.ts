@@ -12,9 +12,11 @@ interface VisualEventSubscriptionEntry {
 
 let subscriptions: VisualEventSubscriptionEntry[] = [];
 let rendererEnabled = true;
+let generation = 0;
 let subscriptionIdCounter = 0;
 
 export function setVisualEventRendererEnabled(enabled: boolean): void {
+	if (!enabled) discardPendingVisualEvents();
 	rendererEnabled = enabled;
 }
 
@@ -22,15 +24,20 @@ export function isVisualEventRendererEnabled(): boolean {
 	return rendererEnabled;
 }
 
+export function discardPendingVisualEvents(): void {
+	generation++;
+}
+
 export function emitVisualEvent(event: VisualEvent): void {
 	if (!rendererEnabled) return;
+	const emittedIn = generation;
 	const matching = subscriptions.filter(entry => entry.eventType === event.type || entry.eventType === '*');
 	for (const entry of matching) {
-		try {
-			entry.handler(event);
-		} catch (error) {
-			debug.error(`[VisualEventEmitter] Handler error for ${event.type}:`, error);
-		}
+		// Finish the command (including P2P bookkeeping) before any renderer runs.
+		// Each subscriber starts independently even when another never completes.
+		void Promise.resolve().then(() => {
+			if (generation === emittedIn && subscriptions.includes(entry)) return entry.handler(event);
+		}).catch(error => debug.error(`[VisualEventEmitter] Handler error for ${event.type}:`, error));
 	}
 }
 

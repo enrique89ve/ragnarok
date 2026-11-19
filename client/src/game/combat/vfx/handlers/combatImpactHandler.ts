@@ -3,14 +3,41 @@ import {
 } from '../../../animations/UnifiedAnimationOrchestrator';
 import { requestCombatDamageFloater } from '../../floaters/combatDamageFloater';
 import {
+	spawnArcaneVortex,
+	spawnArenaFlash,
+	spawnChromaticSlash,
+	spawnDiamondShards,
 	spawnDirectionalImpactBurst,
+	spawnEmbers,
 	spawnImpactRing,
+	spawnMagicTunnel,
+	spawnShieldDome,
 	spawnSlashTrail,
 	spawnSmokePuff,
 	spawnSparkBurst,
-	ELEMENT_PALETTES,
+	spawnStarburstBloom,
+	spawnTranslucentRibbon,
+	spawnTravelingGlowRing,
+	triggerEmotionalImpulse,
 	type ParticleColor,
 } from '../../../animations/PixiParticleCanvas';
+import {
+	resolveCardSymbolAttackChoreography,
+	type SymbolAttackChoreography,
+} from '../cardSymbolAttackContract';
+import { proceduralAudio } from '../../../audio/proceduralAudio';
+import {
+	ARENA_COORDINATE_CONTRACT,
+	arenaContractPointToViewport,
+	hostileFrontAnchorFor,
+} from '../arenaCoordinateContract';
+import {
+	getArenaLocalPoint,
+	getArenaVfxCoordinateLayer,
+} from '../../arenaVfxTargets';
+import { triggerArenaShake } from '../arenaShake';
+import { vfxOrchestrationDirector } from '../vfxOrchestrationDirector';
+import { holdHeroVisualHp, releaseHeroVisualHp } from '../visualVitalsHold';
 import {
 	gameEffectCoordinator,
 	type GameEffectHandle,
@@ -55,7 +82,7 @@ import type {
 	PresentationTarget,
 } from '@/game/effects/presentation/types';
 import { resolveArenaEffectPoint } from '@/game/effects/presentation';
-import { playLocalFx, combineEffectHandles } from '../localFxPrimitives';
+import { playLocalFx, triggerCardImpactVibration, combineEffectHandles } from '../localFxPrimitives';
 import { registerVisualEffect, type EffectHandle, type VisualEffectUnregister } from '../registry';
 import type { CombatImpactEvent } from '../events';
 
@@ -267,14 +294,21 @@ function scheduleAttackMotion(
 	profile: CombatImpactMotionProfile,
 	priority: GameEffectPriority,
 	seed: string,
+	distancePx?: number,
 ): GameEffectHandle {
 	const host = motionHost(target);
 	if (!host) return { cancel() {}, onComplete: Promise.resolve() };
 
 	clearCombatMotion(host);
-	const contactVector = motionVector(direction, profile.lungePx);
-	const anticipation = motionVector(direction, -profile.lungePx * 0.12);
-	const rebound = motionVector(direction, profile.lungePx * 0.08);
+	// Scale card lunge proportionally toward the real arena-space target distance
+	// (1920x1080 coordinates) so attacks visibly reach the enemy regardless of
+	// browser viewport scale, instead of twitching 20px in place.
+	const effectiveLungePx = distancePx && distancePx > 0
+		? Math.min(180, Math.max(profile.lungePx * 2.2, distancePx * 0.48))
+		: profile.lungePx * 2;
+	const contactVector = motionVector(direction, effectiveLungePx);
+	const anticipation = motionVector(direction, -Math.min(20, effectiveLungePx * 0.16));
+	const rebound = motionVector(direction, effectiveLungePx * 0.08);
 	setMotionProperty(host, '--bf-action-anticipation-x', anticipation.x);
 	setMotionProperty(host, '--bf-action-anticipation-y', anticipation.y);
 	setMotionProperty(host, '--bf-action-contact-x', contactVector.x);
@@ -500,6 +534,7 @@ function scheduleImpactPhase(
 	sourcePoint: Point | null,
 	direction: CombatAttackDirection,
 	profile: CombatImpactMotionProfile,
+	palette: ParticleColor,
 	event: CombatImpactEvent,
 	priority: GameEffectPriority,
 	seed: string,
@@ -514,7 +549,7 @@ function scheduleImpactPhase(
 		targetPoint,
 		sourcePoint,
 		counts,
-		ELEMENT_PALETTES.neutral,
+		palette,
 		direction,
 		profile.travelMs,
 		seed,
@@ -552,6 +587,28 @@ function maxRecipeDelay(
 	);
 }
 
+function playImpactAudioAndShake(phase: ImpactPhase): void {
+	try {
+		if (phase.impact.outcome === 'shield') {
+			proceduralAudio.play('sword_clash');
+			return;
+		}
+		if (phase.impact.target.type === 'hero') {
+			proceduralAudio.play(phase.impact.level === 'heavy' || phase.impact.lethal === true ? 'damage_hero' : 'damage');
+		} else {
+			proceduralAudio.play('damage');
+		}
+	} catch {
+		// Audio context unavailable in headless/test environments
+	}
+
+	if (phase.impact.lethal === true) {
+		triggerArenaShake('lethal');
+	} else if (phase.impact.level === 'heavy') {
+		triggerArenaShake('heavy');
+	}
+}
+
 function scheduleImpactPhaseWithGate(
 	phase: ImpactPhase,
 	recipe: readonly EffectRecipeStep[],
@@ -559,11 +616,75 @@ function scheduleImpactPhaseWithGate(
 	sourcePoint: Point | null,
 	direction: CombatAttackDirection,
 	profile: CombatImpactMotionProfile,
+	palette: ParticleColor,
+	choreography: SymbolAttackChoreography,
 	event: CombatImpactEvent,
 	priority: GameEffectPriority,
 	seed: string,
 	includeTrail: boolean,
 ): GameEffectHandle {
+	playImpactAudioAndShake(phase);
+
+	// Symbol-contract 2D impact signature rendered purely in PixiJS v8 + tactile
+	// CSS card vibration on the actual damage receiver.
+	if (phase.impact.outcome === 'shield') {
+		spawnShieldDome(targetPoint.x, targetPoint.y);
+		triggerCardImpactVibration(phase.impact.target, 'normal', priority);
+	} else {
+		const isHeavy = phase.impact.lethal === true || phase.impact.level === 'heavy';
+		triggerCardImpactVibration(phase.impact.target, isHeavy ? 'heavy' : 'normal', priority);
+		spawnChromaticSlash(targetPoint.x, targetPoint.y, direction, palette, choreography.slashScale);
+		spawnDiamondShards(
+			targetPoint.x,
+			targetPoint.y,
+			choreography.shardCount,
+			palette,
+			direction,
+			`${seed}:${phase.id}`,
+		);
+		if (choreography.spawnVortex) {
+			spawnArcaneVortex(targetPoint.x, targetPoint.y, palette, 500);
+		}
+		if (choreography.spawnEmbers) {
+			spawnEmbers(targetPoint.x, targetPoint.y, isHeavy ? 10 : 6, palette);
+		}
+		if (choreography.spawnStarburst || isHeavy) {
+			spawnStarburstBloom(
+				targetPoint.x,
+				targetPoint.y,
+				palette,
+				phase.impact.lethal === true ? 1.45 : isHeavy ? 1.2 : 0.95,
+				340,
+			);
+		}
+		if (isHeavy) {
+			spawnArenaFlash(palette.primary, phase.impact.lethal === true ? 0.2 : 0.12, 220);
+			triggerEmotionalImpulse('shock', phase.impact.lethal === true ? 0.92 : 0.55);
+			if (phase.impact.lethal === true) {
+				vfxOrchestrationDirector.triggerCriticalSpotlight(680);
+			}
+		}
+		// Lifesteal return ribbon flowing visibly from target back to the caster hero
+		if (choreography.returnRibbonPalette && phase.id === 'target') {
+			const casterSide = event.presentation?.attackerSide ?? 'player';
+			const casterHeroPoint = arenaContractPointToViewport(
+				casterSide === 'player'
+					? ARENA_COORDINATE_CONTRACT.playerHero
+					: ARENA_COORDINATE_CONTRACT.opponentHero,
+			);
+			if (casterHeroPoint) {
+				spawnTranslucentRibbon(
+					targetPoint.x,
+					targetPoint.y,
+					casterHeroPoint.x,
+					casterHeroPoint.y,
+					choreography.returnRibbonPalette,
+					{ strands: 2, durationMs: 360, lingerMs: 340, arcFactor: 0.2 },
+				);
+			}
+		}
+	}
+
 	const effects = scheduleImpactPhase(
 		phase,
 		recipe,
@@ -571,6 +692,7 @@ function scheduleImpactPhaseWithGate(
 		sourcePoint,
 		direction,
 		profile,
+		palette,
 		event,
 		priority,
 		seed,
@@ -604,6 +726,19 @@ function scheduleImpactPhaseWithGate(
 	};
 }
 
+function arenaDistanceBetween(source: Point | null, target: Point): number | undefined {
+	if (!source) return undefined;
+	const layer = getArenaVfxCoordinateLayer();
+	if (layer) {
+		const localSource = getArenaLocalPoint(source, layer);
+		const localTarget = getArenaLocalPoint(target, layer);
+		if (localSource && localTarget) {
+			return Math.hypot(localTarget.x - localSource.x, localTarget.y - localSource.y);
+		}
+	}
+	return Math.hypot(target.x - source.x, target.y - source.y);
+}
+
 function schedulePrimaryTravel(
 	phase: ImpactPhase,
 	recipe: readonly EffectRecipeStep[],
@@ -611,17 +746,69 @@ function schedulePrimaryTravel(
 	sourcePoint: Point | null,
 	direction: CombatAttackDirection,
 	profile: CombatImpactMotionProfile,
+	palette: ParticleColor,
+	choreography: SymbolAttackChoreography,
 	event: CombatImpactEvent,
 	priority: GameEffectPriority,
 	seed: string,
 ): GameEffectHandle {
 	const trail = recipe.find(step => pixiPrimitive(step.primitive) === 'slashTrail');
+	const travelMs = Math.round(travelDuration(event, profile) * choreography.travelSpeedMultiplier);
 	const travelHold = scheduleVisualWindow(
 		`${seed}:attack-travel:duration`,
-		travelDuration(event, profile),
+		travelMs,
 		priority,
 	);
-	const action = scheduleAttackMotion(phase.source ?? phase.impact.target, direction, profile, priority, seed);
+	const distancePx = arenaDistanceBetween(sourcePoint, targetPoint);
+	const action = scheduleAttackMotion(
+		phase.source ?? phase.impact.target,
+		direction,
+		profile,
+		priority,
+		seed,
+		distancePx,
+	);
+
+	// Alternate between 2D Magic Tunnel and Braided Translucent Silk Ribbon per
+	// the card's real symbol choreography contract (element + keywords + race).
+	if (sourcePoint) {
+		if (choreography.travelStyle === 'tunnel') {
+			spawnMagicTunnel(
+				sourcePoint.x,
+				sourcePoint.y,
+				targetPoint.x,
+				targetPoint.y,
+				palette,
+				{
+					rings: choreography.tunnelRings,
+					durationMs: travelMs,
+				},
+			);
+		} else {
+			spawnTranslucentRibbon(
+				sourcePoint.x,
+				sourcePoint.y,
+				targetPoint.x,
+				targetPoint.y,
+				palette,
+				{
+					strands: choreography.ribbonStrands,
+					durationMs: travelMs,
+					lingerMs: phase.impact.lethal === true ? 380 : 280,
+					arcFactor: choreography.ribbonArcFactor,
+				},
+			);
+		}
+		spawnTravelingGlowRing(
+			sourcePoint.x,
+			sourcePoint.y,
+			targetPoint.x,
+			targetPoint.y,
+			palette,
+			travelMs,
+		);
+	}
+
 	if (!trail) return combineEffectHandles([travelHold, action]);
 
 	const trailHandle = scheduleRecipeStep(
@@ -631,13 +818,38 @@ function schedulePrimaryTravel(
 		targetPoint,
 		sourcePoint,
 		countsForImpact(phase),
-		ELEMENT_PALETTES.neutral,
+		palette,
 		direction,
-		profile.travelMs,
+		travelMs,
 		seed,
 		priority,
 	);
 	return combineEffectHandles([travelHold, trailHandle, action]);
+}
+
+function contractFallbackPointForTarget(
+	target: PresentationTarget,
+	fallbackSide: 'player' | 'opponent',
+): Point | null {
+	if (target.type === 'hero') {
+		return arenaContractPointToViewport(
+			target.side === 'player'
+				? ARENA_COORDINATE_CONTRACT.playerHero
+				: ARENA_COORDINATE_CONTRACT.opponentHero,
+		);
+	}
+	if (target.type === 'field') {
+		return arenaContractPointToViewport(
+			target.side === 'player'
+				? ARENA_COORDINATE_CONTRACT.playerFront
+				: ARENA_COORDINATE_CONTRACT.opponentFront,
+		);
+	}
+	return arenaContractPointToViewport(
+		fallbackSide === 'player'
+			? ARENA_COORDINATE_CONTRACT.playerFront
+			: ARENA_COORDINATE_CONTRACT.opponentFront,
+	);
 }
 
 function pointForTarget(
@@ -659,6 +871,48 @@ function captureImpactPoints(phases: readonly ImpactPhase[]): ReadonlyMap<string
 	return snapshots;
 }
 
+function triggerLethalEmphasisVfx(
+	targetPhase: ImpactPhase,
+	targetPoint: Point,
+	counterPhase: ImpactPhase | undefined,
+	counterPoint: Point | null,
+	palette: ParticleColor,
+	seed: string,
+): void {
+	if (targetPhase.impact.lethal === true) {
+		spawnImpactRing(targetPoint.x, targetPoint.y, palette, 'luminous');
+		spawnSparkBurst(targetPoint.x, targetPoint.y, 12, palette, `${seed}:lethal-target`);
+	}
+	if (counterPhase?.impact.lethal === true && counterPoint) {
+		spawnImpactRing(counterPoint.x, counterPoint.y, palette, 'luminous');
+		spawnSparkBurst(counterPoint.x, counterPoint.y, 12, palette, `${seed}:lethal-counter`);
+	}
+}
+
+function triggerDeathVfx(
+	targetPhase: ImpactPhase,
+	targetPoint: Point,
+	counterPhase: ImpactPhase | undefined,
+	counterPoint: Point | null,
+	palette: ParticleColor,
+	seed: string,
+): void {
+	const lethalEntries: Array<{ phase: ImpactPhase; point: Point }> = [];
+	if (targetPhase.impact.lethal === true) lethalEntries.push({ phase: targetPhase, point: targetPoint });
+	if (counterPhase?.impact.lethal === true && counterPoint) lethalEntries.push({ phase: counterPhase, point: counterPoint });
+
+	for (const { phase, point } of lethalEntries) {
+		spawnImpactRing(point.x, point.y, palette, 'luminous');
+		spawnSparkBurst(point.x, point.y, 16, palette, `${seed}:death-sparks:${phase.id}`);
+		spawnSmokePuff(point.x, point.y, 6, palette, `${seed}:death-smoke:${phase.id}`);
+		spawnEmbers(point.x, point.y, 10, palette);
+		if (phase.impact.target.type === 'card') {
+			const host = motionHost(phase.impact.target);
+			host?.classList.add('card-fx--dying');
+		}
+	}
+}
+
 function buildImpactPlanNodes(
 	targetPhase: ImpactPhase,
 	targetPoint: Point,
@@ -672,9 +926,19 @@ function buildImpactPlanNodes(
 	priority: GameEffectPriority,
 	seed: string,
 ): GameEffectNode[] {
+	const choreography = resolveCardSymbolAttackChoreography({
+		element: presentation.element,
+		keywords: presentation.keywords,
+		race: presentation.race,
+		level: targetPhase.impact.level,
+		lethal: targetPhase.impact.lethal,
+	});
+	const palette = choreography.palette;
+	const paceDelayMs = vfxOrchestrationDirector.reservePrimaryPaceDelayMs();
 	const nodes: GameEffectNode[] = [
 		{
 			id: 'attack-travel',
+			...(paceDelayMs > 0 ? { delayMs: paceDelayMs } : {}),
 			run: () => {
 				const profile = combatImpactMotionProfile(
 					targetPhase.impact.level,
@@ -693,6 +957,8 @@ function buildImpactPlanNodes(
 					targetSourcePoint,
 					direction,
 					travelProfile,
+					palette,
+					choreography,
 					event,
 					priority,
 					`${seed}:target`,
@@ -703,6 +969,9 @@ function buildImpactPlanNodes(
 			id: 'target-impact',
 			after: ['attack-travel'],
 			run: () => {
+				if (targetPhase.impact.target.type === 'hero') {
+					releaseHeroVisualHp(targetPhase.impact.target.side, seed);
+				}
 				const profile = combatImpactMotionProfile(
 					targetPhase.impact.level,
 					targetPhase.impact.lethal,
@@ -719,6 +988,8 @@ function buildImpactPlanNodes(
 					targetSourcePoint,
 					direction,
 					profile,
+					palette,
+					choreography,
 					event,
 					priority,
 					`${seed}:target`,
@@ -730,6 +1001,11 @@ function buildImpactPlanNodes(
 
 	if (counterPhase && counterPoint) {
 		const counterRecipe = recipeForCombatPresentation(presentation, 'counter');
+		const counterChoreography = resolveCardSymbolAttackChoreography({
+			element: 'neutral',
+			level: counterPhase.impact.level,
+			lethal: counterPhase.impact.lethal,
+		});
 		nodes.push({
 			id: 'counter-impact',
 			after: ['target-impact'],
@@ -750,6 +1026,8 @@ function buildImpactPlanNodes(
 					counterSourcePoint,
 					direction,
 					profile,
+					counterChoreography.palette,
+					counterChoreography,
 					event,
 					priority,
 					`${seed}:counter`,
@@ -767,20 +1045,26 @@ function buildImpactPlanNodes(
 		nodes.push({
 			id: 'lethal-confirmed',
 			after: [impactAfter],
-			run: () => scheduleVisualWindow(
-				`${seed}:lethal-confirmed`,
-				COMBAT_LETHAL_TIMELINE_MS.lethalEmphasis,
-				priority,
-			),
+			run: () => {
+				triggerLethalEmphasisVfx(targetPhase, targetPoint, counterPhase, counterPoint, palette, seed);
+				return scheduleVisualWindow(
+					`${seed}:lethal-confirmed`,
+					COMBAT_LETHAL_TIMELINE_MS.lethalEmphasis,
+					priority,
+				);
+			},
 		});
 		nodes.push({
 			id: 'death',
 			after: ['lethal-confirmed'],
-			run: () => scheduleVisualWindow(
-				`${seed}:death`,
-				COMBAT_LETHAL_TIMELINE_MS.death,
-				priority,
-			),
+			run: () => {
+				triggerDeathVfx(targetPhase, targetPoint, counterPhase, counterPoint, palette, seed);
+				return scheduleVisualWindow(
+					`${seed}:death`,
+					COMBAT_LETHAL_TIMELINE_MS.death,
+					priority,
+				);
+			},
 		});
 		aftermathAfter = 'death';
 	}
@@ -802,16 +1086,19 @@ function handleCombatImpact(event: CombatImpactEvent): EffectHandle | null {
 	)) return null;
 	holdLethalCardVisuals(presentation);
 
-	// Capture every endpoint synchronously while the combat state still owns
-	// both cards. The later counter/death phases can then render from geometry
-	// even when the primary impact removed a card from the DOM.
+	// Snapshot available anchors once. Removed cards can use their retained exit
+	// geometry, or the arena fallback when no DOM anchor remains.
 	const snapshots = captureImpactPoints(phases);
 
+	const defenderSide = presentation.attackerSide === 'player' ? 'opponent' : 'player';
 	const targetPhase = phases[0];
-	const targetPoint = pointForTarget(targetPhase.impact.target, snapshots);
+	const targetPoint = pointForTarget(targetPhase.impact.target, snapshots)
+		?? contractFallbackPointForTarget(targetPhase.impact.target, defenderSide)
+		?? arenaContractPointToViewport(hostileFrontAnchorFor(presentation.attackerSide));
 	if (!targetPoint) return null;
 	const targetSourcePoint = targetPhase.source
-		? pointForTarget(targetPhase.source, snapshots)
+		? (pointForTarget(targetPhase.source, snapshots)
+			?? contractFallbackPointForTarget(targetPhase.source, presentation.attackerSide))
 		: null;
 	const targetRecipe = recipeForCombatPresentation(
 		presentation,
@@ -826,7 +1113,27 @@ function handleCombatImpact(event: CombatImpactEvent): EffectHandle | null {
 		: null;
 	const seed = event.intent?.id ?? event.id;
 	const priority = priorityFor(event);
-	return gameEffectMediator.dispatch({
+
+	// Latch hero displayed HP until the exact target-impact beat lands.
+	if (
+		targetPhase.impact.target.type === 'hero'
+		&& event.resolvedAttack
+		&& event.resolvedAttack.healthDamageToTarget > 0
+	) {
+		const profile = combatImpactMotionProfile(
+			targetPhase.impact.level,
+			targetPhase.impact.lethal,
+		);
+		const holdMs = travelDuration(event, profile) + 600;
+		holdHeroVisualHp(
+			targetPhase.impact.target.side,
+			event.resolvedAttack.targetHealthBefore,
+			seed,
+			holdMs,
+		);
+	}
+
+	const handle = gameEffectMediator.dispatch({
 		id: `combat-impact:${presentation.id}`,
 		owner: 'visual-impact',
 		lane: 'impact',
@@ -845,6 +1152,15 @@ function handleCombatImpact(event: CombatImpactEvent): EffectHandle | null {
 			seed,
 		),
 	});
+	return {
+		onComplete: handle.onComplete,
+		cancel: () => {
+			if (targetPhase.impact.target.type === 'hero') {
+				releaseHeroVisualHp(targetPhase.impact.target.side, seed);
+			}
+			handle.cancel();
+		},
+	};
 }
 
 export function registerCombatImpactVisualEffect(): VisualEffectUnregister {

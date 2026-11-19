@@ -30,6 +30,8 @@ function processQueue() {
 }
 
 export function preloadImages(paths: string[], options?: { urgent?: boolean }) {
+	if (typeof Image === 'undefined') return;
+
 	for (const p of paths) {
 		const url = p.startsWith('/') ? assetPath(p) : p;
 		if (!preloaded.has(url)) {

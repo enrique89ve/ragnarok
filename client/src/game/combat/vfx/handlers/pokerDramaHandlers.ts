@@ -25,6 +25,7 @@ import {
 	playRagnarokVFX,
 	playReraiseVFX,
 	playShowdownDamageVFX,
+	playStaminaVfx,
 	playStreakAnnouncementVFX,
 	playWagerActivate,
 } from '../../animations/PokerDramaVFX';
@@ -34,6 +35,8 @@ import { useAudio } from '@/lib/stores/useAudio';
 import type { GameAudioCueId } from '@/game/audio/gameAudioCues';
 import { registerVisualEffect, type EffectHandle, type VisualEffectUnregister } from '../registry';
 import { registerCombatImpactVisualEffect } from './combatImpactHandler';
+import { registerSpellVfxHandler } from './spellVfxHandler';
+import { registerFactionVfxSubscriber } from '../factionScenes';
 import { requestCombatDamageFloater } from '../../floaters/combatDamageFloater';
 import {
 	bettingActionMotion,
@@ -58,6 +61,7 @@ import {
 	type PhaseEnteredEvent,
 	type RagnarokTriggeredEvent,
 	type ShowdownDamageEvent,
+	type StaminaChangedEvent,
 	type StreakAnnouncedEvent,
 	type SpellCastEvent,
 	type WagerActivatedEvent,
@@ -156,7 +160,10 @@ function maybePublishStakeFloater(event: BettingActionEvent): void {
 function handleBettingAction(event: BettingActionEvent): EffectHandle | null {
 	const isPlayer = event.side === 'player';
 	const motion = bettingActionMotion(event.action, event.side);
-	const bettingIntent = resolvePokerVfxIntentForBettingAction(event.action, event.side);
+	const rawIntent = resolvePokerVfxIntentForBettingAction(event.action, event.side);
+	const bettingIntent = rawIntent && event.hpCommitment !== undefined
+		? { ...rawIntent, stakeAmount: event.hpCommitment }
+		: rawIntent;
 	return schedulePokerMotion(motion, [0], () => {
 		maybePublishStakeFloater(event);
 		switch (event.action) {
@@ -265,7 +272,7 @@ function handleHandRankAnnounced(event: HandRankAnnouncedEvent): EffectHandle | 
 			);
 		} else if (event.rank === PokerHandRank.THORS_HAMMER) {
 			handle = schedulePokerMotion(POKER_MOTION_SPECS['hand-rank'], [at], () => {
-				playThorHammerIfNeeded(event.side, event.id, event.timestamp);
+				playThorHammerIfNeeded(event.side, event.id, event.timestamp, 'strike');
 			}, 'hand-rank');
 		} else {
 			handle = schedulePokerMotion(POKER_MOTION_SPECS['hand-rank'], [at], () => {
@@ -282,24 +289,31 @@ function handleHandRankAnnounced(event: HandRankAnnouncedEvent): EffectHandle | 
 
 function handleShowdownDamage(event: ShowdownDamageEvent): EffectHandle | null {
 	if (event.damage <= 0) return COMPLETED_HANDLE;
+	// Non-lethal showdowns are choreographed in one synchronized pass by
+	// PokerCombatAnimation so HP latch release, Pixi blast, floater, and audio
+	// never fire twice at competing timestamps.
+	if (event.handledByCelebration) return COMPLETED_HANDLE;
 	const rankDiff = showdownContext
 		? Math.abs(showdownContext.playerRank - showdownContext.opponentRank)
 		: 0;
 	const isPlayerWinner = event.winner === 'player';
 	const isLethal = event.isLethal ?? false;
 	const targetOwner = event.target === 'player-hero' ? 'player' : 'opponent';
-	const damageAt = Math.max(
-		SHOWDOWN_RANK_LEAD_MS,
-		showdownFollowMs(showdownContext?.winner ?? event.winner) - 400,
-	);
+	const damageAt = isLethal
+		? SHOWDOWN_RANK_LEAD_MS
+		: Math.max(
+			SHOWDOWN_RANK_LEAD_MS,
+			showdownFollowMs(showdownContext?.winner ?? event.winner) - 400,
+		);
 	return schedulePokerMotion(showdownImpactMotion(targetOwner), [damageAt], () => {
-		requestCombatDamageFloater({
-			id: event.id,
-			targetId: event.target,
-			amount: event.damage,
-			variant: 'showdown',
+		playShowdownDamageVFX(event.damage, isPlayerWinner, rankDiff, isLethal, () => {
+			requestCombatDamageFloater({
+				id: event.id,
+				targetId: event.target,
+				amount: event.damage,
+				variant: 'showdown',
+			});
 		});
-		playShowdownDamageVFX(event.damage, isPlayerWinner, rankDiff, isLethal);
 	}, `showdown-impact-${targetOwner}`);
 }
 
@@ -370,16 +384,32 @@ function handlePhaseEntered(event: PhaseEnteredEvent): EffectHandle | null {
 	return schedulePokerMotion(POKER_MOTION_SPECS['phase-reveal'], [0], () => playPhaseDramaVFX(event.phase), 'phase');
 }
 
-function playThorHammerIfNeeded(side: ArenaVfxOwner, seed: string, timestamp: number): void {
+function playThorHammerIfNeeded(
+	side: ArenaVfxOwner,
+	seed: string,
+	timestamp: number,
+	mode: 'strike' | 'hand-rank' = 'hand-rank',
+): void {
 	const previous = lastThorHammerPlayedAt[side];
 	if (previous !== undefined && timestamp - previous < 2800) return;
 	lastThorHammerPlayedAt[side] = timestamp;
-	void playThorHammerVFX({ side, seed });
+	void playThorHammerVFX({ side, seed, mode });
+}
+
+function handleStaminaChanged(event: StaminaChangedEvent): EffectHandle | null {
+	return schedulePokerMotion(
+		POKER_MOTION_SPECS['betting-action'],
+		[0],
+		() => {
+			playStaminaVfx(event.side, event.reason);
+		},
+		`stamina-${event.side}-${event.reason}`,
+	);
 }
 
 function handleHandImproved(event: HandImprovedEvent): EffectHandle | null {
 	if (event.rank === PokerHandRank.THORS_HAMMER) {
-		playThorHammerIfNeeded(event.side, event.id, event.timestamp);
+		playThorHammerIfNeeded(event.side, event.id, event.timestamp, 'hand-rank');
 		return COMPLETED_HANDLE;
 	}
 	return schedulePokerMotion(POKER_MOTION_SPECS['hand-improve'], [0], () => playHandImprovementVFX(event.tier), 'hand-improved');
@@ -409,7 +439,10 @@ export function registerPokerDramaVisualEffects(): VisualEffectUnregister {
 		registerVisualEffect('handImproved', handleHandImproved),
 		registerVisualEffect('spellCast', handleSpellCast),
 		registerVisualEffect('wagerActivated', handleWagerActivated),
+		registerVisualEffect('staminaChanged', handleStaminaChanged),
 		registerCombatImpactVisualEffect(),
+		registerSpellVfxHandler(),
+		registerFactionVfxSubscriber(),
 	];
 	return () => {
 		phaseAudioCueCancel?.();

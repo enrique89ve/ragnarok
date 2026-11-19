@@ -89,6 +89,52 @@ export function playLocalFx(
 	};
 }
 
+export function triggerCardImpactVibration(
+	target: PresentationTarget,
+	intensity: 'normal' | 'heavy' = 'normal',
+	priority: GameEffectPriority = 'normal',
+): GameEffectHandle {
+	const element = resolvePresentationTargetElement(target);
+	if (!element) return completedHandle();
+
+	const host = element.closest?.<HTMLElement>('.bf-card-wrapper')
+		?? element.closest?.<HTMLElement>('.hero-card-wrapper')
+		?? element;
+	const className = intensity === 'heavy'
+		? 'vfx-card-receive-vibrate--heavy'
+		: 'vfx-card-receive-vibrate';
+	const otherClass = intensity === 'heavy'
+		? 'vfx-card-receive-vibrate'
+		: 'vfx-card-receive-vibrate--heavy';
+	const durationMs = intensity === 'heavy' ? 380 : 280;
+
+	const owner = Symbol(className);
+	const owners = localFxOwners.get(host) ?? new Map<string, symbol>();
+	owners.set(className, owner);
+	localFxOwners.set(host, owners);
+
+	host.classList.remove(className, otherClass);
+	void host.offsetWidth;
+	host.classList.add(className);
+
+	const scheduled = gameEffectCoordinator.schedule({
+		owner: 'visual-impact',
+		lane: 'card-vibrate',
+		key: `${targetEntityId(target)}:vibrate`,
+		priority,
+		delayMs: durationMs,
+		run: () => removeOwnedClass(host, className, owner),
+	});
+
+	return {
+		cancel: () => {
+			scheduled.cancel();
+			removeOwnedClass(host, className, owner);
+		},
+		onComplete: scheduled.onComplete,
+	};
+}
+
 export function combineEffectHandles(handles: readonly GameEffectHandle[]): GameEffectHandle {
 	const completions = handles
 		.map(handle => handle.onComplete)

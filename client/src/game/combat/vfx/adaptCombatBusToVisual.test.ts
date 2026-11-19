@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CombatEventBus } from '../../services/CombatEventBus';
 import { subscribeVisualEvent, setVisualEventRendererEnabled } from './emitter';
 import { adaptCombatBusToVisual } from './adaptCombatBusToVisual';
@@ -9,7 +9,7 @@ describe('combat bus visual adapter', () => {
 		setVisualEventRendererEnabled(true);
 	});
 
-	it('emits one primary event carrying the counter for ordered rendering', () => {
+	it('emits one primary event carrying the counter for ordered rendering', async () => {
 		const seen: CombatImpactEvent[] = [];
 		const unsubscribeAdapter = adaptCombatBusToVisual();
 		const unsubscribeVisual = subscribeVisualEvent('combatImpact', event => seen.push(event));
@@ -20,6 +20,7 @@ describe('combat bus visual adapter', () => {
 			damageToTarget: 8,
 			damageToAttacker: 3,
 		});
+		await Promise.resolve();
 
 		expect(seen).toHaveLength(1);
 		expect(seen[0]).toMatchObject({
@@ -35,7 +36,7 @@ describe('combat bus visual adapter', () => {
 		unsubscribeAdapter();
 	});
 
-	it('uses resolved event amounts when an older presentation payload is stale', () => {
+	it('uses resolved event amounts when an older presentation payload is stale', async () => {
 		const seen: CombatImpactEvent[] = [];
 		const unsubscribeAdapter = adaptCombatBusToVisual();
 		const unsubscribeVisual = subscribeVisualEvent('combatImpact', event => seen.push(event));
@@ -69,6 +70,7 @@ describe('combat bus visual adapter', () => {
 				},
 			},
 		});
+		await Promise.resolve();
 
 		expect(seen[0]).toMatchObject({
 			presentation: {
@@ -81,7 +83,7 @@ describe('combat bus visual adapter', () => {
 		unsubscribeAdapter();
 	});
 
-	it('keeps a zero-damage shield break visible as an impact outcome', () => {
+	it('keeps a zero-damage shield break visible as an impact outcome', async () => {
 		const seen: CombatImpactEvent[] = [];
 		const unsubscribeAdapter = adaptCombatBusToVisual();
 		const unsubscribeVisual = subscribeVisualEvent('combatImpact', event => seen.push(event));
@@ -115,6 +117,7 @@ describe('combat bus visual adapter', () => {
 				zoneChanges: [],
 			},
 		});
+		await Promise.resolve();
 
 		expect(seen).toHaveLength(1);
 		expect(seen[0]).toMatchObject({
@@ -124,5 +127,33 @@ describe('combat bus visual adapter', () => {
 
 		unsubscribeVisual();
 		unsubscribeAdapter();
+	});
+
+	it('drops queued cues on teardown and keeps failed observers independent', async () => {
+		const seen = vi.fn();
+		const offAdapter = adaptCombatBusToVisual();
+		const offFailed = subscribeVisualEvent('combatImpact', async () => { throw new Error('renderer failed'); });
+		const offSeen = subscribeVisualEvent('combatImpact', seen);
+		const hit = () => CombatEventBus.emitImpactPhase({
+			attackerId: 'wolf', targetId: 'guard', damageToTarget: 2, damageToAttacker: 0,
+		});
+		try {
+			hit();
+			setVisualEventRendererEnabled(false);
+			setVisualEventRendererEnabled(true);
+			await Promise.resolve();
+			expect(seen).not.toHaveBeenCalled();
+			hit();
+			await Promise.resolve();
+			expect(seen).toHaveBeenCalledTimes(1);
+			hit();
+			offSeen();
+			await Promise.resolve();
+			expect(seen).toHaveBeenCalledTimes(1);
+		} finally {
+			offSeen();
+			offFailed();
+			offAdapter();
+		}
 	});
 });

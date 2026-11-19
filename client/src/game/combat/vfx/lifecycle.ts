@@ -6,6 +6,7 @@ import {
 import { CombatPhase } from '../../types/PokerCombatTypes';
 import { killAllPokerVFX, startPokerOrphanSweep, stopPokerOrphanSweep } from '../animations/PokerDramaVFX';
 import { cancelAllActiveVisualEffects } from './registry';
+import { cancelAllFactionVfxScenes } from './factionScenes';
 import { gameEffectCoordinator } from '@/game/effects/core/gameEffectCoordinator';
 import { gameEffectMediator } from '@/game/effects/core/gameEffectMediator';
 import { startGameEffectBrowserRuntime } from '@/game/effects/core/gameEffectBrowserRuntime';
@@ -33,11 +34,13 @@ function cancelPokerOrchestratedEffects(): void {
 
 export function cancelAllVisualEffects(): void {
 	cancelAllActiveVisualEffects();
+	cancelAllFactionVfxScenes();
 	gameEffectCoordinator.cancelOwner('poker');
 	gameEffectCoordinator.cancelOwner('animation-overlay');
 	gameEffectCoordinator.cancelOwner('feedback');
 	gameEffectCoordinator.cancelOwner('visual-impact');
 	gameEffectCoordinator.cancelOwner('poker-renderer');
+	gameEffectCoordinator.cancelOwner('faction-vfx');
 	gameEffectMediator.cancelAll();
 	cancelPokerOrchestratedEffects();
 	if (!hasDom()) return;

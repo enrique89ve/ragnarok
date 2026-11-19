@@ -97,6 +97,8 @@ export interface ShowdownDamageEvent extends VisualEventBase {
 	target: ArenaVfxTarget;
 	damage: number;
 	isLethal?: boolean;
+	/** True when ShowdownCelebration/PokerCombatAnimation owns the non-lethal strike. */
+	handledByCelebration?: boolean;
 }
 
 export interface RagnarokTriggeredEvent extends VisualEventBase {
@@ -188,6 +190,24 @@ export function resolveWagerActivatedTarget(
 	}
 }
 
+export type StaminaChangeReason =
+	| 'bet'
+	| 'raise'
+	| 'defend'
+	| 'fold'
+	| 'fold_curse'
+	| 'shield_absorbed'
+	| 'spell_cost'
+	| 'spell_drain';
+
+export interface StaminaChangedEvent extends VisualEventBase {
+	type: 'staminaChanged';
+	side: ArenaVfxOwner;
+	delta: number;
+	reason: StaminaChangeReason;
+	absorbed?: number;
+}
+
 export interface CombatImpactEvent extends VisualEventBase {
 	type: 'combatImpact';
 	attackerId: string;
@@ -211,6 +231,7 @@ export interface VisualEventMap {
 	handImproved: HandImprovedEvent;
 	spellCast: SpellCastEvent;
 	wagerActivated: WagerActivatedEvent;
+	staminaChanged: StaminaChangedEvent;
 	combatImpact: CombatImpactEvent;
 }
 
@@ -248,6 +269,7 @@ export function visualEventTypeOf(event: VisualEvent): VisualEventType {
 		case 'handImproved':
 		case 'spellCast':
 		case 'wagerActivated':
+		case 'staminaChanged':
 		case 'combatImpact':
 			return event.type;
 		default: {
@@ -347,6 +369,14 @@ export function emitWagerActivatedFromMinion(
 		source: wagerMinionSource(sourceInstanceId),
 		...(target ? { target } : {}),
 	});
+}
+
+export function emitStaminaChanged(
+	data: Omit<StaminaChangedEvent, 'type' | 'id' | 'timestamp'>,
+): StaminaChangedEvent {
+	const event: StaminaChangedEvent = { type: 'staminaChanged', ...baseEventFields(), ...data };
+	emitVisualEvent(event);
+	return event;
 }
 
 export function emitCombatImpact(

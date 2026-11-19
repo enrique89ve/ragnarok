@@ -87,6 +87,13 @@ export const POKER_EVENT_FX: Readonly<Record<VisualEventType, PokerEventFxSpec>>
 		zone: 'feedbackStack',
 		priority: 'feedback',
 	},
+	staminaChanged: {
+		event: 'staminaChanged',
+		lane: 'zone',
+		motion: 'betting-action',
+		zone: 'playerHero',
+		priority: 'feedback',
+	},
 	combatImpact: {
 		event: 'combatImpact',
 		lane: 'floater',
