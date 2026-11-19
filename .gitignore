@@ -40,7 +40,6 @@ replit_push_status.json
 .cache/
 .replit_db/
 .local/
-.upm/
 
 # Replit logs and temp files
 nohup.out
@@ -117,6 +116,9 @@ __tests__/
 !client/src/game/utils/effects/statusEffectUtils.test.ts
 !client/src/game/combat/vfx/combatVisualLifetime.test.ts
 !client/src/game/combat/vfx/adaptCombatBusToVisual.test.ts
+!client/src/game/combat/vfx/registryLifecycle.test.ts
+!client/src/game/combat/vfx/contractSmoke.test.ts
+!client/src/game/combat/vfx/handlers/spellVfxHandler.test.ts
 !client/src/game/combat/feedback/combatFeedbackStore.test.ts
 !client/src/game/utils/pokerHeroComposition.test.ts
 !client/src/game/utils/pokerHeroFrameAdapter.test.ts
@@ -184,7 +186,6 @@ __tests__/
 !server/services/adminSession.test.ts
 !server/services/indexCheckpointPublisher.test.ts
 !client/src/data/HiveKeychain.test.ts
-!client/src/data/HiveSync.test.ts
 !client/src/lib/warbandRoutes.test.ts
 !client/src/game/nft/LocalNFTBridge.test.ts
 !client/src/game/stores/saveStateManager.test.ts
@@ -322,7 +323,6 @@ Thumbs.db
 # Each AI-coding tool drops its own state/config directory.
 # These should never be committed — they're per-developer environment.
 .agents/
-.codex/
 .gstack/
 .scratch/*
 # Exception: protocol workstream scratch dirs are tracked because their PRD +
@@ -409,9 +409,8 @@ docs/BETA_TESTNET_ROADMAP.md
 docs/RUNE_ATTACK_VECTORS.md
 a.out
 .playwright-mcp/
-
-
-PLAN.md
-CONTEXT.md
 .interface-harness
 deep-research-report.md
+
+# QA screenshots and smoke test artifacts
+artifacts/
