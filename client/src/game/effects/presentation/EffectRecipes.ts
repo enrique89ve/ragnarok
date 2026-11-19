@@ -8,12 +8,18 @@ const step = (primitive: EffectRecipeStep['primitive'], delayMs: number): Effect
 export const BASIC_ATTACK_RECIPE: readonly EffectRecipeStep[] = [
 	step('slashTrail', 0),
 	step('impact-normal', 0),
-	step('white-flash', 40),
+	step('impactRing', 0),
+	step('impactBurst', 0),
+	step('sparkBurst', 0),
+	step('white-flash', 35),
 ];
 
 export const LIGHT_ATTACK_RECIPE: readonly EffectRecipeStep[] = [
 	step('slashTrail', 0),
 	step('impact-light', 0),
+	step('impactRing', 0),
+	step('impactBurst', 0),
+	step('sparkBurst', 0),
 	step('white-flash', 30),
 ];
 

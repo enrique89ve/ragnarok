@@ -24,9 +24,11 @@ import { CombatAction } from '../types/PokerCombatTypes';
 import { useUnifiedCombatStore } from './unifiedCombatStore';
 import { useTargetingStore } from './targetingStore';
 import { logActivity } from './activityLogStore';
-import { CombatEventBus } from '../services/CombatEventBus';
 import { getEffectiveAttack } from '../utils/effects/statusEffectUtils';
 import { useMatchStore } from '../match/store';
+import type { ResolvedAttack } from '../core/commands/resolvedAttack';
+import { collectCardCommandEvents, publishCardCommandEvent } from '../core/commands/cardCommandEvents';
+import { useAIAttackAnimationStore } from './aiAttackAnimationStore';
 import { computeStateHash } from '../engine/engineBridge';
 import { flipGameState } from '../engine/wireHash';
 import { serializeGameState } from '../engine/stateSerializer';
@@ -35,8 +37,6 @@ import { applyGameCommandToStore } from './gameCommandStoreAdapter';
 import { buildHandshakeGameState, type CardsDeckAnnounce } from '../p2p/cardsDeckHandshake';
 import { applyPokerAuxiliaryEffects } from '../combat/pokerAuxiliaryEffects';
 import type { FrontlineAttackMode } from '../core/commands';
-import { createCombatStep, createResolvedAttackFromStates } from '../services/AttackResolutionService';
-import { buildCombatPresentationFromResolvedAttack } from '../effects/presentation/CombatPresentation';
 import { planEndTurnPokerFold, type EndTurnPokerFoldSide } from '../match/modes/p2p/wireSync/endTurnPokerFold';
 import { getCanonicalPokerActionNowMs } from '../../../../shared/p2p-wire/pokerTurnClock';
 
@@ -276,15 +276,16 @@ export function applyEndTurnPokerFold(side: EndTurnPokerFoldSide): EndTurnPokerF
 		: { status: 'rejected', reason: 'engine_rejected' };
 }
 
-// Guard: prevents a second attack from being initiated while one is already animating
-let isAttackProcessing = false;
-let attackWatchdogTimer: ReturnType<typeof setTimeout> | null = null;
-
 // Auto-end-turn timer (declared early so initGame/resetGameState can clear it)
 let autoEndTurnTimer: ReturnType<typeof setTimeout> | null = null;
 
-// Guard: prevents double-firing endTurn while AI is thinking
-let isAITurnProcessing = false;
+let aiTurnTimer: ReturnType<typeof setTimeout> | null = null;
+
+function resetLocalAITurn(): void {
+  if (aiTurnTimer !== null) clearTimeout(aiTurnTimer);
+  aiTurnTimer = null;
+  useAIAttackAnimationStore.getState().clearAll();
+}
 
 /**
  * Lazy read of the player's NFT collection from the Hive data store.
@@ -318,9 +319,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 
   initGame: () => {
     if (autoEndTurnTimer) { clearTimeout(autoEndTurnTimer); autoEndTurnTimer = null; }
-    isAttackProcessing = false;
-    isAITurnProcessing = false;
-    if (attackWatchdogTimer) { clearTimeout(attackWatchdogTimer); attackWatchdogTimer = null; }
+    resetLocalAITurn();
 
     const { selectedDeck, selectedHero, selectedHeroId } = useGame.getState();
     const hiveCollection = readHiveCollection();
@@ -354,9 +353,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 
   initGameWithSeed: (matchSeed: string) => {
     if (autoEndTurnTimer) { clearTimeout(autoEndTurnTimer); autoEndTurnTimer = null; }
-    isAttackProcessing = false;
-    isAITurnProcessing = false;
-    if (attackWatchdogTimer) { clearTimeout(attackWatchdogTimer); attackWatchdogTimer = null; }
+    resetLocalAITurn();
 
     const { selectedDeck, selectedHero, selectedHeroId } = useGame.getState();
     const hiveCollection = readHiveCollection();
@@ -393,9 +390,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 
   initGameFromHandshake: (input) => {
     if (autoEndTurnTimer) { clearTimeout(autoEndTurnTimer); autoEndTurnTimer = null; }
-    isAttackProcessing = false;
-    isAITurnProcessing = false;
-    if (attackWatchdogTimer) { clearTimeout(attackWatchdogTimer); attackWatchdogTimer = null; }
+    resetLocalAITurn();
 
     get().bindCardsRng(input.matchSeed);
     const gameState = buildHandshakeGameState(input);
@@ -468,7 +463,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 
 	  endTurn: () => {
 	    // Guard: prevent double-firing while AI is thinking
-	    if (isAITurnProcessing) {
+	    if (aiTurnTimer !== null) {
 	      debug.log('[EndTurn] Blocked — AI turn still processing');
 	      return ignoredGameCommand(get().gameState, 'ai_turn_in_progress');
     }
@@ -498,28 +493,32 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 	    const pokerFold = applyEndTurnPokerFold('player');
 	    if (pokerFold.status === 'applied') debug.log('[UnifiedEndTurn] End Turn = Fold');
 
-	    // A peer match must never arm local opponent AI, even if its transport is down.
-	    if (isPeerOpponentMatch()) return result;
+	    const scheduledMatch = useMatchStore.getState().activeMatch;
+	    if (scheduledMatch?.opponent.kind === 'peer') return result;
 
-    // AI delay + AI turn — kept in wrapper so the isAITurnProcessing guard above remains coherent.
-    const aiDelay = 1800 + Math.random() * 1000;
-    const scheduledTurnNumber = result.state.turnNumber;
-    isAITurnProcessing = true;
-	    setTimeout(() => {
-      try {
-        const { gameState: currentState } = get();
-        if (currentState.currentTurn !== 'opponent') return;
-        if (currentState.gamePhase === 'game_over') return;
-        if (currentState.turnNumber !== scheduledTurnNumber) return;
-        // Re-check in case the match mode changed while a local-AI timer was pending.
-        if (isPeerOpponentMatch()) return;
+	    const aiDelay = 1800 + Math.random() * 1000;
+	    const scheduledTurnNumber = result.state.turnNumber;
+	    aiTurnTimer = setTimeout(() => {
+	      try {
+	        const { gameState: currentState } = get();
+	        if (currentState.currentTurn !== 'opponent') return;
+	        if (currentState.gamePhase === 'game_over') return;
+	        if (currentState.turnNumber !== scheduledTurnNumber) return;
+	        if (useMatchStore.getState().activeMatch !== scheduledMatch) return;
 
-        const finalState = processAITurn(currentState);
-        logActivity('turn_start', 'player', `Turn ${finalState.turnNumber} - Your turn`);
-        set({ gameState: finalState });
-      } finally {
-        isAITurnProcessing = false;
-      }
+	        const resolvedAttacks: ResolvedAttack[] = [];
+	        const { result: finalState, effects } = collectCardCommandEvents(
+	          () => processAITurn(currentState, resolvedAttacks),
+	        );
+	        set({ gameState: finalState });
+	        if (useMatchStore.getState().activeMatch !== scheduledMatch) return;
+
+	        logActivity('turn_start', 'player', `Turn ${finalState.turnNumber} - Your turn`);
+	        useAIAttackAnimationStore.getState().queueResolvedAttacks(scheduledMatch, resolvedAttacks);
+	        effects.forEach(publishCardCommandEvent);
+	      } finally {
+	        aiTurnTimer = null;
+	      }
 	    }, aiDelay);
 	    return result;
   },
@@ -577,113 +576,31 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
   },
 
   // Execute an attack with the selected card against a target (or hero if no target)
-	  attackWithCard: (attackerId: string, defenderId?: string) => {
-	    // Prevent re-entry while a previous attack animation is in flight
-	    if (isAttackProcessing) return ignoredGameCommand(get().gameState, 'attack_in_progress');
-    isAttackProcessing = true;
-    if (attackWatchdogTimer) clearTimeout(attackWatchdogTimer);
-    attackWatchdogTimer = setTimeout(() => {
-      isAttackProcessing = false;
-      attackWatchdogTimer = null;
-    }, 5000);
-
-	    try {
-	      const { gameState, matchSeed, myCanonicalSide } = get();
-      const attackerCard = gameState.players.player.battlefield.find(
-        c => c.instanceId === attackerId
-      );
-
-      // Asymmetric early-return: when the attacker isn't on our player.battlefield,
-      // this is either a P2P host receiving an opponent's attack or a stale ID.
-      // Bypass the canonical pipeline so processAttack's player-side checks don't surface as toasts.
-	      if (!attackerCard) {
-	        useTargetingStore.getState().cancelTargeting();
-	        set({ attackingCard: null, selectedCard: null });
-	        return ignoredGameCommand(gameState, 'attacker_not_found');
-      }
-
-	      const command = {
-        type: GAME_COMMAND_TYPES.attack,
-        attackerId,
-        defenderId,
-	      } as const;
-	      const pokerTiming = getPokerCommandTiming();
-	      const result = applyGameCommand(gameState, command, {
-	        isAiSimulationMode: isAISimulationMode,
-	        rng: commandRng(),
-	        idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
-	        ...pokerTiming,
-	      });
-
-      if (result.status === 'applied') {
-        // Keep event data on the same gameplay authority as resolution.
-        const damage = getEffectiveAttack(attackerCard);
-        const targetMinion = gameState.players.opponent.battlefield.find(c => c.instanceId === defenderId);
-        const counterDamage = targetMinion
-          ? getEffectiveAttack(targetMinion)
-          : 0;
-        const isHeroTarget = !defenderId || defenderId === 'opponent-hero';
-
-        const combatStep = createCombatStep(
-          attackerId,
-          attackerCard.card.name,
-          damage,
-          defenderId || 'opponent-hero',
-          targetMinion?.card.name || 'Opponent Hero',
-          isHeroTarget ? 'hero' : 'minion',
-          counterDamage,
-          attackerCard.hasDivineShield || false,
-          targetMinion?.hasDivineShield || false,
-          'player',
-        );
-        const resolvedAttack = createResolvedAttackFromStates(gameState, result.state, combatStep);
-
-        CombatEventBus.emitImpactPhase({
-          attackerId,
-          targetId: defenderId || 'opponent-hero',
-          damageToTarget: resolvedAttack.damageToTarget,
-          damageToAttacker: resolvedAttack.damageToAttacker,
-          resolvedAttack,
-          presentation: buildCombatPresentationFromResolvedAttack(resolvedAttack),
-        });
-
-        CombatEventBus.emitDamageResolved({
-          sourceId: attackerId,
-          sourceType: 'minion',
-          targetId: defenderId || 'opponent-hero',
-          targetType: isHeroTarget ? 'hero' : 'minion',
-          actualDamage: resolvedAttack.healthDamageToTarget,
-          damageSource: 'minion_attack',
-          attackerOwner: 'player',
-          defenderOwner: 'opponent',
-          targetHealthBefore: resolvedAttack.targetHealthBefore,
-          targetHealthAfter: resolvedAttack.targetHealthAfter,
-          targetDied: resolvedAttack.targetLethal,
-          shieldConsumed: resolvedAttack.targetShieldConsumed,
-          counterDamage: isHeroTarget ? undefined : resolvedAttack.damageToAttacker,
-          counterTargetHealthBefore: isHeroTarget ? undefined : resolvedAttack.attackerHealthBefore,
-          counterTargetHealthAfter: isHeroTarget ? undefined : resolvedAttack.attackerHealthAfter,
-          counterTargetDied: isHeroTarget ? undefined : resolvedAttack.attackerLethal,
-          counterShieldConsumed: isHeroTarget ? undefined : resolvedAttack.attackerShieldConsumed,
-        });
-      }
-
-	      applyGameCommandToStore({
-        command,
-        beforeState: gameState,
-        result,
-	        setState: set,
-	      });
-	      return result;
-	    } catch (error) {
-	      debug.error('Error processing attack:', error);
-	      useTargetingStore.getState().cancelTargeting();
+  attackWithCard: (attackerId: string, defenderId?: string) => {
+    const { gameState, matchSeed, myCanonicalSide } = get();
+    if (!gameState.players.player.battlefield.some(card => card.instanceId === attackerId)) {
+      useTargetingStore.getState().cancelTargeting();
       set({ attackingCard: null, selectedCard: null });
-	      return rejectedGameCommand(get().gameState, 'attack_processing_failed');
-	    } finally {
-      isAttackProcessing = false;
-      if (attackWatchdogTimer) { clearTimeout(attackWatchdogTimer); attackWatchdogTimer = null; }
+      return ignoredGameCommand(gameState, 'attacker_not_found');
     }
+
+    const command = { type: GAME_COMMAND_TYPES.attack, attackerId, defenderId } as const;
+    let result: ApplyGameCommandResult;
+    try {
+      result = applyGameCommand(gameState, command, {
+        isAiSimulationMode: isAISimulationMode,
+        rng: commandRng(),
+        idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
+        ...getPokerCommandTiming(),
+      });
+    } catch (error) {
+      debug.error('Error processing attack:', error);
+      useTargetingStore.getState().cancelTargeting();
+      set({ attackingCard: null, selectedCard: null });
+      return rejectedGameCommand(gameState, 'attack_processing_failed');
+    }
+    applyGameCommandToStore({ command, beforeState: gameState, result, setState: set });
+    return result;
   },
 
   autoAttackAll: (mode: 'minion' | 'hero' = 'minion') => {
@@ -700,6 +617,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 	      idGen: commandIdGenFor(matchSeed, gameState, command, myCanonicalSide),
 	      ...pokerTiming,
 	    });
+
 	    applyGameCommandToStore({ command, beforeState: gameState, result, setState: set });
 	    if (result.status === 'applied') applyPokerAuxiliaryEffects(command, 'player');
 	    return result;
@@ -716,7 +634,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
   // Reset the game state to initial values
   resetGameState: () => {
     if (autoEndTurnTimer) { clearTimeout(autoEndTurnTimer); autoEndTurnTimer = null; }
-    isAITurnProcessing = false;
+    resetLocalAITurn();
     debug.log('Resetting game state to initial values');
     cardsRng = null;
     set({
@@ -1009,13 +927,16 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 
   setupOpponentSpellPetCards: () => {
     const { gameState } = get();
-    if (!gameState) return;
-    if (isPeerOpponentMatch()) return;
+    const match = useMatchStore.getState().activeMatch;
+    if (!gameState || match?.opponent.kind === 'peer') return;
 
-    const newState = processOpponentSpellPetSetup(gameState);
-    if (newState !== gameState) {
-      set({ gameState: newState });
-    }
+    const { result: newState, effects } = collectCardCommandEvents(
+      () => processOpponentSpellPetSetup(gameState),
+    );
+    if (newState === gameState) return;
+
+    set({ gameState: newState });
+    if (useMatchStore.getState().activeMatch === match) effects.forEach(publishCardCommandEvent);
   },
 
   updateStateHash: () => {
@@ -1116,7 +1037,6 @@ export function disposeGameStoreSubscriptions() {
 	_gameStoreUnsubs.forEach(unsub => unsub());
 	_gameStoreUnsubs = [];
 	if (autoEndTurnTimer) { clearTimeout(autoEndTurnTimer); autoEndTurnTimer = null; }
-	if (attackWatchdogTimer) { clearTimeout(attackWatchdogTimer); attackWatchdogTimer = null; }
 }
 
 // Stable empty fallback for the player-hand selector. A zustand selector

@@ -14,7 +14,7 @@ import { debug } from '../../config/debugConfig';
 import { processArtifactOnHeroDamaged, processArtifactOnLethal } from '../artifactTriggerProcessor';
 import { hasKeyword } from '../cards/keywordUtils';
 import { MAX_ARMOR } from '../../constants/gameConstants';
-import { CombatEventBus } from '../../services/CombatEventBus';
+import { reportCardCommandEvent } from '../../core/commands/cardCommandEvents';
 import type { DamageSource } from '../../services/CombatEventBus';
 
 function resolveDamageSource(sourceCardId?: number): DamageSource {
@@ -29,13 +29,13 @@ function emitEffectHealResolved(input: {
 	readonly sourceCardId?: number;
 }): void {
 	if (input.actualHeal <= 0) return;
-	CombatEventBus.emitHealResolved({
+	reportCardCommandEvent({ type: 'heal_resolved', data: {
 		sourceId: input.sourceCardId ? String(input.sourceCardId) : 'effect',
 		targetId: input.targetId,
 		actualHeal: input.actualHeal,
 		targetHealthBefore: input.healthBefore,
 		targetHealthAfter: input.healthAfter,
-	});
+	} });
 }
 
 function emitEffectDamageResolved(input: {
@@ -47,23 +47,24 @@ function emitEffectDamageResolved(input: {
 	readonly healthBefore: number;
 	readonly healthAfter: number;
 	readonly shieldConsumed?: boolean;
+	readonly attackingMinionId?: string;
 	readonly sourceCardId?: number;
 }): void {
 	if (input.actualDamage <= 0 && !input.shieldConsumed) return;
-	CombatEventBus.emitDamageResolved({
-		sourceId: input.sourceCardId ? String(input.sourceCardId) : 'effect',
-		sourceType: 'effect',
+	reportCardCommandEvent({ type: 'damage_resolved', data: {
+		sourceId: input.attackingMinionId ?? (input.sourceCardId ? String(input.sourceCardId) : 'effect'),
+		sourceType: input.attackingMinionId ? 'minion' : 'effect',
 		targetId: input.targetId,
 		targetType: input.targetType,
 		actualDamage: input.actualDamage,
-		damageSource: resolveDamageSource(input.sourceCardId),
+		damageSource: input.attackingMinionId ? 'minion_attack' : resolveDamageSource(input.sourceCardId),
 		attackerOwner: input.attackerOwner,
 		defenderOwner: input.defenderOwner,
 		targetHealthBefore: input.healthBefore,
 		targetHealthAfter: input.healthAfter,
 		targetDied: input.healthAfter <= 0,
 		shieldConsumed: input.shieldConsumed,
-	});
+	} });
 }
 
 /**
@@ -97,7 +98,8 @@ export function dealDamageToHero(
   targetPlayerId: 'player' | 'opponent',
   amount: number,
   sourceCardId?: number,
-  sourcePlayerId?: 'player' | 'opponent'
+  sourcePlayerId?: 'player' | 'opponent',
+  attackingMinionId?: string,
 ): GameState {
   let newState: GameState = {
     ...state,
@@ -147,19 +149,6 @@ export function dealDamageToHero(
     turn: newState.turnNumber,
   });
 
-  const healthAfter = targetPlayer.heroHealth ?? targetPlayer.health ?? 0;
-  emitEffectDamageResolved({
-    targetId: `${targetPlayerId}-hero`,
-    targetType: 'hero',
-    defenderOwner: targetPlayerId,
-    attackerOwner: sourcePlayerId ?? (targetPlayerId === 'player' ? 'opponent' : 'player'),
-    actualDamage: Math.max(0, healthBefore - healthAfter),
-    healthBefore,
-    healthAfter,
-    shieldConsumed: remainingDamage <= 0 && amount > 0,
-    sourceCardId,
-  });
-
   // Check for game over
   if ((targetPlayer.heroHealth ?? 0) <= 0) {
     newState = { ...newState, gamePhase: 'game_over', winner: targetPlayerId === 'player' ? 'opponent' : 'player' };
@@ -179,6 +168,20 @@ export function dealDamageToHero(
       }];
     }
   }
+
+  const healthAfter = newState.players[targetPlayerId].heroHealth ?? newState.players[targetPlayerId].health ?? 0;
+  emitEffectDamageResolved({
+    targetId: `${targetPlayerId}-hero`,
+    targetType: 'hero',
+    defenderOwner: targetPlayerId,
+    attackerOwner: sourcePlayerId ?? (targetPlayerId === 'player' ? 'opponent' : 'player'),
+    actualDamage: Math.max(0, healthBefore - healthAfter),
+    healthBefore,
+    healthAfter,
+    shieldConsumed: remainingDamage <= 0 && amount > 0,
+    sourceCardId,
+    attackingMinionId,
+  });
 
   return newState;
 }

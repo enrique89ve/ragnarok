@@ -58,6 +58,9 @@ export type CombatPresentation = {
 	readonly action: 'melee-hit';
 	readonly source: PresentationTarget;
 	readonly attackerSide: ArenaVfxOwner;
+	readonly element?: string;
+	readonly keywords?: readonly string[];
+	readonly race?: string;
 	readonly target: PresentationImpact;
 	readonly counter?: PresentationCounterImpact;
 };

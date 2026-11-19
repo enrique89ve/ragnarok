@@ -8,22 +8,11 @@
  */
 
 import { GameEventBus } from '@/core/events/GameEventBus';
+import {
+	gameEffectCoordinator,
+	type GameEffectHandle,
+} from '@/game/effects/core/gameEffectCoordinator';
 import { debug } from '../config/debugConfig';
-import type {
-  CardPlayedEvent,
-  CardDrawnEvent,
-  MinionSummonedEvent,
-  MinionDestroyedEvent,
-  SpellCastEvent,
-  BattlecryTriggeredEvent,
-  DeathrattleTriggeredEvent,
-  BuffAppliedEvent,
-  TurnStartedEvent,
-  GameStartedEvent,
-  GameEndedEvent,
-  AnimationRequestEvent,
-  PetEvolvedEvent
-} from '@/core/events/GameEvents';
 
 type UnsubscribeFn = () => void;
 
@@ -55,6 +44,9 @@ interface AnimationState {
  */
 type AnimationCallback = (animation: QueuedAnimation) => void;
 
+const MAX_ANIMATION_QUEUE_LENGTH = 24;
+const TURN_BOUNDARY_SURVIVING_PRIORITY = 8;
+
 /**
  * Animation subscriber class for managing animation queue
  */
@@ -67,7 +59,7 @@ class AnimationSubscriberImpl {
 
   private callbacks: AnimationCallback[] = [];
   private unsubscribes: UnsubscribeFn[] = [];
-  private processNextTimer: ReturnType<typeof setTimeout> | null = null;
+  private processNextHandle: GameEffectHandle | null = null;
 
   /**
    * Register callback for when animations should play
@@ -97,6 +89,11 @@ class AnimationSubscriberImpl {
       this.state.queue.splice(insertIndex, 0, fullAnimation);
     }
 
+    // Never allow an unbounded presentation backlog to lag behind canonical state.
+    if (this.state.queue.length > MAX_ANIMATION_QUEUE_LENGTH) {
+      this.state.queue.length = MAX_ANIMATION_QUEUE_LENGTH;
+    }
+
     // Start processing if not already
     if (!this.state.isPlaying) {
       this.processNext();
@@ -104,10 +101,29 @@ class AnimationSubscriberImpl {
   }
 
   /**
+   * Drop stale lower-priority queued animations on turn/match boundaries so
+   * slow VFX never bleed across turns or delay terminal presentation.
+   */
+  private purgeStaleQueue(minPriority: number, preemptCurrent = false): void {
+    this.state.queue = this.state.queue.filter(item => item.priority >= minPriority);
+    if (preemptCurrent) {
+      this.cancelScheduledNext();
+      this.state.isPlaying = false;
+      this.state.currentAnimation = null;
+    }
+  }
+
+  private cancelScheduledNext(): void {
+    this.processNextHandle?.cancel();
+    this.processNextHandle = null;
+  }
+
+  /**
    * Process next animation in queue
    */
   private processNext(): void {
     if (this.state.queue.length === 0) {
+      this.cancelScheduledNext();
       this.state.isPlaying = false;
       this.state.currentAnimation = null;
       return;
@@ -125,20 +141,29 @@ class AnimationSubscriberImpl {
       }
     });
 
-    if (this.processNextTimer) {
-      clearTimeout(this.processNextTimer);
-    }
-    this.processNextTimer = setTimeout(() => {
-      this.processNextTimer = null;
-      this.processNext();
-    }, this.state.currentAnimation.duration);
+    this.cancelScheduledNext();
+    const scheduled = this.state.currentAnimation;
+    this.processNextHandle = gameEffectCoordinator.schedule({
+      owner: 'animation-subscriber',
+      lane: 'queue',
+      key: 'next',
+      priority: scheduled.priority >= 10 ? 'high' : 'normal',
+      delayMs: scheduled.duration,
+      run: () => {
+        this.processNextHandle = null;
+        this.processNext();
+      },
+    });
   }
 
   /**
    * Clear all queued animations
    */
   clearQueue(): void {
+    this.cancelScheduledNext();
     this.state.queue = [];
+    this.state.isPlaying = false;
+    this.state.currentAnimation = null;
   }
 
   /**
@@ -161,7 +186,7 @@ class AnimationSubscriberImpl {
   initialize(): void {
     // Card Played Animation
     this.unsubscribes.push(
-      GameEventBus.subscribe<CardPlayedEvent>('CARD_PLAYED', (event) => {
+      GameEventBus.subscribePresentation('CARD_PLAYED', (event) => {
         const isMythic = event.rarity === 'mythic';
         this.queueAnimation({
           type: isMythic ? 'mythic_entrance' : 'card_play',
@@ -180,7 +205,7 @@ class AnimationSubscriberImpl {
 
     // Card Drawn Animation
     this.unsubscribes.push(
-      GameEventBus.subscribe<CardDrawnEvent>('CARD_DRAWN', (event) => {
+      GameEventBus.subscribePresentation('CARD_DRAWN', (event) => {
         if (event.player === 'player') {
           this.queueAnimation({
             type: event.burned ? 'card_burn' : 'card_draw',
@@ -199,7 +224,7 @@ class AnimationSubscriberImpl {
 
     // Minion Summoned Animation
     this.unsubscribes.push(
-      GameEventBus.subscribe<MinionSummonedEvent>('MINION_SUMMONED', (event) => {
+      GameEventBus.subscribePresentation('MINION_SUMMONED', (event) => {
         if (event.source !== 'played') {
           this.queueAnimation({
             type: 'summon',
@@ -218,7 +243,7 @@ class AnimationSubscriberImpl {
 
     // Minion Destroyed Animation
     this.unsubscribes.push(
-      GameEventBus.subscribe<MinionDestroyedEvent>('MINION_DESTROYED', (event) => {
+      GameEventBus.subscribePresentation('MINION_DESTROYED', (event) => {
         this.queueAnimation({
           type: 'death',
           sourceId: event.instanceId,
@@ -234,7 +259,7 @@ class AnimationSubscriberImpl {
 
     // Spell Cast Animation
     this.unsubscribes.push(
-      GameEventBus.subscribe<SpellCastEvent>('SPELL_CAST', (event) => {
+      GameEventBus.subscribePresentation('SPELL_CAST', (event) => {
         this.queueAnimation({
           type: 'spell_cast',
           sourceId: event.cardId,
@@ -251,7 +276,7 @@ class AnimationSubscriberImpl {
 
     // Battlecry Animation
     this.unsubscribes.push(
-      GameEventBus.subscribe<BattlecryTriggeredEvent>('BATTLECRY_TRIGGERED', (event) => {
+      GameEventBus.subscribePresentation('BATTLECRY_TRIGGERED', (event) => {
         this.queueAnimation({
           type: 'battlecry',
           sourceId: event.sourceId,
@@ -269,7 +294,7 @@ class AnimationSubscriberImpl {
 
     // Deathrattle Animation
     this.unsubscribes.push(
-      GameEventBus.subscribe<DeathrattleTriggeredEvent>('DEATHRATTLE_TRIGGERED', (event) => {
+      GameEventBus.subscribePresentation('DEATHRATTLE_TRIGGERED', (event) => {
         this.queueAnimation({
           type: 'deathrattle',
           sourceId: event.sourceId,
@@ -285,7 +310,7 @@ class AnimationSubscriberImpl {
 
     // Buff Applied Animation
     this.unsubscribes.push(
-      GameEventBus.subscribe<BuffAppliedEvent>('BUFF_APPLIED', (event) => {
+      GameEventBus.subscribePresentation('BUFF_APPLIED', (event) => {
         this.queueAnimation({
           type: 'buff',
           targetId: event.targetId,
@@ -303,7 +328,8 @@ class AnimationSubscriberImpl {
 
     // Turn Started Animation
     this.unsubscribes.push(
-      GameEventBus.subscribe<TurnStartedEvent>('TURN_STARTED', (event) => {
+      GameEventBus.subscribePresentation('TURN_STARTED', (event) => {
+        this.purgeStaleQueue(TURN_BOUNDARY_SURVIVING_PRIORITY);
         this.queueAnimation({
           type: 'turn_start',
           duration: 1500,
@@ -318,7 +344,8 @@ class AnimationSubscriberImpl {
 
     // Game Started Animation
     this.unsubscribes.push(
-      GameEventBus.subscribe<GameStartedEvent>('GAME_STARTED', (event) => {
+      GameEventBus.subscribePresentation('GAME_STARTED', (event) => {
+        this.clearQueue();
         this.queueAnimation({
           type: 'game_start',
           duration: 3000,
@@ -334,7 +361,8 @@ class AnimationSubscriberImpl {
 
     // Game Ended Animation
     this.unsubscribes.push(
-      GameEventBus.subscribe<GameEndedEvent>('GAME_ENDED', (event) => {
+      GameEventBus.subscribePresentation('GAME_ENDED', (event) => {
+        this.purgeStaleQueue(10, true);
         this.queueAnimation({
           type: event.winner === 'player' ? 'victory' : 'defeat',
           duration: 5000,
@@ -350,7 +378,7 @@ class AnimationSubscriberImpl {
 
     // Pet Evolution Animation
     this.unsubscribes.push(
-      GameEventBus.subscribe<PetEvolvedEvent>('PET_EVOLVED', (event) => {
+      GameEventBus.subscribePresentation('PET_EVOLVED', (event) => {
         const isApotheosis = event.toStage === 3;
         this.queueAnimation({
           type: isApotheosis ? 'pet_apotheosis' : 'pet_ascension',
@@ -371,10 +399,10 @@ class AnimationSubscriberImpl {
 
     // Weapon Equipped Animation
     this.unsubscribes.push(
-      GameEventBus.subscribe<any>('WEAPON_EQUIPPED', (event) => {
+      GameEventBus.subscribePresentation('WEAPON_EQUIPPED', (event) => {
         this.queueAnimation({
           type: 'weapon_equip',
-          sourceId: event.instanceId,
+          sourceId: event.cardId,
           duration: 600,
           priority: 7,
           params: { cardName: event.cardName, player: event.player, attack: event.attack, durability: event.durability }
@@ -384,7 +412,7 @@ class AnimationSubscriberImpl {
 
     // Weapon Destroyed Animation
     this.unsubscribes.push(
-      GameEventBus.subscribe<any>('WEAPON_DESTROYED', (event) => {
+      GameEventBus.subscribePresentation('WEAPON_DESTROYED', (event) => {
         this.queueAnimation({
           type: 'weapon_destroy',
           duration: 500,
@@ -396,7 +424,7 @@ class AnimationSubscriberImpl {
 
     // Secret (Rune) Played Animation
     this.unsubscribes.push(
-      GameEventBus.subscribe<any>('SECRET_PLAYED', (event) => {
+      GameEventBus.subscribePresentation('SECRET_PLAYED', (event) => {
         this.queueAnimation({
           type: 'secret_played',
           duration: 800,
@@ -408,34 +436,34 @@ class AnimationSubscriberImpl {
 
     // Secret (Rune) Revealed Animation
     this.unsubscribes.push(
-      GameEventBus.subscribe<any>('SECRET_REVEALED', (event) => {
+      GameEventBus.subscribePresentation('SECRET_REVEALED', (event) => {
         this.queueAnimation({
           type: 'secret_revealed',
           duration: 1000,
           priority: 9,
-          params: { secretName: event.secretName, player: event.player, triggerCard: event.triggerCard }
+          params: { secretName: event.cardName, player: event.player, triggeredBy: event.triggeredBy }
         });
       })
     );
 
     // Hero Power Used Animation
     this.unsubscribes.push(
-      GameEventBus.subscribe<any>('HERO_POWER_USED', (event) => {
+      GameEventBus.subscribePresentation('HERO_POWER_USED', (event) => {
         this.queueAnimation({
           type: 'hero_power',
           duration: 700,
           priority: 7,
-          params: { player: event.player, heroPowerName: event.heroPowerName, manaCost: event.manaCost }
+          params: { player: event.player, heroPowerName: event.heroPowerName, manaCost: event.cost }
         });
       })
     );
 
     // Silence Applied Animation
     this.unsubscribes.push(
-      GameEventBus.subscribe<any>('SILENCE_APPLIED', (event) => {
+      GameEventBus.subscribePresentation('SILENCE_APPLIED', (event) => {
         this.queueAnimation({
           type: 'silence',
-          targetId: event.targetInstanceId,
+          targetId: event.targetId,
           duration: 500,
           priority: 6,
           params: { targetName: event.targetName }
@@ -445,7 +473,7 @@ class AnimationSubscriberImpl {
 
     // Direct Animation Requests
     this.unsubscribes.push(
-      GameEventBus.subscribe<AnimationRequestEvent>('ANIMATION_REQUEST', (event) => {
+      GameEventBus.subscribePresentation('ANIMATION_REQUEST', (event) => {
         this.queueAnimation({
           type: event.animationType,
           sourceId: event.sourceId,
@@ -464,10 +492,6 @@ class AnimationSubscriberImpl {
   cleanup(): void {
     this.unsubscribes.forEach(unsub => unsub());
     this.unsubscribes = [];
-    if (this.processNextTimer) {
-      clearTimeout(this.processNextTimer);
-      this.processNextTimer = null;
-    }
     this.clearQueue();
   }
 }

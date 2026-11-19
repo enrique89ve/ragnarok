@@ -1,3 +1,5 @@
+import type { CardCommandEvent } from './cardCommandEvents';
+import type { ResolvedAttack } from './resolvedAttack';
 import type { CardRarity, CardType, SoundEffectType } from '../../types';
 import type { GameState } from '../../types';
 import type { ActivityEventType } from '../../types/ActivityTypes';
@@ -20,6 +22,8 @@ export type CardPlayedEffect = {
 
 export type GameCommandEffect =
 	| CardPlayedEffect
+	| CardCommandEvent
+	| { readonly type: 'attack_resolved'; readonly attack: ResolvedAttack }
 	| {
 		readonly type: 'play_sound';
 		readonly sound: SoundEffectType;

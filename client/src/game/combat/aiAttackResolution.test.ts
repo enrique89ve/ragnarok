@@ -1,173 +1,91 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { ResolvedAttack } from '../core/commands/resolvedAttack';
+import type { MatchContext } from '../match/types';
+import { CombatEventBus, type ImpactPhaseEvent } from '../services/CombatEventBus';
+import { useAIAttackAnimationStore } from '../stores/aiAttackAnimationStore';
+import { publishAIAttackImpact } from './aiAttackPresentation';
 
-vi.mock('../stores/gameStore', () => ({
-  useGameStore: {
-    getState: () => ({
-      gameState: { id: 'mock-current-state' },
-      setGameState: () => undefined
-    })
-  }
-}));
+const heroHit: ResolvedAttack = {
+	id: 'ai-hit',
+	attackerId: 'draugr',
+	targetId: null,
+	targetType: 'hero',
+	attackerSide: 'opponent',
+	damageToTarget: 4,
+	damageToAttacker: 0,
+	healthDamageToTarget: 3,
+	healthDamageToAttacker: 0,
+	targetHealthBefore: 20,
+	targetHealthAfter: 17,
+	attackerHealthBefore: 3,
+	attackerHealthAfter: 3,
+	targetShieldConsumed: false,
+	attackerShieldConsumed: false,
+	targetLethal: false,
+	attackerLethal: false,
+	counterAttackOccurred: false,
+	triggeredEffects: [],
+	statChanges: [],
+	zoneChanges: [],
+};
 
-import {
-  resolveAIAttackEvent,
-  type AIAttackResolutionDeps
-} from './aiAttackResolution';
-import type { AIAttackEvent } from '../stores/aiAttackAnimationStore';
-import type { CombatStep } from '../services/AttackResolutionService';
-import type { GameState } from '../types';
+const localMatch: MatchContext = {
+	matchId: 'local-test',
+	matchSeed: 'local-seed',
+	opponent: { kind: 'ai', difficulty: 'normal', deckSource: 'default' },
+	reward: { matchXp: { kind: 'none' }, rune: { kind: 'none' }, ranking: { kind: 'none' } },
+};
 
-const currentState = { id: 'current-state' } as GameState;
-const nextState = { id: 'next-state' } as GameState;
+afterEach(() => useAIAttackAnimationStore.getState().clearAll());
 
-function createEvent(overrides: Partial<AIAttackEvent> = {}): AIAttackEvent {
-  return {
-    id: 'attack-1',
-    attackerId: 'ai-minion-1',
-    attackerName: 'Draugr',
-    targetId: null,
-    targetName: 'Player Hero',
-    targetType: 'hero',
-    damage: 4,
-    counterDamage: 0,
-    timestamp: 1234,
-    damageApplied: false,
-    combatStepId: 'combat-step-1',
-    attackerHasDivineShield: false,
-    defenderHasDivineShield: false,
-    attackerSide: 'opponent',
-    ...overrides
-  };
-}
+describe('AI attack presentation', () => {
+	it('publishes the resolved hero hit and its health delta', () => {
+		const listener = vi.fn<(event: ImpactPhaseEvent) => void>();
+		const unsubscribe = CombatEventBus.subscribe<ImpactPhaseEvent>('IMPACT_PHASE', listener);
+		try {
+			publishAIAttackImpact(heroHit);
 
-function createDeps(overrides: Partial<AIAttackResolutionDeps> = {}) {
-  const appliedAttackIds = new Set<string>();
-  const applyDamageToGameState = vi.fn((_state: GameState, _step: CombatStep) => nextState);
-  const deps: AIAttackResolutionDeps = {
-    getDeferDamage: () => true,
-    hasDamageBeenApplied: (event) => appliedAttackIds.has(event.id),
-    markDamageApplied: (event) => {
-      appliedAttackIds.add(event.id);
-    },
-    getGameState: () => currentState,
-    commitGameState: vi.fn(),
-    emitImpactPhase: vi.fn(),
-    applyDamageToGameState,
-    ...overrides
-  };
+			expect(listener).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+				attackerId: 'draugr',
+				targetId: 'player-hero',
+				damageToTarget: 4,
+				damageToAttacker: 0,
+				resolvedAttack: heroHit,
+				presentation: expect.objectContaining({
+					target: expect.objectContaining({
+						target: { type: 'hero', side: 'player' },
+						healthDamage: 3,
+					}),
+				}),
+			}));
+		} finally {
+			unsubscribe();
+		}
+	});
 
-  return { deps, appliedAttackIds, applyDamageToGameState };
-}
+	it('drops queued visuals on a match change', () => {
+		const newMatch = { ...localMatch, matchId: 'new-match' };
+		const queue = useAIAttackAnimationStore.getState();
+		queue.queueResolvedAttacks(localMatch, [heroHit]);
 
-describe('resolveAIAttackEvent', () => {
-  it('applies deferred AI hero damage through the resolver seam', () => {
-    const event = createEvent();
-    const { deps, appliedAttackIds, applyDamageToGameState } = createDeps();
+		expect(queue.startAnimation(newMatch)).toBeNull();
+		expect(useAIAttackAnimationStore.getState().pendingAttacks).toEqual([]);
+	});
 
-    const result = resolveAIAttackEvent(event, deps);
+	it('allows only one visual consumer and ignores stale completion', () => {
+		const nextHit = { ...heroHit, id: 'next-hit' };
+		const queue = useAIAttackAnimationStore.getState();
+		queue.queueResolvedAttacks(localMatch, [heroHit, nextHit]);
 
-    expect(result.status).toBe('applied');
-    expect(deps.emitImpactPhase).toHaveBeenCalledWith(expect.objectContaining({
-      attackerId: 'ai-minion-1',
-      targetId: 'player-hero',
-      damageToTarget: 4,
-      damageToAttacker: 0
-    }));
-    expect(deps.emitImpactPhase).toHaveBeenCalledWith(expect.objectContaining({
-      presentation: expect.objectContaining({
-        action: 'melee-hit',
-        target: expect.objectContaining({
-          target: { type: 'hero', side: 'player' },
-        }),
-      }),
-    }));
-    expect(applyDamageToGameState).toHaveBeenCalledWith(
-      currentState,
-      expect.objectContaining({
-        id: 'combat-step-1',
-        attackerId: 'ai-minion-1',
-        targetId: null,
-        targetType: 'hero',
-        damage: 4,
-        counterDamage: 0,
-        attackerSide: 'opponent'
-      })
-    );
-    expect(deps.commitGameState).toHaveBeenCalledWith(nextState);
-    expect(appliedAttackIds.has(event.id)).toBe(true);
-  });
+		const first = queue.startAnimation(localMatch);
+		if (!first) throw new Error('Expected the first attack');
+		expect(first.resolvedAttack).toBe(heroHit);
+		expect(queue.startAnimation(localMatch)).toBeNull();
+		queue.completeAnimation(first);
 
-  it('uses minion instance ids for impact events', () => {
-    const event = createEvent({
-      targetId: 'player-minion-2',
-      targetName: 'Shieldmaiden',
-      targetType: 'minion',
-      counterDamage: 2
-    });
-    const { deps } = createDeps();
-
-    const result = resolveAIAttackEvent(event, deps);
-
-    expect(result).toMatchObject({ status: 'applied', impactTargetId: 'player-minion-2' });
-    expect(deps.emitImpactPhase).toHaveBeenCalledWith(expect.objectContaining({
-      attackerId: 'ai-minion-1',
-      targetId: 'player-minion-2',
-      damageToTarget: 4,
-      damageToAttacker: 2
-    }));
-    expect(deps.emitImpactPhase).toHaveBeenCalledWith(expect.objectContaining({
-      presentation: expect.objectContaining({
-        target: expect.objectContaining({
-          target: { type: 'card', instanceId: 'player-minion-2' },
-        }),
-        counter: expect.objectContaining({
-          target: { type: 'card', instanceId: 'ai-minion-1' },
-        }),
-      }),
-    }));
-  });
-
-  it('keeps legacy non-deferred damage mode as a mark-only skip', () => {
-    const event = createEvent();
-    const { deps, appliedAttackIds, applyDamageToGameState } = createDeps({
-      getDeferDamage: () => false
-    });
-
-    const result = resolveAIAttackEvent(event, deps);
-
-    expect(result).toEqual({ status: 'skipped', reason: 'legacy_mode' });
-    expect(deps.emitImpactPhase).not.toHaveBeenCalled();
-    expect(applyDamageToGameState).not.toHaveBeenCalled();
-    expect(deps.commitGameState).not.toHaveBeenCalled();
-    expect(appliedAttackIds.has(event.id)).toBe(true);
-  });
-
-  it('fails closed when a stale legacy event is observed in a peer match', () => {
-    const event = createEvent();
-    const { deps, appliedAttackIds, applyDamageToGameState } = createDeps({
-      isPeerMatch: () => true,
-    });
-
-    const result = resolveAIAttackEvent(event, deps);
-
-    expect(result).toEqual({ status: 'skipped', reason: 'peer_match' });
-    expect(deps.emitImpactPhase).not.toHaveBeenCalled();
-    expect(applyDamageToGameState).not.toHaveBeenCalled();
-    expect(deps.commitGameState).not.toHaveBeenCalled();
-    expect(appliedAttackIds.has(event.id)).toBe(true);
-  });
-
-  it('is idempotent when a fallback path repeats the same attack event', () => {
-    const event = createEvent();
-    const { deps, applyDamageToGameState } = createDeps();
-
-    const first = resolveAIAttackEvent(event, deps);
-    const second = resolveAIAttackEvent(event, deps);
-
-    expect(first.status).toBe('applied');
-    expect(second).toEqual({ status: 'skipped', reason: 'already_applied' });
-    expect(deps.emitImpactPhase).toHaveBeenCalledTimes(1);
-    expect(applyDamageToGameState).toHaveBeenCalledTimes(1);
-    expect(deps.commitGameState).toHaveBeenCalledTimes(1);
-  });
+		const second = queue.startAnimation(localMatch);
+		expect(second?.resolvedAttack).toBe(nextHit);
+		queue.completeAnimation(first);
+		expect(useAIAttackAnimationStore.getState().currentAttack).toBe(second);
+	});
 });

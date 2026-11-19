@@ -8,24 +8,6 @@
  */
 
 import { GameEventBus } from '@/core/events/GameEventBus';
-import type {
-  CardPlayedEvent,
-  CardDrawnEvent,
-  MinionSummonedEvent,
-  MinionDestroyedEvent,
-  SpellCastEvent,
-  BattlecryTriggeredEvent,
-  DeathrattleTriggeredEvent,
-  HeroPowerUsedEvent,
-  SecretRevealedEvent,
-  TurnStartedEvent,
-  GameStartedEvent,
-  GameEndedEvent,
-  DiscoveryStartedEvent,
-  PokerHandRevealedEvent,
-  ShowdownResultEvent,
-  PetEvolvedEvent
-} from '@/core/events/GameEvents';
 import { useAudio, type SoundEffectType } from '@/lib/stores/useAudio';
 import { proceduralAudio } from '@/game/audio/proceduralAudio';
 import cardDatabase from '@/game/services/cardDatabase';
@@ -62,7 +44,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
 
   // Card Played
   unsubscribes.push(
-    GameEventBus.subscribe<CardPlayedEvent>('CARD_PLAYED', (event) => {
+    GameEventBus.subscribePresentation('CARD_PLAYED', (event) => {
       const audioStore = useAudio.getState();
 
       // Play rarity-specific sound for mythics
@@ -84,7 +66,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
 
   // Card Drawn
   unsubscribes.push(
-    GameEventBus.subscribe<CardDrawnEvent>('CARD_DRAWN', (event) => {
+    GameEventBus.subscribePresentation('CARD_DRAWN', (event) => {
       const audioStore = useAudio.getState();
 
       if (event.burned) {
@@ -97,7 +79,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
 
   // Minion Summoned
   unsubscribes.push(
-    GameEventBus.subscribe<MinionSummonedEvent>('MINION_SUMMONED', (event) => {
+    GameEventBus.subscribePresentation('MINION_SUMMONED', (event) => {
       const audioStore = useAudio.getState();
 
       // Different sounds based on source
@@ -111,7 +93,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
 
   // Minion Destroyed
   unsubscribes.push(
-    GameEventBus.subscribe<MinionDestroyedEvent>('MINION_DESTROYED', () => {
+    GameEventBus.subscribePresentation('MINION_DESTROYED', () => {
       const audioStore = useAudio.getState();
       audioStore.playSoundEffect('damage');
     })
@@ -119,7 +101,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
 
   // Spell Cast
   unsubscribes.push(
-    GameEventBus.subscribe<SpellCastEvent>('SPELL_CAST', () => {
+    GameEventBus.subscribePresentation('SPELL_CAST', () => {
       const audioStore = useAudio.getState();
       audioStore.playSoundEffect('spell_cast');
     })
@@ -127,7 +109,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
 
   // Battlecry Triggered
   unsubscribes.push(
-    GameEventBus.subscribe<BattlecryTriggeredEvent>('BATTLECRY_TRIGGERED', () => {
+    GameEventBus.subscribePresentation('BATTLECRY_TRIGGERED', () => {
       const audioStore = useAudio.getState();
       audioStore.playSoundEffect('battlecry');
     })
@@ -135,7 +117,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
 
   // Deathrattle Triggered
   unsubscribes.push(
-    GameEventBus.subscribe<DeathrattleTriggeredEvent>('DEATHRATTLE_TRIGGERED', () => {
+    GameEventBus.subscribePresentation('DEATHRATTLE_TRIGGERED', () => {
       const audioStore = useAudio.getState();
       audioStore.playSoundEffect('deathrattle');
     })
@@ -143,7 +125,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
 
   // Hero Power Used
   unsubscribes.push(
-    GameEventBus.subscribe<HeroPowerUsedEvent>('HERO_POWER_USED', () => {
+    GameEventBus.subscribePresentation('HERO_POWER_USED', () => {
       const audioStore = useAudio.getState();
       audioStore.playSoundEffect('hero_power');
     })
@@ -151,7 +133,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
 
   // Secret Revealed
   unsubscribes.push(
-    GameEventBus.subscribe<SecretRevealedEvent>('SECRET_REVEALED', () => {
+    GameEventBus.subscribePresentation('SECRET_REVEALED', () => {
       const audioStore = useAudio.getState();
       audioStore.playSoundEffect('secret_trigger');
     })
@@ -159,7 +141,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
 
   // Weapon Equipped
   unsubscribes.push(
-    GameEventBus.subscribe<any>('WEAPON_EQUIPPED', () => {
+    GameEventBus.subscribePresentation('WEAPON_EQUIPPED', () => {
       const audioStore = useAudio.getState();
       audioStore.playSoundEffect('weapon_equip');
     })
@@ -167,7 +149,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
 
   // Weapon Destroyed
   unsubscribes.push(
-    GameEventBus.subscribe<any>('WEAPON_DESTROYED', () => {
+    GameEventBus.subscribePresentation('WEAPON_DESTROYED', () => {
       const audioStore = useAudio.getState();
       audioStore.playSoundEffect('weapon_break');
     })
@@ -175,7 +157,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
 
   // Secret Played
   unsubscribes.push(
-    GameEventBus.subscribe<any>('SECRET_PLAYED', () => {
+    GameEventBus.subscribePresentation('SECRET_PLAYED', () => {
       const audioStore = useAudio.getState();
       audioStore.playSoundEffect('secret_play');
     })
@@ -183,7 +165,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
 
   // Silence Applied
   unsubscribes.push(
-    GameEventBus.subscribe<any>('SILENCE_APPLIED', () => {
+    GameEventBus.subscribePresentation('SILENCE_APPLIED', () => {
       const audioStore = useAudio.getState();
       audioStore.playSoundEffect('silence');
     })
@@ -191,7 +173,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
 
   // Buff Applied
   unsubscribes.push(
-    GameEventBus.subscribe<any>('BUFF_APPLIED', () => {
+    GameEventBus.subscribePresentation('BUFF_APPLIED', () => {
       const audioStore = useAudio.getState();
       audioStore.playSoundEffect('buff');
     })
@@ -199,7 +181,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
 
   // Turn Started
   unsubscribes.push(
-    GameEventBus.subscribe<TurnStartedEvent>('TURN_STARTED', () => {
+    GameEventBus.subscribePresentation('TURN_STARTED', () => {
       const audioStore = useAudio.getState();
       audioStore.playSoundEffect('turn_start');
     })
@@ -207,7 +189,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
 
   // Game Started
   unsubscribes.push(
-    GameEventBus.subscribe<GameStartedEvent>('GAME_STARTED', () => {
+    GameEventBus.subscribePresentation('GAME_STARTED', () => {
       const audioStore = useAudio.getState();
       audioStore.playSoundEffect('game_start');
       audioStore.playBackgroundMusic('battle_theme');
@@ -216,7 +198,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
 
   // Game Ended
   unsubscribes.push(
-    GameEventBus.subscribe<GameEndedEvent>('GAME_ENDED', (event) => {
+    GameEventBus.subscribePresentation('GAME_ENDED', (event) => {
       const audioStore = useAudio.getState();
 
       // Determine if player won
@@ -232,7 +214,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
 
   // Discovery Started
   unsubscribes.push(
-    GameEventBus.subscribe<DiscoveryStartedEvent>('DISCOVERY_STARTED', () => {
+    GameEventBus.subscribePresentation('DISCOVERY_STARTED', () => {
       const audioStore = useAudio.getState();
       audioStore.playSoundEffect('discover');
     })
@@ -240,7 +222,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
 
   // Poker Hand Revealed
   unsubscribes.push(
-    GameEventBus.subscribe<PokerHandRevealedEvent>('POKER_HAND_REVEALED', (event) => {
+    GameEventBus.subscribePresentation('POKER_HAND_REVEALED', (event) => {
       const audioStore = useAudio.getState();
       // Higher value hands get more dramatic sound
       if (event.value >= 7) {
@@ -255,7 +237,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
 
   // Showdown Result
   unsubscribes.push(
-    GameEventBus.subscribe<ShowdownResultEvent>('SHOWDOWN_RESULT', (event) => {
+    GameEventBus.subscribePresentation('SHOWDOWN_RESULT', (event) => {
       const audioStore = useAudio.getState();
       if (event.winner === 'player') {
         audioStore.playSoundEffect('victory');
@@ -267,7 +249,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
 
   // Pet Evolved — play family-specific sound
   unsubscribes.push(
-    GameEventBus.subscribe<PetEvolvedEvent>('PET_EVOLVED', (event) => {
+    GameEventBus.subscribePresentation('PET_EVOLVED', (event) => {
       if (event.familyName) {
         proceduralAudio.playPetSound(event.familyName);
       }

@@ -28,8 +28,14 @@ import {
 	selectPlayerHand,
 	EMPTY_HAND,
 } from './gameStore';
-import { GAME_COMMAND_TYPES } from '../core/commands';
+import { applyGameCommand, GAME_COMMAND_TYPES } from '../core/commands';
+import { GameEventBus } from '@/core/events/GameEventBus';
+import { CombatEventBus, type DamageResolvedEvent, type ImpactPhaseEvent } from '../services/CombatEventBus';
+import { adaptCombatBusToVisual } from '../combat/vfx/adaptCombatBusToVisual';
+import { subscribeVisualEvent } from '../combat/vfx/emitter';
 import { useMatchStore } from '../match/store';
+import { useAIAttackAnimationStore } from './aiAttackAnimationStore';
+import type { ResolvedAttack } from '../core/commands/resolvedAttack';
 import type { MatchContext } from '../match/types';
 import { usePeerStore, type P2PConnectionState } from './peerStore';
 import { initializeGame, initializeGameSeeded, processAITurn } from '../utils/gameUtils';
@@ -159,6 +165,43 @@ describe('processAITurn', () => {
 		expect(result.players.opponent.battlefield).toHaveLength(1);
 		expect(result.players.opponent.battlefield[0].instanceId).toBe(freeMinion.instanceId);
 	});
+
+	it('records the shield and lethal counter from the minion trade', () => {
+		const state = createOpponentTurnState([]);
+		const target = createAiCardInstance({
+			instanceId: 'shielded-target',
+			hasDivineShield: true,
+			currentAttack: 2,
+			currentHealth: 2,
+		});
+		const attacker = createAiCardInstance({
+			instanceId: 'ai-attacker',
+			currentAttack: 3,
+			currentHealth: 2,
+			canAttack: true,
+			isSummoningSick: false,
+		});
+		target.card = createAiMinionCard({ keywords: ['taunt'], attack: 2, health: 2 });
+		state.players.player.battlefield = [target];
+		state.players.opponent.battlefield = [attacker];
+		const attacks: ResolvedAttack[] = [];
+
+		const result = processAITurn(state, attacks);
+
+		expect(result.players.player.battlefield[0].hasDivineShield).toBe(false);
+		expect(result.players.player.battlefield[0].currentHealth).toBe(2);
+		expect(result.players.opponent.battlefield).toEqual([]);
+		expect(attacks).toEqual([expect.objectContaining({
+			attackerId: attacker.instanceId,
+			targetId: target.instanceId,
+			damageToTarget: 3,
+			healthDamageToTarget: 0,
+			targetShieldConsumed: true,
+			counterAttackOccurred: true,
+			damageToAttacker: 2,
+			attackerLethal: true,
+		})]);
+	});
 });
 
 describe('setupOpponentSpellPetCards', () => {
@@ -173,6 +216,34 @@ describe('setupOpponentSpellPetCards', () => {
 		expect(nextState.players.opponent.hand).toHaveLength(0);
 		expect(nextState.players.opponent.battlefield).toHaveLength(1);
 		expect(nextState.players.opponent.battlefield[0].instanceId).toBe(freeMinion.instanceId);
+	});
+
+	it('reports a setup spell after the hand change is committed', () => {
+		const spell = createAiCardInstance({
+			instanceId: 'opponent-spell',
+			card: {
+				id: 'opponent-spell',
+				name: 'Opponent Draw',
+				type: 'spell',
+				manaCost: 0,
+				rarity: 'common',
+				description: '',
+				spellEffect: { type: 'draw', value: 1 },
+				class: 'neutral',
+			},
+		});
+		useGameStore.setState({ gameState: createPlayerTurnSetupState([spell]) });
+		const handsWhenCast: string[][] = [];
+		const unsubscribe = GameEventBus.subscribe('SPELL_CAST', () => {
+			handsWhenCast.push(useGameStore.getState().gameState.players.opponent.hand.map(card => card.instanceId));
+		});
+		try {
+			useGameStore.getState().setupOpponentSpellPetCards();
+
+			expect(handsWhenCast).toEqual([[]]);
+		} finally {
+			unsubscribe();
+		}
 	});
 });
 
@@ -264,6 +335,64 @@ describe('match authority at local opponent automation boundaries', () => {
 		expect(finalState.players.opponent.hand).toHaveLength(0);
 		expect(finalState.players.opponent.battlefield).toHaveLength(1);
 		expect(finalState.currentTurn).toBe('player');
+	});
+
+	it('commits AI hero damage before queuing the resolved attack for presentation', () => {
+		vi.useFakeTimers();
+		useAIAttackAnimationStore.getState().clearAll();
+		useMatchStore.setState({ activeMatch: aiMatchContext() });
+		const state = createPlayerTurnSetupState([]);
+		const attacker = createAiCardInstance({
+			canAttack: true,
+			isSummoningSick: false,
+			isPlayed: true,
+		});
+		state.players.opponent.battlefield = [attacker];
+		useGameStore.setState({ gameState: state });
+
+		const healthWhenQueued: number[] = [];
+		const unsubscribe = useAIAttackAnimationStore.subscribe(({ pendingAttacks }) => {
+			if (pendingAttacks.length > 0) {
+				healthWhenQueued.push(useGameStore.getState().gameState.players.player.heroHealth ?? 0);
+			}
+		});
+		try {
+			useGameStore.getState().endTurn();
+			vi.advanceTimersByTime(4_000);
+
+			expect(useGameStore.getState().gameState.players.player.heroHealth).toBe(29);
+			expect(healthWhenQueued).toEqual([29]);
+			expect(useAIAttackAnimationStore.getState().pendingAttacks).toEqual([
+				expect.objectContaining({
+					resolvedAttack: expect.objectContaining({
+						attackerId: attacker.instanceId,
+						attackerSide: 'opponent',
+						targetType: 'hero',
+						targetHealthBefore: 30,
+						targetHealthAfter: 29,
+						healthDamageToTarget: 1,
+					}),
+				}),
+			]);
+		} finally {
+			unsubscribe();
+			useAIAttackAnimationStore.getState().clearAll();
+		}
+	});
+
+	it('discards a scheduled turn when the local match changes', () => {
+		vi.useFakeTimers();
+		useMatchStore.getState().setMatch(aiMatchContext());
+		useGameStore.setState({ gameState: createPlayerTurnSetupState([createAiCardInstance()]) });
+
+		useGameStore.getState().endTurn();
+		useMatchStore.getState().setMatch({ ...aiMatchContext(), matchId: 'replacement-match' });
+		vi.advanceTimersByTime(4_000);
+
+		const finalState = useGameStore.getState().gameState;
+		expect(finalState.players.opponent.hand).toHaveLength(1);
+		expect(finalState.players.opponent.battlefield).toEqual([]);
+		expect(finalState.currentTurn).toBe('opponent');
 	});
 
 	it('does not arm the global auto-end timer for a peer match', () => {
@@ -536,5 +665,80 @@ describe('campaign board bootstrap guard', () => {
 			initialArmy: army,
 			alreadyBootstrapped: false,
 		})).toBe(false);
+	});
+});
+
+
+describe('committed attacks and presentation', () => {
+	const ready = (instanceId: string) => createAiCardInstance({
+		instanceId, canAttack: true, isSummoningSick: false, isPlayed: true,
+	});
+	const prepare = () => {
+		const state = createPlayerTurnSetupState([]);
+		state.players.player.battlefield = [ready('wolf'), ready('bear')];
+		useGameStore.setState({ gameState: state, matchSeed: null });
+		return state;
+	};
+
+	it('publishes each hit after commit and accepts a second attack while its renderer is stalled', async () => {
+		prepare();
+		const atImpact: number[] = [];
+		const atDamage: number[] = [];
+		const painted: string[] = [];
+		const offImpact = CombatEventBus.subscribe<ImpactPhaseEvent>('IMPACT_PHASE', () => {
+			atImpact.push(useGameStore.getState().gameState.players.opponent.heroHealth);
+		});
+		const offDamage = CombatEventBus.subscribe<DamageResolvedEvent>('DAMAGE_RESOLVED', () => {
+			atDamage.push(useGameStore.getState().gameState.players.opponent.heroHealth);
+		});
+		const offAdapter = adaptCombatBusToVisual();
+		const offVfx = subscribeVisualEvent('combatImpact', async event => {
+			painted.push(event.attackerId);
+			await new Promise<void>(() => {});
+		});
+		try {
+			expect(useGameStore.getState().attackWithCard('wolf').status).toBe('applied');
+			expect(useGameStore.getState().attackWithCard('wolf').status).toBe('rejected');
+			expect(useGameStore.getState().attackWithCard('bear').status).toBe('applied');
+			expect(atImpact).toEqual([29, 28]);
+			expect(atDamage).toEqual([29, 28]);
+			expect(painted).toEqual([]);
+			await Promise.resolve();
+			expect(painted).toEqual(['wolf', 'bear']);
+			expect(useGameStore.getState().gameState.players.opponent.heroHealth).toBe(28);
+		} finally {
+			offImpact(); offDamage(); offVfx(); offAdapter();
+		}
+	});
+
+	it('keeps a simulated card command silent until its result is committed', () => {
+		const state = prepare();
+		const seen = vi.fn();
+		const off = CombatEventBus.subscribe('*', seen);
+		try {
+			const result = applyGameCommand(state, { type: GAME_COMMAND_TYPES.attack, attackerId: 'wolf' });
+			expect(result.status).toBe('applied');
+			expect(seen).not.toHaveBeenCalled();
+			expect(state.players.opponent.heroHealth).toBe(30);
+		} finally {
+			off();
+		}
+	});
+
+	it('reports each actual frontline target, including forced taunt in hero mode', () => {
+		const state = prepare();
+		state.players.opponent.battlefield = [
+			createAiCardInstance({ instanceId: 'guard', card: createAiMinionCard({ keywords: ['taunt'] }) }),
+		];
+		const impacts: Array<[string, string, number | undefined]> = [];
+		const off = CombatEventBus.subscribe<ImpactPhaseEvent>('IMPACT_PHASE', event => {
+			impacts.push([event.attackerId, event.targetId, event.resolvedAttack?.targetHealthAfter]);
+		});
+		try {
+			expect(useGameStore.getState().frontlineAttack('hero', 'frontline-test').status).toBe('applied');
+			expect(impacts).toEqual([['wolf', 'guard', 0], ['bear', 'opponent-hero', 29]]);
+		} finally {
+			off();
+		}
 	});
 });

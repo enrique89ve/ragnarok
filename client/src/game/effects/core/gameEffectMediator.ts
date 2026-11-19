@@ -16,6 +16,7 @@ export interface GameEffectNode {
 	readonly id: string;
 	readonly after?: readonly string[];
 	readonly delayMs?: number;
+	readonly timeoutMs?: number;
 	readonly run: () => GameEffectExecutionResult;
 }
 
@@ -30,6 +31,7 @@ export interface GameEffectPlan {
 export interface GameEffectMediatorOptions {
 	readonly coordinator?: GameEffectCoordinator;
 	readonly maxNodesPerPlan?: number;
+	readonly maxNodeDurationMs?: number;
 }
 
 export interface GameEffectMediator {
@@ -47,6 +49,7 @@ interface RuntimeNode {
 	status: NodeStatus;
 	coordinatorHandle?: GameEffectHandle;
 	childHandle?: GameEffectHandle;
+	watchdogHandle?: GameEffectHandle;
 }
 
 interface RuntimePlan {
@@ -59,6 +62,7 @@ interface RuntimePlan {
 }
 
 const DEFAULT_MAX_NODES_PER_PLAN = 32;
+const DEFAULT_MAX_NODE_DURATION_MS = 5_000;
 
 function completedHandle(): GameEffectHandle {
 	return { cancel() {}, onComplete: Promise.resolve() };
@@ -124,6 +128,7 @@ function validatePlan(plan: GameEffectPlan, maxNodes: number): string | null {
 export function createGameEffectMediator(options: GameEffectMediatorOptions = {}): GameEffectMediator {
 	const coordinator = options.coordinator ?? gameEffectCoordinator;
 	const maxNodes = options.maxNodesPerPlan ?? DEFAULT_MAX_NODES_PER_PLAN;
+	const maxNodeDurationMs = options.maxNodeDurationMs ?? DEFAULT_MAX_NODE_DURATION_MS;
 	const activePlans = new Map<string, RuntimePlan>();
 
 	const settlePlan = (runtime: RuntimePlan): void => {
@@ -145,6 +150,7 @@ export function createGameEffectMediator(options: GameEffectMediatorOptions = {}
 		for (const node of runtime.nodes.values()) {
 			node.status = 'cancelled';
 			node.coordinatorHandle?.cancel();
+			node.watchdogHandle?.cancel();
 			node.childHandle?.cancel();
 		}
 		settlePlan(runtime);
@@ -187,28 +193,59 @@ export function createGameEffectMediator(options: GameEffectMediatorOptions = {}
 							return;
 						}
 
+						const clearWatchdog = (): void => {
+							node.watchdogHandle?.cancel();
+							node.watchdogHandle = undefined;
+						};
+
 						const completeNode = (): void => {
-							if (runtime.cancelled || node.status === 'cancelled') return;
+							if (runtime.cancelled || node.status !== 'running') return;
+							clearWatchdog();
 							node.status = 'completed';
 							progress(runtime);
 							settlePlan(runtime);
 						};
 						const failNode = (error: unknown): void => {
+							if (runtime.cancelled || node.status !== 'running') return;
+							clearWatchdog();
+							node.childHandle?.cancel();
 							node.status = 'failed';
 							debug.error(`[GameEffectMediator] Node "${node.definition.id}" failed:`, error);
 							progress(runtime);
 							settlePlan(runtime);
 						};
+						const armWatchdog = (): void => {
+							const timeoutMs = Math.min(
+								maxNodeDurationMs,
+								Math.max(1, node.definition.timeoutMs ?? maxNodeDurationMs),
+							);
+							node.watchdogHandle = coordinator.schedule({
+								owner: runtime.definition.owner,
+								lane: `${runtime.definition.lane}:watchdog`,
+								key: `${runtime.definition.id}:${node.definition.id}:watchdog`,
+								priority: 'critical',
+								delayMs: timeoutMs,
+								run: () => {
+									failNode(new Error(`Node "${node.definition.id}" timed out after ${timeoutMs}ms`));
+								},
+							});
+						};
 
 						if (isEffectHandle(result)) {
 							node.childHandle = result;
 							if (result.onComplete) {
+								armWatchdog();
 								result.onComplete.then(completeNode, failNode);
 							} else {
 								completeNode();
 							}
 						} else if (isPromiseLike(result)) {
+							armWatchdog();
 							Promise.resolve(result).then(value => {
+								if (runtime.cancelled || node.status !== 'running') {
+									if (isEffectHandle(value)) value.cancel();
+									return;
+								}
 								if (isEffectHandle(value)) {
 									node.childHandle = value;
 									if (value.onComplete) value.onComplete.then(completeNode, failNode);

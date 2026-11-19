@@ -1,9 +1,11 @@
+import { collectCardCommandEvents } from './cardCommandEvents';
+import { describeCardAttack } from './resolvedAttack';
 import { GAME_COMMAND_TYPES, assertNeverCommand, type GameCommand } from './gameCommandTypes';
 import type { CardInstance, GameState } from '../../types';
 import { findCardInstance } from '../../utils/cards/cardUtils';
 import { hasKeyword } from '../../utils/cards/keywordUtils';
 import { getEffectiveAttack } from '../../utils/effects/statusEffectUtils';
-import { autoAttackWithAllCards, processAttack, playCard, endTurn } from '../../utils/gameUtils';
+import { resolveFrontlineAttacks, processAttack, playCard, endTurn } from '../../utils/gameUtils';
 import { executeHeroPower } from '../../utils/heroPowerUtils';
 import { applyWeaponUpgrade, executeNorseHeroPower, getNorseHeroById, withNorseHeroPowerRandomness } from '../../utils/norseHeroPowerUtils';
 import { confirmMulligan, skipMulligan, toggleCardSelection, type MulliganActor } from '../../utils/mulliganUtils';
@@ -106,12 +108,39 @@ function swapPlayerOpponent(state: GameState): GameState {
  *   wasn't selecting, isn't running AI for a human peer, and shouldn't see
  *   "Not your turn" toasts for opponent's actions.
  */
+function flipHeroTarget(id: string): string {
+	if (id === 'player-hero') return 'opponent-hero';
+	if (id === 'opponent-hero') return 'player-hero';
+	return id;
+}
+
 function flipEffectsToOpponentPerspective(
 	effects: readonly GameCommandEffect[],
 ): readonly GameCommandEffect[] {
 	const out: GameCommandEffect[] = [];
 	for (const effect of effects) {
 		switch (effect.type) {
+			case 'card_rule_event': {
+				const data = { ...effect.data };
+				if ('player' in data) data.player = data.player === 'player' ? 'opponent' : 'player';
+				if ('targetId' in data && data.targetId) data.targetId = flipHeroTarget(data.targetId);
+				out.push({ ...effect, data });
+				break;
+			}
+			case 'attack_resolved':
+				out.push({ ...effect, attack: { ...effect.attack, attackerSide: 'opponent' } });
+				break;
+			case 'damage_resolved':
+				out.push({ ...effect, data: {
+					...effect.data,
+					targetId: flipHeroTarget(effect.data.targetId),
+					attackerOwner: effect.data.attackerOwner === 'player' ? 'opponent' : 'player',
+					defenderOwner: effect.data.defenderOwner === 'player' ? 'opponent' : 'player',
+				} });
+				break;
+			case 'heal_resolved':
+				out.push({ ...effect, data: { ...effect.data, targetId: flipHeroTarget(effect.data.targetId) } });
+				break;
 			case 'play_sound':
 				out.push(effect);
 				break;
@@ -239,15 +268,14 @@ export function applyGameCommand(
 	// instances deterministic across the two browser perspectives. `idGen`
 	// is supplied by the P2P store and this synchronous scope reaches all
 	// nested battlecry/spell/deathrattle helpers.
-	const result = withCardsRng(
+	const { result, effects } = collectCardCommandEvents(() => withCardsRng(
 		rng,
 		deps.idGen ? () => withCardsIdGen(deps.idGen!, apply) : apply,
-	);
+	));
 	if (result.status !== 'applied') return result;
 	const afterViolation = findGameStateResourceViolation(result.state);
-	return afterViolation
-		? rejectedGameCommand(state, formatResourceViolation(afterViolation))
-		: result;
+	if (afterViolation) return rejectedGameCommand(state, formatResourceViolation(afterViolation));
+	return effects.length ? { ...result, effects: [...effects, ...result.effects] } : result;
 }
 
 function findGameStateResourceViolation(state: GameState): ResourceInvariantViolation | null {
@@ -417,10 +445,8 @@ function applyAttackCommandInPerspective(
 	// this logical action on both peers.  Thread a deterministic generator into
 	// the legacy combat resolver so those instance ids cannot diverge after a
 	// VPN/reconnect or from different browser CSPRNG streams.
-	const attackEffectIdGen = createSeededIdGen(
-		[command.attackerId, command.defenderId ?? 'opponent-hero', state.turnNumber, attacker.attacksPerformed ?? 0].join(':'),
-		'attack-effects',
-	);
+	const attackId = [command.attackerId, command.defenderId ?? 'opponent-hero', state.turnNumber, attacker.attacksPerformed ?? 0].join(':');
+	const attackEffectIdGen = createSeededIdGen(attackId, 'attack-effects');
 	const newState = processAttack(state, command.attackerId, command.defenderId, deps.rng, attackEffectIdGen);
 	if (newState === state) {
 		return finish(ignoredGameCommand(state, 'attack produced no state change', [
@@ -428,11 +454,10 @@ function applyAttackCommandInPerspective(
 		]));
 	}
 
-	const targetName = !command.defenderId || command.defenderId === 'opponent-hero'
-		? 'enemy hero'
-		: state.players.opponent.battlefield.find(card => card.instanceId === command.defenderId)?.card.name ?? 'enemy minion';
-
+	const defender = state.players.opponent.battlefield.find(card => card.instanceId === command.defenderId);
+	const targetName = defender?.card.name ?? 'enemy hero';
 	return finish(appliedGameCommand(newState, [
+		{ type: 'attack_resolved', attack: describeCardAttack(state, newState, attacker, defender, 'player', attackId) },
 		{ type: 'play_sound', sound: 'attack' },
 		{
 			type: 'log_activity',
@@ -548,14 +573,16 @@ function applyFrontlineAttackCommand(
 	const timingRejection = pokerTimingRejection(commandState, deps);
 	if (timingRejection) return finish(rejectedGameCommand(commandState, timingRejection));
 
-	const newState = autoAttackWithAllCards(
+	const { state: newState, attacks } = resolveFrontlineAttacks(
 		commandState,
 		command.mode,
-		deps.rng,
+		deps.rng ?? cryptoRng,
 		createSeededIdGen(command.actionId, 'frontline-attack-effects'),
+		command.actionId,
 	);
 	if (newState === commandState) return finish(ignoredGameCommand(commandState, 'frontline attack produced no state change'));
 	return finish(appliedGameCommand(newState, [
+		...attacks.map((attack): GameCommandEffect => ({ type: 'attack_resolved', attack })),
 		{ type: 'play_sound', sound: 'attack' },
 		{ type: 'clear_selection', selection: 'all' },
 	]));

@@ -1,3 +1,6 @@
+import { CombatEventBus } from '../services/CombatEventBus';
+import { publishCardCommandEvent } from '../core/commands/cardCommandEvents';
+import type { ResolvedAttack } from '../core/commands/resolvedAttack';
 import { emitCardPlayed, emitHeroPowerUsed, emitNotification } from '../actions/gameActions';
 import { GAME_COMMAND_TYPES, type ApplyGameCommandResult, type GameCommand, type GameCommandEffect } from '../core/commands';
 import type { CardInstance, CardType, GameState } from '../types';
@@ -101,6 +104,14 @@ function applyGameCommandEffect(
 	setState: (patch: GameCommandStorePatch) => void,
 ): void {
 	switch (effect.type) {
+		case 'attack_resolved':
+			publishResolvedAttack(effect.attack);
+			return;
+		case 'damage_resolved':
+		case 'card_rule_event':
+		case 'heal_resolved':
+			publishCardCommandEvent(effect);
+			return;
 		case 'card_played':
 			applyCardPlayedEffect(effect);
 			return;
@@ -119,6 +130,40 @@ function applyGameCommandEffect(
 		case 'schedule_ai_turn':
 			return;
 	}
+}
+
+function publishResolvedAttack(attack: ResolvedAttack): void {
+	const defender = attack.attackerSide === 'player' ? 'opponent' : 'player';
+	const targetId = attack.targetId ?? `${defender}-hero`;
+	CombatEventBus.emitImpactPhase({
+		attackerId: attack.attackerId,
+		targetId,
+		damageToTarget: attack.damageToTarget,
+		damageToAttacker: attack.damageToAttacker,
+		resolvedAttack: attack,
+	});
+
+	// Hero hits already carry the health event from dealDamageToHero, including armor.
+	if (attack.targetType === 'hero') return;
+	CombatEventBus.emitDamageResolved({
+		sourceId: attack.attackerId,
+		sourceType: 'minion',
+		targetId,
+		targetType: attack.targetType,
+		actualDamage: attack.healthDamageToTarget,
+		damageSource: 'minion_attack',
+		attackerOwner: attack.attackerSide,
+		defenderOwner: defender,
+		targetHealthBefore: attack.targetHealthBefore,
+		targetHealthAfter: attack.targetHealthAfter,
+		targetDied: attack.targetLethal,
+		shieldConsumed: attack.targetShieldConsumed,
+		counterDamage: attack.damageToAttacker,
+		counterTargetHealthBefore: attack.attackerHealthBefore,
+		counterTargetHealthAfter: attack.attackerHealthAfter,
+		counterTargetDied: attack.attackerLethal,
+		counterShieldConsumed: attack.attackerShieldConsumed,
+	});
 }
 
 function emitAppliedCommandProgress(command: GameCommand, beforeState: GameState): void {

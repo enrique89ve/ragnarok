@@ -78,10 +78,11 @@ function readOpeningMulliganGate(): boolean {
 import {
 	emitCommunityCardRevealed,
 	emitPhaseEntered,
+	emitStaminaChanged,
 	emitWagerActivatedFromMinion,
 	isShowdownResolvedWagerType,
+	type StaminaChangeReason,
 } from '../../combat/vfx/events';
-import { POST_SHOWDOWN_HAND_BUFFER_MS } from '../../combat/pokerResolutionOutcome';
 
 function findPokerResourceViolation(state: PokerCombatState): ResourceInvariantViolation | null {
 	for (const participant of [state.player, state.opponent]) {
@@ -263,16 +264,7 @@ export const createPokerCombatSlice: StateCreator<
   [],
   [],
   PokerCombatSlice
-> = (set, get) => {
-  let pendingNextHandTimeout: ReturnType<typeof setTimeout> | null = null;
-
-  const cancelPendingPokerHandTransition = (): void => {
-    if (pendingNextHandTimeout === null) return;
-    clearTimeout(pendingNextHandTimeout);
-    pendingNextHandTimeout = null;
-  };
-
-  return {
+> = (set, get) => ({
   pokerState: null,
   pokerCombatState: null,
   pokerDeck: [],
@@ -409,7 +401,6 @@ export const createPokerCombatSlice: StateCreator<
     firstStrikeTarget?: 'player' | 'opponent',
     deterministic?: PokerCombatDeterministicOptions
   ) => {
-    cancelPendingPokerHandTransition();
     clearHandCache();
     let deck = createShuffledPokerDeck(deterministic?.deckSeed);
     
@@ -760,6 +751,9 @@ export const createPokerCombatSlice: StateCreator<
     const actingAfter = (combat: typeof newState) => (
       combat.player.playerId === playerId ? combat.player : combat.opponent
     );
+    const staminaBeforeAction = actingAfter(newState).pet.stats.currentStamina;
+    let foldShieldAbsorbed = 0;
+    let foldCurseApplied = false;
     
     switch (action) {
       case CombatAction.ATTACK:
@@ -879,10 +873,14 @@ export const createPokerCombatSlice: StateCreator<
         // Check fold curse from spell state (extra -1 STA)
         const spellState = nextPokerSpellState;
         if (spellState) {
-          foldStaPenalty += getExtraFoldPenalty(spellState, folderSide);
+          const extraCurse = getExtraFoldPenalty(spellState, folderSide);
+          foldCurseApplied = extraCurse > 0;
+          foldStaPenalty += extraCurse;
           
           // Apply stamina shield absorption
+          const preShieldPenalty = foldStaPenalty;
           const shieldResult = applyStaminaShield(spellState, folderSide, foldStaPenalty);
+          foldShieldAbsorbed = Math.max(0, preShieldPenalty - shieldResult.reducedPenalty);
           foldStaPenalty = shieldResult.reducedPenalty;
           
           // Update spell state if shield was consumed
@@ -993,6 +991,31 @@ export const createPokerCombatSlice: StateCreator<
     // writer emits phaseEntered so the phase shake fires for it too.
     if (newState.phase !== state.pokerCombatState.phase) {
       emitPhaseEntered({ phase: newState.phase });
+    }
+
+    // Post-commit: emit semantic stamina VFX events anchored to `.hero-stamina-rail`.
+    const actorSide: 'player' | 'opponent' = isPlayer ? 'player' : 'opponent';
+    const staminaAfterAction = actingAfter(newState).pet.stats.currentStamina;
+    const staminaDelta = staminaAfterAction - staminaBeforeAction;
+    if (foldShieldAbsorbed > 0) {
+      emitStaminaChanged({
+        side: actorSide,
+        delta: 0,
+        reason: 'shield_absorbed',
+        absorbed: foldShieldAbsorbed,
+      });
+    }
+    if (staminaDelta !== 0) {
+      let reason: StaminaChangeReason;
+      if (action === CombatAction.ATTACK) reason = 'bet';
+      else if (action === CombatAction.COUNTER_ATTACK) reason = 'raise';
+      else if (action === CombatAction.DEFEND) reason = 'defend';
+      else reason = foldCurseApplied ? 'fold_curse' : 'fold';
+      emitStaminaChanged({
+        side: actorSide,
+        delta: staminaDelta,
+        reason,
+      });
     }
   },
 
@@ -1207,8 +1230,14 @@ export const createPokerCombatSlice: StateCreator<
   resolvePokerCombat: (): CombatResolution | null => {
     const state = get();
     const combatState = state.pokerCombatState;
-    
-    if (!combatState) return null;
+    if (!state.pokerIsActive || combatState?.phase !== PokerCombatPhase.RESOLUTION) return null;
+
+    const resolved = state.lastResolvedPokerHand;
+    if (resolved?.combatId === combatState.combatId && resolved.handIndex === combatState.handNumber) {
+      return resolved.resolution;
+    }
+    if (readOpeningMulliganGate()) return null;
+    if (!combatState.foldWinner && (!combatState.player.isReady || !combatState.opponent.isReady)) return null;
     
     const playerMaxHP = combatState.player.pet.stats.maxHealth;
     const opponentMaxHP = combatState.opponent.pet.stats.maxHealth;
@@ -1589,7 +1618,6 @@ export const createPokerCombatSlice: StateCreator<
   },
 
 	  endPokerCombat: () => {
-    cancelPendingPokerHandTransition();
     set({
       pokerCombatState: null,
       pokerDeck: [],
@@ -1980,41 +2008,6 @@ export const createPokerCombatSlice: StateCreator<
 	    emitPhaseEntered({ phase: PokerCombatPhase.PRE_FLOP });
   },
 
-  startNextHandDelayed: (resolution: CombatResolution) => {
-    const state = get();
-    const scheduledCombatId = state.pokerCombatState?.combatId;
-    if (!scheduledCombatId) {
-      debug.combat('[startNextHandDelayed] Skipped: no active poker combat');
-      return;
-    }
-    if (state.isTransitioningHand) {
-      debug.combat('[startNextHandDelayed] Skipped: already transitioning');
-      return;
-    }
-
-    cancelPendingPokerHandTransition();
-    set({ isTransitioningHand: true });
-
-    pendingNextHandTimeout = setTimeout(() => {
-      pendingNextHandTimeout = null;
-      const currentState = get();
-      if (
-        !currentState.pokerIsActive
-        || currentState.pokerCombatState?.combatId !== scheduledCombatId
-      ) {
-        return;
-      }
-      try {
-        currentState.startNextHand(resolution);
-      } catch (err) {
-        debug.error('[startNextHandDelayed] startNextHand threw:', err);
-        set({ isTransitioningHand: false });
-      }
-    }, POST_SHOWDOWN_HAND_BUFFER_MS);
-  },
-
-  cancelPendingPokerHandTransition,
-
   maybeCloseBettingRound: () => {
     const state = get();
     if (!state.pokerCombatState) return;
@@ -2127,5 +2120,4 @@ export const createPokerCombatSlice: StateCreator<
       get().advancePokerPhase();
     }
   },
-  };
-};
+});

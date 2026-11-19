@@ -1,3 +1,5 @@
+import { reportCardRuleEvent } from '../core/commands/cardCommandEvents';
+import { createResolvedAttackFromStates, describeCardAttack, type ResolvedAttack } from '../core/commands/resolvedAttack';
 import { GameState, CardInstance, Player, HeroClass, CardData } from '../types';
 import type { HiveCardAsset } from '../../data/schemas/HiveTypes';
 import { debug, isAISimulationMode } from '../config/debugConfig';
@@ -46,7 +48,6 @@ import {
   logDamage,
   logBuff
 } from './gameLogUtils';
-import { queueAIAttackAnimation } from '../stores/aiAttackAnimationStore';
 import {
   processAllEndOfTurnEffects,
   processAllStartOfTurnEffects,
@@ -65,7 +66,6 @@ import { checkPetEvolutionTrigger } from './petEvolutionTriggers';
 import { applyLifestealHealing } from './mechanics/lifestealUtils';
 import { recalculateAuras } from './mechanics/auraUtils';
 import { processSpellburst } from './mechanics/spellburstUtils';
-import { GameEventBus } from '@/core/events/GameEventBus';
 import { cryptoIdGen, cryptoRng } from './seededRng';
 import { getCardsRng, withCardsIdGen, withCardsRng } from './cardsCommandRng';
 import { canMinionAct, getEffectiveAttack, processOnAttackEffects } from './effects/statusEffectUtils';
@@ -153,7 +153,8 @@ function attemptPetEvolution(
 
   const fromStage = isMaster ? 2 : 1;
   const toStage = isMaster ? 3 : 2;
-  GameEventBus.emitPetEvolved({
+  reportCardRuleEvent({
+      type: 'PET_EVOLVED',
     player: state.currentTurn as 'player' | 'opponent',
     instanceId: basic.instanceId,
     cardName: evolvedCard.name || 'Unknown',
@@ -656,7 +657,8 @@ function playCardUnbound(state: GameState, cardInstanceId: string, targetId?: st
     spellResult = processSpellburst(spellResult, card.card);
 
     // Emit spell cast event for animations
-    GameEventBus.emitSpellCast({
+    reportCardRuleEvent({
+      type: 'SPELL_CAST',
       cardId: String(card.card.id),
       cardName: card.card.name,
       player: currentPlayer,
@@ -760,7 +762,8 @@ function playCardUnbound(state: GameState, cardInstanceId: string, targetId?: st
         attacksPerformed: 0
       };
       updatedPlayer.battlefield.push(placed);
-      GameEventBus.emitCardPlayed({
+      reportCardRuleEvent({
+      type: 'CARD_PLAYED',
         player: currentPlayer,
         cardId: String(placed.card.id),
         instanceId: placed.instanceId,
@@ -1505,7 +1508,7 @@ export function endTurn(state: GameState, skipAISimulation = false): GameState {
   newState = applyTurnStartPipeline(newState, typedNextPlayer);
 
   // Emit turn started event for animations
-  GameEventBus.emitTurnStarted(typedNextPlayer, newState.turnNumber);
+  reportCardRuleEvent({ type: 'TURN_STARTED', player: typedNextPlayer, turnNumber: newState.turnNumber });
 
   // If next player is AI (opponent), simulate their turn
   if (typedNextPlayer === 'opponent' && !skipAISimulation) {
@@ -1607,10 +1610,10 @@ export function endTurn(state: GameState, skipAISimulation = false): GameState {
  * Takes a state where currentTurn === 'opponent' and turn-start pipeline is already applied.
  * Simulates AI play, processes end-of-turn, then switches back to player.
  */
-export function processAITurn(state: GameState): GameState {
+export function processAITurn(state: GameState, resolvedAttacks?: ResolvedAttack[]): GameState {
   let newState = state;
   try {
-    newState = simulateOpponentTurn(newState);
+    newState = simulateOpponentTurn(newState, resolvedAttacks);
     newState = processEndOfTurnEffects(newState);
 
     const playerState = newState.players.player;
@@ -2005,7 +2008,7 @@ export function processOpponentSpellPetSetup(state: GameState): GameState {
 	};
 }
 
-function simulateOpponentTurn(state: GameState): GameState {
+function simulateOpponentTurn(state: GameState, resolvedAttacks?: ResolvedAttack[]): GameState {
 	try {
 		if (!state || !state.players || !state.players.opponent) {
 			debug.error("Invalid state passed to simulateOpponentTurn", state);
@@ -2116,7 +2119,7 @@ function simulateOpponentTurn(state: GameState): GameState {
 			debug.ai('[AI Turn] Lethal detected! Going face with everything.');
 			for (const attacker of attackers) {
 				try {
-					currentState = processAttackForOpponent(currentState, attacker.instanceId);
+					currentState = processAttackForOpponent(currentState, resolvedAttacks, attacker.instanceId);
 				} catch (error) {
 					debug.error('AI lethal attack error:', error);
 				}
@@ -2153,7 +2156,7 @@ function simulateOpponentTurn(state: GameState): GameState {
 
 					if (bestTarget) {
 						currentState = processAttackForOpponent(
-							currentState, attacker.instanceId, (bestTarget as CardInstance).instanceId
+							currentState, resolvedAttacks, attacker.instanceId, bestTarget.instanceId
 						);
 					}
 					continue;
@@ -2181,10 +2184,10 @@ function simulateOpponentTurn(state: GameState): GameState {
 
 				if (bestTarget && bestScore > 0) {
 					currentState = processAttackForOpponent(
-						currentState, attacker.instanceId, (bestTarget as CardInstance).instanceId
+						currentState, resolvedAttacks, attacker.instanceId, bestTarget.instanceId
 					);
 				} else if (pField.length === 0) {
-					currentState = processAttackForOpponent(currentState, attacker.instanceId);
+					currentState = processAttackForOpponent(currentState, resolvedAttacks, attacker.instanceId);
 				}
 			} catch (error) {
 				debug.error('AI attack error:', error);
@@ -2201,13 +2204,12 @@ function simulateOpponentTurn(state: GameState): GameState {
 /**
  * Process attack from opponent's perspective
  * This is a modified version of processAttack that works when the attacker is the opponent
- * When deferDamage is true, damage is NOT applied to state - it will be applied by the animation processor
  */
 function processAttackForOpponent(
   state: GameState,
+  resolvedAttacks: ResolvedAttack[] | undefined,
   attackerInstanceId: string,
-  defenderInstanceId?: string, // If undefined, attack is directed at the player's hero
-  deferDamage: boolean = false // Apply damage immediately for reliable AI attacks
+  defenderInstanceId?: string,
 ): GameState {
   // Deep clone state to avoid mutation
   let newState = JSON.parse(JSON.stringify(state)) as GameState;
@@ -2239,6 +2241,19 @@ function processAttackForOpponent(
       return state;
     }
 
+    const completeAttack = (targetId: string | null, damage: number, counterDamage: number): GameState => {
+      resolvedAttacks?.push(createResolvedAttackFromStates(state, newState, {
+        id: `ai-attack:${state.turnNumber}:${attackerInstanceId}:${attacker.attacksPerformed ?? 0}`,
+        attackerId: attackerInstanceId,
+        targetId,
+        targetType: targetId === null ? 'hero' : 'minion',
+        attackerSide: 'opponent',
+        damage,
+        counterDamage,
+      }));
+      return newState;
+    };
+
     // If no defender is specified, attack the player's hero directly
     if (!defenderInstanceId) {
       // Check for Rush restriction - cards with Rush can only attack minions on the turn they're played
@@ -2251,30 +2266,7 @@ function processAttackForOpponent(
       // Calculate attack with status effects using type guard
       const attackDamage = getEffectiveAttack(attacker);
 
-      debug.combat(`[AI Attack] ${attacker.card.name} attacks Player Hero for ${attackDamage} damage (deferDamage=${deferDamage})`);
-
-      // Queue animation with full combat data
-      queueAIAttackAnimation(
-        attacker.card.name,
-        attacker.instanceId,
-        'Player Hero',
-        null,
-        'hero',
-        attackDamage,
-        0, // counterDamage
-        attacker.hasDivineShield || false,
-        false, // defender (hero) has no divine shield
-        'opponent',
-        !deferDamage // mark as already applied when not deferring
-      );
-
-      // Apply damage immediately when NOT deferring
-      if (!deferDamage) {
-        const hpBefore = newState.players.player.heroHealth ?? newState.players.player.health;
-        newState = dealDamage(newState, 'player', 'hero', attackDamage, undefined, undefined, 'opponent');
-        const hpAfter = newState.players.player.heroHealth ?? newState.players.player.health;
-        debug.combat(`[AI Attack] Player HP: ${hpBefore} → ${hpAfter}`);
-      }
+      newState = dealDamageToHero(newState, 'player', attackDamage, undefined, 'opponent', attacker.instanceId);
 
       // Apply Burn self-damage if attacker is burning
       if (attacker.isBurning) {
@@ -2314,8 +2306,7 @@ function processAttackForOpponent(
         }
       }
 
-      // Game over is handled by dealDamage above
-      return newState;
+      return completeAttack(null, attackDamage, 0);
     }
 
     // Find the defender card
@@ -2336,52 +2327,6 @@ function processAttackForOpponent(
     const attackerHasDivineShield = attacker.hasDivineShield || false;
     const defenderHasDivineShield = defender.hasDivineShield || false;
 
-    debug.combat(`[AI Attack] ${attacker.card.name} (${attackDamage} atk) attacks ${defender.card.name} (deferDamage=${deferDamage})`);
-
-    // Queue animation with full combat data
-    queueAIAttackAnimation(
-      attacker.card.name,
-      attacker.instanceId,
-      defender.card.name,
-      defender.instanceId,
-      'minion',
-      attackDamage,
-      getEffectiveAttack(defender), // counterDamage
-      attackerHasDivineShield,
-      defenderHasDivineShield,
-      'opponent',
-      !deferDamage // mark as already applied when not deferring
-    );
-
-    // If deferring damage, skip damage application - animation processor will handle it
-    if (deferDamage) {
-      // Just mark the attacker as having attacked (canAttack = false)
-      const attackerId = attacker.instanceId;
-      const updatedAttackerIndex = newState.players.opponent.battlefield.findIndex(
-        card => card.instanceId === attackerId
-      );
-
-      if (updatedAttackerIndex !== -1) {
-        const hasWindfury = hasKeyword(attacker, 'windfury');
-        const maxAttacksAllowed = hasWindfury ? 2 : 1;
-
-        newState.players.opponent.battlefield[updatedAttackerIndex].attacksPerformed = (newState.players.opponent.battlefield[updatedAttackerIndex].attacksPerformed || 0) + 1;
-
-        if ((newState.players.opponent.battlefield[updatedAttackerIndex].attacksPerformed || 0) >= maxAttacksAllowed) {
-          newState.players.opponent.battlefield[updatedAttackerIndex].canAttack = false;
-        }
-
-        // Remove stealth after attacking
-        if (hasKeyword(newState.players.opponent.battlefield[updatedAttackerIndex], 'stealth')) {
-          newState = checkPetEvolutionTrigger(newState, 'on_attack_from_stealth', newState.players.opponent.battlefield[updatedAttackerIndex].instanceId);
-          removeKeyword(newState.players.opponent.battlefield[updatedAttackerIndex], 'stealth');
-        }
-      }
-
-      return newState;
-    }
-
-    // Non-deferred damage application (legacy path)
     // Track minions that take damage for Frenzy mechanic
     const damagedMinionIds: string[] = [];
 
@@ -2402,14 +2347,14 @@ function processAttackForOpponent(
       newState = updateEnrageEffects(newState);
     }
 
+    const counterDamage = getEffectiveAttack(defender);
     if (attackerHasDivineShield) {
       // Divine Shield blocks the damage once
       newState.players.opponent.battlefield[attackerIndex].hasDivineShield = false;
     } else {
       // Normal damage application
-      const defenderAttack = getEffectiveAttack(defender);
-      if (defenderAttack > 0) {
-        newState.players.opponent.battlefield[attackerIndex].currentHealth = (newState.players.opponent.battlefield[attackerIndex].currentHealth || 0) - defenderAttack;
+      if (counterDamage > 0) {
+        newState.players.opponent.battlefield[attackerIndex].currentHealth = (newState.players.opponent.battlefield[attackerIndex].currentHealth || 0) - counterDamage;
 
         // Track this minion as damaged for Frenzy effect
         damagedMinionIds.push(attacker.instanceId);
@@ -2534,384 +2479,12 @@ function processAttackForOpponent(
       }
     }
 
-    return checkGameOver(newState);
+    newState = checkGameOver(newState);
+    return completeAttack(defenderId, attackDamage, counterDamage);
   } catch (error) {
     debug.error('AI attack processing error:', error);
     return state;
   }
-}
-
-/**
- * Process player minion attacks during end turn (auto-attack phase)
- * Similar to AI attacks but for player minions attacking opponent
- */
-function processAttackForPlayer(
-  state: GameState,
-  attackerInstanceId: string,
-  defenderInstanceId?: string, // If undefined, attack is directed at the opponent's hero
-  deferDamage: boolean = true // When true, damage is applied by animation processor
-): GameState {
-  // Deep clone state to avoid mutation
-  let newState = JSON.parse(JSON.stringify(state)) as GameState;
-
-  try {
-    // Find the attacker card
-    const playerField = newState.players.player.battlefield;
-    const attackerIndex = playerField.findIndex(card => card.instanceId === attackerInstanceId);
-
-    if (attackerIndex === -1) {
-      debug.error('Player Auto-Attack: Attacker card not found');
-      return state;
-    }
-
-    const attacker = playerField[attackerIndex];
-
-    if (!canMinionAct(attacker).canAct) {
-      return state;
-    }
-
-    // Check if the card can attack
-    if (attacker.isSummoningSick || !attacker.canAttack) {
-      debug.error('Player Auto-Attack: Card cannot attack - summoning sick or already attacked');
-      return state;
-    }
-
-    // If no defender is specified, attack the opponent's hero directly
-    if (!defenderInstanceId) {
-      // Check for Rush restriction
-      if (!isValidRushTarget(attacker, 'hero')) {
-        debug.error('Player Auto-Attack: Minions with Rush cannot attack the hero on the turn they are played');
-        return state;
-      }
-
-      // Calculate attack with status effects using type guard
-      const attackDamage = getEffectiveAttack(attacker);
-
-      // Queue animation with full combat data for deferred damage
-      queueAIAttackAnimation(
-        attacker.card.name,
-        attacker.instanceId,
-        'Opponent Hero',
-        null,
-        'hero',
-        attackDamage,
-        0, // counterDamage
-        attacker.hasDivineShield || false,
-        false, // defender (hero) has no divine shield
-        'player' // attackerSide - this is a player minion attacking
-      );
-
-      // Only apply damage immediately if NOT deferring
-      if (!deferDamage) {
-        newState = dealDamage(newState, 'opponent', 'hero', attackDamage, undefined, undefined, 'player');
-      }
-
-      // Apply Burn self-damage if attacker is burning
-      if (attacker.isBurning) {
-        const burnDamage = 3;
-        const attackerIdx = newState.players.player.battlefield.findIndex(m => m.instanceId === attacker.instanceId);
-        if (attackerIdx !== -1) {
-          const currentHealth = newState.players.player.battlefield[attackerIdx].currentHealth ?? 0;
-          newState.players.player.battlefield[attackerIdx].currentHealth = currentHealth - burnDamage;
-        }
-      }
-
-      // Store the original attacker ID
-      const attackerId = attacker.instanceId;
-
-      // Find attacker to ensure we have the right index
-      const updatedAttackerIndex = newState.players.player.battlefield.findIndex(
-        card => card.instanceId === attackerId
-      );
-
-      if (updatedAttackerIndex !== -1) {
-        // Track attacks performed for Windfury
-        const currentCard = newState.players.player.battlefield[updatedAttackerIndex];
-        const currentAttacks = currentCard.attacksPerformed ?? 0;
-        currentCard.attacksPerformed = currentAttacks + 1;
-
-        const hasWindfury = hasKeyword(attacker, 'windfury');
-        const maxAttacksAllowed = hasWindfury ? 2 : 1;
-
-        if ((currentCard.attacksPerformed ?? 0) >= maxAttacksAllowed) {
-          currentCard.canAttack = false;
-        }
-      }
-
-      return newState;
-    }
-
-    // Find the defender card on opponent's battlefield
-    const opponentField = newState.players.opponent.battlefield;
-    const defenderIndex = opponentField.findIndex(card => card.instanceId === defenderInstanceId);
-
-    if (defenderIndex === -1) {
-      debug.error('Player Auto-Attack: Defender card not found');
-      return state;
-    }
-
-    const defender = opponentField[defenderIndex];
-
-    // Calculate attack with status effects using type guard
-    const attackDamage = getEffectiveAttack(attacker);
-
-    // Check for Divine Shield
-    const attackerHasDivineShield = attacker.hasDivineShield || false;
-    const defenderHasDivineShield = defender.hasDivineShield || false;
-
-    // Queue animation with full combat data for deferred damage
-    queueAIAttackAnimation(
-      attacker.card.name,
-      attacker.instanceId,
-      defender.card.name,
-      defender.instanceId,
-      'minion',
-      attackDamage,
-      getEffectiveAttack(defender), // counterDamage
-      attackerHasDivineShield,
-      defenderHasDivineShield,
-      'player' // attackerSide - this is a player minion attacking
-    );
-
-    // If deferring damage, skip damage application - animation processor will handle it
-    if (deferDamage) {
-      const attackerId = attacker.instanceId;
-      const updatedAttackerIndex = newState.players.player.battlefield.findIndex(
-        card => card.instanceId === attackerId
-      );
-
-      if (updatedAttackerIndex !== -1) {
-        const hasWindfury = hasKeyword(attacker, 'windfury');
-        const maxAttacksAllowed = hasWindfury ? 2 : 1;
-
-        newState.players.player.battlefield[updatedAttackerIndex].attacksPerformed = (newState.players.player.battlefield[updatedAttackerIndex].attacksPerformed || 0) + 1;
-
-        if ((newState.players.player.battlefield[updatedAttackerIndex].attacksPerformed || 0) >= maxAttacksAllowed) {
-          newState.players.player.battlefield[updatedAttackerIndex].canAttack = false;
-        }
-
-        // Remove stealth after attacking
-        if (hasKeyword(newState.players.player.battlefield[updatedAttackerIndex], 'stealth')) {
-          newState = checkPetEvolutionTrigger(newState, 'on_attack_from_stealth', newState.players.player.battlefield[updatedAttackerIndex].instanceId);
-          removeKeyword(newState.players.player.battlefield[updatedAttackerIndex], 'stealth');
-        }
-      }
-
-      return newState;
-    }
-
-    // Non-deferred damage application (legacy path)
-    const damagedMinionIds: string[] = [];
-
-    if (defenderHasDivineShield) {
-      newState.players.opponent.battlefield[defenderIndex].hasDivineShield = false;
-    } else {
-      // Normal damage application - use modified attack for status effects
-      if (attackDamage && attackDamage > 0) {
-        newState.players.opponent.battlefield[defenderIndex].currentHealth = (newState.players.opponent.battlefield[defenderIndex].currentHealth || 0) - attackDamage;
-        damagedMinionIds.push(defender.instanceId);
-      }
-      newState = updateEnrageEffects(newState);
-    }
-
-    if (attackerHasDivineShield) {
-      newState.players.player.battlefield[attackerIndex].hasDivineShield = false;
-    } else {
-      const defenderAttack = getEffectiveAttack(defender);
-      if (defenderAttack > 0) {
-        newState.players.player.battlefield[attackerIndex].currentHealth = (newState.players.player.battlefield[attackerIndex].currentHealth || 0) - defenderAttack;
-        damagedMinionIds.push(attacker.instanceId);
-      }
-      newState = updateEnrageEffects(newState);
-    }
-
-    const attackerId = attacker.instanceId;
-    const defenderId = defender.instanceId;
-
-    if ((newState.players.opponent.battlefield[defenderIndex]?.currentHealth || 0) <= 0) {
-      newState = destroyCard(newState, defenderId, 'opponent');
-    }
-
-    const updatedAttackerIndex = newState.players.player.battlefield.findIndex(
-      card => card.instanceId === attackerId
-    );
-
-    if (updatedAttackerIndex !== -1 &&
-        (newState.players.player.battlefield[updatedAttackerIndex].currentHealth || 0) <= 0) {
-      newState = destroyCard(newState, attackerId, 'player');
-    } else if (updatedAttackerIndex !== -1) {
-      const hasWindfury = hasKeyword(attacker, 'windfury');
-      const maxAttacksAllowed = hasWindfury ? 2 : 1;
-
-      newState.players.player.battlefield[updatedAttackerIndex].attacksPerformed = (newState.players.player.battlefield[updatedAttackerIndex].attacksPerformed || 0) + 1;
-
-      if ((newState.players.player.battlefield[updatedAttackerIndex].attacksPerformed || 0) >= maxAttacksAllowed) {
-        newState.players.player.battlefield[updatedAttackerIndex].canAttack = false;
-      }
-
-      // Remove stealth after attacking
-      if (hasKeyword(newState.players.player.battlefield[updatedAttackerIndex], 'stealth')) {
-        newState = checkPetEvolutionTrigger(newState, 'on_attack_from_stealth', newState.players.player.battlefield[updatedAttackerIndex].instanceId);
-        removeKeyword(newState.players.player.battlefield[updatedAttackerIndex], 'stealth');
-      }
-    }
-
-    if (damagedMinionIds.length > 0) {
-      newState = processFrenzyEffects(newState, damagedMinionIds.map(id => ({ id, playerId: 'player' })));
-    }
-
-    if (attacker.card.type === 'minion') {
-      newState = processAfterAttackEffects(newState, 'minion', attacker.instanceId, 'player');
-    }
-
-    // After damage application, apply onAttack status effects
-    const updatedAttacker = newState.players.player.battlefield.find(m => m.instanceId === attackerId);
-    if (updatedAttacker && (updatedAttacker.card as any)?.onAttack?.type === 'apply_status') {
-      const targetMinion = newState.players.opponent.battlefield.find(m => m.instanceId === defenderId);
-      if (targetMinion) {
-        const statusType = (updatedAttacker.card as any)?.onAttack?.statusEffect;
-        const updatedTarget = processOnAttackStatusEffect(updatedAttacker as any, targetMinion as any);
-        const targetIndex = newState.players.opponent.battlefield.findIndex(m => m.instanceId === defenderId);
-        if (targetIndex !== -1) {
-          newState.players.opponent.battlefield[targetIndex] = updatedTarget as any;
-        }
-        if (statusType === 'burn') newState = checkPetEvolutionTrigger(newState, 'on_apply_burn');
-        if (statusType === 'poison') newState = checkPetEvolutionTrigger(newState, 'on_apply_poison');
-      }
-    }
-
-    // Apply Burn self-damage if attacker is burning
-    if (attacker.isBurning) {
-      const burnDamage = 3;
-      const burnAttackerIdx = newState.players.player.battlefield.findIndex(m => m.instanceId === attackerId);
-      if (burnAttackerIdx !== -1) {
-        const currentHealth = newState.players.player.battlefield[burnAttackerIdx].currentHealth ?? 0;
-        newState.players.player.battlefield[burnAttackerIdx].currentHealth = currentHealth - burnDamage;
-      }
-    }
-
-    return checkGameOver(newState);
-  } catch (error) {
-    debug.error('Player auto-attack processing error:', error);
-    return state;
-  }
-}
-
-/**
- * Execute player minion attacks during end turn phase
- * Player minions auto-attack based on HP (highest HP attacks first)
- */
-function simulatePlayerMinionAttacks(state: GameState): GameState {
-
-  let currentState = JSON.parse(JSON.stringify(state)) as GameState;
-
-  // Log minion states before filtering
-  currentState.players.player.battlefield.forEach(card => {
-  });
-
-  // Get all cards that can attack
-  // Sort by HP (currentHealth) - highest HP attacks first per game rules
-  const attackableCards = currentState.players.player.battlefield
-    .filter(card => !card.isSummoningSick && card.canAttack)
-    .sort((a, b) => (b.currentHealth || 0) - (a.currentHealth || 0)); // Sort by HP (highest first)
-
-
-  if (attackableCards.length > 0) {
-    attackableCards.forEach(attackerCard => {
-      try {
-        const opponentField = currentState.players.opponent.battlefield;
-        const opponentHealth = currentState.players.opponent.health;
-        const opponentHasTaunts = hasTauntMinions(opponentField);
-
-        // If we can kill opponent, do it! (But only if there are no Taunts)
-        if (!opponentHasTaunts && ((attackerCard.card as any).attack || 0) >= opponentHealth) {
-          currentState = processAttackForPlayer(
-            currentState,
-            attackerCard.instanceId
-          );
-          return;
-        }
-
-        let bestTarget: CardInstance | null = null;
-        let bestTargetScore = -1;
-
-        if (opponentHasTaunts) {
-          const tauntMinions = getTauntMinions(opponentField);
-
-          tauntMinions.forEach(defenderCard => {
-            let score = 0;
-
-            if (((attackerCard.card as any).attack || 0) >= (defenderCard.currentHealth || 0)) {
-              score += 150;
-              if (((defenderCard.card as any).attack || 0) < (attackerCard.currentHealth || 0)) {
-                score += 100;
-              }
-              score += ((defenderCard.card as any).attack || 0) * 5;
-              score += (defenderCard.card.manaCost || 0) * 3;
-
-              if (score > bestTargetScore) {
-                bestTarget = defenderCard;
-                bestTargetScore = score;
-              }
-            } else {
-              score += 50;
-              if (((defenderCard.card as any).attack || 0) < (attackerCard.currentHealth || 0)) {
-                score += 30;
-              }
-              if (score > bestTargetScore) {
-                bestTarget = defenderCard;
-                bestTargetScore = score;
-              }
-            }
-          });
-
-          if (bestTarget) {
-            const target = bestTarget as CardInstance;
-            currentState = processAttackForPlayer(
-              currentState,
-              attackerCard.instanceId,
-              target.instanceId
-            );
-            return;
-          }
-        }
-
-        // If no Taunts, target the LOWEST HP enemy minion first
-        bestTarget = null;
-        let lowestHP = Infinity;
-
-        opponentField.forEach(defenderCard => {
-          if (hasKeyword(defenderCard, 'taunt')) {
-            return;
-          }
-
-          if ((defenderCard.currentHealth || 0) < lowestHP) {
-            lowestHP = defenderCard.currentHealth || 0;
-            bestTarget = defenderCard;
-          }
-        });
-
-        if (bestTarget) {
-          const target = bestTarget as CardInstance;
-          currentState = processAttackForPlayer(
-            currentState,
-            attackerCard.instanceId,
-            target.instanceId
-          );
-        } else {
-          // No enemy minions, attack the opponent's hero
-          currentState = processAttackForPlayer(
-            currentState,
-            attackerCard.instanceId
-          );
-        }
-      } catch (error) {
-        debug.error(`Error during player auto-attack with ${attackerCard.card.name}:`, error);
-      }
-    });
-  }
-
-  return currentState;
 }
 
 /**
@@ -3039,7 +2612,7 @@ function processAttackUnbound(
     // This ensures armor is properly handled
     const attackerAttackVal = getEffectiveAttack(attacker);
     if (attackerAttackVal !== undefined && attackerAttackVal > 0) {
-      newState = dealDamage(newState, 'opponent', 'hero', attackerAttackVal, undefined, attacker.card.id as number | undefined, 'player');
+      newState = dealDamageToHero(newState, 'opponent', attackerAttackVal, attacker.card.id as number | undefined, 'player', attacker.instanceId);
       newState = applyLifestealHealing(newState, attacker, attackerAttackVal, 'player');
     }
 
@@ -3673,63 +3246,38 @@ export function applyDamage(
   return updatedState;
 }
 
-/**
- * @deprecated Use manual attack system (attackStore.ts + AttackSystem.tsx) instead.
- * This auto-attack function is kept for backwards compatibility only.
- */
-export function autoAttackWithAllCards(
-  state: GameState,
-  mode: 'minion' | 'hero' = 'minion',
-  rng: () => number = cryptoRng,
-  idGen: () => string = cryptoIdGen,
-): GameState {
-  try {
-    if (state.currentTurn !== 'player') {
-      return state;
-    }
+export function resolveFrontlineAttacks(
+	state: GameState,
+	mode: 'minion' | 'hero',
+	rng: () => number,
+	idGen: () => string,
+	actionId: string,
+): { state: GameState; attacks: ResolvedAttack[] } {
+	const attacks: ResolvedAttack[] = [];
+	let current = state;
+	if (state.currentTurn !== 'player') return { state, attacks };
+	const attackers = state.players.player.battlefield
+		.filter(card => !card.isSummoningSick && card.canAttack)
+		.sort((a, b) => getAttack(a.card) - getAttack(b.card));
 
-    const attackableCards = state.players.player.battlefield
-      .filter(card => !card.isSummoningSick && card.canAttack)
-      .sort((a, b) => getAttack(a.card) - getAttack(b.card)); // Lowest attack first (save big hitters)
+	for (const card of attackers) {
+		const attacker = current.players.player.battlefield.find(entry => entry.instanceId === card.instanceId);
+		if (!attacker?.canAttack) continue;
 
-    if (attackableCards.length === 0) {
-      return state;
-    }
+		const field = current.players.opponent.battlefield;
+		const taunts = getTauntMinions(field);
+		const targets = taunts.length ? taunts : mode === 'minion' ? field : [];
+		const defender = targets.length ? targets.reduce((lowest, candidate) =>
+			(candidate.currentHealth || 999) < (lowest.currentHealth || 999) ? candidate : lowest
+		) : undefined;
+		if (!defender && !isValidRushTarget(attacker, 'hero')) continue;
 
-    let newState = JSON.parse(JSON.stringify(state)) as GameState;
-
-    for (const card of attackableCards) {
-      const attacker = newState.players.player.battlefield.find(c => c.instanceId === card.instanceId);
-      if (!attacker || !attacker.canAttack) continue;
-
-      const opponentField = newState.players.opponent.battlefield;
-      const tauntMinions = getTauntMinions(opponentField);
-
-      if (tauntMinions.length > 0) {
-        // Must attack taunt — pick lowest HP taunt
-        const target = tauntMinions.reduce((low, cur) =>
-          (cur.currentHealth || 999) < (low.currentHealth || 999) ? cur : low
-        );
-			newState = processAttack(newState, card.instanceId, target.instanceId, rng, idGen);
-      } else if (mode === 'hero' || opponentField.length === 0) {
-        // Hero mode or no minions — go face
-        if (isValidRushTarget(attacker, 'hero')) {
-			newState = processAttack(newState, card.instanceId, undefined, rng, idGen);
-        }
-      } else {
-        // Minion mode — attack lowest HP enemy minion
-        const target = opponentField.reduce((low, cur) =>
-          (cur.currentHealth || 999) < (low.currentHealth || 999) ? cur : low
-        );
-			newState = processAttack(newState, card.instanceId, target.instanceId, rng, idGen);
-      }
-    }
-
-    return newState;
-  } catch (error) {
-    debug.error('Auto-attack all error:', error);
-    return state;
-  }
+		const next = processAttack(current, attacker.instanceId, defender?.instanceId, rng, idGen);
+		if (next === current) continue;
+		attacks.push(describeCardAttack(current, next, attacker, defender, 'player', `${actionId}:${attacks.length}`));
+		current = next;
+	}
+	return { state: current, attacks };
 }
 
 function processSubmergeCountdowns(

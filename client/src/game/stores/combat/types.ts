@@ -203,8 +203,6 @@ export interface PokerCombatSliceActions {
   addOpponentArmor: (amount: number) => void;
   markBothPlayersReady: () => void;
   startNextHand: (resolution?: CombatResolution) => void;
-  startNextHandDelayed: (resolution: CombatResolution) => void;
-  cancelPendingPokerHandTransition: () => void;
   maybeCloseBettingRound: () => void;
   applyDirectDamage: (targetPlayerId: 'player' | 'opponent', damage: number, sourceDescription?: string) => void;
   setPokerSlotsSwapped: (swapped: boolean) => void;
@@ -289,11 +287,6 @@ export interface ChessCombatSliceActions {
   // Dev Battle Sandbox and any non-geometric duel entry. Same pendingCombat
   // owner as a legal hero-vs-hero capture so poker HP writeback has a collision.
   stagePendingPokerCombat: (attacker: ChessPiece, defender: ChessPiece) => ChessMutationResult;
-  // Presentation cleanup only. Attack mechanics are resolved when
-  // beginChessAttack records the attack intent; this clears the transient
-  // marker so the coordinator can advance from chess to poker after the strike
-  // animation has actually been visible.
-  completeAttackAnimation: () => void;
   isKingInCheck: (side: ChessPlayerSide, pieces?: ChessPiece[]) => boolean;
   getThreateningPieces: (kingPosition: ChessBoardPosition, attackerSide: ChessPlayerSide, pieces?: ChessPiece[]) => ChessPiece[];
   updateCheckStatus: () => void;
@@ -409,7 +402,7 @@ export interface ChessAnimationSliceActions {
   // timestamp via the chess slice's `_nextLogTick`. It does not apply
   // gameplay mechanics.
   startAttackAnimation: (attacker: ChessPiece, defender: ChessPiece, isInstantKill: boolean) => void;
-  clearAttackAnimation: () => void;
+  clearAttackAnimation: (animation: PendingAttackAnimation) => boolean;
   // Internal-style setter consumed only by chessCombatSlice.executeInstantKill
   // — exposed through the slice surface because Zustand cross-slice writes
   // route through `get()` against the unified store union.

@@ -1,3 +1,4 @@
+import { reportCardRuleEvent } from '../../core/commands/cardCommandEvents';
 import { GameState, SpellEffect, CardData, CardInstance, MinionCardData, GameLogEventType, RealmShiftSpellEffect } from '../../types';
 import { executeBattlecry } from '../battlecryUtils';
 import { createCardInstance } from '../cards/cardUtils';
@@ -9,7 +10,6 @@ import executeSetHealthHandler from '../../effects/handlers/spellEffect/set_heal
 import allCards, { getCardById } from '../../data/allCards';
 import { useAnimationStore } from '../../animations/AnimationManager';
 import { logActivity } from '../../stores/activityLogStore';
-import { GameEventBus } from '@/core/events/GameEventBus';
 
 // Lazy access to break game-engine <-> game-store circular dependency
 const useGameStore = {
@@ -1713,7 +1713,8 @@ function executeBuffSpell(
 
   // Emit buff applied event for animations
   if (targetFound && targetId) {
-    GameEventBus.emitBuffApplied({
+    reportCardRuleEvent({
+      type: 'BUFF_APPLIED',
       targetId,
       targetName: 'minion',
       attackChange: effect.buffAttack,
@@ -1906,7 +1907,8 @@ function executeFreezeSpell(
 
   // Emit battlecry-style event for freeze VFX
   if (targetFound && targetId) {
-    GameEventBus.emitBattlecryTriggered({
+    reportCardRuleEvent({
+      type: 'BATTLECRY_TRIGGERED',
       sourceId: 'spell',
       sourceName: 'Freeze Spell',
       effectType: 'freeze',

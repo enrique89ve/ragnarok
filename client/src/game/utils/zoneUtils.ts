@@ -1,3 +1,4 @@
+import { reportCardRuleEvent } from '../core/commands/cardCommandEvents';
 import { CardInstance, GameState, ZoneType } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { shouldTriggerDeathrattle, processPendingDeathrattles } from './deathrattleUtils';
@@ -12,7 +13,6 @@ import { MAX_BATTLEFIELD_SIZE, MAX_HAND_SIZE } from '../constants/gameConstants'
 import { checkPetEvolutionTrigger } from './petEvolutionTriggers';
 import { removeKeyword } from './cards/keywordUtils';
 import { recalculateAuras } from './mechanics/auraUtils';
-import { GameEventBus } from '@/core/events/GameEventBus';
 import { cryptoIdGen } from './seededRng';
 import { cardsRng, getCardsIdGen } from './cardsCommandRng';
 
@@ -186,7 +186,8 @@ export function drawCardFromDeck(
   );
 
   // Emit card drawn event for animations
-  GameEventBus.emitCardDrawn({
+  reportCardRuleEvent({
+      type: 'CARD_DRAWN',
     cardId: String(cardData.id),
     cardName: cardData.name || 'Unknown',
     player: playerId,
@@ -218,7 +219,8 @@ export function destroyCard(
   if (result.movedCard) {
 
     // Emit minion destroyed event for death animations
-    GameEventBus.emitMinionDestroyed({
+    reportCardRuleEvent({
+      type: 'MINION_DESTROYED',
       instanceId: result.movedCard.instanceId,
       cardId: String(result.movedCard.card?.id || 0),
       cardName: result.movedCard.card?.name || 'Unknown',

@@ -23,7 +23,7 @@ import {
   getExtraFoldPenalty as utilGetExtraFoldPenalty,
   clearCombatSpellEffects
 } from '../../utils/poker/pokerSpellUtils';
-import { emitSpellCast, wagerMinionSource } from '../../combat/vfx/events';
+import { emitSpellCast, emitStaminaChanged, wagerMinionSource } from '../../combat/vfx/events';
 
 const initialState: PokerSpellSliceState = {
   pokerSpellState: null,
@@ -127,6 +127,17 @@ export const createPokerSpellSlice: StateCreator<
 				sourceInstanceId: spellSourceId,
 				source: wagerMinionSource(spellSourceId),
 			});
+			for (const effect of result.immediateEffects ?? []) {
+				if (effect.type === 'deduct_stamina' && effect.data) {
+					const target = effect.data.target as 'player' | 'opponent';
+					const amount = (effect.data.amount as number) || 1;
+					emitStaminaChanged({
+						side: target,
+						delta: -amount,
+						reason: target === caster ? 'spell_cost' : 'spell_drain',
+					});
+				}
+			}
     }
     
     return result;

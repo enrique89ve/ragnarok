@@ -67,6 +67,7 @@ interface Subscription {
   eventType: GameEventType | '*';
   handler: EventHandler;
   priority: number;
+  delivery: 'immediate' | 'presentation';
 }
 
 class GameEventBusImpl {
@@ -124,11 +125,30 @@ class GameEventBusImpl {
     handler: EventHandler<T>,
     priority: number = 0
   ): UnsubscribeFn {
+    return this.addSubscription(eventType, handler, priority, 'immediate');
+  }
+
+  /** Post-commit visual/audio observers run outside synchronous gameplay subscribers. */
+  subscribePresentation<K extends GameEventType>(
+    eventType: K,
+    handler: EventHandler<Extract<GameEvent, { type: K }>>,
+    priority = 0,
+  ): UnsubscribeFn {
+    return this.addSubscription(eventType, handler, priority, 'presentation');
+  }
+
+  private addSubscription<T extends GameEvent>(
+    eventType: GameEventType | '*',
+    handler: EventHandler<T>,
+    priority: number,
+    delivery: Subscription['delivery'],
+  ): UnsubscribeFn {
     const subscription: Subscription = {
       id: `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       eventType,
       handler: handler as EventHandler,
-      priority
+      priority,
+      delivery,
     };
 
     this.subscriptions.push(subscription);
@@ -182,6 +202,13 @@ class GameEventBusImpl {
     );
 
     for (const sub of handlers) {
+      if (sub.delivery === 'presentation') {
+        void Promise.resolve().then(() => {
+          if (this.subscriptions.includes(sub)) return sub.handler(event);
+        }).catch(error => console.error(`[GameEventBus] Presentation error for ${event.type}:`, error));
+        continue;
+      }
+
       try {
         sub.handler(event);
       } catch (error) {

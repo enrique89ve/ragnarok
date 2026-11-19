@@ -137,6 +137,9 @@ export function buildCombatPresentationFromResolvedAttack(
 		action: 'melee-hit',
 		source: { type: 'card', instanceId: resolved.attackerId },
 		attackerSide: resolved.attackerSide,
+		...(resolved.attackerElement ? { element: resolved.attackerElement } : {}),
+		...(resolved.attackerKeywords ? { keywords: resolved.attackerKeywords } : {}),
+		...(resolved.attackerRace ? { race: resolved.attackerRace } : {}),
 		target: targetImpact,
 		...(counter ? { counter } : {}),
 	};
