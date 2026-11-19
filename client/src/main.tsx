@@ -12,6 +12,7 @@ import {
   recoverFromChunkLoadError,
   stripChunkCacheBustQuery,
 } from "./lib/chunkLoadRecovery";
+import { appUpdateManager } from "./lib/appUpdateManager";
 
 const DEV_SW_RESET_KEY = createRuntimeStorageKey('dev-sw-reset');
 
@@ -87,6 +88,8 @@ async function resetDevelopmentServiceWorker(): Promise<boolean> {
 }
 
 function registerProductionServiceWorker(): void {
+  appUpdateManager.startPolling();
+
   if (!hasServiceWorkerSupport()) return;
 
   window.addEventListener('load', () => {
@@ -94,18 +97,7 @@ function registerProductionServiceWorker(): void {
     const swPath = `${import.meta.env.BASE_URL}sw.js?resetEpoch=${resetEpoch}`;
     navigator.serviceWorker.register(swPath, { scope: import.meta.env.BASE_URL, updateViaCache: 'none' })
       .then((reg) => {
-        // Check for updates every 30 minutes
-        setInterval(() => reg.update().catch(() => {}), 30 * 60 * 1000);
-        reg.addEventListener('updatefound', () => {
-          const newSW = reg.installing;
-          if (!newSW) return;
-          newSW.addEventListener('statechange', () => {
-            // New SW activated + old one existed = app updated, reload silently
-            if (newSW.state === 'activated' && navigator.serviceWorker.controller) {
-              window.location.reload();
-            }
-          });
-        });
+        appUpdateManager.attachServiceWorkerRegistration(reg);
       })
       .catch(() => {});
   });

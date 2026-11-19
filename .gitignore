@@ -181,6 +181,7 @@ __tests__/
 !client/src/data/HiveDataLayer.test.ts
 !server/services/serverStateAdapter.test.ts
 !client/src/main/swCacheName.test.ts
+!client/src/lib/appUpdateManager.test.ts
 !shared/runtimeConfig.test.ts
 !server/services/adminApprovalReplayGuard.test.ts
 !server/services/adminSession.test.ts

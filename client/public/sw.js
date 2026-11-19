@@ -89,7 +89,17 @@ function isRuntimeApiRequest(url) {
 	return normalized === '/api' || normalized.startsWith('/api/');
 }
 
-// Install: pre-cache index.html for offline navigation, then activate immediately
+function isVersionManifestRequest(url) {
+	var parsed = new URL(url);
+	var base = getBase();
+	var normalized = parsed.pathname.startsWith(base)
+		? '/' + parsed.pathname.slice(base.length)
+		: parsed.pathname;
+	return normalized === '/version.json';
+}
+
+// Install: pre-cache index.html for offline navigation.
+// Do NOT auto-skipWaiting so active tabs can prompt the user before reloading.
 self.addEventListener('install', function(event) {
 	event.waitUntil(
 		caches.open(CACHE_NAME).then(function(cache) {
@@ -101,10 +111,14 @@ self.addEventListener('install', function(event) {
 			]).catch(function() {
 				// Non-fatal: first install might fail if offline (impossible, but safe)
 			});
-		}).then(function() {
-			return self.skipWaiting();
 		})
 	);
+});
+
+self.addEventListener('message', function(event) {
+	if (event && event.data && event.data.type === 'SKIP_WAITING') {
+		self.skipWaiting();
+	}
 });
 
 // Activate: clean other reset-epoch caches, but keep visited JS/CSS chunks for
@@ -138,6 +152,9 @@ self.addEventListener('fetch', function(event) {
 	// Runtime API responses include short-lived matchmaking offers and tokens.
 	// They must never be served from an offline cache fallback.
 	if (isRuntimeApiRequest(request.url)) return;
+
+	// Build version manifest must always bypass cache so clients detect new deploys.
+	if (isVersionManifestRequest(request.url)) return;
 
 	// Navigation: network-first with offline fallback to cached index.html
 	if (request.mode === 'navigate') {

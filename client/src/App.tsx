@@ -5,6 +5,7 @@ import { getWarbandEntryRoute } from './lib/warbandRoutes';
 import { Button, ToastProvider } from './components/ui-norse';
 import { AccountSlot } from './components/account/AccountSlot';
 import { LoginModalHost } from './components/account/LoginModal';
+import { AppUpdateToast } from './components/AppUpdateToast';
 import {
 	ChevronRight,
 	Compass,
@@ -1248,6 +1249,7 @@ function App() {
 			<EitrMigrationBanner />
 
 			<ToastProvider position="top-right" richColors />
+			<AppUpdateToast />
 			<HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
 				<LoginModalHost />
 				<Suspense fallback={<LoadingScreen />}>

@@ -1,4 +1,4 @@
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path, { dirname } from "path";
@@ -48,6 +48,27 @@ function assertNoSensitivePublicEnv(env: Record<string, string | undefined>): vo
   );
 }
 
+function emitVersionManifestPlugin(hash: string): Plugin {
+  return {
+    name: 'ragnarok-version-manifest',
+    apply: 'build',
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'version.json',
+        source: JSON.stringify(
+          {
+            buildHash: hash,
+            builtAt: new Date().toISOString(),
+          },
+          null,
+          2,
+        ),
+      });
+    },
+  };
+}
+
 export default defineConfig(({ command, mode }) => {
   assertNoSensitivePublicEnv({
     ...process.env,
@@ -62,6 +83,7 @@ export default defineConfig(({ command, mode }) => {
     plugins: [
       react(),
       tailwindcss(),
+      emitVersionManifestPlugin(buildHash),
       ...(command === 'build' ? [visualizer({ filename: 'dist/bundle-stats.html', gzipSize: true, brotliSize: true })] : []),
     ],
     resolve: {

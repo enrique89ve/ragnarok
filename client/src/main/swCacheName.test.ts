@@ -58,6 +58,46 @@ function isServiceWorkerRuntimeApiRequest(requestUrl: string): boolean {
 	return context.__isRuntimeApiRequest === true;
 }
 
+function isServiceWorkerVersionManifestRequest(requestUrl: string): boolean {
+	const source = readFileSync(resolve(process.cwd(), 'client/public/sw.js'), 'utf8');
+	const context: ServiceWorkerContext & { __isVersionManifest?: boolean } = {
+		URL,
+		self: {
+			location: new URL('https://example.test/sw.js?resetEpoch=alfa-testnet'),
+			addEventListener: () => undefined,
+		},
+	};
+
+	vm.runInNewContext(`${source}\n__isVersionManifest = isVersionManifestRequest(${JSON.stringify(requestUrl)});`, context);
+	return context.__isVersionManifest === true;
+}
+
+function dispatchServiceWorkerMessage(data: unknown): number {
+	const source = readFileSync(resolve(process.cwd(), 'client/public/sw.js'), 'utf8');
+	const listeners: Record<string, Array<(event: unknown) => void>> = {};
+	let skipWaitingCalls = 0;
+
+	const context = {
+		URL,
+		self: {
+			location: new URL('https://example.test/sw.js?resetEpoch=alfa-testnet'),
+			addEventListener: (type: string, handler: (event: unknown) => void) => {
+				listeners[type] = listeners[type] ?? [];
+				listeners[type].push(handler);
+			},
+			skipWaiting: () => {
+				skipWaitingCalls += 1;
+			},
+		},
+	};
+
+	vm.runInNewContext(source, context);
+	for (const handler of listeners.message ?? []) {
+		handler({ data });
+	}
+	return skipWaitingCalls;
+}
+
 describe('service worker reset epoch cache name', () => {
 	it('isolates asset caches by reset epoch', () => {
 		expect(readServiceWorkerCacheName('https://example.test/sw.js?resetEpoch=QA%20Season%200%20%2F%202026-05')).toBe(
@@ -79,5 +119,17 @@ describe('service worker reset epoch cache name', () => {
 		expect(isServiceWorkerRuntimeApiRequest('https://example.test/api/matchmaking/status/peer-one')).toBe(true);
 		expect(isServiceWorkerRuntimeApiRequest('https://example.test/api/health')).toBe(true);
 		expect(isServiceWorkerRuntimeApiRequest('https://example.test/assets/index-j87ec-cY.js')).toBe(false);
+	});
+
+	it('identifies version.json manifest requests that must bypass cache', () => {
+		expect(isServiceWorkerVersionManifestRequest('https://example.test/version.json')).toBe(true);
+		expect(isServiceWorkerVersionManifestRequest('https://example.test/version.json?t=123456')).toBe(true);
+		expect(isServiceWorkerVersionManifestRequest('https://example.test/manifest.json')).toBe(false);
+	});
+
+	it('calls self.skipWaiting only when receiving a SKIP_WAITING message', () => {
+		expect(dispatchServiceWorkerMessage({ type: 'SKIP_WAITING' })).toBe(1);
+		expect(dispatchServiceWorkerMessage({ type: 'OTHER_EVENT' })).toBe(0);
+		expect(dispatchServiceWorkerMessage(null)).toBe(0);
 	});
 });

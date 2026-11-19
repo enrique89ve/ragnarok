@@ -49,6 +49,17 @@ export function serveStatic(app: Express) {
       .sendFile(path.resolve(distPath, "manifest.json"));
   });
 
+  app.get("/version.json", (_req, res) => {
+    res
+      .type("application/json")
+      .set({
+        "Cache-Control": "no-store, no-cache, max-age=0, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
+      })
+      .sendFile(path.resolve(distPath, "version.json"));
+  });
+
   app.get("/service-worker.js", (_req, res) => {
     res
       .status(404)
@@ -64,7 +75,7 @@ export function serveStatic(app: Express) {
         return;
       }
 
-      if (filePath.endsWith("sw.js") || filePath.endsWith("manifest.json")) {
+      if (filePath.endsWith("sw.js") || filePath.endsWith("manifest.json") || filePath.endsWith("version.json")) {
         res.setHeader("Cache-Control", "no-store, no-cache, max-age=0, must-revalidate");
         return;
       }
