@@ -2,7 +2,10 @@ import type { ParticleColor } from '../../animations/PixiParticleCanvas';
 import {
 	ARENA_VFX_TARGETS,
 	getArenaVfxCommunitySlot,
+	getArenaVfxHoleCardsTarget,
+	getArenaVfxNextUnrevealedCommunitySlot,
 	getArenaVfxSpellTrayCards,
+	getArenaVfxStaminaTarget,
 	getArenaVfxTarget,
 	getArenaVfxWagerTargets,
 	getBoundArenaVfxQueryRoot,
@@ -11,6 +14,10 @@ import {
 	type QueryRoot,
 } from '../arenaVfxTargets';
 import { resolveArenaEffectPoint } from '@/game/effects/presentation';
+import {
+	resolveContractViewportPoint,
+	resolveHostileArenaZoneTarget,
+} from '../vfx/arenaCoordinateContract';
 import type { PokerSpellEffectType } from '../../types/CardTypes';
 import { CombatAction } from '../../types/PokerCombatTypes';
 import type { SpellCastEvent, WagerActivatedEvent, WagerType } from '../vfx/events';
@@ -18,6 +25,26 @@ import { resolveWagerActivatedTarget } from '../vfx/events';
 import type { EffectEndpoint } from '@/game/effects/core/effectIntentTypes';
 
 export type PokerVfxMotionKind = 'local-pulse' | 'travel-impact' | 'stake-to-pot';
+
+export type PokerSpellSignature =
+	| 'prophecy'
+	| 'ward'
+	| 'curse'
+	| 'board-macro'
+	| 'swap-arc';
+
+export type PokerSpellTargetKind =
+	| 'caster-hole-cards'
+	| 'opponent-hole-cards'
+	| 'both-hole-cards'
+	| 'caster-stamina'
+	| 'opponent-stamina'
+	| 'opponent-hero'
+	| 'stake-sink'
+	| 'next-community-slot'
+	| 'river-slot'
+	| 'all-community-slots'
+	| 'board-center';
 
 export interface PokerVfxPoint {
 	readonly x: number;
@@ -31,6 +58,16 @@ export interface PokerVfxResolvedIntent {
 	readonly side: ArenaVfxOwner;
 	readonly palette: ParticleColor;
 	readonly sourceInstanceId?: string;
+	readonly targetInstanceId?: string | null;
+	readonly targetHasCards?: boolean;
+	readonly opposingCardCount?: number;
+	readonly stakeAmount?: number;
+	readonly echoTargets?: readonly {
+		readonly point: PokerVfxPoint;
+		readonly instanceId: string | null;
+	}[];
+	readonly signature?: PokerSpellSignature;
+	readonly targetKind?: PokerSpellTargetKind;
 }
 
 const GOLD_PALETTE: ParticleColor = {
@@ -48,19 +85,54 @@ const WHITE_PALETTE: ParticleColor = {
 export const POKER_SPELL_PALETTES: Record<PokerSpellEffectType, ParticleColor> = {
 	bluff_rune: { primary: '#38bdf8', secondary: '#7dd3fc', glow: 'rgba(56,189,248,0.55)' },
 	fate_peek: { primary: '#38bdf8', secondary: '#e5e7eb', glow: 'rgba(56,189,248,0.55)' },
-	stamina_shield: { primary: '#38bdf8', secondary: '#7dd3fc', glow: 'rgba(56,189,248,0.55)' },
-	hole_swap: { primary: '#f5c542', secondary: '#b7791f', glow: 'rgba(245,197,66,0.5)' },
-	echo_bet: { primary: '#38bdf8', secondary: '#7dd3fc', glow: 'rgba(56,189,248,0.5)' },
-	shadow_fold: { primary: '#334155', secondary: '#111827', glow: 'rgba(51,65,85,0.55)' },
-	run_twice: { primary: '#38bdf8', secondary: '#e5e7eb', glow: 'rgba(56,189,248,0.45)' },
-	river_rewrite: { primary: '#38bdf8', secondary: '#7dd3fc', glow: 'rgba(56,189,248,0.55)' },
-	norns_glimpse: { primary: '#f5c542', secondary: '#f59e0b', glow: 'rgba(245,197,66,0.5)' },
-	fold_curse: { primary: '#dc2626', secondary: '#fca5a5', glow: 'rgba(220,38,38,0.55)' },
-	blood_bet: { primary: '#dc2626', secondary: '#fca5a5', glow: 'rgba(220,38,38,0.6)' },
-	void_stare: { primary: '#05070d', secondary: '#38bdf8', glow: 'rgba(56,189,248,0.4)' },
-	all_in_aura: { primary: '#f5c542', secondary: '#fde68a', glow: 'rgba(245,197,66,0.55)' },
-	ragnarok_gambit: { primary: '#dc2626', secondary: '#fca5a5', glow: 'rgba(220,38,38,0.6)' },
-	destiny_override: { primary: '#f5c542', secondary: '#fef3c7', glow: 'rgba(245,197,66,0.55)' },
+	stamina_shield: { primary: '#38bdf8', secondary: '#bae6fd', glow: 'rgba(56,189,248,0.6)' },
+	hole_swap: { primary: '#f5c542', secondary: '#fde68a', glow: 'rgba(245,197,66,0.55)' },
+	echo_bet: { primary: '#f5c542', secondary: '#7dd3fc', glow: 'rgba(245,197,66,0.55)' },
+	shadow_fold: { primary: '#64748b', secondary: '#94a3b8', glow: 'rgba(100,116,139,0.55)' },
+	run_twice: { primary: '#38bdf8', secondary: '#e5e7eb', glow: 'rgba(56,189,248,0.5)' },
+	river_rewrite: { primary: '#38bdf8', secondary: '#7dd3fc', glow: 'rgba(56,189,248,0.58)' },
+	norns_glimpse: { primary: '#f5c542', secondary: '#fde68a', glow: 'rgba(245,197,66,0.55)' },
+	fold_curse: { primary: '#dc2626', secondary: '#fca5a5', glow: 'rgba(220,38,38,0.6)' },
+	blood_bet: { primary: '#dc2626', secondary: '#fca5a5', glow: 'rgba(220,38,38,0.65)' },
+	void_stare: { primary: '#38bdf8', secondary: '#a78bfa', glow: 'rgba(56,189,248,0.5)' },
+	all_in_aura: { primary: '#f5c542', secondary: '#fde68a', glow: 'rgba(245,197,66,0.6)' },
+	ragnarok_gambit: { primary: '#dc2626', secondary: '#f5c542', glow: 'rgba(220,38,38,0.65)' },
+	destiny_override: { primary: '#f5c542', secondary: '#fef3c7', glow: 'rgba(245,197,66,0.6)' },
+};
+
+export interface PokerSpellSpatialSpec {
+	readonly signature: PokerSpellSignature;
+	readonly motion: PokerVfxMotionKind;
+	readonly targetKind: PokerSpellTargetKind;
+}
+
+/**
+ * Spatial Intentionality Map for all 15 Poker Spells:
+ * Every spell aims directly at the physical arena element it mechanically alters.
+ */
+export const POKER_SPELL_SPATIAL_MAP: Readonly<Record<PokerSpellEffectType, PokerSpellSpatialSpec>> = {
+	// A. Prophecy / Reveal (information — no hit shake)
+	fate_peek:        { signature: 'prophecy',    motion: 'travel-impact', targetKind: 'opponent-hole-cards' },
+	void_stare:       { signature: 'prophecy',    motion: 'travel-impact', targetKind: 'opponent-hole-cards' },
+	norns_glimpse:    { signature: 'prophecy',    motion: 'travel-impact', targetKind: 'next-community-slot' },
+	hole_swap:        { signature: 'swap-arc',    motion: 'travel-impact', targetKind: 'both-hole-cards' },
+
+	// B. Shield / Self-Ward / Empower (protective/rising — no recoil)
+	stamina_shield:   { signature: 'ward',        motion: 'travel-impact', targetKind: 'caster-stamina' },
+	bluff_rune:       { signature: 'ward',        motion: 'travel-impact', targetKind: 'caster-hole-cards' },
+	shadow_fold:      { signature: 'ward',        motion: 'travel-impact', targetKind: 'caster-hole-cards' },
+	echo_bet:         { signature: 'ward',        motion: 'stake-to-pot',  targetKind: 'stake-sink' },
+	all_in_aura:      { signature: 'ward',        motion: 'stake-to-pot',  targetKind: 'stake-sink' },
+
+	// C. Curse / Hostile Pressure
+	fold_curse:       { signature: 'curse',       motion: 'travel-impact', targetKind: 'opponent-stamina' },
+	blood_bet:        { signature: 'curse',       motion: 'travel-impact', targetKind: 'opponent-hero' },
+
+	// D. Macro Board / Destiny Rewrite
+	river_rewrite:    { signature: 'board-macro', motion: 'travel-impact', targetKind: 'river-slot' },
+	destiny_override: { signature: 'board-macro', motion: 'travel-impact', targetKind: 'river-slot' },
+	run_twice:        { signature: 'board-macro', motion: 'travel-impact', targetKind: 'all-community-slots' },
+	ragnarok_gambit:  { signature: 'board-macro', motion: 'travel-impact', targetKind: 'board-center' },
 };
 
 export const WAGER_PALETTES: Record<WagerType, ParticleColor> = {
@@ -89,15 +161,38 @@ function arenaQueryRoot(): QueryRoot | null {
 	return getBoundArenaVfxQueryRoot();
 }
 
+function oppositeSide(side: ArenaVfxOwner): ArenaVfxOwner {
+	return side === 'player' ? 'opponent' : 'player';
+}
+
 function heroCastPoint(side: ArenaVfxOwner): PokerVfxPoint | null {
 	return resolveArenaEffectPoint({ entityId: `${side}-hero`, anchor: 'hero-body' }, arenaQueryRoot());
+}
+
+function staminaPoint(side: ArenaVfxOwner): PokerVfxPoint | null {
+	const rail = getArenaVfxStaminaTarget(side, arenaQueryRoot());
+	return rail ? getElementCenter(rail, 0.5) : heroCastPoint(side);
+}
+
+function holeCardsPoint(side: ArenaVfxOwner): PokerVfxPoint | null {
+	const hole = getArenaVfxHoleCardsTarget(side, arenaQueryRoot());
+	return hole ? getElementCenter(hole, 0.5) : heroCastPoint(side);
 }
 
 function stakeSinkPoint(): PokerVfxPoint | null {
 	const sink = getArenaVfxTarget(ARENA_VFX_TARGETS.stakeSink, arenaQueryRoot());
 	if (sink) return getElementCenter(sink, 0.5);
-	const centerSlot = getArenaVfxCommunitySlot(2, arenaQueryRoot());
-	return centerSlot ? getElementCenter(centerSlot, 0.5) : null;
+	return resolveContractViewportPoint('clashCenter', arenaQueryRoot());
+}
+
+function communitySlotPoint(slotIndex: number): PokerVfxPoint | null {
+	const slot = getArenaVfxCommunitySlot(slotIndex, arenaQueryRoot());
+	return slot ? getElementCenter(slot, 0.5) : stakeSinkPoint();
+}
+
+function nextCommunitySlotPoint(): PokerVfxPoint | null {
+	const slot = getArenaVfxNextUnrevealedCommunitySlot(arenaQueryRoot());
+	return slot ? getElementCenter(slot, 0.5) : communitySlotPoint(2);
 }
 
 function primaryWagerCardPoint(side: ArenaVfxOwner): PokerVfxPoint | null {
@@ -114,10 +209,6 @@ function midpoint(a: PokerVfxPoint, b: PokerVfxPoint): PokerVfxPoint {
 	return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
 
-function withFallback(point: PokerVfxPoint | null, fallback: PokerVfxPoint | null): PokerVfxPoint | null {
-	return point ?? fallback;
-}
-
 function pointForEndpoint(endpoint: EffectEndpoint | undefined): PokerVfxPoint | null {
 	if (!endpoint) return null;
 	return resolveArenaEffectPoint(endpoint, arenaQueryRoot());
@@ -129,6 +220,39 @@ function endpointsDiffer(
 ): boolean {
 	if (!source || !target) return false;
 	return source.entityId !== target.entityId || source.anchor !== target.anchor;
+}
+
+function resolveSpellTargetPoint(
+	targetKind: PokerSpellTargetKind,
+	caster: ArenaVfxOwner,
+): PokerVfxPoint | null {
+	const foe = oppositeSide(caster);
+	switch (targetKind) {
+		case 'caster-hole-cards':
+			return holeCardsPoint(caster);
+		case 'opponent-hole-cards':
+		case 'both-hole-cards':
+			return holeCardsPoint(foe);
+		case 'caster-stamina':
+			return staminaPoint(caster);
+		case 'opponent-stamina':
+			return staminaPoint(foe);
+		case 'opponent-hero':
+			return heroCastPoint(foe);
+		case 'stake-sink':
+			return stakeSinkPoint();
+		case 'next-community-slot':
+			return nextCommunitySlotPoint();
+		case 'river-slot':
+			return communitySlotPoint(4);
+		case 'all-community-slots':
+		case 'board-center':
+			return communitySlotPoint(2) ?? stakeSinkPoint();
+		default: {
+			const exhaustive: never = targetKind;
+			return exhaustive;
+		}
+	}
 }
 
 /** Presentation-only motion when event carries explicit endpoints. */
@@ -148,15 +272,12 @@ export function wagerMotionForType(wagerType: WagerType): PokerVfxMotionKind {
 	}
 }
 
-const OPPONENT_HERO_SPELLS = new Set<PokerSpellEffectType>([
-	'fold_curse',
-	'blood_bet',
-	'void_stare',
-]);
+export function spellSpatialForType(effectType: PokerSpellEffectType): PokerSpellSpatialSpec {
+	return POKER_SPELL_SPATIAL_MAP[effectType] ?? POKER_SPELL_SPATIAL_MAP.bluff_rune;
+}
 
 export function spellMotionForType(effectType: PokerSpellEffectType): PokerVfxMotionKind {
-	if (OPPONENT_HERO_SPELLS.has(effectType)) return 'travel-impact';
-	return 'travel-impact';
+	return spellSpatialForType(effectType).motion;
 }
 
 export function resolvePokerVfxIntentFromWagerEvent(
@@ -193,37 +314,25 @@ export function resolvePokerVfxIntentFromSpellEvent(
 	event: SpellCastEvent,
 ): PokerVfxResolvedIntent {
 	const palette = POKER_SPELL_PALETTES[event.effectType] ?? POKER_SPELL_PALETTES.bluff_rune;
-	const opponentHero: EffectEndpoint = {
-		entityId: event.side === 'player' ? 'opponent-hero' : 'player-hero',
-		anchor: OPPONENT_HERO_SPELLS.has(event.effectType) ? 'health-bar' : 'hero-body',
-	};
-	const sourceEndpoint = event.source
-		?? (event.sourceInstanceId
-			? { entityId: event.sourceInstanceId, anchor: 'card-body' as const }
-			: undefined);
+	const spatial = spellSpatialForType(event.effectType);
 
-	let targetEndpoint: EffectEndpoint | undefined;
-	if (OPPONENT_HERO_SPELLS.has(event.effectType)) {
-		targetEndpoint = opponentHero;
-	} else if (event.effectType === 'fate_peek' || event.effectType === 'norns_glimpse') {
-		targetEndpoint = opponentHero;
-	} else if (event.effectType === 'hole_swap') {
-		targetEndpoint = { entityId: `${event.side}-hero`, anchor: 'hero-body' };
-	}
+	const sourcePoint = event.effectType === 'hole_swap'
+		? holeCardsPoint(event.side)
+		: event.effectType === 'ragnarok_gambit'
+			? (communitySlotPoint(2) ?? stakeSinkPoint() ?? heroCastPoint(event.side))
+			: (heroCastPoint(event.side) ?? primarySpellTrayPoint());
 
-	const sourcePoint = pointForEndpoint(sourceEndpoint)
-		?? heroCastPoint(event.side)
-		?? primarySpellTrayPoint();
-	const targetPoint = pointForEndpoint(targetEndpoint)
-		?? withFallback(primarySpellTrayPoint(), sourcePoint);
+	const targetPoint = resolveSpellTargetPoint(spatial.targetKind, event.side) ?? sourcePoint;
 
 	return {
-		motion: spellMotionForType(event.effectType),
+		motion: spatial.motion,
 		sourcePoint,
 		targetPoint,
 		side: event.side,
 		palette,
 		sourceInstanceId: event.sourceInstanceId,
+		signature: spatial.signature,
+		targetKind: spatial.targetKind,
 	};
 }
 
@@ -247,29 +356,54 @@ export function resolvePokerVfxIntentForSpell(
 	side: ArenaVfxOwner,
 ): PokerVfxResolvedIntent {
 	const palette = POKER_SPELL_PALETTES[effectType] ?? POKER_SPELL_PALETTES.bluff_rune;
-	const sourcePoint = heroCastPoint(side);
-	const targetPoint = withFallback(primarySpellTrayPoint(), sourcePoint);
+	const spatial = spellSpatialForType(effectType);
+	const sourcePoint = effectType === 'hole_swap'
+		? holeCardsPoint(side)
+		: heroCastPoint(side);
+	const targetPoint = resolveSpellTargetPoint(spatial.targetKind, side) ?? sourcePoint;
 	return {
-		motion: 'travel-impact',
+		motion: spatial.motion,
 		sourcePoint,
 		targetPoint,
 		side,
 		palette,
+		signature: spatial.signature,
+		targetKind: spatial.targetKind,
 	};
 }
 
 export function resolvePokerVfxIntentForRaise(side: ArenaVfxOwner): PokerVfxResolvedIntent {
+	// Directional arena pressure:
+	// - Player Hero (bottom-left) -> Opponent's top battlefield zone (rotates across enemy cards)
+	// - Opponent Hero (top-left) -> Player's bottom battlefield zone (rotates across player cards)
+	// Empty opposing zone -> `targetHasCards: false` for subtle, restrained reception.
+	const hostile = resolveHostileArenaZoneTarget(side, arenaQueryRoot());
 	return {
 		motion: 'stake-to-pot',
 		sourcePoint: heroCastPoint(side),
-		targetPoint: stakeSinkPoint(),
+		targetPoint: hostile?.point ?? stakeSinkPoint() ?? resolveContractViewportPoint('clashCenter'),
 		side,
 		palette: GOLD_PALETTE,
+		targetInstanceId: hostile?.instanceId ?? null,
+		targetHasCards: hostile?.hasCards ?? false,
+		opposingCardCount: hostile?.opposingCardCount ?? 0,
+		echoTargets: hostile?.echoTargets.map(t => ({ point: t.point, instanceId: t.instanceId })) ?? [],
 	};
 }
 
 export function resolvePokerVfxIntentForReraise(side: ArenaVfxOwner): PokerVfxResolvedIntent {
-	return resolvePokerVfxIntentForRaise(side);
+	const hostile = resolveHostileArenaZoneTarget(side, arenaQueryRoot());
+	return {
+		motion: 'stake-to-pot',
+		sourcePoint: heroCastPoint(side),
+		targetPoint: hostile?.point ?? stakeSinkPoint() ?? resolveContractViewportPoint('clashCenter'),
+		side,
+		palette: { primary: '#f59e0b', secondary: '#ef4444', glow: 'rgba(245,158,11,0.65)' },
+		targetInstanceId: hostile?.instanceId ?? null,
+		targetHasCards: hostile?.hasCards ?? false,
+		opposingCardCount: hostile?.opposingCardCount ?? 0,
+		echoTargets: hostile?.echoTargets.map(t => ({ point: t.point, instanceId: t.instanceId })) ?? [],
+	};
 }
 
 export interface CallClashEndpoints {
@@ -281,7 +415,8 @@ export interface CallClashEndpoints {
 export function resolveCallClashEndpoints(): CallClashEndpoints {
 	const player = heroCastPoint('player');
 	const opponent = heroCastPoint('opponent');
-	const center = player && opponent ? midpoint(player, opponent) : player ?? opponent;
+	const center = stakeSinkPoint()
+		?? (player && opponent ? midpoint(player, opponent) : player ?? opponent);
 	return { player, opponent, center };
 }
 

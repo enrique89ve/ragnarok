@@ -1,157 +1,87 @@
-import { useEffect, useRef } from 'react';
-import { CombatPhase, PokerCombatState, PokerCard, PokerHandRank } from '../../types/PokerCombatTypes';
+import { useEffect, useRef, useState } from 'react';
+import {
+	PokerHandRank,
+	type CombatResolution,
+	type PokerCard,
+	type PokerCombatState,
+	type PokerResolvedHand,
+} from '../../types/PokerCombatTypes';
 import { initializeCombatEventSubscribers, cleanupCombatEventSubscribers } from '../../services/CombatEventSubscribers';
-import { useGameStore } from '../../stores/gameStore';
-import { isOpeningMulliganGatingPoker } from '../../utils/mulliganUtils';
 import {
 	emitHandRankAnnounced,
 	emitRagnarokTriggered,
 	emitShowdownDamage,
 	emitStreakAnnounced,
 } from '../vfx/events';
+import { holdHeroVisualHp } from '../vfx/visualVitalsHold';
 import { planPokerResolutionOutcome } from '../pokerResolutionOutcome';
 
 export interface ShowdownCelebration {
-  resolution: {
-    winner: 'player' | 'opponent' | 'draw';
-    resolutionType: 'showdown' | 'fold';
-    playerHand: { rank: number; cards: PokerCard[] };
-    opponentHand: { rank: number; cards: PokerCard[] };
-    playerDamage: number;
-    opponentDamage: number;
-    playerFinalHealth: number;
-    opponentFinalHealth: number;
-    whoFolded?: 'player' | 'opponent';
-    foldPenalty?: number;
-  };
-  winningCards: PokerCard[];
+	readonly combatId: string;
+	readonly handIndex: number;
+	readonly resolution: CombatResolution;
+	readonly winningCards: PokerCard[];
 }
 
-export interface HeroDeathState {
-  isAnimating: boolean;
-  deadHeroName: string;
-  isPlayerDead: boolean;
-  pendingResolution: any;
-}
+export function useCombatEvents(
+	combatState: PokerCombatState | null,
+	resolvedHand: PokerResolvedHand | null,
+) {
+	const [celebration, setCelebration] = useState<ShowdownCelebration | null>(null);
+	const presentedHandRef = useRef<PokerResolvedHand | null>(null);
 
-interface UseCombatEventsOptions {
-  combatState: PokerCombatState | null;
-  isActive: boolean;
-  onShowdownCelebration: (celebration: ShowdownCelebration | null) => void;
-  onHeroDeath: (deathState: HeroDeathState | null) => void;
-  resolveCombat: () => any;
-  setResolution: (resolution: any) => void;
-}
+	useEffect(() => {
+		initializeCombatEventSubscribers();
+		return cleanupCombatEventSubscribers;
+	}, []);
 
-export function useCombatEvents(options: UseCombatEventsOptions): void {
-  const { combatState, isActive, onShowdownCelebration, onHeroDeath, resolveCombat, setResolution } = options;
+	useEffect(() => {
+		if (!resolvedHand || !combatState || presentedHandRef.current === resolvedHand) return;
+		if (resolvedHand.combatId !== combatState.combatId || resolvedHand.handIndex !== combatState.handNumber) return;
+		presentedHandRef.current = resolvedHand;
 
-  const openingMulliganGatingPoker = useGameStore(state => isOpeningMulliganGatingPoker(state.gameState));
-  const hasResolvedRef = useRef(false);
+		const result = resolvedHand.resolution;
+		const { playerHand, opponentHand, winner } = result;
+		const isCombatOver = planPokerResolutionOutcome(result).kind === 'combat-over';
+		if (isCombatOver) {
+			setCelebration(null);
+		} else {
+			const winningCards = winner === 'draw'
+				? [...playerHand.cards, ...opponentHand.cards]
+				: winner === 'player' ? playerHand.cards : opponentHand.cards;
+			setCelebration({
+				combatId: resolvedHand.combatId,
+				handIndex: resolvedHand.handIndex,
+				resolution: result,
+				winningCards,
+			});
+		}
 
-  useEffect(() => {
-    if (combatState?.phase !== CombatPhase.RESOLUTION) {
-      hasResolvedRef.current = false;
-    }
-  }, [combatState?.phase]);
+		const loserSide = winner === 'player' ? 'opponent' : 'player';
+		const damage = loserSide === 'player' ? result.playerDamage : result.opponentDamage;
+		if (winner !== 'draw' && damage > 0) {
+			const loserFinalHp = loserSide === 'player' ? result.playerFinalHealth : result.opponentFinalHealth;
+			holdHeroVisualHp(loserSide, loserFinalHp + damage, 'showdown-impact', 2_400);
+		}
 
-  useEffect(() => {
-    if (!isActive) {
-      hasResolvedRef.current = false;
-    }
-  }, [isActive]);
+		if (playerHand.rank === PokerHandRank.RAGNAROK || opponentHand.rank === PokerHandRank.RAGNAROK) {
+			emitRagnarokTriggered({ side: playerHand.rank === PokerHandRank.RAGNAROK ? 'player' : 'opponent' });
+		}
+		emitHandRankAnnounced({ side: 'player', rank: playerHand.rank, winner });
+		emitHandRankAnnounced({ side: 'opponent', rank: opponentHand.rank, winner });
+		if (winner !== 'draw' && damage > 0) {
+			emitShowdownDamage({ winner, damage, isLethal: isCombatOver, handledByCelebration: !isCombatOver });
+		}
+		const { currentHealth, maxHealth } = combatState.player.pet.stats;
+		if (winner === 'player' && maxHealth > 0 && currentHealth / maxHealth <= 0.2) {
+			emitStreakAnnounced({ side: 'player', streak: 0, kind: 'last_stand' });
+		}
+	}, [combatState, resolvedHand]);
 
-  useEffect(() => {
-    initializeCombatEventSubscribers();
-
-    return () => {
-      cleanupCombatEventSubscribers();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (hasResolvedRef.current) return;
-    if (!combatState || !isActive) return;
-    if (combatState.phase !== CombatPhase.RESOLUTION) return;
-    if (openingMulliganGatingPoker) return;
-
-    const hasFold = !!combatState.foldWinner;
-    if (!hasFold && (!combatState.player.isReady || !combatState.opponent.isReady)) {
-      return;
-    }
-
-    const result = resolveCombat();
-    if (!result) return; // Don't lock ref if resolution failed — allow retry
-    hasResolvedRef.current = true;
-
-    // Showdown drama choreography — emitted post-commit for BOTH the
-    // match-over (lethal) and next-hand cases so the lethal cue can fire
-    // on the killing blow. The handler module owns the timing.
-    const playerRank = result.playerHand?.rank || PokerHandRank.HIGH_CARD;
-    const opponentRank = result.opponentHand?.rank || PokerHandRank.HIGH_CARD;
-    const damage = result.winner === 'player' ? result.opponentDamage : result.playerDamage;
-
-    if (playerRank === PokerHandRank.RAGNAROK || opponentRank === PokerHandRank.RAGNAROK) {
-      emitRagnarokTriggered({
-        side: playerRank === PokerHandRank.RAGNAROK ? 'player' : 'opponent',
-      });
-    }
-    emitHandRankAnnounced({ side: 'player', rank: playerRank, winner: result.winner });
-    emitHandRankAnnounced({ side: 'opponent', rank: opponentRank, winner: result.winner });
-    if (result.winner !== 'draw' && (damage || 0) > 0) {
-      emitShowdownDamage({
-        winner: result.winner,
-        damage: damage || 0,
-        isLethal: result.playerFinalHealth <= 0 || result.opponentFinalHealth <= 0,
-      });
-    }
-    if (result.winner === 'player' && combatState) {
-      const pHP = combatState.player.pet.stats.currentHealth;
-      const pMax = combatState.player.pet.stats.maxHealth;
-      if (pMax > 0 && pHP / pMax <= 0.2) {
-        emitStreakAnnounced({ side: 'player', streak: 0, kind: 'last_stand' });
-      }
-    }
-
-    {
-      const outcome = planPokerResolutionOutcome(result);
-
-      if (outcome.kind === 'combat-over') {
-        const deadHeroName = outcome.isPlayerDead
-          ? (combatState?.player?.pet?.name || 'Hero')
-          : (combatState?.opponent?.pet?.name || 'Enemy');
-
-        onHeroDeath({
-          isAnimating: true,
-          deadHeroName,
-          isPlayerDead: outcome.isPlayerDead,
-          pendingResolution: result
-        });
-      } else {
-        setResolution(result);
-
-        const winningCards = result.winner === 'draw'
-          ? [...(result.playerHand?.cards || []), ...(result.opponentHand?.cards || [])]
-          : result.winner === 'player'
-            ? result.playerHand?.cards || []
-            : result.opponentHand?.cards || [];
-
-        onShowdownCelebration({
-          resolution: {
-            winner: result.winner,
-            resolutionType: result.resolutionType,
-            playerHand: result.playerHand,
-            opponentHand: result.opponentHand,
-            playerDamage: result.playerDamage || 0,
-            opponentDamage: result.opponentDamage || 0,
-            playerFinalHealth: result.playerFinalHealth || 0,
-            opponentFinalHealth: result.opponentFinalHealth || 0,
-            whoFolded: result.whoFolded,
-            foldPenalty: result.foldPenalty
-          },
-          winningCards
-        });
-      }
-    }
-  }, [combatState?.phase, combatState?.player?.isReady, combatState?.opponent?.isReady, isActive, resolveCombat, onShowdownCelebration, onHeroDeath, setResolution, openingMulliganGatingPoker]);
+	return {
+		showdownCelebration: celebration?.combatId === combatState?.combatId ? celebration : null,
+		dismissShowdown: (snapshot: ShowdownCelebration) => {
+			setCelebration(current => current === snapshot ? null : current);
+		},
+	};
 }

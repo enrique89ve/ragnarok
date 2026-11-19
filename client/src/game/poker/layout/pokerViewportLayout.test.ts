@@ -119,8 +119,11 @@ describe('pokerViewportLayout', () => {
 	it('keeps the attack banner off the hourglass even while both can show', () => {
 		const pairs = findBoardOverlaps().map((hit) => `${hit.a}|${hit.b}`);
 		expect(pairs).not.toContain('attackModeBanner|hourglass');
-		expect(pairs).not.toContain('centerTitle|playerBattlefieldCards');
+		expect(pairs).not.toContain('centerTitle|opponentBattlefieldCards');
 		expect(pairs).not.toContain('centerTitle|communityCards');
+		expect(pairs).not.toContain('centerTitle|playerHand');
+		expect(pairs).not.toContain('battleLog|centerTitle');
+		expect(pairs).not.toContain('centerTitle|wagerPanel');
 		expect(pairs).toContain('hourglass|opponentPokerSpellTray');
 	});
 });

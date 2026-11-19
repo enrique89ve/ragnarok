@@ -102,12 +102,47 @@
   transform-style: preserve-3d;
   perspective: 1000px;
   position: relative;
-  transition: transform 0.2s ease-out, filter 0.2s ease;
-  transform: translateY(0);
+  transition: transform 240ms cubic-bezier(0.22, 1.18, 0.36, 1), filter 180ms ease;
+  transform: translate3d(0, 0, 0);
   z-index: 30;
   will-change: transform;
   pointer-events: auto;
   cursor: grab !important;
+}
+
+/* Lightweight GPU-composited elevation shadow ("efecto de sombra") that separates
+   downward as the card lifts toward the battle zone. */
+.card-drag-shadow {
+  position: absolute;
+  inset: 8px 10px;
+  border-radius: 14px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(2, 6, 18, 0.78) 0%,
+    rgba(2, 6, 18, 0.44) 58%,
+    transparent 100%
+  );
+  filter: blur(12px);
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(0, 8px, 0) scale(0.95);
+  transform-origin: center center;
+  z-index: -1;
+  will-change: transform, opacity;
+  transition: opacity 160ms ease-out, transform 220ms cubic-bezier(0.22, 1.18, 0.36, 1);
+}
+
+.card-with-drag.is-dragging .card-drag-shadow {
+  transition: none;
+}
+
+.card-with-drag.is-dragging.is-valid-drop .card-drag-shadow {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(16, 185, 129, 0.42) 0%,
+    rgba(2, 6, 18, 0.56) 56%,
+    transparent 100%
+  );
 }
 
 .card-with-drag.in-hand {
@@ -151,7 +186,14 @@
 
 .card-with-drag.can-drag.is-pressed:not(.is-dragging) {
   cursor: grabbing !important;
-  filter: brightness(1.14) drop-shadow(0 0 12px rgba(245, 206, 95, 0.48)) !important;
+  transform: translate3d(0, -4px, 0) scale(1.03);
+  transition: transform 90ms cubic-bezier(0.2, 0.9, 0.3, 1), filter 120ms ease;
+  filter: brightness(1.1) !important;
+}
+
+.card-with-drag.can-drag.is-pressed:not(.is-dragging) .card-drag-shadow {
+  opacity: 0.36;
+  transform: translate3d(0, 12px, 0) scale(0.95);
 }
 
 /* Pointer capture keeps the drag alive when the pointer leaves the card. Keep
@@ -180,11 +222,18 @@ html.is-card-dragging * {
   filter: none;
 }
 
-.card-with-drag.is-hovering {
-  transform: translateY(-12px);
+.card-with-drag.is-hovering:not(.in-hand) {
+  transform: translate3d(0, -10px, 0);
   z-index: 100;
   box-shadow: none !important;
-  filter: brightness(1.1) !important;
+  filter: brightness(1.08) !important;
+}
+
+/* HandFan owns the hover lift for in-hand cards; avoid stacking a second jump. */
+.card-with-drag.in-hand.is-hovering:not(.is-dragging):not(.is-pressed) {
+  z-index: 100;
+  box-shadow: none !important;
+  filter: brightness(1.08) !important;
 }
 
 .card-with-drag.is-dragging {
@@ -192,17 +241,32 @@ html.is-card-dragging * {
   box-shadow: none !important;
   z-index: 9500;
   cursor: grabbing !important;
-  filter: brightness(1.12) drop-shadow(0 20px 28px rgba(0, 0, 0, 0.62)) !important;
+  filter: brightness(1.08) !important;
+}
+
+.card-with-drag.is-dragging::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 14px;
+  pointer-events: none;
+  opacity: 0;
+  border: 2px solid rgba(52, 211, 153, 0.92);
+  box-shadow:
+    0 0 14px rgba(52, 211, 153, 0.65),
+    inset 0 0 10px rgba(52, 211, 153, 0.3);
+  transition: opacity 120ms ease-out;
 }
 
 .card-with-drag.is-dragging.is-valid-drop {
-  filter:
-    brightness(1.16)
-    drop-shadow(0 0 12px rgba(34, 197, 94, 0.9))
-    drop-shadow(0 0 28px rgba(34, 197, 94, 0.58)) !important;
+  filter: brightness(1.12) !important;
 }
 
-.card-with-drag.playable:active {
+.card-with-drag.is-dragging.is-valid-drop::after {
+  opacity: 1;
+}
+
+.card-with-drag.playable:active:not(.can-drag) {
   transform: translateY(-6px) scale(0.96);
   transition: transform 0.08s ease-out;
   filter: brightness(1.2);

@@ -27,6 +27,8 @@ import {
   createPokerHeroFrameRenderPlan,
   createPokerHeroPortraitProfile,
 } from '../../utils/pokerHeroFrameAdapter';
+import { useVisualHeroHp } from '../vfx/visualVitalsHold';
+import { ARENA_VFX_TARGETS, arenaVfxTargetProps } from '../arenaVfxTargets';
 import '../styles/hero-reactions.css';
 
 const POKER_HERO_FRAME_KIT = adaptPokerHeroComposition(POKER_HERO_BOARD_COMPOSITION);
@@ -141,9 +143,11 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
     createPokerHeroPortraitProfile(resolvedPortrait),
   ), [resolvedPortrait]);
 
+  const side: 'player' | 'opponent' = isOpponent ? 'opponent' : 'player';
   const currentHP = pet.stats.currentHealth;
+  const displayHP = useVisualHeroHp(side, currentHP);
   const maxHP = pet.stats.maxHealth;
-  const effectiveHP = Math.max(0, currentHP - hpCommitted);
+  const effectiveHP = Math.max(0, displayHP - hpCommitted);
   const armor = pet.stats.armor || 0;
   const healthPercent = maxHP > 0
     ? Math.max(0, Math.min(100, (effectiveHP / maxHP) * 100))
@@ -152,21 +156,33 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
   const maxSta = pet.stats.maxStamina;
   const staminaPercent = maxSta > 0 ? Math.max(0, Math.min(100, (currentSta / maxSta) * 100)) : 0;
   const [damageReaction, setDamageReaction] = useState<'damaged' | 'healed' | null>(null);
+  const [staminaReaction, setStaminaReaction] = useState<'spent' | 'gained' | null>(null);
   const [powerActivating, setPowerActivating] = useState(false);
   const [isDossierOpen, setIsDossierOpen] = useState(false);
-  const prevHealthRef = useRef(effectiveHP);
+  const prevRealHealthRef = useRef(displayHP);
+  const prevStaminaRef = useRef(currentSta);
 
+  // Track real HP changes (post-visual-latch), NOT hpCommitted bets — placing a
+  // wager must never flash the hero red as if it took combat damage.
   useEffect(() => {
-    if (prevHealthRef.current === effectiveHP) return;
-    if (effectiveHP < prevHealthRef.current) {
+    if (prevRealHealthRef.current === displayHP) return;
+    if (displayHP < prevRealHealthRef.current) {
       setDamageReaction('damaged');
     } else {
       setDamageReaction('healed');
     }
-    prevHealthRef.current = effectiveHP;
-    const timer = setTimeout(() => setDamageReaction(null), 600);
+    prevRealHealthRef.current = displayHP;
+    const timer = setTimeout(() => setDamageReaction(null), 550);
     return () => clearTimeout(timer);
-  }, [effectiveHP]);
+  }, [displayHP]);
+
+  useEffect(() => {
+    if (prevStaminaRef.current === currentSta) return;
+    setStaminaReaction(currentSta < prevStaminaRef.current ? 'spent' : 'gained');
+    prevStaminaRef.current = currentSta;
+    const timer = setTimeout(() => setStaminaReaction(null), 520);
+    return () => clearTimeout(timer);
+  }, [currentSta]);
 
   const elementClass = heroElement ? `element-${heroElement.toLowerCase()}` : '';
 
@@ -212,16 +228,18 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
       {pocketCardsOverlay}
       <div className={`hero-card-wrapper ${damageReaction ? `hero-${damageReaction}` : ''} ${healthPercent <= 20 ? 'hero-critical-hp' : healthPercent <= 40 ? 'hero-low-hp' : ''} ${shakingHero ? 'damage-shake damage-flash' : ''}`}>
         <div
-          className="hero-stamina-rail"
+          className={`hero-stamina-rail${currentSta <= 0 ? ' hero-stamina-rail--empty' : staminaPercent <= 30 ? ' hero-stamina-rail--low' : ''}${staminaReaction ? ` hero-stamina-rail--${staminaReaction}` : ''}`}
           role="meter"
           aria-label={`${pet.name} stamina`}
           aria-valuemin={0}
           aria-valuemax={maxSta}
           aria-valuenow={currentSta}
           title={`Stamina ${currentSta}/${maxSta}`}
+          {...arenaVfxTargetProps(isOpponent ? ARENA_VFX_TARGETS.opponentStamina : ARENA_VFX_TARGETS.playerStamina)}
         >
           <span className="hero-stamina-label">STA</span>
           <span className="hero-stamina-track">
+            <span className="hero-stamina-ghost" style={{ transform: `scaleY(${staminaPercent / 100})` }} />
             <span className="hero-stamina-fill" style={{ transform: `scaleY(${staminaPercent / 100})` }} />
           </span>
           <strong>{currentSta}</strong>
@@ -266,6 +284,7 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
                 disabled={isPowerDisabled}
                 aria-label={`${heroPower.name}, costs ${heroPower.cost} mana`}
                 title={`${heroPower.name} · ${heroPower.cost} Mana`}
+                {...arenaVfxTargetProps(ARENA_VFX_TARGETS.heroPowerBadge)}
               >
                 {isScorchingBurst ? <ScorchingBurstIcon className="scorching-burst-icon" size={28} /> : <GameIcon name="zap" size={12} />}
                 <span className="power-cost">{heroPower.cost}</span>
@@ -280,7 +299,7 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
           <div className="hero-status-console">
             <div className={`fighting-hp-bar-container${isOpponent ? ' opponent' : ''}`}>
               <div className="fighting-hp-bar" role="meter" aria-label={`${pet.name} health`} aria-valuemin={0} aria-valuemax={maxHP} aria-valuenow={effectiveHP}>
-                <div className="fighting-hp-damage" />
+                <div className="fighting-hp-damage" style={{ transform: `scaleX(${healthPercent / 100})` }} />
                 <div className="fighting-hp-fill" style={{ transform: `scaleX(${healthPercent / 100})` }} />
                 <span className="fighting-hp-text">{Math.round(effectiveHP)}/{Math.round(maxHP)}</span>
               </div>

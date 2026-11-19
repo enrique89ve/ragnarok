@@ -18,6 +18,11 @@ export const ARENA_CANVAS_SIZE = {
 export const ARENA_VFX_TARGETS = {
 	playerHero: 'player-hero',
 	opponentHero: 'opponent-hero',
+	playerStamina: 'player-stamina',
+	opponentStamina: 'opponent-stamina',
+	playerHoleCards: 'player-hole-cards',
+	opponentHoleCards: 'opponent-hole-cards',
+	heroPowerBadge: 'hero-power-badge',
 	communitySlot: 'community-slot',
 	riskDisplay: 'risk-display',
 	/** Board-center stake sink (hourglass / pot focal point) — not the HUD stakes chip. */
@@ -141,6 +146,36 @@ export function getArenaVfxHeroTarget(owner: ArenaVfxOwner, root?: QueryRoot | n
 export function getArenaVfxHeroSurfaceTarget(owner: ArenaVfxOwner, root?: QueryRoot | null): HTMLElement | null {
 	const hero = getArenaVfxHeroTarget(owner, root);
 	return hero?.querySelector<HTMLElement>('.hero-card-wrapper') ?? hero;
+}
+
+export function getArenaVfxStaminaTarget(owner: ArenaVfxOwner, root?: QueryRoot | null): HTMLElement | null {
+	return getArenaVfxTarget(
+		owner === 'player' ? ARENA_VFX_TARGETS.playerStamina : ARENA_VFX_TARGETS.opponentStamina,
+		root,
+	) ?? getArenaVfxHeroSurfaceTarget(owner, root);
+}
+
+export function getArenaVfxHoleCardsTarget(owner: ArenaVfxOwner, root?: QueryRoot | null): HTMLElement | null {
+	return getArenaVfxTarget(
+		owner === 'player' ? ARENA_VFX_TARGETS.playerHoleCards : ARENA_VFX_TARGETS.opponentHoleCards,
+		root,
+	) ?? getArenaVfxHeroTarget(owner, root);
+}
+
+export function getArenaVfxHeroPowerTarget(root?: QueryRoot | null): HTMLElement | null {
+	return getArenaVfxTarget(ARENA_VFX_TARGETS.heroPowerBadge, root)
+		?? getArenaVfxHeroSurfaceTarget('player', root);
+}
+
+export function getArenaVfxNextUnrevealedCommunitySlot(root?: QueryRoot | null): HTMLElement | null {
+	const slots = getArenaVfxTargets(ARENA_VFX_TARGETS.communitySlot, root);
+	if (slots.length === 0) return null;
+	const faceDown = slots.find(slot =>
+		slot.querySelector('[data-face="down"]') !== null
+		|| slot.classList.contains('face-down')
+		|| slot.classList.contains('empty'),
+	);
+	return faceDown ?? getArenaVfxCommunitySlot(4, root) ?? slots[slots.length - 1] ?? null;
 }
 
 export function getArenaVfxMinionFieldTarget(owner: ArenaVfxOwner, root?: QueryRoot | null): HTMLElement | null {

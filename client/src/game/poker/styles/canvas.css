@@ -31,16 +31,26 @@
    contract as the betting panel and must render above arena cards. */
 .ragnarok-combat-arena {
   --arena-z-hand-strength: 761;
-  /* Seam between the opponent minion row and the community cards. */
+  /* Center-title lane: centred on the open table (middle of the player
+     minion row) and on the battlefield axis instead of the whole canvas, so
+     titles never clip the opponent's stat gems.
+     Mirrors cinemaReadingLane() in poker/layout/boardOccupancy.ts. */
+  --poker-cinema-lane-height: 60px;
+  --poker-cinema-lane-width: var(--poker-zone-playerBattlefieldCards-w);
+  /* Raise above the exact row centre so titles read nearer the table middle. */
+  --poker-cinema-lane-lift: 40px;
   --poker-cinema-lane-top: calc(
-    var(--poker-zone-opponentBattlefieldCards-y) +
-    var(--poker-zone-opponentBattlefieldCards-h) + 5px
+    var(--poker-zone-playerBattlefieldCards-y) +
+    (var(--poker-zone-playerBattlefieldCards-h) - var(--poker-cinema-lane-height)) / 2 -
+    var(--poker-cinema-lane-lift)
   );
-  --poker-cinema-lane-height: calc(
-    var(--poker-zone-communityCards-y) -
-    var(--poker-zone-opponentBattlefieldCards-y) -
-    var(--poker-zone-opponentBattlefieldCards-h) -
-    10px
+  --poker-cinema-lane-center-x: calc(
+    var(--poker-zone-playerBattlefieldCards-x) +
+    var(--poker-zone-playerBattlefieldCards-w) / 2
+  );
+  /* Left padding that shifts a full-width centred flex row onto the lane axis. */
+  --poker-cinema-lane-inset-left: calc(
+    2 * var(--poker-cinema-lane-center-x) - var(--poker-reference-width)
   );
 }
 
@@ -352,6 +362,44 @@
   transform: rotate(var(--poker-zone-playerBattlefieldCards-rot));
   transform-origin: center center;
   z-index: var(--arena-z-player-field);
+}
+
+/* Intentional battle-zone landing highlight while dragging a hand card upward */
+.unified-combat-arena > .zone-player-field::before {
+  content: '';
+  position: absolute;
+  inset: -6px -14px;
+  border-radius: 18px;
+  border: 1.5px dashed rgba(245, 206, 95, 0.36);
+  background: radial-gradient(
+    ellipse at 50% 65%,
+    rgba(245, 206, 95, 0.1) 0%,
+    rgba(245, 206, 95, 0.02) 60%,
+    transparent 100%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease-out, border-color 140ms ease-out, box-shadow 140ms ease-out, background 140ms ease-out;
+  z-index: 0;
+}
+
+html.is-card-dragging .unified-combat-arena > .zone-player-field::before {
+  opacity: 1;
+}
+
+html.is-card-dragging .unified-combat-arena > .zone-player-field[data-drag-ready="true"]::before {
+  opacity: 1;
+  border-style: solid;
+  border-color: rgba(52, 211, 153, 0.72);
+  background: radial-gradient(
+    ellipse at 50% 60%,
+    rgba(52, 211, 153, 0.18) 0%,
+    rgba(16, 185, 129, 0.05) 62%,
+    transparent 100%
+  );
+  box-shadow:
+    0 0 28px rgba(52, 211, 153, 0.22),
+    inset 0 0 22px rgba(52, 211, 153, 0.14);
 }
 
 .unified-combat-arena > .zone-opp-field.minion-field,

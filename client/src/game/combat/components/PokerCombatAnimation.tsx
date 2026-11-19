@@ -1,12 +1,25 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { getHeroAnimationProfile, ELEMENT_COLORS } from '../data/heroAnimationProfiles';
-import type { AnimationArchetype } from '../data/heroAnimationProfiles';
+import {
+	resolveElementPalette,
+	spawnRunePulse,
+	spawnShowdownBlast,
+} from '../../animations/PixiParticleCanvas';
 import { proceduralAudio } from '../../audio/proceduralAudio';
-import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../arenaVfxTargets';
+import {
+	ARENA_VFX_LAYERS,
+	getArenaVfxHeroTarget,
+	getArenaVfxLayer,
+} from '../arenaVfxTargets';
 import { useArenaVfxRoot } from '../arenaVfxContext';
-import { GameIcon } from '../../utils/ui/GameIcon';
-import type { IconName } from '../../utils/ui/iconMap';
+import { triggerArenaShake } from '../vfx/arenaShake';
+import { releaseHeroVisualHp } from '../vfx/visualVitalsHold';
+import { requestCombatDamageFloater } from '../floaters/combatDamageFloater';
+import {
+	gameEffectCoordinator,
+	type GameEffectHandle,
+} from '@/game/effects/core/gameEffectCoordinator';
 import '../styles/combat-animations.css';
 
 interface PokerCombatAnimationProps {
@@ -18,48 +31,20 @@ interface PokerCombatAnimationProps {
 	onComplete: () => void;
 }
 
-type AnimationPhase = 'idle' | 'windup' | 'attack' | 'impact' | 'particles' | 'complete';
+type AnimationPhase = 'idle' | 'windup' | 'attack' | 'impact' | 'complete';
 
-const ATTACK_NAME_HOLD_MS = 1_200;
-const IMPACT_HOLD_MS = 1_400;
-const CRITICAL_IMPACT_HOLD_MS = 1_600;
-const PARTICLE_HOLD_MS = {
-	light: 1_200,
-	medium: 1_700,
-	heavy: 2_200,
-} as const;
+const WINDUP_MS = 320;
+const TRAVEL_MS = 380;
+const SETTLE_MS = 620;
 
-interface ParticleData {
-	id: number;
-	iconName: IconName;
-	left: string;
-	top: string;
-	color: string;
-	duration: number;
-	delay: number;
-	tx: number;
-	ty: number;
-}
-
-function getDamageTier(damage: number): { tier: 'none' | 'light' | 'medium' | 'heavy'; duration: number; particleCount: number; shakeClass: string } {
-	if (damage <= 0) return { tier: 'none', duration: 1500, particleCount: 0, shakeClass: '' };
-	if (damage < 15) return { tier: 'light', duration: 2000, particleCount: 8, shakeClass: 'screen-shake-mild' };
-	if (damage < 30) return { tier: 'medium', duration: 2500, particleCount: 16, shakeClass: 'screen-shake-moderate' };
-	return { tier: 'heavy', duration: 3000, particleCount: 24, shakeClass: 'screen-shake-heavy' };
-}
-
-function getAttackDuration(archetype: AnimationArchetype): number {
-	switch (archetype) {
-		case 'melee_strike': return 300;
-		case 'ranged_shot': return 500;
-		case 'magic_blast': return 500;
-		case 'divine_radiance': return 600;
-		case 'nature_surge': return 500;
-		case 'shadow_strike': return 400;
-		default: return 400;
-	}
-}
-
+/**
+ * Single-authority Showdown strike choreography.
+ *
+ * Uses PixiJS v8 2D effects anchored to the real winner/loser hero DOM rects
+ * (zero DOM icon particles, zero hardcoded 30%/70% viewport coordinates) and
+ * releases the loser's visual HP latch + damage floater + shake + SFX on the
+ * exact impact frame.
+ */
 export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 	attackerHeroId,
 	damage,
@@ -69,280 +54,204 @@ export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 }) => {
 	const arenaRoot = useArenaVfxRoot();
 	const [phase, setPhase] = useState<AnimationPhase>('idle');
-	const [particles, setParticles] = useState<ParticleData[]>([]);
 	const onCompleteRef = useRef(onComplete);
-	const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+	const handlesRef = useRef<GameEffectHandle[]>([]);
+	const impactCommittedRef = useRef(false);
 
 	useEffect(() => {
 		onCompleteRef.current = onComplete;
 	}, [onComplete]);
 
-	const reducedMotion = useRef(
-		typeof window !== 'undefined' &&
-		window.matchMedia('(prefers-reduced-motion: reduce)').matches
-	);
-
 	const attackerProfile = useMemo(() => getHeroAnimationProfile(attackerHeroId), [attackerHeroId]);
 	const attackerColors = ELEMENT_COLORS[attackerProfile.element];
+	const palette = useMemo(
+		() => resolveElementPalette(attackerProfile.element),
+		[attackerProfile.element],
+	);
 
 	const isFold = resolutionType === 'fold';
-	const tier = useMemo(() => {
-		const rawTier = getDamageTier(damage);
-		if (isFold) {
-			return { ...rawTier, tier: 'light' as const, shakeClass: 'screen-shake-mild', particleCount: 8 };
-		}
-		if (reducedMotion.current) {
-			return { ...rawTier, tier: 'light' as const, particleCount: 0, shakeClass: 'screen-shake-mild' };
-		}
-		return rawTier;
-	}, [damage, isFold]);
-
-	const attackDuration = getAttackDuration(attackerProfile.archetype);
-
-	const spawnParticles = useCallback((count: number, iconName: IconName, colors: { primary: string; secondary: string }) => {
-		if (reducedMotion.current) return;
-		const next: ParticleData[] = [];
-		for (let i = 0; i < count; i++) {
-			const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
-			const distance = 60 + Math.random() * 120;
-			const tx = Math.cos(angle) * distance;
-			const ty = Math.sin(angle) * distance;
-			next.push({
-				id: i,
-				iconName,
-				left: '50%',
-				top: winner === 'player' ? '30%' : '70%',
-				color: Math.random() > 0.5 ? colors.primary : colors.secondary,
-				duration: 0.5 + Math.random() * 1,
-				delay: Math.random() * 0.2,
-				tx,
-				ty,
-			});
-		}
-		setParticles(next);
-	}, [winner]);
+	const loserSide: 'player' | 'opponent' = winner === 'player' ? 'opponent' : 'player';
 
 	useEffect(() => {
 		if (isFold && damage <= 0) {
+			releaseHeroVisualHp(loserSide, 'showdown-impact');
 			onCompleteRef.current();
 			return;
 		}
 
-		const addTimer = (fn: () => void, delay: number) => {
-			const id = setTimeout(fn, delay);
-			timersRef.current.push(id);
-			return id;
+		impactCommittedRef.current = false;
+		const sequenceId = `showdown-strike:${winner}:${damage}:${Date.now()}`;
+
+		const commitImpact = () => {
+			if (impactCommittedRef.current) return;
+			impactCommittedRef.current = true;
+			setPhase('impact');
+
+			// 1. Release visual HP latch so the HP bar drops + gold ghost trail drains NOW.
+			releaseHeroVisualHp(loserSide, 'showdown-impact');
+
+			// 2. Spawn showdown damage floater on the exact impact frame.
+			if (damage > 0) {
+				requestCombatDamageFloater({
+					id: sequenceId,
+					targetId: `${loserSide}-hero`,
+					amount: damage,
+					variant: 'showdown',
+				});
+			}
+
+			// 3. Single-channel CSS shake + loser recoil.
+			triggerArenaShake(damage >= 25 ? 'lethal' : damage >= 12 ? 'heavy' : 'mild');
+			const loserEl = getArenaVfxHeroTarget(loserSide, arenaRoot);
+			if (loserEl) {
+				loserEl.classList.remove('vfx-hero-hit-recoil');
+				void loserEl.offsetWidth;
+				loserEl.classList.add('vfx-hero-hit-recoil');
+				handlesRef.current.push(gameEffectCoordinator.schedule({
+					owner: 'showdown-strike',
+					lane: 'recoil',
+					key: `${sequenceId}:recoil`,
+					priority: 'high',
+					delayMs: 340,
+					run: () => loserEl.classList.remove('vfx-hero-hit-recoil'),
+				}));
+			}
+
+			// 4. Impact audio synced to contact frame.
+			try {
+				proceduralAudio.play(damage >= 25 ? 'damage_hero' : 'damage');
+				if (!isFold && damage >= 25) {
+					handlesRef.current.push(gameEffectCoordinator.schedule({
+						owner: 'showdown-strike',
+						lane: 'audio',
+						key: `${sequenceId}:horn`,
+						priority: 'normal',
+						delayMs: 90,
+						run: () => proceduralAudio.play('norse_horn'),
+					}));
+				}
+			} catch {
+				// Audio unavailable in headless environments
+			}
+
+			// 5. Settle beat before winner badge slides in.
+			handlesRef.current.push(gameEffectCoordinator.schedule({
+				owner: 'showdown-strike',
+				lane: 'settle',
+				key: `${sequenceId}:complete`,
+				priority: 'high',
+				delayMs: SETTLE_MS,
+				run: () => {
+					setPhase('complete');
+					onCompleteRef.current();
+				},
+			}));
 		};
 
-		let elapsed = 0;
-
-		addTimer(() => {
-			setPhase('windup');
+		// Beat 1: Anticipation windup on winner hero
+		setPhase('windup');
+		try {
 			proceduralAudio.play(isFold ? 'combat_brace' : 'attack_prepare');
-		}, 100);
-		elapsed = 100;
+		} catch {
+			// Audio unavailable
+		}
 
-		const windupEnd = elapsed + ATTACK_NAME_HOLD_MS;
-		addTimer(() => {
-			setPhase('attack');
-			proceduralAudio.playCombatSound(
-				attackerProfile.archetype,
-				attackerProfile.element,
-				tier.tier === 'heavy' ? 1.0 : tier.tier === 'medium' ? 0.8 : 0.6
+		const winnerEl = getArenaVfxHeroTarget(winner, arenaRoot);
+		if (winnerEl) {
+			const wRect = winnerEl.getBoundingClientRect();
+			spawnRunePulse(
+				wRect.left + wRect.width / 2,
+				wRect.top + wRect.height / 2,
+				palette,
+				WINDUP_MS + 80,
+				1.5,
 			);
-		}, windupEnd);
-		elapsed = windupEnd;
+		}
 
-		const attackEnd = elapsed + attackDuration;
-		addTimer(() => {
-			setPhase('impact');
-			proceduralAudio.play(damage >= 30 ? 'damage_hero' : 'damage');
-			if (!isFold && tier.tier === 'heavy') {
-				addTimer(() => proceduralAudio.play('norse_horn'), 100);
-			}
-		}, attackEnd);
-		elapsed = attackEnd;
+		// Beat 2: Curved PixiJS 2D elemental blast from winner → loser
+		handlesRef.current.push(gameEffectCoordinator.schedule({
+			owner: 'showdown-strike',
+			lane: 'travel',
+			key: `${sequenceId}:launch`,
+			priority: 'high',
+			delayMs: WINDUP_MS,
+			run: () => {
+				setPhase('attack');
+				try {
+					proceduralAudio.playCombatSound(
+						attackerProfile.archetype,
+						attackerProfile.element,
+						damage >= 25 ? 1.0 : damage >= 12 ? 0.8 : 0.6,
+					);
+				} catch {
+					// Audio unavailable
+				}
 
-		const impactEnd = elapsed + (damage >= 10 ? CRITICAL_IMPACT_HOLD_MS : IMPACT_HOLD_MS);
-		addTimer(() => {
-			setPhase('particles');
-			spawnParticles(
-				tier.particleCount,
-				attackerProfile.particleIconName,
-				attackerColors
-			);
-		}, impactEnd);
-		elapsed = impactEnd;
+				const srcEl = getArenaVfxHeroTarget(winner, arenaRoot);
+				const dstEl = getArenaVfxHeroTarget(loserSide, arenaRoot);
+				if (srcEl && dstEl) {
+					const sRect = srcEl.getBoundingClientRect();
+					const dRect = dstEl.getBoundingClientRect();
+					spawnShowdownBlast(
+						sRect.left + sRect.width / 2,
+						sRect.top + sRect.height / 2,
+						dRect.left + dRect.width / 2,
+						dRect.top + dRect.height / 2,
+						palette,
+						{
+							travelMs: TRAVEL_MS,
+							heavy: !isFold && damage >= 18,
+							onImpact: commitImpact,
+						},
+					);
+				} else {
+					commitImpact();
+				}
 
-		const particleDuration = PARTICLE_HOLD_MS[tier.tier === 'none' ? 'light' : tier.tier];
-		const particlesEnd = elapsed + particleDuration;
-		addTimer(() => {
-			setPhase('complete');
-			setParticles([]);
-			onCompleteRef.current();
-		}, particlesEnd);
+				// Safety guarantee: ensure impact commits even if canvas is disabled/unmounted.
+				handlesRef.current.push(gameEffectCoordinator.schedule({
+					owner: 'showdown-strike',
+					lane: 'safety',
+					key: `${sequenceId}:safety`,
+					priority: 'high',
+					delayMs: TRAVEL_MS + 60,
+					run: commitImpact,
+				}));
+			},
+		}));
 
 		return () => {
-			timersRef.current.forEach(clearTimeout);
-			timersRef.current = [];
+			handlesRef.current.forEach(handle => handle.cancel());
+			handlesRef.current = [];
+			releaseHeroVisualHp(loserSide, 'showdown-impact');
 		};
 	}, [
-		attackDuration,
-		attackerColors,
+		arenaRoot,
 		attackerProfile.archetype,
 		attackerProfile.element,
-		attackerProfile.particleIconName,
 		damage,
 		isFold,
-		spawnParticles,
-		tier.particleCount,
-		tier.tier,
+		loserSide,
+		palette,
+		winner,
 	]);
 
-	if (phase === 'complete') return null;
+	if (phase === 'complete' || phase === 'idle') return null;
 
 	const attackNameText = isFold ? 'BRACE' : attackerProfile.attackName;
-	const elementColor = attackerColors.primary;
-
-	const renderArchetypeEffect = (archetype: AnimationArchetype) => {
-		switch (archetype) {
-			case 'melee_strike':
-				return (
-					<div
-						className="melee-slash-trail"
-						style={{
-							left: '50%',
-							top: '50%',
-							transform: 'translate(-50%, -50%)',
-							['--element-color' as string]: elementColor,
-						}}
-					/>
-				);
-			case 'ranged_shot':
-				return (
-					<div
-						className="ranged-projectile"
-						style={{
-							left: '50%',
-							[winner === 'opponent' ? 'top' : 'bottom']: '10%',
-							['--start-x' as string]: '0px',
-							['--start-y' as string]: '0px',
-							['--end-x' as string]: '0px',
-							['--end-y' as string]: winner === 'opponent' ? '650px' : '-650px',
-						}}
-					>
-						<GameIcon name={attackerProfile.particleIconName} size={20} color="#fff" />
-					</div>
-				);
-			case 'magic_blast':
-				return (
-					<div
-						className="magic-blast-ring"
-						style={{
-							left: '50%',
-							top: '50%',
-							transform: 'translate(-50%, -50%)',
-							['--element-color' as string]: elementColor,
-						}}
-					/>
-				);
-			case 'divine_radiance':
-				return (
-					<div
-						className="divine-rays"
-						style={{
-							left: '50%',
-							top: winner === 'player' ? '55%' : '25%',
-							transform: 'translate(-50%, -50%)',
-							['--element-color' as string]: elementColor,
-						}}
-					/>
-				);
-			case 'nature_surge':
-				return (
-					<div
-						className="nature-wave"
-						style={{
-							left: 0,
-							top: '50%',
-							transform: 'translateY(-50%)',
-							['--element-color' as string]: elementColor,
-						}}
-					/>
-				);
-			case 'shadow_strike':
-				return (
-					<div
-						className="shadow-tendril"
-						style={{
-							left: 0,
-							top: winner === 'player' ? '60%' : '40%',
-							['--element-color' as string]: elementColor,
-						}}
-					/>
-				);
-			default:
-				return null;
-		}
-	};
 
 	const content = (
 		<div
-			className={`poker-combat-animation ${phase === 'impact' ? tier.shakeClass : ''}`}
-			style={{ ['--element-color' as string]: elementColor }}
+			className="poker-combat-animation"
+			style={{ ['--element-color' as string]: attackerColors.primary }}
 		>
 			{phase === 'windup' && !isFold && (
-				<>
-					<div className="attack-name-text">{attackNameText}</div>
-					<div
-						className="combat-attacker-glow"
-						style={{
-							left: '50%',
-							top: winner === 'player' ? '70%' : '30%',
-							transform: 'translate(-50%, -50%)',
-							width: 100,
-							height: 100,
-						}}
-					/>
-				</>
-			)}
-
-			{phase === 'attack' && renderArchetypeEffect(attackerProfile.archetype)}
-
-			{phase === 'impact' && (
-				<>
-					<div className="impact-flash" style={{ ['--element-color' as string]: elementColor }} />
-					{!isFold && tier.tier === 'heavy' && <div className="super-move-flash" />}
-				</>
-			)}
-
-			{phase === 'particles' && damage > 0 && (
-				<>
-					{particles.map(p => (
-						<div
-							key={p.id}
-							className="combat-particle"
-							style={{
-								left: p.left,
-								top: p.top,
-								color: p.color,
-								animation: `particle-burst ${p.duration}s ease-out forwards`,
-								animationDelay: `${p.delay}s`,
-								['--tx' as string]: `${p.tx}px`,
-								['--ty' as string]: `${p.ty}px`,
-							}}
-						>
-							<GameIcon name={p.iconName} size={14} />
-						</div>
-					))}
-				</>
+				<div className="attack-name-text">{attackNameText}</div>
 			)}
 		</div>
 	);
 
-	const portalTarget =
-		getArenaVfxLayer(ARENA_VFX_LAYERS.vfx, arenaRoot);
-
+	const portalTarget = getArenaVfxLayer(ARENA_VFX_LAYERS.vfx, arenaRoot);
 	return portalTarget ? createPortal(content, portalTarget) : content;
 };
 

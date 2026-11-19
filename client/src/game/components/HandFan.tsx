@@ -57,6 +57,7 @@ export const HandFan = React.memo<HandFanProps>(({
   onCardInspect,
 }) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
   const [shakingCardId, setShakingCardId] = useState<string | null>(null);
   const [bloodModeCardId, setBloodModeCardId] = useState<string | null>(null);
   const [drawCounter, setDrawCounter] = useState(0);
@@ -181,7 +182,7 @@ export const HandFan = React.memo<HandFanProps>(({
   };
 
   return (
-    <div className="hand-fan-container" style={activeIndex !== null ? HOVERED_CONTAINER_STYLE : undefined}>
+    <div className={`hand-fan-container ${draggingCardId ? 'has-dragging-card' : ''}`} style={activeIndex !== null || draggingCardId !== null ? HOVERED_CONTAINER_STYLE : undefined}>
       <CardDrawAnimation drawCount={drawCounter} />
       <CardPlayAnimation playedCard={playedCardData} playCount={playCounter} />
       {adaptedCards.map((card, index) => {
@@ -237,7 +238,7 @@ export const HandFan = React.memo<HandFanProps>(({
         return (
           <div
             key={card.instanceId || card.card.id}
-            className={`hand-fan-card ${canPlay ? 'playable' : ''} ${isHovered ? 'is-hovered' : ''} ${isShaking ? 'shake' : ''} ${isBloodMode ? 'blood-mode' : ''} ${isEvolveReady ? 'evolve-ready' : ''} ${isEvolvePet && !meetsPetEvolution ? 'evolution-locked' : ''}`}
+            className={`hand-fan-card ${canPlay ? 'playable' : ''} ${isHovered ? 'is-hovered' : ''} ${draggingCardId === card.instanceId ? 'is-dragging-host' : ''} ${isShaking ? 'shake' : ''} ${isBloodMode ? 'blood-mode' : ''} ${isEvolveReady ? 'evolve-ready' : ''} ${isEvolvePet && !meetsPetEvolution ? 'evolution-locked' : ''}`}
             style={getCardStyle(index)}
             tabIndex={0}
             role="button"
@@ -310,6 +311,8 @@ export const HandFan = React.memo<HandFanProps>(({
               card={card}
               isInHand={true}
               isPlayable={canPlay}
+              onDragStart={() => setDraggingCardId(card.instanceId)}
+              onDragEnd={() => setDraggingCardId(prev => prev === card.instanceId ? null : prev)}
               onValidDrop={canPlay ? (position) => handleCardPlay(card, position) : undefined}
               boardRef={battlefieldRef}
               registerPosition={stableRegisterPosition}

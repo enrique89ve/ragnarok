@@ -113,12 +113,72 @@
   top: 25%;
   left: 50%;
   translate: -50% 0;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(220, 68, 68, 0.2), transparent 56%),
+    linear-gradient(145deg, rgba(16, 10, 14, 0.98), rgba(26, 16, 20, 0.96) 52%, rgba(8, 6, 10, 0.99));
+  box-shadow:
+    0 0 34px rgba(185, 28, 28, 0.3),
+    0 18px 38px rgba(0, 0, 0, 0.76);
+}
+
+.winner-badge.opponent-side::before {
+  background: linear-gradient(180deg, rgba(58, 22, 26, 0.42), rgba(7, 5, 9, 0.68));
+}
+
+.winner-badge.opponent-side .winner-badge-frame path {
+  stroke: rgba(224, 92, 82, 0.84);
+}
+
+.winner-badge.opponent-side .winner-badge-frame-outer {
+  filter: drop-shadow(0 0 5px rgba(220, 38, 38, 0.45));
+}
+
+.winner-badge.opponent-side .winner-badge-kicker {
+  color: rgba(248, 150, 140, 0.82);
+}
+
+.winner-badge.opponent-side .winner-badge-rule {
+  background: linear-gradient(90deg, transparent, rgba(224, 92, 82, 0.76), transparent);
+}
+
+.winner-badge.opponent-side .winner-badge-text {
+  color: #fca5a5;
+  text-shadow:
+    0 0 18px rgba(220, 38, 38, 0.54),
+    0 2px 5px rgba(0, 0, 0, 0.86);
+}
+
+.winner-badge.opponent-side .winner-hand-name {
+  color: #fda4af;
+  text-shadow: 0 0 12px rgba(244, 63, 94, 0.45);
 }
 
 .winner-badge.center {
   top: 50%;
   left: 50%;
   translate: -50% -50%;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(148, 184, 218, 0.18), transparent 56%),
+    linear-gradient(145deg, rgba(9, 14, 22, 0.98), rgba(20, 28, 40, 0.96) 52%, rgba(6, 9, 15, 0.99));
+}
+
+.winner-badge.center .winner-badge-frame path {
+  stroke: rgba(148, 184, 218, 0.82);
+}
+
+.winner-badge.center .winner-badge-kicker {
+  color: rgba(186, 212, 236, 0.82);
+}
+
+.winner-badge.center .winner-badge-rule {
+  background: linear-gradient(90deg, transparent, rgba(148, 184, 218, 0.72), transparent);
+}
+
+.winner-badge.center .winner-badge-text {
+  color: #dbeafe;
+  text-shadow:
+    0 0 16px rgba(147, 197, 253, 0.48),
+    0 2px 5px rgba(0, 0, 0, 0.84);
 }
 
 .winner-badge::before {
@@ -186,6 +246,7 @@
   font-size: 0.58rem;
   font-weight: 700;
   letter-spacing: 0.3em;
+  padding-left: 0.3em;
   line-height: 1;
   text-transform: uppercase;
 }
@@ -205,6 +266,7 @@
     0 0 18px rgba(221, 184, 74, 0.54),
     0 2px 5px rgba(0, 0, 0, 0.82);
   letter-spacing: 0.08em;
+  padding-left: 0.08em;
   line-height: 1;
   white-space: nowrap;
 }
@@ -342,6 +404,9 @@
 
 .showdown-hand-comparison {
   display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  width: 100%;
   gap: 8px;
   align-items: center;
   font-size: var(--text-xs);

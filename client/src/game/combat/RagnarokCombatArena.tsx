@@ -41,7 +41,6 @@ import { HeroPowerPrompt } from './components/HeroPowerPrompt';
 import { CombatDamageFloaterHost } from './floaters/CombatDamageFloaterHost';
 import { GameOverScreen } from './components/GameOverScreen';
 import { GameHUD } from './components/GameHUD';
-import { HeroDeathAnimation } from './components/HeroDeathAnimation';
 import HeroGearPanel from './components/HeroGearPanel';
 import { ElementBuffPopup } from './components/ElementBuffPopup';
 import { ElementMatchupBanner } from './components/ElementMatchupBanner';
@@ -50,7 +49,7 @@ import { PhaseBanner } from './components/PhaseBanner';
 import { useElementalBuff } from './hooks/useElementalBuff';
 import { GameViewport } from './GameViewport';
 import { useSettingsStore } from '../stores/settingsStore';
-import { useRagnarokCombatController } from './hooks/useRagnarokCombatController';
+import { useRagnarokCombatController, type UseRagnarokCombatControllerOptions } from './hooks/useRagnarokCombatController';
 import { HeroBattlePopup } from './components/HeroBattlePopup';
 import { KingPassivePopup } from './components/KingPassivePopup';
 import type { ShowdownCelebration as ShowdownCelebrationState } from './hooks/useCombatEvents';
@@ -58,6 +57,9 @@ import { GameLog } from '../components/GameLog';
 import { useGameLogIntegration } from '../hooks/useGameLogIntegration';
 import { usePokerDrama } from './hooks/usePokerDrama';
 import { registerPokerDramaVisualEffects } from './vfx/handlers/pokerDramaHandlers';
+import { useFactionBattlefieldVfx } from './vfx/factionScenes';
+import { clearAllVisualVitalsHolds } from './vfx/visualVitalsHold';
+import { clearArenaShake } from './vfx/arenaShake';
 import { HandStrengthIndicator } from './components/HandStrengthIndicator';
 import { useEventAnimationBridge } from '../hooks/useEventAnimationBridge';
 import { useKingPassiveEventStore } from '../stores/kingPassiveEventStore';
@@ -89,6 +91,7 @@ import {
 	bindArenaVfxQueryRoot,
 } from './arenaVfxTargets';
 import { ArenaVfxRootContext } from './arenaVfxContext';
+import { vfxOrchestrationDirector } from './vfx/vfxOrchestrationDirector';
 import {
 	BoardOccupancyOverlay,
 	getActivePokerBoardSurfaceArenaStyle,
@@ -176,9 +179,7 @@ function getCombatElement(element?: ElementType | string): ElementType {
 
 // FACEDOWN_PLACEHOLDER_CARD moved to utils/combatArenaUtils.ts (consumed by BoardZone).
 
-interface RagnarokCombatArenaProps {
-  onCombatEnd?: (winner: 'player' | 'opponent' | 'draw') => void;
-}
+type RagnarokCombatArenaProps = UseRagnarokCombatControllerOptions;
 
 // DamageAnimation and HealthSnapshot types imported from hooks/useDamageAnimations
 
@@ -323,6 +324,8 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
     const cards = (gameState?.players?.opponent?.battlefield ?? []) as CardInstance[];
     return cards.map(card => adaptCardInstance(card));
   }, [gameState?.players?.opponent?.battlefield]);
+
+  useFactionBattlefieldVfx(playerBattlefield, opponentBattlefield);
   
   const evolveReadyIds = useMemo(() => {
     const ids = new Set<string>();
@@ -875,16 +878,13 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
   const {
     combatState,
     isActive,
-    resolution,
     betAmount,
     setBetAmount,
     showdownCelebration,
-    setShowdownCelebration,
-    heroDeathState,
+    dismissShowdown,
     heroPowerTargeting,
     weaponUpgraded,
     gameStateMulligan,
-    showdownBackupTimerRef,
     sharedBattlefieldRef,
     playerHand,
     selectedCard,
@@ -903,13 +903,14 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
     cancelHeroPowerTargeting,
     handleWeaponUpgrade,
     handleAction,
-    handleCombatEnd,
-    beginNextPokerHandAfterShowdown,
-	    handleHeroDeathComplete,
 	    handleUnifiedEndTurn,
     heroBattlePopups,
     removeHeroBattlePopup,
   } = useRagnarokCombatController({ onCombatEnd });
+  const showdownForCurrentHand = showdownCelebration?.handIndex === combatState?.handNumber
+    ? showdownCelebration
+    : null;
+
 
   // First-strike damage and phase transition are committed immediately from
   // the canonical combat state. The overlay receives a snapshot so changing
@@ -996,7 +997,12 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
   useEffect(() => {
     if (openingMulliganGatingPoker) return;
     const unregister = registerPokerDramaVisualEffects();
-    return unregister;
+    return () => {
+      unregister();
+      clearAllVisualVitalsHolds();
+      clearArenaShake();
+      vfxOrchestrationDirector.reset();
+    };
   }, [openingMulliganGatingPoker]);
 
   const elementalBuff = useElementalBuff();
@@ -1337,6 +1343,11 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
           />
         )}
         <div id="arena-layer-vfx" className="layer-vfx" {...arenaVfxLayerProps(ARENA_VFX_LAYERS.vfx)} />
+        <div
+          className="arena-center-stake-anchor"
+          aria-hidden="true"
+          {...arenaVfxTargetProps(ARENA_VFX_TARGETS.stakeSink)}
+        />
         <div className="arena-notice-layer" />
         <div id="arena-layer-modal" className="layer-modal" {...arenaVfxLayerProps(ARENA_VFX_LAYERS.modal)} />
 
@@ -1352,7 +1363,6 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
           return (
             <div
               className={`hourglass-timer ${outerDecisionView.hasClock && outerDecisionView.timerTone === 'low' ? 'low-time' : ''} ${outerDecisionView.hasClock && (outerDecisionView.timerTone === 'critical' || outerDecisionView.timerTone === 'expired') ? 'critical' : ''} ${outerDecisionView.hasClock ? '' : 'hourglass-timer--parked'}`}
-              {...arenaVfxTargetProps(ARENA_VFX_TARGETS.stakeSink)}
             >
               <svg className="hourglass-svg" viewBox="0 0 60 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <defs>
@@ -1502,7 +1512,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
           );
         })()}
         
-        <PhaseBanner phase={combatState.phase} forceHide={!!showdownCelebration} />
+        <PhaseBanner phase={combatState.phase} forceHide={!!showdownForCurrentHand} />
         <CombatFeedbackStack combatId={gamePhase === 'game_over' ? null : combatState.combatId} />
 
         {/* Hand strength indicator — live display of current best hand */}
@@ -1624,7 +1634,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
             onEndTurn={handleUnifiedEndTurn}
             betAmount={betAmount}
             setBetAmount={setBetAmount}
-            showdownCelebration={showdownCelebration}
+            showdownCelebration={showdownForCurrentHand}
             onOpponentHeroClick={handleOpponentHeroClick}
             onPlayerHeroClick={handlePlayerHeroClick}
             isOpponentTargetable={isOpponentTargetable}
@@ -1668,7 +1678,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
       <KingPassivePopup />
       <AIAttackAnimationProcessor />
       {particleCanvasEnabled && (
-        <PixiParticleCanvas />
+        <PixiParticleCanvas realm={activeRealmId ?? undefined} />
       )}
       {/* First Strike is a presentation snapshot; gameplay was committed above. */}
       {firstStrikePresentation && (
@@ -1726,45 +1736,15 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
         }
       />
 
-      {/* Non-blocking Showdown Celebration - replaces old blocking resolution-overlay */}
-      {showdownCelebration && !heroDeathState?.isAnimating && (
+      {showdownCelebration && (
         <ShowdownCelebration
-          resolution={{
-            winner: resolution?.winner || showdownCelebration.resolution.winner,
-            resolutionType: resolution?.resolutionType || showdownCelebration.resolution.resolutionType,
-            playerHand: resolution?.playerHand || showdownCelebration.resolution.playerHand,
-            opponentHand: resolution?.opponentHand || showdownCelebration.resolution.opponentHand,
-            playerDamage: resolution?.playerDamage ?? showdownCelebration.resolution.playerDamage,
-            opponentDamage: resolution?.opponentDamage ?? showdownCelebration.resolution.opponentDamage,
-            playerFinalHealth: resolution?.playerFinalHealth ?? showdownCelebration.resolution.playerFinalHealth,
-            opponentFinalHealth: resolution?.opponentFinalHealth ?? showdownCelebration.resolution.opponentFinalHealth,
-            whoFolded: resolution?.whoFolded || showdownCelebration.resolution.whoFolded,
-            foldPenalty: resolution?.foldPenalty || showdownCelebration.resolution.foldPenalty
-          }}
-          playerHeroId={combatState?.player?.pet?.norseHeroId || 'hero-odin'}
-          opponentHeroId={combatState?.opponent?.pet?.norseHeroId || 'hero-loki'}
-          onComplete={() => {
-            // Clear backup timer - animation completed normally
-            if (showdownBackupTimerRef.current) {
-              clearTimeout(showdownBackupTimerRef.current);
-              showdownBackupTimerRef.current = null;
-            }
-            setShowdownCelebration(null);
-            beginNextPokerHandAfterShowdown();
-          }}
+          key={`${showdownCelebration.combatId}:${showdownCelebration.handIndex}`}
+          resolution={showdownCelebration.resolution}
+          playerHeroId={combatState.player.pet.norseHeroId || 'hero-odin'}
+          opponentHeroId={combatState.opponent.pet.norseHeroId || 'hero-loki'}
+          onComplete={() => dismissShowdown(showdownCelebration)}
         />
       )}
-      
-      {/* Hero Death Animation - plays crumble/fade when a hero dies */}
-      <AnimatePresence>
-        {heroDeathState?.isAnimating && (
-          <HeroDeathAnimation
-            heroName={heroDeathState.deadHeroName}
-            isPlayer={heroDeathState.isPlayerDead}
-            onComplete={handleHeroDeathComplete}
-          />
-        )}
-      </AnimatePresence>
 
       {!deferPokerPresentationShell && (
         <>

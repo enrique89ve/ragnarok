@@ -298,6 +298,7 @@
 	justify-content: flex-start;
 	flex-direction: column;
 	padding-top: var(--poker-cinema-lane-top);
+	padding-left: var(--poker-cinema-lane-inset-left, 0px);
 	gap: 2px;
 	animation: realm-announce-in 2s ease-out forwards;
 }

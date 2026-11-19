@@ -5,6 +5,7 @@
   align-items: flex-start;
   justify-content: center;
   padding-top: var(--poker-cinema-lane-top);
+  padding-left: var(--poker-cinema-lane-inset-left, 0px);
   pointer-events: none;
   z-index: var(--z-cinematic);
 }

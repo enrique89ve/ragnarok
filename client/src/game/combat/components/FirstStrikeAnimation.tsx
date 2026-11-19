@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { debug } from '../../config/debugConfig';
-import { GameIcon } from '../../utils/ui/GameIcon';
 import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../arenaVfxTargets';
 import { useArenaVfxRoot } from '../arenaVfxContext';
 import { CINEMA_READ_MS } from '../feedback/combatFeedback';
+import '../styles/poker-drama.css';
+import '../styles/first-strike.css';
 
 export type FirstStrikeAnimationProps = {
   readonly target: 'player' | 'opponent';
@@ -15,10 +15,21 @@ export type FirstStrikeAnimationProps = {
   readonly onComplete: () => void;
 };
 
+type FirstStrikePhase = 'charge' | 'strike' | 'damage' | 'exit';
+
 const FIRST_STRIKE_CHARGE_MS = CINEMA_READ_MS;
 const FIRST_STRIKE_TRAVEL_MS = 700;
 const FIRST_STRIKE_DAMAGE_MS = CINEMA_READ_MS;
+const FIRST_STRIKE_EXIT_MS = 220;
 
+/**
+ * Opening ambush readout. Uses the same center-title anatomy as the phase
+ * banner (cinema-lane plate · rails · title / subtitle) in a blood accent:
+ *   charge → "FIRST STRIKE" + who ambushes whom
+ *   strike → a slash crosses the plate toward the defender's side
+ *   damage → subtitle becomes the HP cost; the defender's hero frame flashes
+ * Damage numbers stay with the regular hero floaters, never duplicated here.
+ */
 export const FirstStrikeAnimation: React.FC<FirstStrikeAnimationProps> = ({
   target,
   damage,
@@ -26,7 +37,7 @@ export const FirstStrikeAnimation: React.FC<FirstStrikeAnimationProps> = ({
   defenderName,
   onComplete,
 }) => {
-  const [phase, setPhase] = useState<'charge' | 'strike' | 'damage' | 'done'>('charge');
+  const [phase, setPhase] = useState<FirstStrikePhase>('charge');
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const onCompleteRef = useRef(onComplete);
   const arenaRoot = useArenaVfxRoot();
@@ -45,140 +56,52 @@ export const FirstStrikeAnimation: React.FC<FirstStrikeAnimationProps> = ({
     debug.animation('[FirstStrike] Animation starting, target:', target, 'damage:', damage);
     setPhase('charge');
 
-    const chargeTimer = setTimeout(() => {
-      debug.animation('[FirstStrike] Phase: strike');
-      setPhase('strike');
-    }, FIRST_STRIKE_CHARGE_MS);
-    const strikeTimer = setTimeout(() => {
-      debug.animation('[FirstStrike] Phase: damage');
-      setPhase('damage');
-    }, FIRST_STRIKE_CHARGE_MS + FIRST_STRIKE_TRAVEL_MS);
-    const doneTimer = setTimeout(() => {
-      debug.animation('[FirstStrike] Animation complete, calling onComplete');
-      setPhase('done');
-      onCompleteRef.current();
-    }, FIRST_STRIKE_CHARGE_MS + FIRST_STRIKE_TRAVEL_MS + FIRST_STRIKE_DAMAGE_MS);
+    const strikeAt = FIRST_STRIKE_CHARGE_MS;
+    const damageAt = strikeAt + FIRST_STRIKE_TRAVEL_MS;
+    const exitAt = damageAt + FIRST_STRIKE_DAMAGE_MS;
+    const timers = [
+      setTimeout(() => setPhase('strike'), strikeAt),
+      setTimeout(() => setPhase('damage'), damageAt),
+      setTimeout(() => setPhase('exit'), exitAt),
+      setTimeout(() => {
+        debug.animation('[FirstStrike] Animation complete, calling onComplete');
+        onCompleteRef.current();
+      }, exitAt + FIRST_STRIKE_EXIT_MS),
+    ];
 
-    return () => {
-      clearTimeout(chargeTimer);
-      clearTimeout(strikeTimer);
-      clearTimeout(doneTimer);
-    };
+    return () => timers.forEach(clearTimeout);
     // Target and damage identify a new presentation; callback identity must
     // not restart an already-running visual.
   }, [target, damage, portalTarget]);
 
   if (!portalTarget) return null;
 
+  const struck = phase === 'damage' || phase === 'exit';
+  const subtitle = struck
+    ? `Surprise attack · ${defenderName} loses ${damage} HP`
+    : `${attackerName} ambushes ${defenderName}`;
+
   return ReactDOM.createPortal(
-    <div className="first-strike-overlay" style={{
-      position: 'absolute',
-      inset: 0,
-      zIndex: 680,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      pointerEvents: 'none',
-      background: 'linear-gradient(to bottom, color-mix(in srgb, var(--obsidian-950) 30%, transparent), color-mix(in srgb, var(--obsidian-900) 50%, transparent))'
-    }}>
-      <AnimatePresence>
-        {phase === 'charge' && (
-          <motion.div
-            key="charge"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.5 }}
-            transition={{ duration: 0.4 }}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '16px'
-            }}
-          >
-            <motion.div
-              animate={{
-                textShadow: ['0 0 10px var(--danger-500)', '0 0 30px var(--danger-400)', '0 0 10px var(--danger-500)']
-              }}
-              transition={{ duration: 0.5, repeat: Infinity }}
-              style={{
-                fontSize: '2.5rem',
-                fontWeight: 'bold',
-                color: 'var(--danger-500)',
-                fontFamily: 'var(--font-norse, serif)',
-                textTransform: 'uppercase',
-                letterSpacing: '4px'
-              }}
-            >
-              <GameIcon name="swords" size={18} /> First Strike!
-            </motion.div>
-            <div style={{
-              fontSize: '1.2rem',
-              color: 'var(--gold-300)',
-              fontFamily: 'var(--font-norse, serif)'
-            }}>
-              {attackerName} attacks {defenderName}
-            </div>
-          </motion.div>
-        )}
-
-        {phase === 'strike' && (
-          <motion.div
-            key="strike"
-            initial={{ x: target === 'player' ? 200 : -200, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-            style={{
-              fontSize: '6rem',
-              filter: 'drop-shadow(0 0 20px rgba(255, 100, 100, 0.8))'
-            }}
-          >
-            <GameIcon name="swords" size={14} />
-          </motion.div>
-        )}
-
-        {phase === 'damage' && (
-          <motion.div
-            key="damage"
-            initial={{ opacity: 0, scale: 2 }}
-            animate={{ opacity: 1, scale: 1, y: [0, -20, 0] }}
-            exit={{ opacity: 0, y: -50 }}
-            transition={{ duration: 0.5 }}
-            style={{
-              position: 'absolute',
-              [target === 'player' ? 'left' : 'right']: '25%',
-              top: '40%',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            <motion.div
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 0.3, repeat: 2 }}
-              style={{
-                fontSize: '4rem',
-                fontWeight: 'bold',
-                color: 'var(--danger-600)',
-                textShadow: '0 0 20px color-mix(in srgb, var(--danger-600) 80%, transparent), 2px 2px 0 #000',
-                fontFamily: 'var(--font-norse, serif)'
-              }}
-            >
-              -{damage}
-            </motion.div>
-            <div style={{
-              fontSize: '1rem',
-              color: 'var(--danger-300)',
-              textTransform: 'uppercase',
-              letterSpacing: '2px'
-            }}>
-              Surprise Attack!
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <div
+      className="first-strike"
+      data-phase={phase}
+      data-target={target}
+      role="status"
+      aria-live="assertive"
+      aria-label={`First strike. ${attackerName} ambushes ${defenderName} for ${damage} damage.`}
+    >
+      <div className="first-strike__plate cinema-lane-plate">
+        <span className="first-strike__line" aria-hidden="true" />
+        <span className="first-strike__text">
+          <span className="first-strike__title">First Strike</span>
+          <span key={struck ? 'cost' : 'intro'} className="first-strike__subtitle">
+            {subtitle}
+          </span>
+        </span>
+        <span className="first-strike__line" aria-hidden="true" />
+        <span className="first-strike__slash" aria-hidden="true" />
+      </div>
+      <span className="first-strike__hero-hit" aria-hidden="true" />
     </div>,
     portalTarget,
   );

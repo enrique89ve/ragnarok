@@ -1,31 +1,57 @@
 /**
  * PokerDramaVFX.ts
  *
- * GSAP-powered poker combat drama engine.
- * Every poker phase transition, betting action, and showdown moment
- * gets cinematic visual treatment — cards slam, screen shakes,
- * heroes react, and the battlefield breathes tension.
+ * Zero-overlap Poker VFX choreography facade:
+ * - All 2D energy/particles/flashes/blasts render inside PixiParticleCanvas (PixiJS v8)
+ * - All DOM gestures/slams/pulses use CSS classes scheduled via gameEffectCoordinator
+ * - All camera shake flows through the single CSS channel `triggerArenaShake`
+ * - All audio flows through the centralized `proceduralAudio` engine (respecting volume/mute)
  *
- * Uses GSAP for timeline sequencing and DOM animation,
- * Pixi particle canvas for GPU particle bursts.
+ * Zero GSAP imports, zero duplicate AudioContext, zero DOM flash divs.
  */
 
-import gsap from 'gsap';
-import { spawnParticleBurst, spawnImpactRing, ELEMENT_PALETTES, type ParticleColor } from '../../animations/PixiParticleCanvas';
+import {
+	spawnArcaneVortex,
+	spawnArenaFlash,
+	spawnBidirectionalSwapArcs,
+	spawnDiamondShards,
+	spawnDrainStream,
+	spawnImpactRing,
+	spawnMagicTunnel,
+	spawnParticleBurst,
+	spawnRisingAura,
+	spawnRunePulse,
+	spawnShieldDome,
+	spawnShowdownBlast,
+	spawnSparkBurst,
+	spawnStarburstBloom,
+	spawnTranslucentRibbon,
+	spawnTravelingGlowRing,
+	triggerEmotionalImpulse,
+	ELEMENT_PALETTES,
+	type ParticleColor,
+} from '../../animations/PixiParticleCanvas';
+import { proceduralAudio } from '../../audio/proceduralAudio';
 import {
 	ARENA_VFX_LAYERS,
 	ARENA_VFX_TARGETS,
 	getArenaVfxCommunitySlot,
 	getArenaVfxHeroTarget,
+	getArenaVfxHoleCardsTarget,
 	getArenaVfxLayer,
-	getArenaVfxSpellTrayCards,
-	getArenaVfxTargets,
 	getArenaVfxMinionCardElements,
+	getArenaVfxSpellTrayCards,
+	getArenaVfxStaminaTarget,
+	getArenaVfxTargets,
 	getArenaVfxWagerTargets,
+	getElementCenter,
 } from '../arenaVfxTargets';
 import { gameEffectCoordinator } from '@/game/effects/core/gameEffectCoordinator';
 import { stampCardMotionClass } from '../../components/card/applyCardMotion';
 import { cinemaReadingLane } from '../../poker/layout/boardOccupancy';
+import { triggerArenaShake } from '../vfx/arenaShake';
+import { vfxOrchestrationDirector } from '../vfx/vfxOrchestrationDirector';
+import { releaseHeroVisualHp } from '../vfx/visualVitalsHold';
 import {
 	resolveCallClashEndpoints,
 	resolvePokerVfxIntentForCall,
@@ -40,13 +66,13 @@ import {
 	playPokerVfxIntent,
 	playShowdownAoeWagerVfx,
 } from './pokerVfxMotion';
+import type { PokerSpellEffectType } from '../../types/CardTypes';
+import type { WagerType } from '../vfx/events';
 
 const DRAMA_CONTAINER_ID = 'poker-drama-vfx-layer';
 const MAX_ORPHAN_AGE_MS = 6000;
+const CENTER_SLAM_DURATION_MS = 3700;
 
-// Screen-point helper: the drama container fills the arena vfx layer
-// (canvas-sized), so positions derived from its rect track the scaled
-// 1920x1080 canvas instead of raw window fractions.
 function getDramaContainerPoint(container: HTMLElement, yRatio = 0.5): { x: number; y: number } {
 	const rect = container.getBoundingClientRect();
 	return {
@@ -64,10 +90,10 @@ function getOrCreateContainer(): HTMLDivElement | null {
 		el = document.createElement('div');
 		el.id = DRAMA_CONTAINER_ID;
 		Object.assign(el.style, {
-			// `position: absolute; inset: 0` — fills the layer-vfx mount.
-			// Layer architecture: docs/POKER_ARENA_UI.md §Layers
-			position: 'absolute', inset: '0', pointerEvents: 'none',
-			overflow: 'hidden'
+			position: 'absolute',
+			inset: '0',
+			pointerEvents: 'none',
+			overflow: 'hidden',
 		});
 	}
 	if (el.parentElement !== target) {
@@ -76,19 +102,33 @@ function getOrCreateContainer(): HTMLDivElement | null {
 	return el;
 }
 
-function createDiv(styles: Partial<CSSStyleDeclaration>): HTMLDivElement {
-	const div = document.createElement('div');
-	Object.assign(div.style, { position: 'absolute', pointerEvents: 'none', ...styles });
-	div.dataset.vfxBorn = String(Date.now());
-	return div;
+function cleanup(el: HTMLElement): void {
+	if (el.parentNode) el.parentNode.removeChild(el);
 }
 
-function cleanup(el: HTMLElement) {
-	if (el.parentNode) el.parentNode.removeChild(el);
+function stampCssGesture(
+	el: HTMLElement | null,
+	className: string,
+	durationMs: number,
+	key: string,
+): void {
+	if (!el) return;
+	el.classList.remove(className);
+	void el.offsetWidth;
+	el.classList.add(className);
+	gameEffectCoordinator.schedule({
+		owner: 'poker-drama-dom',
+		lane: 'gesture',
+		key,
+		priority: 'normal',
+		delayMs: durationMs,
+		run: () => el.classList.remove(className),
+	});
 }
 
 function markCenterSlam(el: HTMLElement): HTMLElement {
 	el.dataset.centerSlam = '1';
+	el.dataset.vfxBorn = String(Date.now());
 	return el;
 }
 
@@ -96,7 +136,7 @@ function cinemaSlamAnchor(): { top: string; left: string; transform: string } {
 	const lane = cinemaReadingLane();
 	const centerY = lane.y + lane.height / 2;
 	return {
-		left: '50%',
+		left: `${lane.x + lane.width / 2}px`,
 		top: `${centerY}px`,
 		transform: 'translate(-50%, -50%)',
 	};
@@ -104,12 +144,11 @@ function cinemaSlamAnchor(): { top: string; left: string; transform: string } {
 
 function createCinemaSlamPlate(title: string, accentColor: string): HTMLDivElement {
 	const plate = document.createElement('div');
-	plate.className = 'cinema-lane-plate cinema-lane-slam';
+	plate.className = 'cinema-lane-plate cinema-lane-slam cinema-lane-slam--active';
 	plate.style.setProperty('--cinema-accent', accentColor);
 	Object.assign(plate.style, {
 		position: 'absolute',
 		pointerEvents: 'none',
-		opacity: '0',
 		...cinemaSlamAnchor(),
 	});
 
@@ -123,40 +162,42 @@ function createCinemaSlamPlate(title: string, accentColor: string): HTMLDivEleme
 	return plate;
 }
 
+function mountCinemaSlam(plate: HTMLDivElement, key: string): void {
+	const container = getOrCreateContainer();
+	if (!container) return;
+	container.appendChild(plate);
+	gameEffectCoordinator.schedule({
+		owner: 'poker-drama-dom',
+		lane: 'center-slam',
+		key,
+		priority: 'critical',
+		delayMs: CENTER_SLAM_DURATION_MS + 40,
+		run: () => cleanup(plate),
+	});
+}
+
 export function dismissCenterSlams(): void {
 	if (typeof document === 'undefined') return;
+	gameEffectCoordinator.cancelOwnerLane('poker-drama-dom', 'center-slam');
 	const container = document.getElementById(DRAMA_CONTAINER_ID);
 	if (!container) return;
 	container.querySelectorAll<HTMLElement>('[data-center-slam]').forEach((node) => {
-		gsap.killTweensOf(node);
 		node.remove();
 	});
 }
 
-/* Helper — screen-shake target.  `.game-viewport` carries the inline
-   `transform: translate(offsetX, offsetY) scale(scale)` set by
-   GameViewport.tsx for responsive canvas scaling. GSAP animations on
-   `x`/`y` overwrite the ENTIRE transform property, so shaking
-   `.game-viewport` blows away the scale on first shake (canvas appears
-   to "shift" and never restores correctly). The outer
-   `.game-viewport-wrapper` has no transform of its own, so it is the
-   correct shake target. */
-function getShakeTarget(): HTMLElement | null {
-	return getArenaVfxLayer(ARENA_VFX_LAYERS.viewportWrapper);
-}
-
-export function killAllPokerVFX() {
+export function killAllPokerVFX(): void {
+	gameEffectCoordinator.cancelOwner('poker-drama-dom');
+	gameEffectCoordinator.cancelOwner('poker-vfx-dom');
 	const container = document.getElementById(DRAMA_CONTAINER_ID);
 	if (container) {
-		gsap.killTweensOf(container.querySelectorAll('*'));
 		container.innerHTML = '';
 	}
 }
 
-// Orphan sweep for poker VFX
 let pokerOrphanInterval: ReturnType<typeof setInterval> | null = null;
 
-export function startPokerOrphanSweep() {
+export function startPokerOrphanSweep(): void {
 	if (pokerOrphanInterval) clearInterval(pokerOrphanInterval);
 	pokerOrphanInterval = setInterval(() => {
 		const container = document.getElementById(DRAMA_CONTAINER_ID);
@@ -169,16 +210,15 @@ export function startPokerOrphanSweep() {
 	}, 2000);
 }
 
-export function stopPokerOrphanSweep() {
+export function stopPokerOrphanSweep(): void {
 	if (pokerOrphanInterval) {
 		clearInterval(pokerOrphanInterval);
 		pokerOrphanInterval = null;
 	}
 }
 
-// Suit → element color mapping for card impacts
 const SUIT_PALETTES: Record<string, ParticleColor> = {
-	spades:   { primary: '#334155', secondary: '#e5e7eb', glow: 'rgba(51,65,85,0.55)' },
+	spades:   { primary: '#38bdf8', secondary: '#e5e7eb', glow: 'rgba(56,189,248,0.55)' },
 	hearts:   { primary: '#ef4444', secondary: '#fca5a5', glow: 'rgba(239,68,68,0.6)' },
 	diamonds: { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
 	clubs:    { primary: '#22c55e', secondary: '#86efac', glow: 'rgba(34,197,94,0.6)' },
@@ -192,19 +232,12 @@ const LIGHT_PALETTE: ParticleColor = ELEMENT_PALETTES.lightning || GOLD_PALETTE;
 // COMMUNITY CARD REVEAL ANIMATIONS
 // ═══════════════════════════════════════════════════
 
-/**
- * Animate community card deal — card flies from top, flips, slams onto table.
- * @param slotIndex - which community slot (0-4) the card lands in
- * @param suit - card suit for color-coded impact
- * @param value - card value for high-card flash
- * @param isRiver - if true, slow-mo river drama
- */
 export function playCardDealVFX(
 	slotIndex: number,
 	suit: string,
 	value: string,
-	isRiver: boolean = false
-) {
+	isRiver = false,
+): void {
 	const slot = getArenaVfxCommunitySlot(slotIndex);
 	if (!slot) return;
 
@@ -212,201 +245,98 @@ export function playCardDealVFX(
 	const cx = rect.left + rect.width / 2;
 	const cy = rect.top + rect.height / 2;
 
-	// Deal animation is GSAP-only: the legacy `.card-dealing` CSS class
-	// (cardSlam keyframes) was removed to avoid double-animating the slot.
-	// GSAP owns the scale bounce, table shake, particles and river slow-mo.
-	const tl = gsap.timeline();
+	stampCssGesture(
+		slot,
+		isRiver ? 'vfx-card-deal-slam--river' : 'vfx-card-deal-slam',
+		isRiver ? 660 : 360,
+		`deal-slot:${slotIndex}`,
+	);
 
-	const timeScale = isRiver ? 0.5 : 1;
-	tl.timeScale(timeScale);
+	triggerArenaShake(isRiver ? 'heavy' : 'mild');
 
-	// Card slam — scale bounce on the slot
-	tl.fromTo(slot, {
-		scale: 1.15,
-		opacity: 0.7,
-		y: -30
-	}, {
-		scale: 1,
-		opacity: 1,
-		y: 0,
-		duration: 0.35,
-		ease: 'back.out(2)'
-	});
-
-	// Table shake on impact — shake the WRAPPER (see getShakeTarget).
-	const shakeTarget = getShakeTarget();
-	if (shakeTarget) {
-		const shakeIntensity = isRiver ? 4 : 2;
-		tl.to(shakeTarget, {
-			x: `random(-${shakeIntensity}, ${shakeIntensity})`,
-			y: `random(-${shakeIntensity / 2}, ${shakeIntensity / 2})`,
-			duration: 0.08,
-			repeat: 3,
-			yoyo: true,
-			ease: 'none'
-		}, '-=0.2');
-		tl.set(shakeTarget, { x: 0, y: 0 });
-	}
-
-	// Particle impact at card position
 	const palette = SUIT_PALETTES[suit] || GOLD_PALETTE;
-	const color = palette.primary;
-	spawnImpactRing(cx, cy, palette);
+	spawnImpactRing(cx, cy, palette, isRiver ? 'luminous' : 'standard');
 
-	// High card flash (A, K, Q face cards)
-	const highCards = ['A', 'K', 'Q', 'J'];
-	if (highCards.includes(value)) {
-		const flash = createDiv({
-			left: `${cx - 40}px`,
-			top: `${cy - 40}px`,
-			width: '80px',
-			height: '80px',
-			borderRadius: '50%',
-			background: `radial-gradient(circle, ${color}44 0%, transparent 70%)`,
-		});
-		const container = getOrCreateContainer();
-		if (!container) return;
-		container.appendChild(flash);
-		gsap.to(flash, {
-			opacity: 0,
-			scale: 2,
-			duration: 0.5,
-			onComplete: () => cleanup(flash)
-		});
+	if (['A', 'K', 'Q', 'J'].includes(value)) {
+		spawnRunePulse(cx, cy, palette, 420, 1.35);
 	}
 
-	// River special — screen flash
 	if (isRiver) {
-		const flash = createDiv({
-			inset: '0',
-			background: 'rgba(255, 255, 255, 0.15)',
-		});
-		const container = getOrCreateContainer();
-		if (!container) return;
-		container.appendChild(flash);
-		gsap.to(flash, {
-			opacity: 0,
-			duration: 0.6,
-			onComplete: () => cleanup(flash)
-		});
-
-		// Extra particles for river
-		spawnParticleBurst(cx, cy, 20, LIGHT_PALETTE);
+		spawnArenaFlash('#f5c542', 0.16, 420);
+		spawnParticleBurst(cx, cy, 22, LIGHT_PALETTE, `river-slot-${slotIndex}`);
+		triggerEmotionalImpulse('climax', 0.65);
 	}
 }
-
-// Reveal scheduling (flop stagger, turn weight, river slow-mo) lives in
-// the VisualEvent handler (vfx/handlers/pokerDramaHandlers.ts), which
-// calls playCardDealVFX per communityCardRevealed event.
-
 
 // ═══════════════════════════════════════════════════
 // BETTING ACTION ANIMATIONS
 // ═══════════════════════════════════════════════════
 
-/**
- * ATTACK (raise) — hero lunge + stake travels to board pot sink (hourglass), not HUD chrome.
- */
-export function playRaiseVFX(isPlayer: boolean, intent?: PokerVfxResolvedIntent) {
+export function playRaiseVFX(
+	isPlayer: boolean,
+	intent?: PokerVfxResolvedIntent,
+	amount?: number,
+): void {
 	const side = isPlayer ? 'player' : 'opponent';
 	const hero = getArenaVfxHeroTarget(side);
 	if (!hero) return;
 
 	const resolved = intent ?? resolvePokerVfxIntentForRaise(side);
-
-	const tl = gsap.timeline();
-	tl.to(hero, {
-		y: isPlayer ? -8 : 8,
-		scale: 1.03,
-		duration: 0.2,
-		ease: 'power2.out',
-	});
-	tl.to(hero, {
-		y: 0,
-		scale: 1,
-		duration: 0.4,
-		ease: 'power2.inOut',
-	});
+	stampCssGesture(
+		hero,
+		isPlayer ? 'vfx-hero-raise-player' : 'vfx-hero-raise-opponent',
+		480,
+		`hero-raise:${side}`,
+	);
 
 	if (resolved.targetPoint) {
-		playPokerVfxIntent(resolved);
+		playPokerVfxIntent(resolved, { amount });
 	} else {
 		const rect = hero.getBoundingClientRect();
 		spawnImpactRing(rect.left + rect.width / 2, rect.top + rect.height / 2, GOLD_PALETTE);
 	}
 }
 
-/**
- * COUNTER (re-raise) — THE BIG ONE.
- * Time dilation, pressure shake, hero slam forward, risk pulse.
- * Escalates with reraise level (1st, 2nd, 3rd+).
- */
 export function playReraiseVFX(
 	isPlayer: boolean,
-	reraiseLevel: number = 1,
+	reraiseLevel = 1,
 	intent?: PokerVfxResolvedIntent,
-) {
+	amount?: number,
+): void {
 	const side = isPlayer ? 'player' : 'opponent';
 	const resolved = intent ?? resolvePokerVfxIntentForRaise(side);
-	const shakeTarget = getShakeTarget();
-
-	// Pressure shake only at high commitment — kept separate from stake motion.
-	if (shakeTarget && reraiseLevel >= 3) {
-		const shakeIntensity = Math.min(2 + reraiseLevel, 5);
-		gsap.to(shakeTarget, {
-			x: `random(-${shakeIntensity}, ${shakeIntensity})`,
-			y: `random(-${shakeIntensity * 0.4}, ${shakeIntensity * 0.4})`,
-			duration: 0.15,
-			repeat: 2 + reraiseLevel,
-			yoyo: true,
-			ease: 'sine.inOut',
-			onComplete: () => { gsap.set(shakeTarget, { x: 0, y: 0 }); },
-		});
-	}
 
 	const hero = getArenaVfxHeroTarget(side);
 	if (hero) {
-		const tl = gsap.timeline();
-		tl.to(hero, {
-			y: isPlayer ? -16 : 16,
-			scale: 1.08,
-			duration: 0.15,
-			ease: 'power3.out',
-		});
-		tl.to(hero, {
-			y: 0,
-			scale: 1,
-			duration: 0.5,
-			ease: 'elastic.out(1, 0.5)',
-		});
-
+		stampCssGesture(
+			hero,
+			isPlayer ? 'vfx-hero-reraise-player' : 'vfx-hero-reraise-opponent',
+			560,
+			`hero-reraise:${side}`,
+		);
 		const rect = hero.getBoundingClientRect();
 		const cx = rect.left + rect.width / 2;
 		const cy = rect.top + rect.height / 2;
-		spawnParticleBurst(cx, cy, 12, ELEMENT_PALETTES.fire);
-		spawnImpactRing(cx, cy, GOLD_PALETTE);
+		spawnParticleBurst(cx, cy, 14, ELEMENT_PALETTES.fire);
+		spawnImpactRing(cx, cy, GOLD_PALETTE, 'luminous');
 	}
 
-	playPokerVfxIntent(resolved, { stakeStrength: 'firm' });
+	playPokerVfxIntent(resolved, {
+		stakeStrength: 'firm',
+		reraiseLevel,
+		amount,
+	});
 	playPressureBassHit(reraiseLevel);
 }
 
-/**
- * ENGAGE (call) — dual travel-impact clash at the lane midpoint.
- */
-export function playCallVFX(intent?: PokerVfxResolvedIntent) {
+export function playCallVFX(intent?: PokerVfxResolvedIntent): void {
 	const resolved = intent ?? resolvePokerVfxIntentForCall();
-
 	const heroes = [
 		...getArenaVfxTargets(ARENA_VFX_TARGETS.playerHero),
 		...getArenaVfxTargets(ARENA_VFX_TARGETS.opponentHero),
 	];
-	heroes.forEach(hero => {
-		gsap.fromTo(
-			hero,
-			{ filter: 'brightness(1.35)' },
-			{ filter: 'brightness(1)', duration: 0.2 },
-		);
+	heroes.forEach((hero, index) => {
+		stampCssGesture(hero, 'vfx-hero-clash-flash', 240, `hero-clash:${index}`);
 	});
 
 	const endpoints = resolveCallClashEndpoints();
@@ -415,72 +345,38 @@ export function playCallVFX(intent?: PokerVfxResolvedIntent) {
 	}
 }
 
-/**
- * DEFEND (check) — subtle shield tint
- */
-export function playCheckVFX(isPlayer: boolean) {
-	const hero = getArenaVfxHeroTarget(isPlayer ? 'player' : 'opponent');
-	if (!hero) return;
-
-	gsap.to(hero, {
-		x: -3,
-		filter: 'brightness(1.1) hue-rotate(-10deg)',
-		duration: 0.15,
-		yoyo: true,
-		repeat: 1
-	});
+export function playCheckVFX(isPlayer: boolean): void {
+	const side = isPlayer ? 'player' : 'opponent';
+	const hero = getArenaVfxHeroTarget(side);
+	stampCssGesture(hero, 'vfx-hero-defend', 280, `hero-defend:${side}`);
 }
 
-/**
- * BRACE (fold) — hero retreats, cards fly off
- */
-export function playFoldVFX(isPlayer: boolean) {
-	const hero = getArenaVfxHeroTarget(isPlayer ? 'player' : 'opponent');
-	if (hero) {
-		gsap.to(hero, {
-			y: isPlayer ? 8 : -8,
-			filter: 'brightness(0.7) grayscale(0.3)',
-			duration: 0.4,
-			ease: 'power2.in'
-		});
-		// Reset after
-		gsap.to(hero, {
-			y: 0,
-			filter: 'brightness(1) grayscale(0)',
-			duration: 0.6,
-			delay: 0.5
-		});
-	}
+export function playFoldVFX(isPlayer: boolean): void {
+	const side = isPlayer ? 'player' : 'opponent';
+	const otherSide = isPlayer ? 'opponent' : 'player';
+	const hero = getArenaVfxHeroTarget(side);
+	const otherHero = getArenaVfxHeroTarget(otherSide);
 
-	// Brighten the winner side
-	const otherHero = getArenaVfxHeroTarget(isPlayer ? 'opponent' : 'player');
-	if (otherHero) {
-		gsap.fromTo(otherHero,
-			{ filter: 'brightness(1.2)' },
-			{ filter: 'brightness(1)', duration: 0.8, delay: 0.3 }
-		);
-	}
+	stampCssGesture(
+		hero,
+		isPlayer ? 'vfx-hero-fold-player' : 'vfx-hero-fold-opponent',
+		900,
+		`hero-fold:${side}`,
+	);
+	stampCssGesture(otherHero, 'vfx-hero-clash-flash', 320, `hero-fold-win:${otherSide}`);
 }
-
 
 // ═══════════════════════════════════════════════════
 // SHOWDOWN ANIMATIONS
 // ═══════════════════════════════════════════════════
 
-/**
- * Hand rank announcement — big Norse text slams onto screen.
- * Scaled by hand strength.
- */
 export function playHandRankAnnouncement(
 	rankName: string,
 	rank: number,
 	_isWinner: boolean,
-	_isPlayer: boolean
-) {
-	if (!rankName || rank <= 1) return; // Don't announce High Card
-
-	const container = getOrCreateContainer();
-	if (!container) return;
+	_isPlayer: boolean,
+): void {
+	if (!rankName || rank <= 1) return;
 
 	let color = '#e5e7eb';
 	if (rank >= 3) color = '#38bdf8';
@@ -495,256 +391,102 @@ export function playHandRankAnnouncement(
 		title.classList.add('cinema-lane-slam__title--compact');
 	}
 	plate.style.zIndex = '10';
-	container.appendChild(plate);
+	mountCinemaSlam(plate, `hand-rank:${displayName}`);
 
-	const tl = gsap.timeline({ onComplete: () => cleanup(plate) });
-	gsap.set(plate, { opacity: 0, scale: 1.06 });
-
-	tl.to(plate, {
-		opacity: 1,
-		scale: 1,
-		duration: 0.3,
-		ease: 'back.out(2)',
-	});
-
-	tl.to(plate, { duration: 3 });
-
-	tl.to(plate, {
-		opacity: 0,
-		scale: 0.96,
-		duration: 0.4,
-		ease: 'power2.in',
-	});
-
-	// Screen flash for strong hands
 	if (rank >= 7) {
-		const flash = createDiv({
-			inset: '0',
-			background: `radial-gradient(circle at 50% 50%, ${color}22 0%, transparent 50%)`,
-		});
-		container.appendChild(flash);
-		gsap.to(flash, {
-			opacity: 0,
-			duration: 0.8,
-			delay: 0.2,
-			onComplete: () => cleanup(flash)
-		});
+		spawnArenaFlash(color, 0.16, 480);
 	}
 }
 
-/**
- * RAGNAROK special — Royal Flush cinematic
- */
-export function playRagnarokVFX() {
-	const container = getOrCreateContainer();
-	if (!container) return;
+export function playRagnarokVFX(): void {
+	spawnArenaFlash('#dc2626', 0.32, 460);
 
-	const flash = createDiv({
-		inset: '0',
-		background: 'radial-gradient(circle at 50% 50%, rgba(220,38,38,0.45) 0%, rgba(245,197,66,0.18) 28%, transparent 62%)',
-		zIndex: '20',
-	});
-	container.appendChild(flash);
-
-	markCenterSlam(flash);
-	const flashTl = gsap.timeline();
-	flashTl.fromTo(flash, { opacity: 0 }, { opacity: 1, duration: 0.12 });
-	flashTl.to(flash, {
-		opacity: 0,
-		duration: 0.28,
-		onComplete: () => cleanup(flash),
-	}, 0.2);
-
-	// RAGNAROK text — same 3.7s window as the other center titles
 	const ragnarokPlate = createCinemaSlamPlate('RAGNAROK', '#dc2626');
-	const ragnarokTitle = ragnarokPlate.querySelector('.cinema-lane-slam__title') as HTMLElement;
+	const ragnarokTitle = ragnarokPlate.querySelector('.cinema-lane-slam__title') as HTMLElement | null;
 	if (ragnarokTitle) {
 		ragnarokTitle.style.letterSpacing = '0.18em';
 	}
 	ragnarokPlate.style.zIndex = '25';
-	container.appendChild(ragnarokPlate);
-
-	gsap.set(ragnarokPlate, { scale: 1.15 });
-	const textTl = gsap.timeline({ onComplete: () => cleanup(ragnarokPlate) });
-	textTl.to(ragnarokPlate, {
-		opacity: 1,
-		scale: 1,
-		duration: 0.3,
-		ease: 'back.out(1.5)',
-	});
-	textTl.to(ragnarokPlate, { duration: 3 });
-	textTl.to(ragnarokPlate, {
-		opacity: 0,
-		scale: 0.92,
-		duration: 0.4,
-	});
-
-	// Heavy screen shake — wrapper, not viewport (see getShakeTarget)
-	const shakeTarget = getShakeTarget();
-	if (shakeTarget) {
-		gsap.to(shakeTarget, {
-			x: 'random(-6, 6)',
-			y: 'random(-4, 4)',
-			duration: 0.1,
-			repeat: 4,
-			yoyo: true,
-			ease: 'none',
-			delay: 0.8,
-			onComplete: () => { gsap.set(shakeTarget, { x: 0, y: 0 }); }
-		});
-	}
-}
-
-/**
- * Showdown damage delivery — damage number flies from winner to loser
- */
-/**
- * Lethal cue for killing blows. Keep it local to poker's VFX layer so it
- * cannot slow unrelated GSAP timelines or delay gameplay cleanup callbacks.
- */
-function playLethalCue(container: HTMLElement) {
-	gsap.fromTo(container,
-		{ filter: 'contrast(1.25) saturate(1.35)' },
-		{ filter: 'none', duration: 1.2, ease: 'power2.out' }
-	);
+	mountCinemaSlam(ragnarokPlate, 'ragnarok');
+	triggerArenaShake('lethal');
 }
 
 export function playShowdownDamageVFX(
 	damage: number,
 	isPlayerWinner: boolean,
 	handRankDiff: number,
-	isLethal: boolean = false
-) {
-	const container = getOrCreateContainer();
-	if (!container) return;
+	isLethal = false,
+	onImpact?: () => void,
+): void {
+	const winnerSide = isPlayerWinner ? 'player' : 'opponent';
+	const loserSide = isPlayerWinner ? 'opponent' : 'player';
+	const winner = getArenaVfxHeroTarget(winnerSide);
+	const loser = getArenaVfxHeroTarget(loserSide);
+	if (!winner || !loser) {
+		releaseHeroVisualHp(loserSide, 'showdown-impact');
+		onImpact?.();
+		return;
+	}
 
-	const winner = getArenaVfxHeroTarget(isPlayerWinner ? 'player' : 'opponent');
-	const loser = getArenaVfxHeroTarget(isPlayerWinner ? 'opponent' : 'player');
-	if (!winner || !loser) return;
-
+	const winRect = winner.getBoundingClientRect();
 	const loseRect = loser.getBoundingClientRect();
+	const startX = winRect.left + winRect.width / 2;
+	const startY = winRect.top + winRect.height / 2;
 	const endX = loseRect.left + loseRect.width / 2;
 	const endY = loseRect.top + loseRect.height / 2;
 
-	const isCrushing = handRankDiff >= 5;
-	const isSolid = handRankDiff >= 3;
-	const dmgColor = isCrushing ? '#fbbf24' : '#ef4444';
-
+	const isCrushing = handRankDiff >= 5 || damage >= 25;
 	const dmgPalette = isCrushing ? GOLD_PALETTE : RED_PALETTE;
-	spawnImpactRing(endX, endY, dmgPalette);
-	if (isCrushing) {
-		spawnParticleBurst(endX, endY, 20, ELEMENT_PALETTES.fire);
-	}
+	vfxOrchestrationDirector.triggerCriticalSpotlight(isLethal || isCrushing ? 820 : 620);
 
-	const shakeIntensity = isCrushing ? 8 : isSolid ? 5 : 3;
-	const shakeDuration = isCrushing ? 0.4 : 0.25;
-	gsap.to(loser, {
-		x: `random(-${shakeIntensity}, ${shakeIntensity})`,
-		duration: 0.06,
-		repeat: Math.floor(shakeDuration / 0.06),
-		yoyo: true,
-		onComplete: () => { gsap.set(loser, { x: 0 }); }
+	spawnShowdownBlast(startX, startY, endX, endY, dmgPalette, {
+		travelMs: 360,
+		heavy: isCrushing || isLethal,
+		onImpact: () => {
+			releaseHeroVisualHp(loserSide, 'showdown-impact');
+			stampCssGesture(loser, 'vfx-hero-hit-recoil', 320, `showdown-recoil:${loserSide}`);
+			triggerArenaShake(isLethal || isCrushing ? 'lethal' : damage >= 12 ? 'heavy' : 'mild');
+			triggerEmotionalImpulse(isLethal || isCrushing ? 'shock' : 'climax', isLethal ? 1.0 : 0.78);
+
+			if (isLethal) {
+				const container = getOrCreateContainer();
+				stampCssGesture(container, 'vfx-lethal-cue', 900, 'lethal-cue');
+			}
+
+			try {
+				proceduralAudio.play(isCrushing || isLethal ? 'damage_hero' : 'damage');
+			} catch {
+				// Audio unavailable in headless environments
+			}
+			onImpact?.();
+		},
 	});
-
-	// Lethal slow-motion — cinematic killing blow
-	if (isLethal) {
-		playLethalCue(container);
-	}
-
-	// Crushing win — screen flash
-	if (isCrushing) {
-		const flash = createDiv({
-			inset: '0',
-			background: `linear-gradient(${isPlayerWinner ? '0deg' : '180deg'}, ${dmgColor}22 0%, transparent 50%)`,
-		});
-		container.appendChild(flash);
-		gsap.to(flash, {
-			opacity: 0,
-			duration: 0.6,
-			delay: 0.5,
-			onComplete: () => cleanup(flash)
-		});
-	}
 }
-
 
 // ═══════════════════════════════════════════════════
 // PHASE BANNER DRAMA
 // ═══════════════════════════════════════════════════
 
-/**
- * Phase-specific screen effects triggered when a new phase banner shows
- */
-export function playPhaseDramaVFX(phase: string) {
+export function playPhaseDramaVFX(phase: string): void {
 	const SHAKE_PHASES = new Set(['destiny']);
 	if (!SHAKE_PHASES.has(phase)) return;
-
-	/*
-	 * Horizontal slash line REMOVED.  Used to inject a `width: 100%` div
-		 * into the old document-level VFX container, painting
-	 * a 1920+ px coloured line straight across the screen. This is the
-	 * "linea roja que traspasa la mesa" the user reported on every PRE_FLOP
-	 * transition. If a phase-change accent is desired in the future, mount
-	 * it INSIDE `.zone-board` (the table) — never the document-level VFX
-	 * layer — and constrain to the table's dimensions.
-	 */
-
-	// Subtle screen shake (kept — it's vw-shake on the viewport itself,
-	// not a foreign element injected outside the canvas).
-	/* Screen shake target is the WRAPPER, not `.game-viewport`. The inner
-	   .game-viewport carries the critical inline transform
-	   `translate(offsetX, offsetY) scale(scale)` set by GameViewport.tsx for
-	   responsive canvas scaling — and GSAP overwrites the entire transform
-	   property when animating `x`/`y`, blowing away the scale on first
-	   shake and never restoring it. Targeting `.game-viewport-wrapper`
-	   (which has no transform of its own) is safe. */
-	const shakeTarget = getShakeTarget();
-	if (shakeTarget) {
-		gsap.to(shakeTarget, {
-			x: 'random(-2, 2)',
-			duration: 0.08,
-			repeat: 2,
-			yoyo: true,
-			ease: 'none',
-			onComplete: () => { gsap.set(shakeTarget, { x: 0, y: 0 }); }
-		});
-	}
+	triggerArenaShake('mild');
 }
-
 
 // ═══════════════════════════════════════════════════
 // MOMENTUM / STREAK EFFECTS
 // ═══════════════════════════════════════════════════
 
-/**
- * Streak announcement — "DOMINATION" / "DEFIANCE" / "LAST STAND"
- */
-export function playStreakAnnouncementVFX(
-	text: string,
-	color: string
-) {
-	const container = getOrCreateContainer();
-	if (!container) return;
-
+export function playStreakAnnouncementVFX(text: string, color: string): void {
 	const announcement = createCinemaSlamPlate(text, color);
-	container.appendChild(announcement);
-
-	gsap.set(announcement, { scale: 1.15 });
-	const tl = gsap.timeline({ onComplete: () => cleanup(announcement) });
-	tl.to(announcement, { opacity: 1, scale: 1, duration: 0.3, ease: 'back.out(2)' });
-	tl.to(announcement, { duration: 3 });
-	tl.to(announcement, { opacity: 0, y: -8, duration: 0.4 });
+	mountCinemaSlam(announcement, `streak:${text}`);
 }
-
 
 // ═══════════════════════════════════════════════════
 // HAND STRENGTH CHANGE FLASH
 // ═══════════════════════════════════════════════════
 
-/**
- * Flash effect when hand rank improves
- */
-export function playHandImprovementVFX(tier: 'low' | 'mid' | 'high' | 'godly') {
+export function playHandImprovementVFX(tier: 'low' | 'mid' | 'high' | 'godly'): void {
 	const colors: Record<string, string> = {
 		low: '#e5e7eb',
 		mid: '#38bdf8',
@@ -752,188 +494,221 @@ export function playHandImprovementVFX(tier: 'low' | 'mid' | 'high' | 'godly') {
 		godly: '#b7791f',
 	};
 	const color = colors[tier] || '#e5e7eb';
-	const glow = tier === 'godly' || tier === 'high' ? 16 : 8;
+	const glow = tier === 'godly' || tier === 'high' ? '16px' : '8px';
 
 	for (let slotIndex = 0; slotIndex < 5; slotIndex += 1) {
 		const slot = getArenaVfxCommunitySlot(slotIndex);
 		if (!slot) continue;
-		gsap.fromTo(slot, {
-			boxShadow: `0 0 0px ${color}`,
-		}, {
-			boxShadow: `0 0 ${glow}px ${color}`,
-			duration: 0.16,
-			yoyo: true,
-			repeat: 1,
-			onComplete: () => { gsap.set(slot, { boxShadow: 'none' }); },
-		});
+		slot.style.setProperty('--vfx-improve-color', color);
+		slot.style.setProperty('--vfx-improve-glow', glow);
+		stampCssGesture(slot, 'vfx-slot-improve', 340, `improve-slot:${slotIndex}`);
 	}
 
-	// Rumble for godly hands — wrapper, not viewport (see getShakeTarget)
 	if (tier === 'godly') {
-		const shakeTarget = getShakeTarget();
-		if (shakeTarget) {
-			gsap.to(shakeTarget, {
-				x: 'random(-1, 1)',
-				duration: 0.06,
-				repeat: 3,
-				yoyo: true,
-				ease: 'none',
-				onComplete: () => { gsap.set(shakeTarget, { x: 0, y: 0 }); }
-			});
-		}
+		triggerArenaShake('mild');
 	}
 }
-
 
 // ═══════════════════════════════════════════════════
 // AMBIENT TENSION
 // ═══════════════════════════════════════════════════
 
-/**
- * Set tension level on the viewport — controls ambient CSS variables
- */
-export function setTensionLevel(level: 'low' | 'medium' | 'high' | 'allin') {
+export function setTensionLevel(level: 'low' | 'medium' | 'high' | 'allin'): void {
 	const viewport = getArenaVfxLayer(ARENA_VFX_LAYERS.viewport);
 	if (!viewport) return;
-
 	viewport.dataset.tensionLevel = level;
 }
 
-
 // ═══════════════════════════════════════════════════
-// PROCEDURAL AUDIO (Web Audio API)
+// CENTRALIZED AUDIO CUES (delegated to proceduralAudio)
 // ═══════════════════════════════════════════════════
 
-let audioCtx: AudioContext | null = null;
-
-function getAudioCtx(): AudioContext | null {
+function playPressureBassHit(level: number): void {
 	try {
-		if (!audioCtx) audioCtx = new AudioContext();
-		return audioCtx;
+		proceduralAudio.play(level >= 2 ? 'norse_horn' : 'attack_prepare');
 	} catch {
-		return null;
+		// Audio unavailable in headless environments
 	}
 }
 
-/**
- * Deep bass hit for re-raise pressure
- */
-function playPressureBassHit(level: number) {
-	const ctx = getAudioCtx();
-	if (!ctx) return;
-
-	const osc = ctx.createOscillator();
-	const gain = ctx.createGain();
-	osc.connect(gain);
-	gain.connect(ctx.destination);
-
-	osc.type = 'sine';
-	osc.frequency.setValueAtTime(50 + level * 10, ctx.currentTime);
-	osc.frequency.exponentialRampToValueAtTime(30, ctx.currentTime + 0.2);
-
-	const volume = Math.min(0.15 + level * 0.05, 0.35);
-	gain.gain.setValueAtTime(volume, ctx.currentTime);
-	gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-
-	osc.start(ctx.currentTime);
-	osc.stop(ctx.currentTime + 0.3);
-}
-
-/**
- * Card slam sound
- */
-export function playCardSlamSound() {
-	const ctx = getAudioCtx();
-	if (!ctx) return;
-
-	// Noise burst filtered low = thump
-	const bufferSize = ctx.sampleRate * 0.05;
-	const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-	const data = buffer.getChannelData(0);
-	for (let i = 0; i < bufferSize; i++) {
-		data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.2));
+export function playCardSlamSound(): void {
+	try {
+		proceduralAudio.play('card_play');
+	} catch {
+		// Audio unavailable in headless environments
 	}
-
-	const source = ctx.createBufferSource();
-	source.buffer = buffer;
-
-	const filter = ctx.createBiquadFilter();
-	filter.type = 'lowpass';
-	filter.frequency.setValueAtTime(200, ctx.currentTime);
-
-	const gain = ctx.createGain();
-	gain.gain.setValueAtTime(0.2, ctx.currentTime);
-	gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-
-	source.connect(filter);
-	filter.connect(gain);
-	gain.connect(ctx.destination);
-	source.start(ctx.currentTime);
 }
 
-/**
- * Steel clash for call action
- */
-export function playClashSound() {
-	const ctx = getAudioCtx();
-	if (!ctx) return;
-
-	const osc = ctx.createOscillator();
-	const gain = ctx.createGain();
-	osc.connect(gain);
-	gain.connect(ctx.destination);
-
-	osc.type = 'triangle';
-	osc.frequency.setValueAtTime(800, ctx.currentTime);
-	osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.15);
-
-	gain.gain.setValueAtTime(0.12, ctx.currentTime);
-	gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-
-	osc.start(ctx.currentTime);
-	osc.stop(ctx.currentTime + 0.15);
+export function playClashSound(): void {
+	try {
+		proceduralAudio.play('sword_clash');
+	} catch {
+		// Audio unavailable in headless environments
+	}
 }
 
 // ============================================================
-// 3-Family VFX separation
-// ============================================================
-// Two new functions, one per non-default family. They are the
-// activation animations for the family axis (commit feat(card-frame)
-// family CSS). Both:
-//   - Particle burst at the caster zone.
-//   - Impact ring.
-//   - One-shot vignette overlay (family palette).
-//   - Stamp .is-casting / .is-activating on the right frame so the
-//     per-family keyframe (added in CardFrame.css) plays.
-// Wire-up lives at the VisualEvent boundary; gameplay slices only emit events.
+// 3-Family VFX separation — 4 Spatial Poker Spell Signatures
 // ============================================================
 
-import type { PokerSpellEffectType } from '../../types/CardTypes';
-import type { WagerType } from '../vfx/events';
-
-/**
- * Cast a poker spell — travel-impact from caster hero to spell tray + frame glow.
- */
 export function playPokerSpellCast(
 	effectType: PokerSpellEffectType,
 	caster: 'player' | 'opponent',
 	intent?: PokerVfxResolvedIntent,
 ): void {
 	const resolved = intent ?? resolvePokerVfxIntentForSpell(effectType, caster);
-	if (resolved.sourcePoint || resolved.targetPoint) {
+	const foe: 'player' | 'opponent' = caster === 'player' ? 'opponent' : 'player';
+	const { sourcePoint, targetPoint, palette, signature } = resolved;
+
+	if (effectType === 'hole_swap' && sourcePoint && targetPoint) {
+		// Bidirectional crossed translucent ribbons between player & opponent hole cards
+		spawnBidirectionalSwapArcs(sourcePoint.x, sourcePoint.y, targetPoint.x, targetPoint.y, palette, 420);
+		spawnStarburstBloom(sourcePoint.x, sourcePoint.y, palette, 1.0, 320);
+		spawnStarburstBloom(targetPoint.x, targetPoint.y, palette, 1.0, 320);
+	} else if (effectType === 'run_twice') {
+		// Staggered translucent ribbon sweep across all 5 community card slots
+		const slots = [0, 1, 2, 3, 4]
+			.map(idx => getArenaVfxCommunitySlot(idx))
+			.filter((el): el is HTMLElement => el !== null);
+		if (sourcePoint) spawnRunePulse(sourcePoint.x, sourcePoint.y, palette, 360, 1.3);
+		if (slots.length >= 2) {
+			const firstPt = getElementCenter(slots[0], 0.5);
+			const lastPt = getElementCenter(slots[slots.length - 1], 0.5);
+			spawnTranslucentRibbon(firstPt.x, firstPt.y, lastPt.x, lastPt.y, palette, {
+				strands: 3,
+				durationMs: 420,
+				lingerMs: 460,
+				arcFactor: 0.12,
+			});
+		}
+		gameEffectCoordinator.scheduleSequence({
+			owner: 'poker-drama-dom',
+			lane: 'spell-sweep',
+			key: `run-twice:${caster}`,
+			priority: 'normal',
+			delaysMs: slots.map((_, i) => i * 75),
+			run: (i) => {
+				const slot = slots[i];
+				if (!slot) return;
+				const pt = getElementCenter(slot, 0.5);
+				spawnRunePulse(pt.x, pt.y, palette, 360, 1.15);
+				spawnDiamondShards(pt.x, pt.y, 6, palette, undefined, `run-twice-${i}`);
+				spawnParticleBurst(pt.x, pt.y, 8, palette, `run-twice-${i}`);
+			},
+		});
+	} else if (effectType === 'ragnarok_gambit') {
+		// Macro board eruption from center outward via translucent ribbons to both hole-card pairs
+		const center = sourcePoint ?? targetPoint;
+		if (center) {
+			vfxOrchestrationDirector.triggerCriticalSpotlight(740);
+			spawnRunePulse(center.x, center.y, palette, 540, 2.2);
+			spawnStarburstBloom(center.x, center.y, palette, 1.8, 460);
+			spawnImpactRing(center.x, center.y, palette, 'luminous');
+			spawnArenaFlash(palette.primary, 0.24, 380);
+			triggerArenaShake('heavy');
+			for (const owner of ['player', 'opponent'] as const) {
+				const holeEl = getArenaVfxHoleCardsTarget(owner);
+				if (holeEl) {
+					const pt = getElementCenter(holeEl, 0.5);
+					spawnTranslucentRibbon(center.x, center.y, pt.x, pt.y, palette, {
+						strands: 3,
+						durationMs: 340,
+						lingerMs: 460,
+					});
+					spawnTravelingGlowRing(center.x, center.y, pt.x, pt.y, palette, 320);
+				}
+			}
+		}
+	} else if (effectType === 'blood_bet') {
+		// 2-beat causal story: (1) crimson stamina drain on caster rail -> (2) hostile blast to opponent hero
+		const casterRail = getArenaVfxStaminaTarget(caster);
+		if (casterRail) {
+			const railPt = getElementCenter(casterRail, 0.5);
+			spawnDrainStream(railPt.x, railPt.y, 12, palette, 1, `blood-bet-drain:${caster}`);
+		}
+		if (sourcePoint && targetPoint) {
+			spawnShowdownBlast(sourcePoint.x, sourcePoint.y, targetPoint.x, targetPoint.y, palette, {
+				travelMs: 320,
+				heavy: false,
+				onImpact: () => {
+					triggerArenaShake('mild');
+					stampCssGesture(getArenaVfxHeroTarget(foe), 'vfx-hero-hit-recoil', 280, `blood-bet:${foe}`);
+				},
+			});
+		}
+	} else if (signature === 'curse' && sourcePoint && targetPoint) {
+		// Hostile spectral teal-violet translucent ribbon + arcane vortex on opponent stamina rail
+		const cursePalette: ParticleColor = {
+			primary: palette.primary,
+			secondary: '#00f0d8',
+			glow: palette.glow,
+		};
+		spawnRunePulse(sourcePoint.x, sourcePoint.y, cursePalette, 320, 1.2);
+		spawnMagicTunnel(sourcePoint.x, sourcePoint.y, targetPoint.x, targetPoint.y, cursePalette, {
+			rings: 7,
+			durationMs: 340,
+		});
+		spawnTravelingGlowRing(sourcePoint.x, sourcePoint.y, targetPoint.x, targetPoint.y, cursePalette, 340, () => {
+			spawnArcaneVortex(targetPoint.x, targetPoint.y, cursePalette, 540);
+			spawnDrainStream(targetPoint.x, targetPoint.y, 14, cursePalette, 1, `curse:${effectType}`);
+			spawnSparkBurst(targetPoint.x, targetPoint.y, 10, cursePalette, `curse-sparks:${effectType}`);
+			triggerEmotionalImpulse('dread', 0.65);
+		});
+	} else if (signature === 'ward') {
+		// Beneficial / protective ward — translucent ribbon + iridescent SpellShield dome, zero recoil
+		if (resolved.motion === 'stake-to-pot') {
+			playPokerVfxIntent(resolved, { seed: `spell-${effectType}`, stakeStrength: 'firm' });
+		} else if (sourcePoint && targetPoint) {
+			spawnTranslucentRibbon(sourcePoint.x, sourcePoint.y, targetPoint.x, targetPoint.y, palette, {
+				strands: 2,
+				durationMs: 300,
+				lingerMs: 420,
+			});
+			spawnTravelingGlowRing(sourcePoint.x, sourcePoint.y, targetPoint.x, targetPoint.y, palette, 300, () => {
+				spawnShieldDome(targetPoint.x, targetPoint.y, {
+					primary: '#38bdf8',
+					secondary: '#e879f9',
+					glow: 'rgba(56,189,248,0.65)',
+				});
+				spawnRisingAura(targetPoint.x, targetPoint.y, 12, palette, `ward:${effectType}`);
+				spawnRunePulse(targetPoint.x, targetPoint.y, palette, 420, 1.3);
+			});
+		} else if (targetPoint) {
+			spawnShieldDome(targetPoint.x, targetPoint.y);
+			spawnRisingAura(targetPoint.x, targetPoint.y, 12, palette, `ward:${effectType}`);
+		}
+	} else if (signature === 'prophecy' && sourcePoint && targetPoint) {
+		// LoR-style cerulean-cyan braided prophecy ribbon gliding to revealed/scried cards
+		const prophecyPalette: ParticleColor = {
+			primary: '#00d4ff',
+			secondary: '#bae6fd',
+			glow: 'rgba(0,212,255,0.6)',
+		};
+		spawnRunePulse(sourcePoint.x, sourcePoint.y, prophecyPalette, 300, 1.15);
+		spawnMagicTunnel(sourcePoint.x, sourcePoint.y, targetPoint.x, targetPoint.y, prophecyPalette, {
+			rings: 8,
+			durationMs: 360,
+		});
+		spawnTravelingGlowRing(sourcePoint.x, sourcePoint.y, targetPoint.x, targetPoint.y, prophecyPalette, 360, () => {
+			spawnStarburstBloom(targetPoint.x, targetPoint.y, prophecyPalette, 1.1, 360);
+			spawnRunePulse(targetPoint.x, targetPoint.y, prophecyPalette, 480, 1.45);
+		});
+	} else if (sourcePoint || targetPoint) {
+		if (sourcePoint) {
+			spawnRunePulse(sourcePoint.x, sourcePoint.y, palette, 360, 1.25);
+		}
 		playPokerVfxIntent(resolved, { seed: `spell-${effectType}` });
 	} else {
 		const container = getOrCreateContainer();
 		if (container) {
 			const burst = getDramaContainerPoint(container, caster === 'player' ? 0.75 : 0.25);
-			spawnParticleBurst(burst.x, burst.y, 8, resolved.palette);
-			spawnImpactRing(burst.x, burst.y, resolved.palette);
+			spawnParticleBurst(burst.x, burst.y, 10, palette);
+			spawnImpactRing(burst.x, burst.y, palette, 'luminous');
 		}
 	}
 
 	getArenaVfxSpellTrayCards().forEach((el, index) => {
 		stampCardMotionClass(el, 'is-casting', false);
-		// Force reflow so the animation re-fires for repeat casts.
 		void el.offsetWidth;
 		stampCardMotionClass(el, 'is-casting', true);
 		gameEffectCoordinator.schedule({
@@ -948,9 +723,73 @@ export function playPokerSpellCast(
 }
 
 /**
- * Activate a wager effect on the minion that carries it.
- * The pulse stays on that frame. The board does not dim.
+ * Stamina rail 2D VFX anchored directly to `.hero-stamina-rail`.
  */
+export function playStaminaVfx(
+	side: 'player' | 'opponent',
+	reason: 'bet' | 'raise' | 'defend' | 'fold' | 'fold_curse' | 'shield_absorbed' | 'spell_cost' | 'spell_drain',
+): void {
+	const rail = getArenaVfxStaminaTarget(side);
+	if (!rail) return;
+	const pt = getElementCenter(rail, 0.5);
+
+	switch (reason) {
+		case 'bet':
+		case 'raise': {
+			// Keep stamina VFX strictly anchored on the stamina rail so it never
+			// competes with the directional Hero -> Opposing Arena Zone beam.
+			spawnDrainStream(pt.x, pt.y, 8, GOLD_PALETTE, 1, `sta-bet:${side}`);
+			return;
+		}
+		case 'defend': {
+			const recoverPalette: ParticleColor = {
+				primary: '#38bdf8',
+				secondary: '#fde68a',
+				glow: 'rgba(56,189,248,0.55)',
+			};
+			spawnRisingAura(pt.x, pt.y, 10, recoverPalette, `sta-defend:${side}`);
+			spawnStarburstBloom(pt.x, pt.y, recoverPalette, 0.9, 320);
+			try {
+				proceduralAudio.play('mana_fill');
+			} catch {
+				// Audio unavailable
+			}
+			return;
+		}
+		case 'shield_absorbed': {
+			const shieldPalette: ParticleColor = {
+				primary: '#38bdf8',
+				secondary: '#e879f9',
+				glow: 'rgba(56,189,248,0.65)',
+			};
+			spawnShieldDome(pt.x, pt.y, shieldPalette, 520);
+			spawnRunePulse(pt.x, pt.y, shieldPalette, 420, 1.35);
+			try {
+				proceduralAudio.play('sword_clash');
+			} catch {
+				// Audio unavailable
+			}
+			return;
+		}
+		case 'fold_curse': {
+			spawnArcaneVortex(pt.x, pt.y, { primary: '#ef4444', secondary: '#8b5cf6', glow: 'rgba(239,68,68,0.6)' }, 520);
+			spawnDrainStream(pt.x, pt.y, 16, RED_PALETTE, 1, `sta-curse:${side}`);
+			spawnSparkBurst(pt.x, pt.y, 10, RED_PALETTE, `sta-curse-spark:${side}`);
+			return;
+		}
+		case 'fold':
+		case 'spell_cost':
+		case 'spell_drain': {
+			spawnDrainStream(pt.x, pt.y, 10, RED_PALETTE, 1, `sta-loss:${side}`);
+			return;
+		}
+		default: {
+			const exhaustive: never = reason;
+			return exhaustive;
+		}
+	}
+}
+
 export function playWagerActivate(
 	wagerType: WagerType,
 	side: 'player' | 'opponent',
@@ -970,8 +809,8 @@ export function playWagerActivate(
 		const container = getOrCreateContainer();
 		if (container) {
 			const burst = getDramaContainerPoint(container, side === 'player' ? 0.7 : 0.3);
-			spawnParticleBurst(burst.x, burst.y, 6, resolved.palette);
-			spawnImpactRing(burst.x, burst.y, resolved.palette);
+			spawnParticleBurst(burst.x, burst.y, 8, resolved.palette);
+			spawnImpactRing(burst.x, burst.y, resolved.palette, 'luminous');
 		}
 	}
 

@@ -138,6 +138,25 @@
 	box-shadow: 0 0 22px rgba(56, 189, 248, 0.72);
 }
 
+.card-fx--dying {
+	animation: card-fx-death-dissolve 320ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes card-fx-death-dissolve {
+	0% {
+		opacity: 1;
+		filter: brightness(1.85) saturate(0.5);
+	}
+	45% {
+		opacity: 0.72;
+		filter: brightness(0.75) grayscale(0.6);
+	}
+	100% {
+		opacity: 0;
+		filter: brightness(0.35) grayscale(1);
+	}
+}
+
 @keyframes combat-fx-target-flash {
 	0% { filter: brightness(1); }
 	22% { filter: brightness(1.9) saturate(0.8); }

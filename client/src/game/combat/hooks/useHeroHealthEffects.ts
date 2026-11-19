@@ -1,38 +1,16 @@
-import { useState, useRef, useEffect } from 'react';
+/**
+ * Legacy compatibility hook kept for RagnarokCombatArena.
+ *
+ * Arena camera shake is now driven exclusively at the exact impact beat via
+ * `triggerArenaShake` (`combat/vfx/arenaShake.ts`) from combatImpactHandler
+ * and Showdown choreography, rather than on raw Zustand HP diffs at t=0.
+ */
 
 interface UseHeroHealthEffectsParams {
 	playerHeroHealth: number;
 	opponentHeroHealth: number;
 }
 
-export function useHeroHealthEffects({ playerHeroHealth, opponentHeroHealth }: UseHeroHealthEffectsParams) {
-	const [outerShakeClass, setOuterShakeClass] = useState('');
-	const outerShakeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const prevHeroHealthRef = useRef<{ player: number; opponent: number } | null>(null);
-
-	useEffect(() => {
-		const curr = { player: playerHeroHealth, opponent: opponentHeroHealth };
-		const prev = prevHeroHealthRef.current;
-		if (prev) {
-			const playerDmg = prev.player - curr.player;
-			const opponentDmg = prev.opponent - curr.opponent;
-			const maxDmg = Math.max(playerDmg, opponentDmg);
-			if (maxDmg >= 8) {
-				const isLethal = curr.player <= 0 || curr.opponent <= 0;
-				const cls = isLethal ? 'screen-shake-impact-lethal' : 'screen-shake-impact-heavy';
-				setOuterShakeClass(cls);
-				if (outerShakeTimeoutRef.current) clearTimeout(outerShakeTimeoutRef.current);
-				outerShakeTimeoutRef.current = setTimeout(() => setOuterShakeClass(''), 350);
-			}
-		}
-		prevHeroHealthRef.current = curr;
-	}, [playerHeroHealth, opponentHeroHealth]);
-
-	useEffect(() => {
-		return () => {
-			if (outerShakeTimeoutRef.current) clearTimeout(outerShakeTimeoutRef.current);
-		};
-	}, []);
-
-	return { outerShakeClass };
+export function useHeroHealthEffects(_params: UseHeroHealthEffectsParams) {
+	return { outerShakeClass: '' };
 }

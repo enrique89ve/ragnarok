@@ -5,6 +5,7 @@ import {
 	CardRankSuit,
 	CardCardBack,
 } from '../../components/card';
+import { ARENA_VFX_TARGETS, arenaVfxTargetProps } from '../arenaVfxTargets';
 
 interface HoleCard extends PokerCard {
 	isRevealed?: boolean;
@@ -149,6 +150,7 @@ export const HoleCardsOverlay: React.FC<HoleCardsOverlayProps> = ({
 			role="group"
 			data-hole-owner={variant}
 			aria-label={isOpponent ? 'Opponent hole cards' : 'Your hole cards'}
+			{...arenaVfxTargetProps(isOpponent ? ARENA_VFX_TARGETS.opponentHoleCards : ARENA_VFX_TARGETS.playerHoleCards)}
 		>
 			{displayCards.map(renderSlot)}
 		</div>

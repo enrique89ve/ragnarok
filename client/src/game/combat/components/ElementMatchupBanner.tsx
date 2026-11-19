@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getElementColor, ELEMENT_LABELS, type ElementType } from '../../utils/elements/elementAdvantage';
 import { getElementIcon } from '../../components/ui/ElementIconsSVG';
 import { useCombatFeedbackStore } from '../feedback/combatFeedbackStore';
+import '../styles/poker-drama.css';
 import '../styles/element-matchup-banner.css';
 
 interface ElementMatchupBannerProps {
@@ -59,7 +60,26 @@ export const ElementMatchupBanner: React.FC<ElementMatchupBannerProps> = ({
 	const opponentLabel = ELEMENT_LABELS[opponentElement] || 'Unknown';
 
 	const isMutual = playerHasAdvantage && opponentHasAdvantage;
-	const isNeutral = !playerHasAdvantage && !opponentHasAdvantage;
+	const tone = isMutual
+		? 'mutual'
+		: playerHasAdvantage
+			? 'advantage'
+			: opponentHasAdvantage
+				? 'disadvantage'
+				: 'neutral';
+	const title = {
+		mutual: 'Mutual Advantage',
+		advantage: 'Elemental Advantage',
+		disadvantage: 'Elemental Disadvantage',
+		neutral: 'Neutral Matchup',
+	}[tone];
+	const bonus = `+${attackBonus} ATK · +${healthBonus} HP · +${armorBonus} Armor`;
+	const detail = {
+		mutual: `Both sides ${bonus}`,
+		advantage: `Your minions ${bonus}`,
+		disadvantage: `Enemy minions ${bonus}`,
+		neutral: 'No elemental bonus',
+	}[tone];
 
 	return (
 		<AnimatePresence>
@@ -68,75 +88,49 @@ export const ElementMatchupBanner: React.FC<ElementMatchupBannerProps> = ({
 					className="element-matchup-overlay"
 					role="status"
 					aria-live="polite"
+					aria-label={`${playerLabel} versus ${opponentLabel}. ${title}. ${detail}`}
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					exit={{ opacity: 0 }}
 					transition={{ duration: 0.25 }}
 				>
 					<motion.div
-						className="element-matchup-banner"
+						className="cinema-lane-plate element-matchup-banner"
+						data-tone={tone}
 						initial={{ scaleY: 0, opacity: 0 }}
 						animate={{ scaleY: 1, opacity: 1 }}
 						exit={{ scaleY: 0, opacity: 0 }}
 						transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
 					>
-						<div className="matchup-line left" />
-						<div className="matchup-line right" />
+						<span
+							className="matchup-side matchup-side--player"
+							style={{ '--element-color': playerColor } as React.CSSProperties}
+						>
+							<span className="matchup-element-icon"><PlayerElementIcon aria-hidden="true" /></span>
+							<span className="matchup-element-name">{playerLabel}</span>
+						</span>
 
-						<motion.div
-							className="matchup-elements"
-							initial={{ opacity: 0, y: -8 }}
+						<span className="matchup-line" aria-hidden="true" />
+
+						<motion.span
+							className="matchup-text"
+							initial={{ opacity: 0, y: 4 }}
 							animate={{ opacity: 1, y: 0 }}
-							transition={{ delay: 0.15, duration: 0.3 }}
+							transition={{ delay: 0.18, duration: 0.3 }}
 						>
-							<div
-								className="matchup-element-badge"
-								style={{ '--element-color': playerColor, '--element-glow': playerColor + '60' } as React.CSSProperties}
-							>
-								<span className="matchup-element-icon"><PlayerElementIcon aria-hidden="true" /></span>
-								<span className="matchup-element-name" style={{ color: playerColor }}>{playerLabel}</span>
-							</div>
+							<span className="matchup-result">{title}</span>
+							<span className="matchup-detail">{detail}</span>
+						</motion.span>
 
-							<span className="matchup-vs">VS</span>
+						<span className="matchup-line" aria-hidden="true" />
 
-							<div
-								className="matchup-element-badge"
-								style={{ '--element-color': opponentColor, '--element-glow': opponentColor + '60' } as React.CSSProperties}
-							>
-								<span className="matchup-element-icon"><OpponentElementIcon aria-hidden="true" /></span>
-								<span className="matchup-element-name" style={{ color: opponentColor }}>{opponentLabel}</span>
-							</div>
-						</motion.div>
-
-						<motion.div
-							className={`matchup-result ${isMutual ? 'mutual' : playerHasAdvantage ? 'advantage' : opponentHasAdvantage ? 'disadvantage' : 'neutral'}`}
-							initial={{ scale: 1.4, opacity: 0 }}
-							animate={{ scale: 1, opacity: 1 }}
-							transition={{ delay: 0.25, duration: 0.35, ease: 'easeOut' }}
+						<span
+							className="matchup-side matchup-side--opponent"
+							style={{ '--element-color': opponentColor } as React.CSSProperties}
 						>
-							{isMutual ? 'Mutual Advantage!' : playerHasAdvantage ? 'Elemental Advantage!' : opponentHasAdvantage ? 'Elemental Disadvantage!' : 'Neutral Matchup'}
-						</motion.div>
-
-						{!isNeutral && (
-							<motion.div
-								className={`matchup-bonuses ${isMutual ? 'mutual-bonuses' : playerHasAdvantage ? 'advantage-bonuses' : 'disadvantage-bonuses'}`}
-								initial={{ opacity: 0, y: 6 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ delay: 0.4, duration: 0.3 }}
-							>
-								{isMutual ? (
-									<span>Both sides get +{attackBonus} ATK, +{healthBonus} HP, +{armorBonus} Armor</span>
-								) : playerHasAdvantage ? (
-									<>
-										<span>+{attackBonus} ATK</span>
-										<span>+{healthBonus} HP</span>
-										<span>+{armorBonus} Armor</span>
-									</>
-								) : (
-									<span>Enemy minions get +{attackBonus}/{healthBonus}, +{armorBonus} Armor</span>
-								)}
-							</motion.div>
-						)}
+							<span className="matchup-element-name">{opponentLabel}</span>
+							<span className="matchup-element-icon"><OpponentElementIcon aria-hidden="true" /></span>
+						</span>
 					</motion.div>
 				</motion.div>
 			)}

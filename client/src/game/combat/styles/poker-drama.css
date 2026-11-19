@@ -64,6 +64,7 @@
 	justify-content: center;
 	align-items: flex-start;
 	padding-top: var(--poker-cinema-lane-top);
+	padding-left: var(--poker-cinema-lane-inset-left, 0px);
 	pointer-events: none;
 }
 
@@ -72,7 +73,7 @@
 	--cinema-accent: var(--gold-300);
 	position: relative;
 	box-sizing: border-box;
-	width: min(38%, 730px);
+	width: min(var(--poker-cinema-lane-width, 730px), 100%);
 	height: var(--poker-cinema-lane-height);
 	max-height: var(--poker-cinema-lane-height);
 	display: flex;
@@ -523,5 +524,241 @@
 		animation: none;
 		opacity: 0.3;
 		transition: none;
+	}
+}
+
+
+/* ========================================
+   UNIFIED CSS DOM GESTURES (replaces GSAP DOM tweens)
+   ======================================== */
+/* Neutral clash corridor strictly between enemy row bottom (419px) and
+   player row top (475px) on the 1920x1080 arena contract. */
+.arena-center-stake-anchor {
+	position: absolute;
+	left: 1071px;
+	top: 447px;
+	width: 1px;
+	height: 1px;
+	pointer-events: none;
+}
+
+.vfx-card-deal-slam {
+	animation: vfxCardDealSlam 340ms cubic-bezier(0.22, 1.4, 0.36, 1) both;
+}
+
+.vfx-card-deal-slam--river {
+	animation: vfxCardDealSlam 640ms cubic-bezier(0.22, 1.35, 0.36, 1) both;
+}
+
+@keyframes vfxCardDealSlam {
+	0% {
+		opacity: 0.65;
+		transform: translate3d(0, -28px, 0) scale(1.14);
+	}
+	100% {
+		opacity: 1;
+		transform: translate3d(0, 0, 0) scale(1);
+	}
+}
+
+.vfx-pulse-stake {
+	animation: vfxPulseStake 260ms ease-out both;
+}
+
+.vfx-pulse-stake--firm {
+	animation: vfxPulseStakeFirm 280ms ease-out both;
+}
+
+@keyframes vfxPulseStake {
+	0%, 100% { transform: scale(1); }
+	45% { transform: scale(1.16); }
+}
+
+@keyframes vfxPulseStakeFirm {
+	0%, 100% { transform: scale(1); }
+	45% { transform: scale(1.24); }
+}
+
+.vfx-pulse-hud {
+	animation: vfxPulseHud 220ms ease-out both;
+}
+
+@keyframes vfxPulseHud {
+	0%, 100% { transform: scale(1); }
+	45% { transform: scale(1.08); }
+}
+
+.vfx-pulse-hero {
+	animation: vfxPulseHero 280ms ease-out both;
+}
+
+.vfx-pulse-hero--firm {
+	animation: vfxPulseHeroFirm 340ms ease-out both;
+}
+
+@keyframes vfxPulseHero {
+	0% { filter: brightness(1.1); }
+	100% { filter: brightness(1); }
+}
+
+@keyframes vfxPulseHeroFirm {
+	0% { filter: brightness(1.2); }
+	100% { filter: brightness(1); }
+}
+
+.vfx-hero-raise-player {
+	animation: vfxHeroRaisePlayer 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.vfx-hero-raise-opponent {
+	animation: vfxHeroRaiseOpponent 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes vfxHeroRaisePlayer {
+	0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+	35% { transform: translate3d(0, -8px, 0) scale(1.03); }
+}
+
+@keyframes vfxHeroRaiseOpponent {
+	0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+	35% { transform: translate3d(0, 8px, 0) scale(1.03); }
+}
+
+.vfx-hero-reraise-player {
+	animation: vfxHeroReraisePlayer 560ms cubic-bezier(0.22, 1.3, 0.36, 1) both;
+}
+
+.vfx-hero-reraise-opponent {
+	animation: vfxHeroReraiseOpponent 560ms cubic-bezier(0.22, 1.3, 0.36, 1) both;
+}
+
+@keyframes vfxHeroReraisePlayer {
+	0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+	28% { transform: translate3d(0, -15px, 0) scale(1.07); }
+}
+
+@keyframes vfxHeroReraiseOpponent {
+	0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+	28% { transform: translate3d(0, 15px, 0) scale(1.07); }
+}
+
+.vfx-hero-clash-flash {
+	animation: vfxHeroClashFlash 240ms ease-out both;
+}
+
+@keyframes vfxHeroClashFlash {
+	0% { filter: brightness(1.35); }
+	100% { filter: brightness(1); }
+}
+
+.vfx-hero-defend {
+	animation: vfxHeroDefend 280ms ease-out both;
+}
+
+@keyframes vfxHeroDefend {
+	0%, 100% { transform: translate3d(0, 0, 0); filter: brightness(1); }
+	50% { transform: translate3d(-3px, 0, 0); filter: brightness(1.12); }
+}
+
+.vfx-hero-fold-player {
+	animation: vfxHeroFoldPlayer 900ms ease-in-out both;
+}
+
+.vfx-hero-fold-opponent {
+	animation: vfxHeroFoldOpponent 900ms ease-in-out both;
+}
+
+@keyframes vfxHeroFoldPlayer {
+	0%, 100% { transform: translate3d(0, 0, 0); filter: brightness(1) grayscale(0); }
+	38% { transform: translate3d(0, 8px, 0); filter: brightness(0.7) grayscale(0.32); }
+}
+
+@keyframes vfxHeroFoldOpponent {
+	0%, 100% { transform: translate3d(0, 0, 0); filter: brightness(1) grayscale(0); }
+	38% { transform: translate3d(0, -8px, 0); filter: brightness(0.7) grayscale(0.32); }
+}
+
+.vfx-hero-hit-recoil {
+	animation: vfxHeroHitRecoil 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes vfxHeroHitRecoil {
+	0%, 100% { transform: translate3d(0, 0, 0); filter: brightness(1); }
+	18% { transform: translate3d(-7px, 2px, 0); filter: brightness(1.65); }
+	40% { transform: translate3d(6px, -2px, 0); filter: brightness(1.2); }
+	64% { transform: translate3d(-3px, 1px, 0); }
+}
+
+.vfx-slot-improve {
+	animation: vfxSlotImprove 320ms ease-out both;
+}
+
+@keyframes vfxSlotImprove {
+	0%, 100% { box-shadow: 0 0 0 0 transparent; }
+	50% { box-shadow: 0 0 var(--vfx-improve-glow, 12px) var(--vfx-improve-color, #f5c542); }
+}
+
+.cinema-lane-slam--active {
+	animation: vfxCinemaSlamLifecycle 3700ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes vfxCinemaSlamLifecycle {
+	0% {
+		opacity: 0;
+		transform: translate(-50%, -50%) scale(1.1);
+	}
+	8% {
+		opacity: 1;
+		transform: translate(-50%, -50%) scale(1);
+	}
+	89% {
+		opacity: 1;
+		transform: translate(-50%, -50%) scale(1);
+	}
+	100% {
+		opacity: 0;
+		transform: translate(-50%, -50%) scale(0.95);
+	}
+}
+
+.vfx-lethal-cue {
+	animation: vfxLethalCue 900ms ease-out both;
+}
+
+.ragnarok-combat-arena .layer-background {
+	filter: var(--arena-mood-filter, none);
+	transition: filter 0.85s ease;
+}
+
+@keyframes vfxLethalCue {
+	0% { filter: contrast(1.24) saturate(1.32); }
+	100% { filter: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ragnarok-combat-arena .layer-background {
+		filter: none;
+		transition: none;
+	}
+
+	.vfx-card-deal-slam,
+	.vfx-card-deal-slam--river,
+	.vfx-pulse-stake,
+	.vfx-pulse-stake--firm,
+	.vfx-pulse-hud,
+	.vfx-pulse-hero,
+	.vfx-pulse-hero--firm,
+	.vfx-hero-raise-player,
+	.vfx-hero-raise-opponent,
+	.vfx-hero-reraise-player,
+	.vfx-hero-reraise-opponent,
+	.vfx-hero-clash-flash,
+	.vfx-hero-defend,
+	.vfx-hero-fold-player,
+	.vfx-hero-fold-opponent,
+	.vfx-hero-hit-recoil,
+	.vfx-slot-improve,
+	.vfx-lethal-cue {
+		animation: none;
 	}
 }

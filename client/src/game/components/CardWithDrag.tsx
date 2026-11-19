@@ -16,11 +16,12 @@ import SimpleCardCompat from './card/SimpleCardCompat';
 import { toSimpleCardData } from './card/cardDataAdapter';
 import './CardHoverEffects.css';
 import {
-	isPointInsideDropRect,
+	computeCardDragDynamics,
+	isPointInBattleCommitZone,
 	resolveCardMagicCursor,
 	toCanvasDragOffset,
 } from './cardDragDrop';
-import type { CardMagicCursor } from './cardDragDrop';
+import type { CardMagicCursor, DropRect } from './cardDragDrop';
 
 interface CardWithDragProps {
 	card: CardInstance | CardInstanceWithCardData;
@@ -39,12 +40,31 @@ interface CardWithDragProps {
 	healthBuff?: number;
 }
 
-const DRAG_START_DISTANCE = 4;
+const DRAG_START_DISTANCE = 3;
 
 interface PointerStart {
 	readonly pointerId: number;
 	readonly x: number;
 	readonly y: number;
+}
+
+interface CachedDragMetrics {
+	readonly arenaScale: Position;
+	readonly dropZoneEl: HTMLElement | null;
+	readonly dropZoneRect: DropRect | null;
+	readonly reducedMotion: boolean;
+}
+
+interface DragMotionState {
+	targetX: number;
+	targetY: number;
+	currentX: number;
+	currentY: number;
+	vx: number;
+	vy: number;
+	currentScale: number;
+	lastFrameTime: number;
+	isOverZone: boolean;
 }
 
 interface CardDragVisualState {
@@ -89,21 +109,66 @@ export const CardWithDrag: React.FC<CardWithDragProps> = React.memo(({
 	healthBuff = 0
 }) => {
 	const cardRef = useRef<HTMLDivElement>(null);
+	const shadowRef = useRef<HTMLDivElement>(null);
 	const [isHovering, setIsHovering] = useState(false);
 	const [isPressed, setIsPressed] = useState(false);
 	const [isDragging, setIsDragging] = useState(false);
 	const [isOverDropZone, setIsOverDropZone] = useState(false);
-	const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 });
 	const pointerStartRef = useRef<PointerStart | null>(null);
 	const dragStartedRef = useRef(false);
 	const releasingCaptureRef = useRef(false);
 	const suppressClickRef = useRef(false);
+	const metricsRef = useRef<CachedDragMetrics | null>(null);
+	const rafIdRef = useRef<number | null>(null);
+	const motionRef = useRef<DragMotionState>({
+		targetX: 0,
+		targetY: 0,
+		currentX: 0,
+		currentY: 0,
+		vx: 0,
+		vy: 0,
+		currentScale: 1.08,
+		lastFrameTime: 0,
+		isOverZone: false,
+	});
+
+	const clearDropZoneIndicators = useCallback(() => {
+		document.documentElement.classList.remove('is-card-drag-ready');
+		metricsRef.current?.dropZoneEl?.removeAttribute('data-drag-ready');
+	}, []);
+
+	const stopDragLoop = useCallback(() => {
+		if (rafIdRef.current !== null) {
+			window.cancelAnimationFrame(rafIdRef.current);
+			rafIdRef.current = null;
+		}
+	}, []);
+
+	const clearInlineDragStyles = useCallback(() => {
+		if (cardRef.current) {
+			cardRef.current.style.transform = '';
+		}
+		if (shadowRef.current) {
+			shadowRef.current.style.transform = '';
+			shadowRef.current.style.opacity = '';
+		}
+	}, []);
 
 	useEffect(() => {
 		if (!isDragging) return undefined;
 		document.documentElement.classList.add('is-card-dragging');
-		return () => document.documentElement.classList.remove('is-card-dragging');
+		return () => {
+			document.documentElement.classList.remove('is-card-dragging');
+			document.documentElement.classList.remove('is-card-drag-ready');
+		};
 	}, [isDragging]);
+
+	useEffect(() => {
+		return () => {
+			stopDragLoop();
+			clearDropZoneIndicators();
+		};
+	}, [stopDragLoop, clearDropZoneIndicators]);
 
 	useEffect(() => {
 		fixCardRenderingIssues();
@@ -131,31 +196,99 @@ export const CardWithDrag: React.FC<CardWithDragProps> = React.memo(({
 		}
 	}, [onPlay, onClick, isPlayable, card]);
 
-	const getDropZoneRect = useCallback((): DOMRect | null => {
-		const dropZone = boardRef.current?.querySelector<HTMLElement>('[data-card-drop-zone="battlefield"]');
-		return dropZone?.getBoundingClientRect() ?? null;
+	const captureDragMetrics = useCallback((): CachedDragMetrics => {
+		const arena = boardRef.current;
+		let arenaScale: Position = { x: 1, y: 1 };
+		if (arena) {
+			const rect = arena.getBoundingClientRect();
+			const scaleX = arena.offsetWidth > 0 ? rect.width / arena.offsetWidth : 1;
+			const scaleY = arena.offsetHeight > 0 ? rect.height / arena.offsetHeight : 1;
+			arenaScale = {
+				x: scaleX > 0 ? scaleX : 1,
+				y: scaleY > 0 ? scaleY : 1,
+			};
+		}
+		const dropZoneEl = arena?.querySelector<HTMLElement>('[data-card-drop-zone="battlefield"]') ?? null;
+		const dropZoneRect = dropZoneEl?.getBoundingClientRect() ?? null;
+		const reducedMotion = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+			? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+			: false;
+		return { arenaScale, dropZoneEl, dropZoneRect, reducedMotion };
 	}, [boardRef]);
 
-	const getArenaScale = useCallback((): Position => {
-		const arena = boardRef.current;
-		if (!arena) return { x: 1, y: 1 };
-		const rect = arena.getBoundingClientRect();
-		const scaleX = arena.offsetWidth > 0 ? rect.width / arena.offsetWidth : 1;
-		const scaleY = arena.offsetHeight > 0 ? rect.height / arena.offsetHeight : 1;
-		return {
-			x: scaleX > 0 ? scaleX : 1,
-			y: scaleY > 0 ? scaleY : 1,
+	const startDragLoop = useCallback(() => {
+		stopDragLoop();
+		motionRef.current.lastFrameTime = performance.now();
+
+		const tick = (now: number) => {
+			if (!dragStartedRef.current) {
+				rafIdRef.current = null;
+				return;
+			}
+			const m = motionRef.current;
+			const metrics = metricsRef.current;
+			const dt = Math.min(Math.max((now - m.lastFrameTime) / 1000, 0.001), 0.05);
+			m.lastFrameTime = now;
+
+			const prevX = m.currentX;
+			const prevY = m.currentY;
+			const posAlpha = 1 - Math.exp(-dt * 38);
+			m.currentX += (m.targetX - m.currentX) * posAlpha;
+			m.currentY += (m.targetY - m.currentY) * posAlpha;
+
+			// Normalize velocity to 60fps-equivalent px/frame for consistent tilt across 60/120/144Hz
+			const frameScale = (1 / 60) / dt;
+			const rawVx = (m.currentX - prevX) * frameScale;
+			const rawVy = (m.currentY - prevY) * frameScale;
+			const velAlpha = 1 - Math.exp(-dt * 18);
+			m.vx += (rawVx - m.vx) * velAlpha;
+			m.vy += (rawVy - m.vy) * velAlpha;
+
+			const dynamics = computeCardDragDynamics({
+				offsetX: m.currentX,
+				offsetY: m.currentY,
+				velocityX: m.vx,
+				velocityY: m.vy,
+				isOverDropZone: m.isOverZone,
+				reducedMotion: metrics?.reducedMotion ?? false,
+			});
+
+			const scaleAlpha = 1 - Math.exp(-dt * 16);
+			m.currentScale += (dynamics.targetScale - m.currentScale) * scaleAlpha;
+
+			const cardEl = cardRef.current;
+			if (cardEl) {
+				cardEl.style.transform =
+					`translate3d(${m.currentX.toFixed(2)}px, ${m.currentY.toFixed(2)}px, 0) ` +
+					`perspective(900px) rotateX(${dynamics.tiltX.toFixed(2)}deg) rotateY(${dynamics.tiltY.toFixed(2)}deg) rotateZ(${dynamics.tiltZ.toFixed(2)}deg) ` +
+					`scale(${m.currentScale.toFixed(4)})`;
+			}
+
+			const shadowEl = shadowRef.current;
+			if (shadowEl) {
+				shadowEl.style.transform =
+					`translate3d(${dynamics.shadowX.toFixed(2)}px, ${dynamics.shadowY.toFixed(2)}px, 0) scale(${dynamics.shadowScale.toFixed(3)})`;
+				shadowEl.style.opacity = dynamics.shadowOpacity.toFixed(3);
+			}
+
+			rafIdRef.current = window.requestAnimationFrame(tick);
 		};
-	}, [boardRef]);
+
+		rafIdRef.current = window.requestAnimationFrame(tick);
+	}, [stopDragLoop]);
 
 	const resetDrag = useCallback(() => {
+		stopDragLoop();
+		clearDropZoneIndicators();
+		clearInlineDragStyles();
 		pointerStartRef.current = null;
 		dragStartedRef.current = false;
+		metricsRef.current = null;
+		motionRef.current.isOverZone = false;
 		setIsPressed(false);
 		setIsDragging(false);
 		setIsOverDropZone(false);
-		setDragOffset({ x: 0, y: 0 });
-	}, []);
+	}, [stopDragLoop, clearDropZoneIndicators, clearInlineDragStyles]);
 
 	const finishDrag = useCallback((event: React.PointerEvent<HTMLDivElement>, wasCancelled: boolean) => {
 		const pointerStart = pointerStartRef.current;
@@ -167,8 +300,14 @@ export const CardWithDrag: React.FC<CardWithDragProps> = React.memo(({
 		}
 
 		const position = { x: event.clientX, y: event.clientY };
-		const dropZoneRect = getDropZoneRect();
-		const wasDropped = !wasCancelled && dragStartedRef.current && !!dropZoneRect && isPointInsideDropRect(position, dropZoneRect);
+		const dropZoneRect = metricsRef.current?.dropZoneRect
+			?? boardRef.current?.querySelector<HTMLElement>('[data-card-drop-zone="battlefield"]')?.getBoundingClientRect()
+			?? null;
+		const wasDropped = !wasCancelled
+			&& dragStartedRef.current
+			&& !!dropZoneRect
+			&& isPointInBattleCommitZone(position, pointerStart, dropZoneRect);
+
 		if (dragStartedRef.current) {
 			suppressClickRef.current = true;
 			onDragEnd?.(wasDropped, position);
@@ -176,7 +315,7 @@ export const CardWithDrag: React.FC<CardWithDragProps> = React.memo(({
 			window.setTimeout(() => { suppressClickRef.current = false; }, 0);
 		}
 		resetDrag();
-	}, [getDropZoneRect, onDragEnd, onValidDrop, resetDrag]);
+	}, [boardRef, onDragEnd, onValidDrop, resetDrag]);
 
 	const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
 		if (!isPlayable || !onValidDrop || event.button !== 0) return;
@@ -191,20 +330,55 @@ export const CardWithDrag: React.FC<CardWithDragProps> = React.memo(({
 		const pointerStart = pointerStartRef.current;
 		if (!pointerStart || pointerStart.pointerId !== event.pointerId) return;
 		event.stopPropagation();
-		const x = event.clientX - pointerStart.x;
-		const y = event.clientY - pointerStart.y;
-		if (!dragStartedRef.current && Math.hypot(x, y) >= DRAG_START_DISTANCE) {
+		const dx = event.clientX - pointerStart.x;
+		const dy = event.clientY - pointerStart.y;
+
+		if (!dragStartedRef.current && Math.hypot(dx, dy) >= DRAG_START_DISTANCE) {
+			const metrics = captureDragMetrics();
+			metricsRef.current = metrics;
 			dragStartedRef.current = true;
+			const initialOffset = toCanvasDragOffset({ x: dx, y: dy }, metrics.arenaScale);
+			motionRef.current = {
+				targetX: initialOffset.x,
+				targetY: initialOffset.y,
+				currentX: initialOffset.x,
+				currentY: initialOffset.y,
+				vx: 0,
+				vy: 0,
+				currentScale: isInHand ? 1.16 : 1.06,
+				lastFrameTime: performance.now(),
+				isOverZone: false,
+			};
 			setIsDragging(true);
 			onDragStart?.();
+			startDragLoop();
 		}
+
 		if (!dragStartedRef.current) return;
 		event.preventDefault();
-		const arenaScale = getArenaScale();
-		setDragOffset(toCanvasDragOffset({ x, y }, arenaScale));
-		const rect = getDropZoneRect();
-		setIsOverDropZone(!!rect && isPointInsideDropRect({ x: event.clientX, y: event.clientY }, rect));
-	}, [getArenaScale, getDropZoneRect, onDragStart]);
+
+		const metrics = metricsRef.current;
+		const arenaScale = metrics?.arenaScale ?? { x: 1, y: 1 };
+		const offset = toCanvasDragOffset({ x: dx, y: dy }, arenaScale);
+		motionRef.current.targetX = offset.x;
+		motionRef.current.targetY = offset.y;
+
+		const rect = metrics?.dropZoneRect ?? null;
+		const nextOverZone = !!rect && isPointInBattleCommitZone(
+			{ x: event.clientX, y: event.clientY },
+			pointerStart,
+			rect,
+		);
+		if (nextOverZone !== motionRef.current.isOverZone) {
+			motionRef.current.isOverZone = nextOverZone;
+			setIsOverDropZone(nextOverZone);
+			document.documentElement.classList.toggle('is-card-drag-ready', nextOverZone);
+			if (metrics?.dropZoneEl) {
+				if (nextOverZone) metrics.dropZoneEl.setAttribute('data-drag-ready', 'true');
+				else metrics.dropZoneEl.removeAttribute('data-drag-ready');
+			}
+		}
+	}, [captureDragMetrics, isInHand, onDragStart, startDragLoop]);
 
 	const handlePointerCancel = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
 		event.stopPropagation();
@@ -213,8 +387,11 @@ export const CardWithDrag: React.FC<CardWithDragProps> = React.memo(({
 
 	const handleLostPointerCapture = useCallback(() => {
 		if (releasingCaptureRef.current) return;
+		if (dragStartedRef.current) {
+			onDragEnd?.(false, { x: 0, y: 0 });
+		}
 		resetDrag();
-	}, [resetDrag]);
+	}, [onDragEnd, resetDrag]);
 
 	if (!card) {
 		debug.error('CardWithDrag received null card data');
@@ -241,7 +418,6 @@ export const CardWithDrag: React.FC<CardWithDragProps> = React.memo(({
 		<div
 			ref={cardRef}
 			className={dragClassName}
-			style={isDragging ? { transform: `translate3d(${dragOffset.x}px, ${dragOffset.y}px, 0) scale(1.06)` } : undefined}
 			onClick={handleClick}
 			onPointerDown={handlePointerDown}
 			onPointerMove={handlePointerMove}
@@ -261,6 +437,7 @@ export const CardWithDrag: React.FC<CardWithDragProps> = React.memo(({
 			data-is-playable={isPlayable ? 'true' : 'false'}
 			aria-grabbed={isDragging}
 		>
+			<div ref={shadowRef} className="card-drag-shadow" aria-hidden="true" />
 			{simpleData && (
 				<SimpleCardCompat
 					card={simpleData}

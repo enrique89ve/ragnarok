@@ -1,0 +1,191 @@
+/* ═══════════════════════════════════════════════════
+   FIRST STRIKE — opening ambush readout.
+   Same anatomy as .phase-banner (poker-drama.css): cinema-lane plate,
+   knotwork rails, title / subtitle. Blood accent; the strike is a slash
+   across the plate plus a hit flash on the defender's hero frame.
+   ═══════════════════════════════════════════════════ */
+
+.first-strike {
+	--first-strike-accent: var(--danger-400, #f87171);
+	position: absolute;
+	inset: 0;
+	z-index: var(--z-cinematic, 680);
+	display: flex;
+	justify-content: center;
+	align-items: flex-start;
+	padding-top: var(--poker-cinema-lane-top);
+	padding-left: var(--poker-cinema-lane-inset-left, 0px);
+	pointer-events: none;
+}
+
+.first-strike__plate {
+	--cinema-accent: var(--first-strike-accent);
+	overflow: hidden;
+	animation: firstStrikeSlam 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.first-strike[data-phase='exit'] .first-strike__plate {
+	animation: firstStrikeOut 0.22s ease-in forwards;
+}
+
+.first-strike__line {
+	flex: 0 0 14%;
+	height: 2px;
+	background: linear-gradient(90deg, transparent 0%, var(--first-strike-accent) 50%, transparent 100%);
+}
+
+.first-strike__text {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 3px;
+	flex: 0 1 auto;
+	min-width: 0;
+}
+
+.first-strike__title {
+	font-family: var(--type-display, 'Cinzel', serif);
+	font-size: 1.32rem;
+	line-height: 1;
+	font-weight: 900;
+	letter-spacing: 4px;
+	text-transform: uppercase;
+	white-space: nowrap;
+	color: var(--first-strike-accent);
+	text-shadow:
+		0 0 15px color-mix(in srgb, var(--first-strike-accent) 60%, transparent),
+		0 0 30px color-mix(in srgb, var(--first-strike-accent) 30%, transparent),
+		0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.first-strike__subtitle {
+	font-family: var(--type-display, 'Cinzel', serif);
+	font-size: 0.78rem;
+	line-height: 1;
+	font-weight: 500;
+	font-style: italic;
+	letter-spacing: 2px;
+	text-transform: uppercase;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 100%;
+	color: var(--text-dimmed);
+	animation: firstStrikeSubtitleIn 0.25s ease-out both;
+}
+
+.first-strike[data-phase='damage'] .first-strike__subtitle,
+.first-strike[data-phase='exit'] .first-strike__subtitle {
+	color: var(--danger-300, #fca5a5);
+}
+
+/* Slash: a bright blade that crosses the plate toward the heroes (left). */
+.first-strike__slash {
+	position: absolute;
+	top: 50%;
+	left: 0;
+	width: 38%;
+	height: 3px;
+	opacity: 0;
+	pointer-events: none;
+	background: linear-gradient(
+		90deg,
+		transparent 0%,
+		color-mix(in srgb, var(--first-strike-accent) 80%, #fff 20%) 70%,
+		#fff 100%
+	);
+	filter: drop-shadow(0 0 8px var(--first-strike-accent));
+	transform: translate(260%, -50%) rotate(var(--first-strike-slash-tilt, 0deg));
+}
+
+.first-strike[data-target='opponent'] { --first-strike-slash-tilt: 6deg; }
+.first-strike[data-target='player'] { --first-strike-slash-tilt: -6deg; }
+
+.first-strike[data-phase='strike'] .first-strike__slash {
+	animation: firstStrikeSlash 0.45s cubic-bezier(0.55, 0, 0.3, 1) forwards;
+}
+
+.first-strike[data-phase='strike'] .first-strike__plate {
+	animation: firstStrikePlateHit 0.45s ease-out both;
+}
+
+/* Defender hero frame hit — sits exactly on the hero zone. */
+.first-strike__hero-hit {
+	position: absolute;
+	opacity: 0;
+	border-radius: var(--radius-norse, 6px);
+	pointer-events: none;
+	box-shadow:
+		inset 0 0 0 2px color-mix(in srgb, var(--first-strike-accent) 85%, transparent),
+		inset 0 0 36px color-mix(in srgb, var(--first-strike-accent) 55%, transparent),
+		0 0 28px color-mix(in srgb, var(--first-strike-accent) 50%, transparent);
+	background: linear-gradient(
+		135deg,
+		transparent 46%,
+		color-mix(in srgb, var(--first-strike-accent) 70%, #fff 30%) 49%,
+		#fff 50%,
+		color-mix(in srgb, var(--first-strike-accent) 70%, #fff 30%) 51%,
+		transparent 54%
+	);
+}
+
+.first-strike[data-target='player'] .first-strike__hero-hit {
+	left: var(--poker-zone-playerHero-x);
+	top: var(--poker-zone-playerHero-y);
+	width: var(--poker-zone-playerHero-w);
+	height: var(--poker-zone-playerHero-h);
+}
+
+.first-strike[data-target='opponent'] .first-strike__hero-hit {
+	left: var(--poker-zone-opponentHero-x);
+	top: var(--poker-zone-opponentHero-y);
+	width: var(--poker-zone-opponentHero-w);
+	height: var(--poker-zone-opponentHero-h);
+}
+
+.first-strike[data-phase='damage'] .first-strike__hero-hit {
+	animation: firstStrikeHeroHit 0.9s ease-out forwards;
+}
+
+@keyframes firstStrikeSlam {
+	0% { opacity: 0; transform: scale(1.12); }
+	60% { opacity: 1; transform: scale(0.98); }
+	100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes firstStrikeOut {
+	to { opacity: 0; transform: scale(0.96); }
+}
+
+@keyframes firstStrikeSubtitleIn {
+	from { opacity: 0; transform: translateY(4px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes firstStrikeSlash {
+	0% { opacity: 0; transform: translate(260%, -50%) rotate(var(--first-strike-slash-tilt, 0deg)); }
+	15% { opacity: 1; }
+	85% { opacity: 1; }
+	100% { opacity: 0; transform: translate(-110%, -50%) rotate(var(--first-strike-slash-tilt, 0deg)); }
+}
+
+@keyframes firstStrikePlateHit {
+	0%, 100% { transform: translateX(0); }
+	55% { transform: translateX(-4px); }
+	75% { transform: translateX(2px); }
+}
+
+@keyframes firstStrikeHeroHit {
+	0% { opacity: 0; transform: scale(1.04); }
+	18% { opacity: 1; transform: scale(1); }
+	100% { opacity: 0; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.first-strike__plate,
+	.first-strike__subtitle,
+	.first-strike__slash,
+	.first-strike__hero-hit {
+		animation-duration: 0.01ms !important;
+	}
+}

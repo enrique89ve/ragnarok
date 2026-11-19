@@ -13,6 +13,7 @@ import {
 	SHOWDOWN_BADGE_CINEMA_HOLDER,
 } from '../cinemaLanePolicy';
 import { useCombatFeedbackStore } from '../feedback/combatFeedbackStore';
+import { gameEffectCoordinator } from '@/game/effects/core/gameEffectCoordinator';
 import '../../poker/styles/poker-showdown.css';
 
 const SHOWDOWN_BADGE_HOLDER = SHOWDOWN_BADGE_CINEMA_HOLDER;
@@ -36,7 +37,7 @@ interface ShowdownCelebrationProps {
 }
 
 const ENTRANCE_DELAY = 400;
-const BADGE_DISPLAY_MS = 3200;
+const BADGE_DISPLAY_MS = 3600;
 
 const NorseResultFrame = () => (
 	<svg
@@ -78,11 +79,19 @@ export const ShowdownCelebration: React.FC<ShowdownCelebrationProps> = ({
 	const finish = useOnceComplete(onComplete);
 
 	useEffect(() => {
-		const delayTimer = setTimeout(() => setReady(true), ENTRANCE_DELAY);
-		return () => clearTimeout(delayTimer);
+		const handle = gameEffectCoordinator.schedule({
+			owner: 'showdown-celebration',
+			lane: 'cinema',
+			key: 'entrance',
+			priority: 'high',
+			delayMs: ENTRANCE_DELAY,
+			run: () => setReady(true),
+		});
+		return () => handle.cancel();
 	}, []);
 
 	useEffect(() => {
+		// Kept off gameEffectCoordinator because the 21s safety ceiling exceeds maxDelayMs (5s).
 		const budgetTimer = setTimeout(() => {
 			finish();
 		}, SHOWDOWN_PRESENTATION_BUDGET_MS);
@@ -92,8 +101,15 @@ export const ShowdownCelebration: React.FC<ShowdownCelebrationProps> = ({
 	// For draws, skip combat animation after a brief pause
 	useEffect(() => {
 		if (!ready || resolution.winner !== 'draw') return;
-		const t = setTimeout(() => setCombatAnimDone(true), 500);
-		return () => clearTimeout(t);
+		const handle = gameEffectCoordinator.schedule({
+			owner: 'showdown-celebration',
+			lane: 'cinema',
+			key: 'draw-pause',
+			priority: 'high',
+			delayMs: 500,
+			run: () => setCombatAnimDone(true),
+		});
+		return () => handle.cancel();
 	}, [ready, resolution.winner]);
 
 	useEffect(() => {
@@ -115,10 +131,15 @@ export const ShowdownCelebration: React.FC<ShowdownCelebrationProps> = ({
 		} else {
 			proceduralAudio.play('defeat');
 		}
-		const timer = setTimeout(() => {
-			finish();
-		}, BADGE_DISPLAY_MS);
-		return () => clearTimeout(timer);
+		const handle = gameEffectCoordinator.schedule({
+			owner: 'showdown-celebration',
+			lane: 'cinema',
+			key: 'badge-display',
+			priority: 'high',
+			delayMs: BADGE_DISPLAY_MS,
+			run: () => finish(),
+		});
+		return () => handle.cancel();
 	}, [showBadge, resolution.winner, finish]);
 
 	// Determine attacker/defender and damage for the combat animation

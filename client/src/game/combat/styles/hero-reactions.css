@@ -18,6 +18,22 @@
 	animation: hero-combat-reaction-recoil var(--bf-reaction-duration) cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+.hero-card-wrapper.vfx-card-receive-vibrate {
+	animation: hero-receive-vibrate 280ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.hero-card-wrapper.vfx-card-receive-vibrate--heavy {
+	animation: hero-receive-vibrate 360ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes hero-receive-vibrate {
+	0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+	18% { transform: translate3d(-5px, 2px, 0) rotate(-1.5deg); }
+	38% { transform: translate3d(5px, -2px, 0) rotate(1.3deg); }
+	60% { transform: translate3d(-3px, 1px, 0) rotate(-0.8deg); }
+	80% { transform: translate3d(2px, -1px, 0) rotate(0.4deg); }
+}
+
 @keyframes hero-combat-reaction-recoil {
 	0%, 10% {
 		transform: translate3d(0, 0, 0) rotate(0deg);
@@ -93,7 +109,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.hero-card-wrapper.combat-reaction-recoil {
+	.hero-card-wrapper.combat-reaction-recoil,
+	.hero-card-wrapper.vfx-card-receive-vibrate,
+	.hero-card-wrapper.vfx-card-receive-vibrate--heavy {
 		animation-duration: 1ms;
 		animation-iteration-count: 1;
 	}

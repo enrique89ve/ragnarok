@@ -206,6 +206,29 @@
 }
 
 /* Empty hand message */
+.hand-fan-container.has-dragging-card {
+  z-index: 9500;
+  position: relative;
+}
+
+/* Lock the dragged card's fan slot to neutral 1:1 coordinates so pointer tracking
+   stays exact without competing hover/scale transitions or heavy drop-shadow repaints. */
+.hand-fan-card.is-dragging-host {
+  --hand-fan-y: 0px !important;
+  --hand-fan-lift: -55px !important;
+  --hand-fan-rotate: 0deg !important;
+  --hand-fan-scale: 1 !important;
+  --hand-fan-push-x: 0px !important;
+  z-index: 9500 !important;
+  transition: none !important;
+  animation: none !important;
+  filter: none !important;
+}
+
+.hand-fan-container.has-dragging-card .hand-fan-card:not(.is-dragging-host) {
+  pointer-events: none;
+}
+
 .hand-fan-empty {
   color: #fcd34d;
   font-size: 0.875rem;

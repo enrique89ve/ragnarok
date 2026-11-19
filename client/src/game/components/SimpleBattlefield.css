@@ -293,15 +293,93 @@
 }
 
 .bf-card-wrapper.combat-action-lunge {
+  z-index: 40;
   animation: bf-action-melee-lunge var(--bf-action-travel-duration) cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .bf-card-wrapper.combat-action-recover {
+  z-index: 35;
   animation: bf-action-melee-recover var(--bf-action-recovery-duration) cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .bf-card-wrapper.combat-reaction-recoil {
   animation: bf-reaction-directional-recoil var(--bf-reaction-duration) cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.bf-card-wrapper.vfx-card-receive-vibrate {
+  animation: bf-card-receive-vibrate 280ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.bf-card-wrapper.vfx-card-receive-vibrate--heavy {
+  animation: bf-card-receive-vibrate-heavy 380ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes bf-card-receive-vibrate {
+  0%, 100% {
+    --bf-reaction-x: 0px;
+    --bf-reaction-y: 0px;
+    --bf-reaction-rotate: 0deg;
+    --bf-reaction-scale: 0;
+  }
+  16% {
+    --bf-reaction-x: -5px;
+    --bf-reaction-y: 3px;
+    --bf-reaction-rotate: -1.8deg;
+    --bf-reaction-scale: -0.025;
+  }
+  34% {
+    --bf-reaction-x: 5px;
+    --bf-reaction-y: -2px;
+    --bf-reaction-rotate: 1.6deg;
+    --bf-reaction-scale: 0.015;
+  }
+  54% {
+    --bf-reaction-x: -3px;
+    --bf-reaction-y: 1px;
+    --bf-reaction-rotate: -1deg;
+    --bf-reaction-scale: 0;
+  }
+  74% {
+    --bf-reaction-x: 2px;
+    --bf-reaction-y: -1px;
+    --bf-reaction-rotate: 0.5deg;
+  }
+}
+
+@keyframes bf-card-receive-vibrate-heavy {
+  0%, 100% {
+    --bf-reaction-x: 0px;
+    --bf-reaction-y: 0px;
+    --bf-reaction-rotate: 0deg;
+    --bf-reaction-scale: 0;
+  }
+  14% {
+    --bf-reaction-x: -8px;
+    --bf-reaction-y: 5px;
+    --bf-reaction-rotate: -3deg;
+    --bf-reaction-scale: -0.04;
+  }
+  30% {
+    --bf-reaction-x: 8px;
+    --bf-reaction-y: -4px;
+    --bf-reaction-rotate: 2.8deg;
+    --bf-reaction-scale: 0.025;
+  }
+  48% {
+    --bf-reaction-x: -5px;
+    --bf-reaction-y: 3px;
+    --bf-reaction-rotate: -1.8deg;
+  }
+  66% {
+    --bf-reaction-x: 4px;
+    --bf-reaction-y: -2px;
+    --bf-reaction-rotate: 1.1deg;
+  }
+  84% {
+    --bf-reaction-x: -2px;
+    --bf-reaction-y: 1px;
+    --bf-reaction-rotate: -0.4deg;
+  }
 }
 
 @keyframes bf-action-melee-lunge {
@@ -1242,7 +1320,9 @@
 
   .bf-card-wrapper.combat-action-lunge,
   .bf-card-wrapper.combat-action-recover,
-  .bf-card-wrapper.combat-reaction-recoil {
+  .bf-card-wrapper.combat-reaction-recoil,
+  .bf-card-wrapper.vfx-card-receive-vibrate,
+  .bf-card-wrapper.vfx-card-receive-vibrate--heavy {
     animation-duration: 1ms;
     animation-iteration-count: 1;
     --bf-action-x: 0px;

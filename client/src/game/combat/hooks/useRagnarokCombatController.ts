@@ -3,8 +3,8 @@
  * 
  * ARCHITECTURE: This hook centralizes all combat state management and logic
  * for the RagnarokCombatArena component. It extracts:
- * - useState declarations for resolution, betting, celebration, hero power targeting
- * - useRef declarations for AI response tracking, backup timers, card positions
+ * - Local betting and hero power targeting state
+ * - Refs for AI response tracking and card positions
  * - useCallback functions for hero clicks, hero power, weapon upgrades, actions
  * - useGameStore selectors for card game state integration
  * - Computed values for turn state and targetability
@@ -30,7 +30,7 @@ import { usePeerStore } from '../../stores/peerStore';
 import { GAME_COMMAND_TYPES, createPokerHandRewardsCommand } from '../../core/commands';
 import { useP2PActions } from '../../context/useP2PActions';
 import { useMatchStore } from '../../match';
-import { CombatPhase, CombatAction } from '../../types/PokerCombatTypes';
+import { CombatPhase, CombatAction, type PokerResolvedHand } from '../../types/PokerCombatTypes';
 import type { CardInstance } from '../../types';
 import { fireAnnouncement } from '../../stores/unifiedUIStore';
 import { ALL_NORSE_HEROES } from '../../data/norseHeroes';
@@ -38,7 +38,7 @@ import { isValidTargetForHeroPower } from '../../utils/combatUtils';
 import { usePokerAI } from './usePokerAI';
 import { usePokerPhases } from './usePokerPhases';
 import { useCombatTimer } from './useCombatTimer';
-import { useCombatEvents, ShowdownCelebration as ShowdownCelebrationState, HeroDeathState } from './useCombatEvents';
+import { useCombatEvents, type ShowdownCelebration as ShowdownCelebrationState } from './useCombatEvents';
 import { useTurnOrchestrator } from './useTurnOrchestrator';
 import { COMBAT_DEBUG } from '../debugConfig';
 import { hasKeyword } from '../../utils/cards/keywordUtils';
@@ -58,8 +58,9 @@ import { localPlayerId } from '../../../data/blockchain/playerIdentity';
 import { getNFTBridge } from '../../nft';
 import { getCanonicalPokerActionNowMs } from '../../../../../shared/p2p-wire/pokerTurnClock';
 import {
-	HERO_DEATH_PRESENTATION_BUDGET_MS,
-	SHOWDOWN_BACKUP_MS,
+	progressResolvedPokerHand,
+	type HeroDeathPresentation,
+	type PokerCombatWinner,
 } from '../pokerResolutionOutcome';
 
 /**
@@ -77,31 +78,17 @@ export interface HeroPowerTargetingState {
   manaCost: number;
 }
 
-/**
- * Hero death animation state structure
- */
-export interface HeroDeathAnimationState {
-  isAnimating: boolean;
-  deadHeroName: string;
-  isPlayerDead: boolean;
-  pendingResolution: any;
-}
-
 export interface UseRagnarokCombatControllerOptions {
-  onCombatEnd?: (winner: 'player' | 'opponent' | 'draw') => void;
+  onCombatEnd?: (winner: PokerCombatWinner, presentation?: HeroDeathPresentation) => void;
 }
 
 export interface UseRagnarokCombatControllerReturn {
   combatState: ReturnType<typeof usePokerCombatAdapter>['combatState'];
   isActive: boolean;
-  resolution: any;
-  setResolution: (resolution: any) => void;
   betAmount: number;
   setBetAmount: (amount: number) => void;
   showdownCelebration: ShowdownCelebrationState | null;
-  setShowdownCelebration: (celebration: ShowdownCelebrationState | null) => void;
-  heroDeathState: HeroDeathAnimationState | null;
-  setHeroDeathState: (state: HeroDeathAnimationState | null) => void;
+  dismissShowdown: (snapshot: ShowdownCelebrationState) => void;
   heroPowerTargeting: HeroPowerTargetingState | null;
   heroPowerUsedThisTurn: boolean;
   weaponUpgraded: boolean;
@@ -109,7 +96,6 @@ export interface UseRagnarokCombatControllerReturn {
   gameStateMulligan: any;
   
   aiResponseInProgressRef: React.MutableRefObject<boolean>;
-  showdownBackupTimerRef: React.MutableRefObject<NodeJS.Timeout | null>;
   sharedBattlefieldRef: React.RefObject<HTMLDivElement | null>;
   cardPositionsRef: React.MutableRefObject<Map<string, { x: number; y: number }>>;
   
@@ -134,9 +120,6 @@ export interface UseRagnarokCombatControllerReturn {
   cancelHeroPowerTargeting: () => void;
   handleWeaponUpgrade: () => void;
   handleAction: (action: CombatAction, hp?: number) => void;
-  handleCombatEnd: () => void;
-  beginNextPokerHandAfterShowdown: () => void;
-	handleHeroDeathComplete: () => void;
 	handleUnifiedEndTurn: () => void;
   
   turnPhase: string;
@@ -158,26 +141,19 @@ export function useRagnarokCombatController(
   const { onCombatEnd } = options;
   
   const { 
-    combatState, 
+    combatState,
+    lastResolvedHand,
     isActive,
     mulliganComplete,
     completeMulligan,
     performAction, 
-    advancePhase,
     maybeCloseBettingRound,
-    resolveCombat,
-    startNextHand,
     updateTimer,
     endCombat,
     applyDirectDamage
   } = usePokerCombatAdapter();
   
-  const [resolution, setResolution] = useState<any>(null);
   const [betAmount, setBetAmount] = useState(10);
-  
-  const [showdownCelebration, setShowdownCelebration] = useState<ShowdownCelebrationState | null>(null);
-  
-  const [heroDeathState, setHeroDeathState] = useState<HeroDeathAnimationState | null>(null);
   
   const [heroPowerTargeting, setHeroPowerTargeting] = useState<HeroPowerTargetingState | null>(null);
 
@@ -201,6 +177,7 @@ export function useRagnarokCombatController(
   const activeMatch = useMatchStore(state => state.activeMatch);
   const connectionState = usePeerStore(state => state.connectionState);
   const integrityError = usePeerStore(state => state.p2pIntegrityError);
+  const p2pSessionAuthorized = usePeerStore(state => state.p2pSessionLocalAuthorized && state.p2pSessionRemoteAuthorized);
   const opponentKind = activeMatch?.opponent.kind ?? null;
   const isP2PCombat = opponentKind === 'peer';
   const pokerTurnProcessMode = getPokerTurnProcessMode(isP2PCombat);
@@ -236,15 +213,8 @@ export function useRagnarokCombatController(
     addHeroBattlePopup,
   });
   
-  useCombatEvents({
-    combatState,
-    isActive,
-    onShowdownCelebration: setShowdownCelebration,
-    onHeroDeath: setHeroDeathState,
-    resolveCombat,
-    setResolution
-  });
-  
+  const { showdownCelebration, dismissShowdown } = useCombatEvents(combatState, lastResolvedHand);
+
   const onPhaseChangeCb = useCallback((from: string, to: string, context: { turnNumber: number }) => {
     if (COMBAT_DEBUG.PHASES) {
       debug.combat(`[TurnOrchestrator] Phase: ${from} → ${to} (Turn ${context.turnNumber})`);
@@ -260,14 +230,9 @@ export function useRagnarokCombatController(
     onPhaseChange: onPhaseChangeCb
   });
   
-  const showdownBackupTimerRef = useRef<NodeJS.Timeout | null>(null);
-  
   const sharedBattlefieldRef = useRef<HTMLDivElement>(null);
   
   const cardPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
-  const handEndProcessedRef = useRef(false);
-  const combatEndFiredRef = useRef(false);
-  const combatEndRetryCountRef = useRef(0);
   const heroPowerProcessingRef = useRef(false);
   const weaponUpgradeProcessingRef = useRef(false);
 
@@ -355,7 +320,6 @@ export function useRagnarokCombatController(
   useEffect(() => {
     if (!isActive) {
       setWeaponUpgraded(false);
-      combatEndFiredRef.current = false;
     }
   }, [isActive]);
   
@@ -726,32 +690,49 @@ export function useRagnarokCombatController(
     }
   }, [mulliganActive, combatState?.phase, completeMulligan, mulliganProcessed, mulliganArmed, mulliganComplete, openingMulliganGatingPoker]);
   
-  const lastCommittedResolutionRef = useRef<NonNullable<typeof resolution>>(null);
+  const requestedHandRef = useRef<PokerResolvedHand | null>(null);
+  const discoveryActive = useGameStore(state => state.gameState?.discovery?.active === true);
+  const cardsGameOver = useGameStore(state => state.gameState?.gamePhase === 'game_over');
 
-  const commitPokerHandRewards = useCallback((resolved: NonNullable<typeof resolution>) => {
-    lastCommittedResolutionRef.current = resolved;
-    const pokerState = getPokerCombatAdapterState().combatState;
-    if (!pokerState) return;
+  useEffect(() => {
+    if (!isActive || !combatState || openingMulliganGatingPoker || combatState.phase !== CombatPhase.RESOLUTION) return;
+    const poker = getPokerCombatAdapterState();
+    if (poker.combatState?.combatId !== combatState.combatId || poker.combatState.handNumber !== combatState.handNumber) return;
+    poker.resolveCombat();
+  }, [combatState, isActive, openingMulliganGatingPoker]);
+
+  useEffect(() => {
+    if (isP2PCombat && (isP2PActionLocked || !p2pSessionAuthorized)) {
+      requestedHandRef.current = null;
+      return;
+    }
+    if (!lastResolvedHand || requestedHandRef.current === lastResolvedHand || mulliganActive || cardsGameOver) return;
+    const terminal = lastResolvedHand.resolution.playerFinalHealth <= 0 || lastResolvedHand.resolution.opponentFinalHealth <= 0;
+    if (discoveryActive && !terminal) return;
+
     const gameStore = useGameStore.getState();
-    const command = createPokerHandRewardsCommand({
-      matchId: gameStore.matchId ?? gameStore.matchSeed ?? pokerState.combatId,
-      combatId: pokerState.combatId,
-      handIndex: pokerState.handNumber,
-      resolution: resolved,
-      allInShowdown: pokerState.isAllInShowdown,
+    requestedHandRef.current = lastResolvedHand;
+    progressResolvedPokerHand(lastResolvedHand, {
+      readPoker: getPokerCombatAdapterState,
+      commitRewards: onCommitted => {
+        const command = createPokerHandRewardsCommand({
+          matchId: gameStore.matchId ?? gameStore.matchSeed ?? lastResolvedHand.combatId,
+          ...lastResolvedHand,
+        });
+        p2pActions.grantPokerHandRewards(command, onCommitted);
+      },
+      startNextHand: () => {
+        cardPositionsRef.current.clear();
+        advanceTurnPhase();
+        getPokerCombatAdapterState().startNextHand(lastResolvedHand.resolution);
+      },
+      endCombat: (winner, presentation) => {
+        onCombatEnd?.(winner, presentation);
+        const currentPoker = getPokerCombatAdapterState();
+        if (currentPoker.lastResolvedHand === lastResolvedHand) currentPoker.endCombat();
+      },
     });
-    p2pActions.dispatchGameCommand(command, () => {
-      advanceTurnPhase();
-      setResolution(null);
-    });
-  }, [advanceTurnPhase, p2pActions]);
-
-  const beginNextPokerHandAfterShowdown = useCallback(() => {
-    const resolved = lastCommittedResolutionRef.current;
-    if (!resolved) return;
-    getPokerCombatAdapterState().startNextHandDelayed(resolved);
-    lastCommittedResolutionRef.current = null;
-  }, []);
+  }, [advanceTurnPhase, cardsGameOver, discoveryActive, isP2PActionLocked, isP2PCombat, lastResolvedHand, mulliganActive, onCombatEnd, p2pActions, p2pSessionAuthorized]);
 
   const handleAction = useCallback(async (action: CombatAction, hp?: number) => {
     if (combatState && !isPlayerTurn) return;
@@ -924,161 +905,6 @@ export function useRagnarokCombatController(
     p2pTransportConnected,
   ]);
   
-  useEffect(() => {
-    if (resolution) {
-      handEndProcessedRef.current = false;
-      combatEndFiredRef.current = false;
-      combatEndRetryCountRef.current = 0;
-    }
-  }, [resolution]);
-  
-  const handleCombatEnd = useCallback(() => {
-    if (!resolution) return;
-    if (handEndProcessedRef.current) {
-      debug.combat('[handleCombatEnd] Blocked: already processed this hand end');
-      return;
-    }
-    const mulliganStillActive = useGameStore.getState().gameState?.mulligan?.active;
-    if (mulliganStillActive) return;
-
-    const discoveryActive = useGameStore.getState().gameState?.discovery?.active;
-    if (discoveryActive) {
-      combatEndRetryCountRef.current += 1;
-      if (combatEndRetryCountRef.current >= 20) {
-        debug.warn('[handleCombatEnd] Discovery retry limit reached (20) — forcing combat end');
-        handEndProcessedRef.current = true;
-      } else {
-        debug.combat(`[handleCombatEnd] Discovery active — will retry in 500ms (attempt ${combatEndRetryCountRef.current}/20)`);
-        setTimeout(() => handleCombatEnd(), 500);
-        return;
-      }
-    }
-
-    combatEndRetryCountRef.current = 0;
-    handEndProcessedRef.current = true;
-    cardPositionsRef.current.clear();
-
-    commitPokerHandRewards(resolution);
-  }, [resolution, commitPokerHandRewards]);
-
-  const handleCombatEndRef = useRef(handleCombatEnd);
-  useEffect(() => {
-    handleCombatEndRef.current = handleCombatEnd;
-  }, [handleCombatEnd]);
-
-  const beginNextPokerHandAfterShowdownRef = useRef(beginNextPokerHandAfterShowdown);
-  useEffect(() => {
-    beginNextPokerHandAfterShowdownRef.current = beginNextPokerHandAfterShowdown;
-  }, [beginNextPokerHandAfterShowdown]);
-
-  useEffect(() => {
-    if (showdownCelebration && !heroDeathState?.isAnimating) {
-      // Commit the resolved hand immediately. The celebration is a retained
-      // presentation snapshot and must not own phase/reward progression.
-      if (resolution) handleCombatEndRef.current();
-
-      if (showdownBackupTimerRef.current) {
-        clearTimeout(showdownBackupTimerRef.current);
-      }
-      
-      showdownBackupTimerRef.current = setTimeout(() => {
-        if (combatEndFiredRef.current) return;
-        combatEndFiredRef.current = true;
-        const mulliganStillActive = useGameStore.getState().gameState?.mulligan?.active;
-        if (mulliganStillActive) { combatEndFiredRef.current = false; return; }
-        debug.warn('[RagnarokCombatArena] Showdown backup timer fired - forcing combat end', { hasResolution: !!resolution });
-        setShowdownCelebration(null);
-        handleCombatEndRef.current();
-        beginNextPokerHandAfterShowdownRef.current();
-      }, SHOWDOWN_BACKUP_MS);
-    }
-    
-    return () => {
-      if (showdownBackupTimerRef.current) {
-        clearTimeout(showdownBackupTimerRef.current);
-        showdownBackupTimerRef.current = null;
-      }
-    };
-  // handleCombatEnd is read through a ref so the backup timer is not
-  // recreated on every render.
-  }, [showdownCelebration, heroDeathState?.isAnimating, resolution]);
-
-  // RESOLUTION phase escape timer — safety net for rare freezes where showdown never triggers
-  const resolutionEscapeRef = useRef<NodeJS.Timeout | null>(null);
-  useEffect(() => {
-    // A peer match must never recover a missing presentation by mutating the
-    // Poker reducer locally. The signed action + canonical resolution path is
-    // the only authority; if it is unavailable, stay frozen and let the
-    // integrity/reconnect surface explain the state instead of diverging.
-    if (isP2PCombat) return;
-    const phase = combatState?.phase;
-    if (phase === CombatPhase.RESOLUTION && !showdownCelebration && !heroDeathState && isActive) {
-      if (resolutionEscapeRef.current) clearTimeout(resolutionEscapeRef.current);
-      resolutionEscapeRef.current = setTimeout(() => {
-        if (combatEndFiredRef.current) return;
-        combatEndFiredRef.current = true;
-        const adapter = getPokerCombatAdapterState();
-        const currentPhase = adapter.combatState?.phase;
-        if (currentPhase === CombatPhase.RESOLUTION) {
-          debug.warn('[ResolutionEscape] Stuck in RESOLUTION for 3s — forcing next hand');
-          cardPositionsRef.current.clear();
-          adapter.setTransitioning(false);
-          commitPokerHandRewards(resolution);
-          beginNextPokerHandAfterShowdown();
-        }
-      }, 3000);
-    } else {
-      if (resolutionEscapeRef.current) {
-        clearTimeout(resolutionEscapeRef.current);
-        resolutionEscapeRef.current = null;
-      }
-    }
-    return () => {
-      if (resolutionEscapeRef.current) {
-        clearTimeout(resolutionEscapeRef.current);
-        resolutionEscapeRef.current = null;
-      }
-    };
-  }, [combatState?.phase, showdownCelebration, heroDeathState, isActive, isP2PCombat, commitPokerHandRewards, resolution]);
-
-  const heroDeathFinishedRef = useRef(false);
-  useEffect(() => {
-    if (heroDeathState?.isAnimating) {
-      heroDeathFinishedRef.current = false;
-    }
-  }, [heroDeathState?.isAnimating]);
-
-  const handleHeroDeathComplete = useCallback(() => {
-    if (!heroDeathState) return;
-    if (heroDeathFinishedRef.current) return;
-    heroDeathFinishedRef.current = true;
-
-    const pendingWinner = heroDeathState.pendingResolution?.winner;
-    let winner: 'player' | 'opponent' | 'draw' = heroDeathState.isPlayerDead ? 'opponent' : 'player';
-    if (pendingWinner === 'player' || pendingWinner === 'opponent' || pendingWinner === 'draw') {
-      winner = pendingWinner;
-    }
-
-    setHeroDeathState(null);
-    setShowdownCelebration(null);
-
-    if (onCombatEnd) {
-      onCombatEnd(winner);
-    }
-    endCombat();
-  }, [heroDeathState, onCombatEnd, endCombat]);
-
-  const handleHeroDeathCompleteRef = useRef(handleHeroDeathComplete);
-  handleHeroDeathCompleteRef.current = handleHeroDeathComplete;
-  useEffect(() => {
-    if (!heroDeathState?.isAnimating) return;
-    const timer = setTimeout(() => {
-      debug.warn('[HeroDeath] presentation budget exceeded — completing combat');
-      handleHeroDeathCompleteRef.current();
-    }, HERO_DEATH_PRESENTATION_BUDGET_MS);
-    return () => clearTimeout(timer);
-  }, [heroDeathState?.isAnimating]);
-
   const handleUnifiedEndTurn = useCallback(() => {
     if (!combatState) return;
     if (!isPlayerTurn) return;
@@ -1112,14 +938,10 @@ export function useRagnarokCombatController(
   return {
     combatState,
     isActive,
-    resolution,
-    setResolution,
     betAmount,
     setBetAmount,
     showdownCelebration,
-    setShowdownCelebration,
-    heroDeathState,
-    setHeroDeathState,
+    dismissShowdown,
     heroPowerTargeting,
     heroPowerUsedThisTurn,
     weaponUpgraded,
@@ -1127,7 +949,6 @@ export function useRagnarokCombatController(
     gameStateMulligan,
     
     aiResponseInProgressRef,
-    showdownBackupTimerRef,
     sharedBattlefieldRef,
     cardPositionsRef,
     
@@ -1152,9 +973,6 @@ export function useRagnarokCombatController(
     cancelHeroPowerTargeting,
     handleWeaponUpgrade,
     handleAction,
-    handleCombatEnd,
-    beginNextPokerHandAfterShowdown,
-	    handleHeroDeathComplete,
 	    handleUnifiedEndTurn,
     
     turnPhase,

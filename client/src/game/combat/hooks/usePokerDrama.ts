@@ -25,6 +25,15 @@ import {
 	stopPokerOrphanSweep,
 	killAllPokerVFX,
 } from '../animations/PokerDramaVFX';
+import {
+	setEmotionalAtmosphere,
+	triggerEmotionalImpulse,
+} from '../../animations/PixiParticleCanvas';
+import {
+	buildBackgroundCssFilter,
+	getEmotionalMoodPreset,
+	resolveEmotionalAtmosphere,
+} from '../vfx/emotionalAtmosphere';
 import { emitHandImproved } from '../vfx/events';
 import { subscribeVisualEvent } from '../vfx/emitter';
 
@@ -108,7 +117,11 @@ export function usePokerDrama(options: UsePokerDramaOptions): PokerDramaState {
 		// Improvement is a moment: edge-detect the rank jump here and emit
 		// it so the registry handler (and future composers) can react.
 		if (hand.rank > prevRank && prevRank > 0) {
-			emitHandImproved({ tier: getHandTier(hand.rank), rank: hand.rank, side: 'player' });
+			const tier = getHandTier(hand.rank);
+			emitHandImproved({ tier, rank: hand.rank, side: 'player' });
+			if (tier === 'high' || tier === 'godly') {
+				triggerEmotionalImpulse('euphoria', tier === 'godly' ? 0.9 : 0.65);
+			}
 		}
 
 		prevHandRankRef.current = hand.rank;
@@ -176,6 +189,55 @@ export function usePokerDrama(options: UsePokerDramaOptions): PokerDramaState {
 		viewport.dataset.playerStreak = String(streaks.player);
 		viewport.dataset.opponentStreak = String(streaks.opponent);
 	}, [streaks.player, streaks.opponent, isActive]);
+
+	// === Psychological Convolutional Atmosphere ===
+	// Projects continuous match telemetry into PixiJS v8 GPU Gaussian blur +
+	// 4x5 RGBA color-matrix convolution, plus subtle backdrop-only CSS tone.
+	useEffect(() => {
+		const viewport = getArenaVfxLayer(ARENA_VFX_LAYERS.viewport);
+		if (!combatState || !isActive) {
+			setEmotionalAtmosphere(getEmotionalMoodPreset('calm'));
+			viewport?.style.removeProperty('--arena-mood-filter');
+			if (viewport) delete viewport.dataset.emotionalMood;
+			return;
+		}
+
+		const playerMax = combatState.player.pet.stats.maxHealth;
+		const opponentMax = combatState.opponent.pet.stats.maxHealth;
+		const totalHP = playerMax + opponentMax;
+		const potRatio = totalHP > 0 ? combatState.pot / totalHP : 0;
+		const playerHpPct = playerMax > 0 ? combatState.player.pet.stats.currentHealth / playerMax : 1;
+		const opponentHpPct = opponentMax > 0 ? combatState.opponent.pet.stats.currentHealth / opponentMax : 1;
+
+		const moodParams = resolveEmotionalAtmosphere({
+			phase: combatState.phase,
+			potRatio,
+			isAllInShowdown: Boolean(combatState.isAllInShowdown),
+			playerHpPct,
+			opponentHpPct,
+			handTier: getHandTier(currentHandRank.current),
+			playerStreak: streaks.player,
+			opponentStreak: streaks.opponent,
+		});
+
+		setEmotionalAtmosphere(moodParams);
+		if (viewport) {
+			viewport.dataset.emotionalMood = moodParams.mood;
+			viewport.style.setProperty('--arena-mood-filter', buildBackgroundCssFilter(moodParams));
+		}
+	}, [
+		combatState?.phase,
+		combatState?.pot,
+		combatState?.isAllInShowdown,
+		combatState?.player.pet.stats.currentHealth,
+		combatState?.opponent.pet.stats.currentHealth,
+		combatState?.communityCards.faith?.length,
+		combatState?.communityCards.foresight,
+		combatState?.communityCards.destiny,
+		streaks.player,
+		streaks.opponent,
+		isActive,
+	]);
 
 	return {
 		currentHandRank: currentHandRank.current,

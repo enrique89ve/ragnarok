@@ -37,6 +37,7 @@ const PLATES = new Set<PokerViewportZoneId>(['battlefield', 'vfxFocus', 'wagerAc
 /** Pairs that share pixels on purpose: a card tucked on its hero, the timer seated on the ribbon. */
 const DESIGNED_OVERLAPS = new Set([
 	'bettingControls|playerHand',
+	'centerTitle|playerBattlefieldCards',
 	'heroActionStamp|playerHero',
 	'heroActionStamp|playerHeroCards',
 	'hourglass|topHud',
@@ -49,25 +50,27 @@ function zoneRect(zone: PokerViewportZone, anchor: 'top-left' | 'center-top'): B
 	return { x, y: zone.y, width: zone.width, height: zone.height };
 }
 
-const CINEMA_LANE_INSET = 5;
+/** Matches `--poker-cinema-lane-height` in poker/styles/canvas.css. */
+export const CINEMA_LANE_HEIGHT = 60;
+/** Matches `--poker-cinema-lane-lift` in poker/styles/canvas.css. */
+export const CINEMA_LANE_LIFT = 40;
 
 /**
- * The open seam between the opponent minion row and the community cards.
- * Center titles live here so they do not cover either row.
+ * Center-title lane: centred on the player minion row (the open middle of
+ * the table) and on the battlefield's horizontal axis. Titles are transient,
+ * so sitting over the player's row is designed; they must never clip the
+ * opponent row's stat gems or reach the community cards.
+ * Mirrors `--poker-cinema-lane-*` in poker/styles/canvas.css.
  */
 export function cinemaReadingLane(
 	layout: typeof POKER_VIEWPORT_LAYOUT = POKER_VIEWPORT_LAYOUT,
 ): BoardRect {
-	const { opponentBattlefieldCards, communityCards } = layout.zones;
-	const width = layout.reference.width;
-	const boxWidth = Math.round(width * 0.38);
-	const y = opponentBattlefieldCards.y + opponentBattlefieldCards.height + CINEMA_LANE_INSET;
-	const bottom = communityCards.y - CINEMA_LANE_INSET;
+	const { playerBattlefieldCards: row } = layout.zones;
 	return {
-		x: Math.round((width - boxWidth) / 2),
-		y,
-		width: boxWidth,
-		height: bottom - y,
+		x: row.x,
+		y: Math.round(row.y + (row.height - CINEMA_LANE_HEIGHT) / 2 - CINEMA_LANE_LIFT),
+		width: row.width,
+		height: CINEMA_LANE_HEIGHT,
 	};
 }
 

@@ -53,9 +53,10 @@ export const DamageIndicator: React.FC<DamageIndicatorProps> = ({
 	onComplete,
 }) => {
 	const arenaRoot = useArenaVfxRoot();
-	const isBig = damage >= 5;
-	const isCritical = damage >= 8;
-	const isCrit = damage >= 10;
+	const isStake = variant === 'stake';
+	const isBig = !isStake && damage >= 5;
+	const isCritical = !isStake && damage >= 8;
+	const isCrit = !isStake && damage >= 10;
 
 	useEffect(() => {
 		const handle = gameEffectCoordinator.schedule({

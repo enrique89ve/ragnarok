@@ -120,7 +120,12 @@ export function useDamageAnimations() {
 					});
 				}, 300);
 				shakeTimersRef.current.add(t);
-				if (showNumber) playSound('damage');
+				// Combat attacks and Showdown play their own impact SFX inside their
+				// DAG nodes; only non-attack spell/effect DAMAGE_RESOLVED floaters
+				// trigger fallback damage audio here.
+				if (showNumber && animationId?.startsWith('damage-resolved:')) {
+					playSound('damage');
+				}
 			}
 		} else if (isHeroTarget) {
 			playSound('heal');

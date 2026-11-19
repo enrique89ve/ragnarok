@@ -5,7 +5,7 @@
  */
 
 export { useCombatEvents } from './useCombatEvents';
-export type { ShowdownCelebration, HeroDeathState } from './useCombatEvents';
+export type { ShowdownCelebration } from './useCombatEvents';
 
 export { useCombatTimer } from './useCombatTimer';
 
@@ -24,5 +24,4 @@ export type {
   UseRagnarokCombatControllerOptions, 
   UseRagnarokCombatControllerReturn,
   HeroPowerTargetingState,
-  HeroDeathAnimationState 
 } from './useRagnarokCombatController';
