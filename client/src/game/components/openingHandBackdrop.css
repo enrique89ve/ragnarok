@@ -1,5 +1,7 @@
-/* Shared VS → mulligan plate (aurora ruins). Keep scrims aligned so the cut feels continuous. */
+/* VS → mulligan letterbox/plate → poker: one photographic stack, optional vignette modifiers. */
+
 :root {
+	--opening-hand-plate: #05070d;
 	--opening-hand-backdrop-image: url('/art/chess/opening-hand-aurora-ruins-v1.webp');
 	--opening-hand-backdrop-scrim: linear-gradient(
 		180deg,
@@ -7,14 +9,46 @@
 		rgba(3, 5, 10, 0.55) 48%,
 		rgba(2, 4, 9, 0.68) 100%
 	);
+	--opening-hand-backdrop-stack:
+		var(--opening-hand-backdrop-scrim),
+		var(--opening-hand-backdrop-image);
+	--opening-hand-backdrop-stack-vs:
+		var(--opening-hand-backdrop-scrim),
+		radial-gradient(
+			ellipse 52% 38% at 50% 42%,
+			rgba(2, 5, 12, 0.12),
+			rgba(2, 4, 9, 0.55) 72%
+		),
+		var(--opening-hand-backdrop-image);
+	--opening-hand-backdrop-stack-chamber:
+		radial-gradient(
+			ellipse 48% 36% at 50% 54%,
+			color-mix(in srgb, #f5c542 5%, transparent),
+			transparent 70%
+		),
+		radial-gradient(
+			ellipse 130% 100% at 50% 50%,
+			transparent 32%,
+			rgba(5, 7, 13, 0.72) 68%,
+			var(--opening-hand-plate) 88%
+		),
+		var(--opening-hand-backdrop-stack);
 }
 
 .opening-hand-backdrop-layer {
-	background-color: #05070d;
-	background-image: var(--opening-hand-backdrop-scrim), var(--opening-hand-backdrop-image);
+	background-color: var(--opening-hand-plate);
+	background-image: var(--opening-hand-backdrop-stack);
 	background-position: center;
 	background-size: cover;
 	background-repeat: no-repeat;
+}
+
+.opening-hand-backdrop-layer--vs {
+	background-image: var(--opening-hand-backdrop-stack-vs);
+}
+
+.opening-hand-backdrop-layer--chamber {
+	background-image: var(--opening-hand-backdrop-stack-chamber);
 }
 
 @keyframes ember-drift-up {

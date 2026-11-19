@@ -407,7 +407,7 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
   const useFullscreenShell = viewportOwnsExit;
   const overlayClass = useFullscreenShell
     ? MULLIGAN_FULLSCREEN_SHELL_CLASS
-    : `${OVERLAY_CLASS} mulligan-chamber--backdrop-host${
+    : `${OVERLAY_CLASS} mulligan-chamber--backdrop-host opening-hand-backdrop-layer opening-hand-backdrop-layer--chamber${
         exitIris.irisOpen ? ' mulligan-chamber--iris' : ''
       }`;
 

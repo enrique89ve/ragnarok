@@ -1,10 +1,14 @@
+import { OPENING_HAND_BACKDROP_CLASSES } from '../openingHandBackdropArt';
+
+const openingHandBackdropChamber = `${OPENING_HAND_BACKDROP_CLASSES.layer} ${OPENING_HAND_BACKDROP_CLASSES.chamber}`;
+
 /** Canvas modal (in-arena mulligan). */
 export const MULLIGAN_OVERLAY_CLASS =
 	'mulligan-chamber absolute inset-0 z-10 pointer-events-auto flex flex-col items-center justify-center overflow-hidden';
 
 /** Opening hand — LoL-style full physical viewport (not letterboxed 1920 canvas). */
 export const MULLIGAN_FULLSCREEN_SHELL_CLASS =
-	'mulligan-chamber mulligan-chamber--fullscreen mulligan-chamber--backdrop-host fixed inset-0 z-[24] pointer-events-auto flex flex-col items-center justify-center overflow-hidden';
+	`mulligan-chamber mulligan-chamber--fullscreen mulligan-chamber--backdrop-host ${openingHandBackdropChamber} fixed inset-0 z-[24] pointer-events-auto flex flex-col items-center justify-center overflow-hidden`;
 
 export const MULLIGAN_TITLE_CLASS =
 	'font-display font-black text-white uppercase leading-none ' +

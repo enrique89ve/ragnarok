@@ -7,6 +7,8 @@ import {
 } from '../components/mulligan/MulliganShellContext';
 import { useMulliganExitIris } from '../components/mulligan/useMulliganExitIris';
 import '../components/mulligan/mulliganChamber.css';
+import '../components/openingHandBackdrop.css';
+import { OPENING_HAND_BACKDROP_CLASSES } from '../components/openingHandBackdropArt';
 import './GameViewport.css';
 import './styles/poker-entry-scene-handoff.css';
 
@@ -223,10 +225,14 @@ export const GameViewport: React.FC<GameViewportProps> = ({
   const exitIrisOwner = exitIris.covered
     ? MULLIGAN_EXIT_IRIS_OWNER.viewport
     : MULLIGAN_EXIT_IRIS_OWNER.screen;
+  const platePhotoDeferred = exitIris.covered && !exitIris.irisOpen;
   const plateClass = [
     'mulligan-viewport-plate',
+    ...(platePhotoDeferred
+      ? []
+      : [OPENING_HAND_BACKDROP_CLASSES.layer, OPENING_HAND_BACKDROP_CLASSES.chamber]),
     exitIris.irisOpen ? 'mulligan-chamber--iris' : '',
-    exitIris.covered && !exitIris.irisOpen ? 'mulligan-viewport-plate--photo-deferred' : '',
+    platePhotoDeferred ? 'mulligan-viewport-plate--photo-deferred' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -242,7 +248,11 @@ export const GameViewport: React.FC<GameViewportProps> = ({
   return (
     <MulliganShellProvider exitIrisOwner={exitIrisOwner}>
       <div
-        className={`game-viewport-wrapper${mulliganChamber ? ' game-viewport-wrapper--opening-mulligan' : ''} ${shakeClasses}`.trim()}
+        className={`game-viewport-wrapper${
+          mulliganChamber
+            ? ` game-viewport-wrapper--opening-mulligan ${OPENING_HAND_BACKDROP_CLASSES.layer}`
+            : ''
+        } ${shakeClasses}`.trim()}
         data-compact-landscape={fit.compactLandscape ? 'true' : 'false'}
         data-viewport-bars={fit.bars}
         {...arenaVfxLayerProps(ARENA_VFX_LAYERS.viewportWrapper)}

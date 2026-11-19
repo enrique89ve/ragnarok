@@ -1,11 +1,4 @@
-/* Opening-hand aurora (wrapper plate) → poker arena `.layer-background`. */
-
-.game-viewport-wrapper--opening-mulligan {
-	background-image: var(--opening-hand-backdrop-scrim), var(--opening-hand-backdrop-image);
-	background-position: center;
-	background-size: cover;
-	background-repeat: no-repeat;
-}
+/* Opening-hand photo: `openingHandBackdrop.css` + `opening-hand-backdrop-layer*` on GameViewport. */
 
 .poker-combat-phase-stack {
 	position: relative;

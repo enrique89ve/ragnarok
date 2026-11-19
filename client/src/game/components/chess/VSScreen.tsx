@@ -71,7 +71,7 @@ const VSScreen: React.FC<VSScreenProps> = ({
         exit={{ opacity: 0 }}
         transition={{ duration: 0.55, ease: 'easeOut' }}
       >
-        <div className="vs-screen-backdrop opening-hand-backdrop-layer" />
+        <div className="vs-screen-backdrop opening-hand-backdrop-layer opening-hand-backdrop-layer--vs" />
         
         <div className="vs-screen-content">
           <motion.div 

@@ -3,7 +3,13 @@
  * Files live under `client/public/art/poker/boards/*.webp`.
  */
 
+import { OPENING_HAND_BACKDROP_PATH } from '../../components/openingHandBackdropArt';
+
 export const POKER_BOARD_SURFACE_SCHEMA = 'norse-poker-board-surface/v1' as const;
+
+export type PokerBoardSurfaceAssetPath =
+	| `/art/poker/boards/${PokerBoardSurfaceId}.webp`
+	| typeof OPENING_HAND_BACKDROP_PATH;
 
 export const POKER_BOARD_SURFACE_IDS = [
 	'ember-forge',
@@ -17,7 +23,7 @@ export type PokerBoardSurfaceId = (typeof POKER_BOARD_SURFACE_IDS)[number];
 export type PokerBoardSurfaceDefinition = Readonly<{
 	id: PokerBoardSurfaceId;
 	/** Path served from client/public (no BASE_URL prefix). */
-	assetPath: `/art/poker/boards/${PokerBoardSurfaceId}.webp`;
+	assetPath: PokerBoardSurfaceAssetPath;
 	label: string;
 }>;
 
@@ -34,7 +40,7 @@ export const POKER_BOARD_SURFACES: Record<PokerBoardSurfaceId, PokerBoardSurface
 	},
 	'aurora-ruin': {
 		id: 'aurora-ruin',
-		assetPath: '/art/poker/boards/aurora-ruin.webp',
+		assetPath: OPENING_HAND_BACKDROP_PATH,
 		label: 'Aurora ruin',
 	},
 	'twilight-brazier': {

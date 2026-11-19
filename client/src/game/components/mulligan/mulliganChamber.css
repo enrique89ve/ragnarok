@@ -11,7 +11,7 @@
 
 :is(.mulligan-chamber, .mulligan-viewport-plate) {
   /* DESIGN.md — Obsidian 950, Gold 300, Rune Cyan */
-  --mulligan-plate: #05070d;
+  --mulligan-plate: var(--opening-hand-plate);
   --mulligan-gold: #f5c542;
   --mulligan-rune: #38bdf8;
 }
@@ -36,47 +36,7 @@
   display: none;
 }
 
-.mulligan-chamber--fullscreen.mulligan-chamber--backdrop-host {
-  background-color: var(--mulligan-plate);
-  background-position: center;
-  background-size: cover;
-  background-repeat: no-repeat;
-  background-image:
-    radial-gradient(
-      ellipse 52% 40% at 50% 48%,
-      color-mix(in srgb, var(--mulligan-gold) 4%, transparent),
-      transparent 74%
-    ),
-    radial-gradient(
-      ellipse 140% 110% at 50% 50%,
-      transparent 38%,
-      rgba(5, 7, 13, 0.35) 72%,
-      rgba(5, 7, 13, 0.55) 100%
-    ),
-    var(--opening-hand-backdrop-scrim),
-    var(--opening-hand-backdrop-image);
-}
-
-:is(.mulligan-viewport-plate, .mulligan-chamber--backdrop-host:not(.mulligan-chamber--fullscreen)) {
-  background-color: var(--mulligan-plate);
-  background-image:
-    radial-gradient(
-      ellipse 48% 36% at 50% 54%,
-      color-mix(in srgb, var(--mulligan-gold) 5%, transparent),
-      transparent 70%
-    ),
-    radial-gradient(
-      ellipse 130% 100% at 50% 50%,
-      transparent 32%,
-      rgba(5, 7, 13, 0.72) 68%,
-      var(--mulligan-plate) 88%
-    ),
-    var(--opening-hand-backdrop-scrim),
-    var(--opening-hand-backdrop-image);
-  background-position: center;
-  background-size: cover;
-  background-repeat: no-repeat;
-}
+/* Photographic plate: add `opening-hand-backdrop-layer--chamber` in TSX. */
 
 /* Decision UI over the arena — vignette only; photo comes from `.mulligan-viewport-plate`. */
 .mulligan-chamber.mulligan-chamber--viewport-backdrop {

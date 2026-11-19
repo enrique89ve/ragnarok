@@ -37,11 +37,8 @@
 	transform: scale(1.02);
 }
 
-.vs-screen-backdrop.opening-hand-backdrop-layer {
-	background-image:
-		var(--opening-hand-backdrop-scrim),
-		radial-gradient(ellipse 52% 38% at 50% 42%, rgba(2, 5, 12, 0.12), rgba(2, 4, 9, 0.55) 72%),
-		var(--opening-hand-backdrop-image);
+.vs-screen-backdrop.opening-hand-backdrop-layer--vs {
+	/* stack owned by openingHandBackdrop.css */
 }
 
 .vs-screen-backdrop::after {

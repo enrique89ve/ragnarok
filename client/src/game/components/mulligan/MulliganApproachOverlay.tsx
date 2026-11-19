@@ -29,7 +29,7 @@ export const MulliganApproachOverlaySurface: React.FC<MulliganApproachOverlayPro
 	compact = true,
 }) => (
 	<motion.div
-		className={`mulligan-approach-overlay mulligan-chamber--backdrop-host ${compact ? 'mulligan-approach-overlay--compact' : ''} ${MULLIGAN_OVERLAY_CLASS}`}
+		className={`mulligan-approach-overlay mulligan-chamber--backdrop-host opening-hand-backdrop-layer opening-hand-backdrop-layer--chamber ${compact ? 'mulligan-approach-overlay--compact' : ''} ${MULLIGAN_OVERLAY_CLASS}`}
 		style={{ pointerEvents }}
 		role="status"
 		aria-live="polite"

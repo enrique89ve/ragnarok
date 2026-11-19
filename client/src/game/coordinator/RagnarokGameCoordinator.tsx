@@ -74,6 +74,7 @@ import {
 } from '../components/chess/vsScreenTiming';
 import { preloadMulliganHandArt } from '../utils/preloadMulliganHandArt';
 import { OPENING_HAND_BACKDROP_PATH } from '../components/openingHandBackdropArt';
+import { beginPokerBoardSurfaceSession } from '../poker/visuals/pokerBoardSurfaceSession';
 import { preloadImages } from '../utils/assetPreloader';
 import { CombatPhasesLazyFallback } from '../components/chess/phases/PokerCombatPhaseSuspenseFallback';
 import {
@@ -713,6 +714,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
 
     setPokerSlotsSwapped(handoff.slotsSwapped);
     initializeCombatFromPayload(adapterInit);
+    beginPokerBoardSurfaceSession(handoff);
 
     runPhaseTransition({
       fromPhase: 'chess',
@@ -770,6 +772,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     if (resumeHandoffKeyRef.current === key) return;
     resumeHandoffKeyRef.current = key;
     setPokerSlotsSwapped(binding.plan.handoff.slotsSwapped);
+    beginPokerBoardSurfaceSession(binding.plan.handoff);
     if (!isResumeHandoffCurrent(flowState, binding.plan)) {
       useGameFlowStore.getState().hydrate(binding.flow);
     }

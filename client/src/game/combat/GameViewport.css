@@ -65,7 +65,7 @@ body:has(.game-viewport-wrapper) {
    components/mulligan/mulliganChamber.css so the letterbox matches the chamber. */
 /* Opening hand: aurora on letterbox — iris must not expose chess realm. */
 .game-viewport-wrapper--opening-mulligan {
-  background-color: #05070d;
+  background-color: var(--opening-hand-plate);
 }
 
 .game-viewport-wrapper--opening-mulligan > .game-viewport {
