@@ -18,14 +18,13 @@ import {
 } from '../../../combat/prefetchPokerCombatChunk';
 import { shouldUseOpeningHandMulliganHost } from '../../../combat/openingHandPresentationPolicy';
 import { useSettingsStore } from '../../../stores/settingsStore';
+import type { HeroDeathPresentation, PokerCombatWinner } from '../../../combat/pokerResolutionOutcome';
 
 const RagnarokCombatArena = lazy(() => import('../../../combat/RagnarokCombatArena'));
 
-export type PokerCombatOutcome = 'player' | 'opponent' | 'draw';
-
 export type PokerCombatPhaseProps = {
 	readonly handoff: CombatHandoff;
-	readonly onCombatEnd: (winner: PokerCombatOutcome) => void;
+	readonly onCombatEnd: (winner: PokerCombatWinner, presentation?: HeroDeathPresentation) => void;
 };
 
 const PokerCombatPhase: React.FC<PokerCombatPhaseProps> = ({ onCombatEnd }) => {

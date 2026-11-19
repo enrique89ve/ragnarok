@@ -446,7 +446,6 @@ export type ChessPhaseProps = {
 	readonly boardState: ChessBoardState;
 	readonly playerArmy: ArmySelectionType | null;
 	readonly opponentArmy: ArmySelectionType;
-	readonly onCombatTriggered: (attackerId: string, defenderId: string) => void;
 	readonly onBattleMode: () => void;
 	/** Mission realm + finale + motion — owns chess backdrop (not coordinator root). */
 	readonly sceneShellClass: string;
@@ -458,7 +457,6 @@ const ChessPhase: React.FC<ChessPhaseProps> = ({
 	boardState,
 	playerArmy,
 	opponentArmy,
-	onCombatTriggered,
 	onBattleMode,
 	sceneShellClass,
 	sceneFxEnabled,
@@ -515,10 +513,7 @@ const ChessPhase: React.FC<ChessPhaseProps> = ({
 
 				<div className="relative flex flex-col items-center chess-board-stage">
 					<div className="chess-board-relief" aria-hidden="true" />
-					<ChessBoard
-						onCombatTriggered={onCombatTriggered}
-						disabled={isPlacementMode}
-					/>
+					<ChessBoard disabled={isPlacementMode} />
 				</div>
 
 				<div className="w-45 flex flex-col items-center justify-end gap-3">

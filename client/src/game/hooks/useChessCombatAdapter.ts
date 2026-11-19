@@ -6,7 +6,7 @@
  */
 
 import { useMemo } from 'react';
-import { useUnifiedCombatStore } from '../stores/unifiedCombatStore';
+import { useUnifiedCombatStore, type InstantKillEvent, type PendingAttackAnimation } from '../stores/unifiedCombatStore';
 import {
   ChessPiece,
   ChessBoardPosition,
@@ -15,21 +15,6 @@ import {
   ArmySelection
 } from '../types/ChessTypes';
 import type { HeroDeckLoadout } from '../deck/heroDeckRules';
-
-interface InstantKillEvent {
-  position: ChessBoardPosition;
-  attackerType: string;
-  timestamp: number;
-}
-
-interface PendingAttackAnimation {
-  attacker: ChessPiece;
-  defender: ChessPiece;
-  attackerPosition: ChessBoardPosition;
-  defenderPosition: ChessBoardPosition;
-  isInstantKill: boolean;
-  timestamp: number;
-}
 
 export interface ChessCombatAdapter {
   boardState: ChessBoardState;
@@ -47,7 +32,7 @@ export interface ChessCombatAdapter {
   movePiece: (to: ChessBoardPosition) => ChessCollision | null;
   getPieceAt: (position: ChessBoardPosition) => ChessPiece | null;
   getValidMoves: (piece: ChessPiece) => { moves: ChessBoardPosition[]; attacks: ChessBoardPosition[] };
-  completeAttackAnimation: () => void;
+  clearAttackAnimation: (animation: PendingAttackAnimation) => boolean;
   nextTurn: () => void;
   resetBoard: () => void;
   
@@ -71,7 +56,7 @@ export function useChessCombatAdapter(): ChessCombatAdapter {
   const movePieceFn = useUnifiedCombatStore(s => s.movePiece);
   const getPieceAtFn = useUnifiedCombatStore(s => s.getPieceAt);
   const getValidMovesFn = useUnifiedCombatStore(s => s.getValidMoves);
-  const completeAttackAnimationFn = useUnifiedCombatStore(s => s.completeAttackAnimation);
+  const clearAttackAnimation = useUnifiedCombatStore(s => s.clearAttackAnimation);
   const nextTurnFn = useUnifiedCombatStore(s => s.nextTurn);
   const resetFn = useUnifiedCombatStore(s => s.reset);
   const clearPendingCombatFn = useUnifiedCombatStore(s => s.clearPendingCombat);
@@ -118,9 +103,7 @@ export function useChessCombatAdapter(): ChessCombatAdapter {
       nextTurnFn();
     },
 
-    completeAttackAnimation: () => {
-      completeAttackAnimationFn();
-    },
+    clearAttackAnimation,
 
     resetBoard: () => {
       resetFn();
@@ -164,7 +147,7 @@ export function useChessCombatAdapter(): ChessCombatAdapter {
     movePieceFn,
     getPieceAtFn,
     getValidMovesFn,
-    completeAttackAnimationFn,
+    clearAttackAnimation,
     nextTurnFn,
     resetFn,
     clearPendingCombatFn,
@@ -207,9 +190,6 @@ export function getChessCombatStoreActions() {
       unified.nextTurn();
     },
 
-    completeAttackAnimation: () => {
-      unified.completeAttackAnimation();
-    },
 
     resetBoard: () => {
       unified.reset();

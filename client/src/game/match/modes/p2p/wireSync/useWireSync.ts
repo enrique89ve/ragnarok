@@ -718,7 +718,7 @@ export function useWireSync() {
 	// a late action after the bytes were accepted by the browser socket.
 	const pendingPokerActionGateRef = useRef(new Map<string, PendingPokerActionGate>());
 	const pendingCardsActionGateRef = useRef(new Map<string, PendingCardsActionGate>());
-	const localCardsCommandPendingRef = useRef(false);
+	const localCardsCommandPendingRef = useRef<Promise<void> | null>(null);
 	const cardsReceiptByCommandIdRef = useRef(new Map<string, ActionAppliedMessage>());
 	const cardsReceiptCommandOrderRef = useRef<string[]>([]);
 
@@ -2598,7 +2598,12 @@ export function useWireSync() {
 					rejectCanonicalCommand('poker_reward_hand_mismatch');
 					break;
 				}
-				const resolvedPokerHand = getP2PPokerCombatAdapter().lastResolvedHand;
+				const pokerAdapter = getP2PPokerCombatAdapter();
+				// An authenticated reward can arrive before React processes the
+				// final wager. Resolve only when local gameplay has reached the
+				// matched hand's showdown barrier, then verify the wire values.
+				if (!pokerRewardAlreadyApplied && !pokerAdapter.lastResolvedHand) pokerAdapter.resolveCombat();
+				const resolvedPokerHand = pokerAdapter.lastResolvedHand;
 				if (!pokerRewardAlreadyApplied) {
 					const authorityError = validatePokerRewardAuthority(wireCommand, resolvedPokerHand);
 					if (authorityError) {
@@ -4307,6 +4312,12 @@ export function useWireSync() {
 				debug.warn('[wireSync] sendCommandEnvelope skipped: no matchId yet');
 				return null;
 			}
+			const isPokerReward = command.type === GAME_COMMAND_TYPES.grantPokerHandRewards;
+			const isCurrentReward = (): boolean => !isPokerReward || (
+				command.rewardId === derivePokerHandRewardId(matchId, command.combatId, command.handIndex)
+				&& !validatePokerRewardAuthority(command, getP2PPokerCombatAdapter().lastResolvedHand)
+			);
+			if (!isCurrentReward()) return null;
 			const sessionState = usePeerStore.getState();
 			const key = sessionKeyRef.current;
 			if (!key || !sessionState.p2pSessionLocalAuthorized || !sessionState.p2pSessionRemoteAuthorized) {
@@ -4335,7 +4346,7 @@ export function useWireSync() {
 			// raced apply. 250ms is under human click cadence.
 			const ENVELOPE_COOLDOWN_MS = 250;
 			const nowSend = Date.now();
-			if (nowSend - lastEnvelopeSentAtRef.current < ENVELOPE_COOLDOWN_MS) {
+			if (!isPokerReward && nowSend - lastEnvelopeSentAtRef.current < ENVELOPE_COOLDOWN_MS) {
 				debug.warn(`[wireSync] envelope cooldown active (${nowSend - lastEnvelopeSentAtRef.current}ms since last) — dropping ${command.type}`);
 				GameEventBus.emitNotification({
 					level: 'error',
@@ -4386,6 +4397,7 @@ export function useWireSync() {
 			const signature = await signGameplayEnvelope(unsignedEnvelope, key);
 			if (usePeerStore.getState().connectionState !== 'connected'
 				|| matchIdRef.current !== matchId
+				|| !isCurrentReward()
 				|| sessionKeyRef.current !== key
 				|| usePeerStore.getState().p2pIntegrityError !== null
 				|| usePeerStore.getState().battleLifecycle?.phase === 'resolved'
@@ -4466,7 +4478,20 @@ export function useWireSync() {
 			isP2PMatch,
 		});
 		if (plan.sendEnvelope) {
-			if (localCardsCommandPendingRef.current) {
+			const pending = localCardsCommandPendingRef.current;
+			if (pending) {
+				if (command.type === GAME_COMMAND_TYPES.grantPokerHandRewards) {
+					// A rules-driven reward can follow a card command immediately.
+					// Its pre-state hash must include that command's local commit.
+					const matchId = matchIdRef.current;
+					void pending.then(() => {
+						if (matchId !== matchIdRef.current
+							|| usePeerStore.getState().connectionState !== 'connected'
+							|| useGameStore.getState().gameState?.pokerRewardIds?.includes(command.rewardId)) return;
+						runCardsLocalAction(command, applyLocal, onCommitted);
+					});
+					return;
+				}
 				GameEventBus.emitNotification({
 					level: 'warning',
 					message: 'Synchronizing match…',
@@ -4474,8 +4499,7 @@ export function useWireSync() {
 				});
 				return;
 			}
-			localCardsCommandPendingRef.current = true;
-			void sendCommandEnvelope(command)
+			const submitted = sendCommandEnvelope(command)
 				.then((sent) => {
 					if (sent && plan.applyLocal) {
 						const localResult = applyLocal();
@@ -4515,8 +4539,9 @@ export function useWireSync() {
 					quarantineP2PSession(`cards_command_signing_failed_${command.type}`);
 				})
 				.finally(() => {
-					localCardsCommandPendingRef.current = false;
+					if (localCardsCommandPendingRef.current === submitted) localCardsCommandPendingRef.current = null;
 				});
+			localCardsCommandPendingRef.current = submitted;
 		} else if (plan.applyLocal) {
 			applyLocal();
 			onCommitted?.(null);

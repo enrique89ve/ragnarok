@@ -18,7 +18,6 @@ import {
 interface VSScreenProps {
   attacker: ChessPiece;
   defender: ChessPiece;
-  onComplete: () => void;
   duration?: number;
   minDurationMs?: number;
   approval?: PokerEntryApprovalView | null;
@@ -27,7 +26,6 @@ interface VSScreenProps {
 const VSScreen: React.FC<VSScreenProps> = ({ 
   attacker, 
   defender, 
-  onComplete,
   duration = VS_DURATION_RANKED_MS,
   minDurationMs = VS_MIN_DURATION_RANKED_MS,
   approval = null,
@@ -49,14 +47,12 @@ const VSScreen: React.FC<VSScreenProps> = ({
     const enterTimer = setTimeout(() => setPhase('vs'), VS_ENTER_DELAY_MS);
     if (approval) return () => clearTimeout(enterTimer);
     const exitTimer = setTimeout(() => setPhase('exit'), exitAt);
-    const completeTimer = setTimeout(onComplete, safeDuration);
 
     return () => {
       clearTimeout(enterTimer);
       clearTimeout(exitTimer);
-      clearTimeout(completeTimer);
     };
-  }, [approval, safeDuration, exitAt, onComplete]);
+  }, [approval, exitAt]);
 
   const getPieceTitle = (piece: ChessPiece) => {
     return piece.heroName || `${piece.type.charAt(0).toUpperCase()}${piece.type.slice(1)}`;

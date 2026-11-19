@@ -13,7 +13,6 @@ import { routes } from '../../lib/routes';
 import { getWarbandEntryRoute } from '../../lib/warbandRoutes';
 import { usePokerCombatAdapter } from '../hooks/usePokerCombatAdapter';
 import { useAudio } from '../../lib/stores/useAudio';
-import { useKingChessAbility } from '../hooks/useKingChessAbility';
 import { useChessAITurn } from './hooks/useChessAITurn';
 import { useUnifiedCombatStore } from '../stores/unifiedCombatStore';
 import { useGameFlowStore } from '../stores/gameFlowStore';
@@ -67,6 +66,7 @@ import {
 	prefetchPokerCombatChunkDeferred,
 } from '../combat/prefetchPokerCombatChunk';
 import { shouldDeferArenaChunkPrefetch } from '../combat/openingHandPresentationPolicy';
+import type { HeroDeathPresentation } from '../combat/pokerResolutionOutcome';
 import { isOpeningMulliganGatingPoker } from '../utils/mulliganUtils';
 import {
 	VS_DURATION_SINGLE_MS,
@@ -99,6 +99,7 @@ const VsScreenPhase = lazy(() => import('../components/chess/phases/VsScreenPhas
 const ChessBattleIntroPhase = lazy(() => import('../components/chess/phases/ChessBattleIntroPhase'));
 const PokerCombatPhase = lazy(() => import('../components/chess/phases/PokerCombatPhase'));
 const ChessPhase = lazy(() => import('../components/chess/phases/ChessPhase'));
+const HeroDeathAnimation = lazy(() => import('../combat/components/HeroDeathAnimation'));
 
 // Realm icon / color / text-color tables moved into MissionIntroPhase.tsx
 // (their only consumer). The coordinator no longer carries them.
@@ -278,6 +279,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   // Local `initializeBoard` must not race peer-synced piece ids. Gate every
   // mount-time `initializeBoard` on this flag.
   const isP2PConnected = flow?.usesPeerPhaseCheckpoint === true;
+	const isP2PMatch = ctx?.opponent.kind === 'peer';
   const p2pTechnicalResult = usePeerStore(s => {
 		const result = s.battleLifecycle?.result;
 		if (result?.kind === 'technical_no_contest') return 'draw';
@@ -399,6 +401,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   const [playerArmy, setPlayerArmy] = useState<ArmySelectionType | null>(effectiveInitialArmy);
   const [exitPromptOpen, setExitPromptOpen] = useState(false);
   const [matchAbandoned, setMatchAbandoned] = useState(false);
+  const [heroDeathPresentation, setHeroDeathPresentation] = useState<HeroDeathPresentation | null>(null);
   /*
     Shared deck IDs flow directly into useUnifiedCombatStore.setSharedDeck
     when warband bootstrap fires. There is no need for a local mirror —
@@ -434,7 +437,6 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     boardState,
     initializeBoard,
     pendingCombat,
-    pendingAttackAnimation,
     clearPendingCombat,
     resolveCombat,
     setSharedDeck,
@@ -632,67 +634,21 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     updatePieceHealth,
   });
 
-  const { lastMineTriggered } = useKingChessAbility(myCanonicalSide);
-
-  const delayedCombatTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    return () => {
-      if (delayedCombatTimerRef.current) clearTimeout(delayedCombatTimerRef.current);
-      delayedCombatTimerRef.current = null;
-    };
-  }, [ctx?.matchId, flowState?.tag]);
-
-  const handleCombatTriggered = useCallback((attackerId: string, defenderId: string) => {
-    const gameState = useGameStore.getState().gameState;
-    const isPeerMatch = ctx?.opponent.kind === 'peer';
-    if (isPeerMatch) {
-      prefetchPokerCombatChunk();
-    } else if (shouldDeferArenaChunkPrefetch(isPeerMatch, isOpeningMulliganGatingPoker(gameState))) {
-      prefetchPokerCombatChunkDeferred();
-    } else {
-      prefetchPokerCombatChunk();
-    }
-
-    if (lastMineTriggered) {
-      if (delayedCombatTimerRef.current) clearTimeout(delayedCombatTimerRef.current);
-      const expectedMatchId = ctx?.matchId ?? null;
-      delayedCombatTimerRef.current = setTimeout(() => {
-        delayedCombatTimerRef.current = null;
-        const currentFlow = useGameFlowStore.getState().current;
-        const currentMatchId = useMatchStore.getState().activeMatch?.matchId ?? null;
-        if (currentFlow?.tag !== 'chess' || currentFlow.tag !== flowState?.tag || currentMatchId !== expectedMatchId) return;
-        const freshPieces = useUnifiedCombatStore.getState().boardState.pieces;
-        const freshAttacker = freshPieces.find(p => p.id === attackerId);
-        const freshDefender = freshPieces.find(p => p.id === defenderId);
-        if (!freshAttacker || !freshDefender) return;
-        dispatchFlow({ type: 'COMBAT_TRIGGERED', pieces: { attacker: freshAttacker, defender: freshDefender } });
-        playSoundEffect('card_draw');
-      }, 1800);
-    } else {
-      const attacker = boardState.pieces.find(p => p.id === attackerId);
-      const defender = boardState.pieces.find(p => p.id === defenderId);
-      if (!attacker || !defender) return;
-      dispatchFlow({ type: 'COMBAT_TRIGGERED', pieces: { attacker, defender } });
-      playSoundEffect('card_draw');
-    }
-  }, [boardState.pieces, playSoundEffect, lastMineTriggered, dispatchFlow, ctx?.matchId, ctx?.opponent.kind, flowState?.tag]);
-
-  const handleVsScreenComplete = useCallback(() => {
-    // VS pieces now live in flowState.pieces (FSM owns vs_screen). Bail
-    // unless the FSM is actually in vs_screen — late callbacks from the
-    // VS timer can fire after a phase change.
-    if (flowState === null || flowState.tag !== 'vs_screen') return;
-    const vsPieces = flowState.pieces;
+  const completePokerEntry = useCallback(() => {
+    const currentFlow = useGameFlowStore.getState().current;
+    if (currentFlow?.tag !== 'vs_screen') return;
+    const { boardState: currentBoard, pendingCombat: collision } = useUnifiedCombatStore.getState();
+    const vsPieces = currentFlow.pieces;
 
     const binding = bindResumePokerHandoff({
-      flow: flowState,
-      pendingCombat,
-      pieces: [...boardState.pieces, vsPieces.attacker, vsPieces.defender],
+      flow: currentFlow,
+      pendingCombat: collision,
+      pieces: [...currentBoard.pieces, vsPieces.attacker, vsPieces.defender],
       localArmy: playerArmy,
       remoteArmy: opponentArmy,
       perspective: p2pPerspective,
       matchSeed,
-      chessMoveCount: boardState.moveCount,
+      chessMoveCount: currentBoard.moveCount,
       resolvePortrait: resolveHeroPortrait,
     });
     if (binding.kind !== 'bound') return;
@@ -703,7 +659,6 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
 
     debug.combat(`Attacker ${attacker.type} (${attacker.owner}): HP=${attacker.health}, Stamina=${attacker.stamina}`);
     debug.combat(`Defender ${defender.type} (${defender.owner}): HP=${defender.health}, Stamina=${defender.stamina}`);
-    debug.combat(`First strike will be applied via animation in poker combat`);
 
     // (Realm background is now set earlier — see useEffect that watches
     //  campaignData.mission.realm. The chess phase needs the realm class
@@ -725,7 +680,35 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
         playAudioCue('frontline_tactical_sting');
       },
     });
-  }, [flowState, pendingCombat, playerArmy, opponentArmy, boardState.pieces, boardState.moveCount, initializeCombatFromPayload, playAudioCue, stopBackgroundMusic, setPokerSlotsSwapped, dispatchFlow, matchSeed, p2pPerspective, runPhaseTransition]);
+  }, [playerArmy, opponentArmy, initializeCombatFromPayload, playAudioCue, stopBackgroundMusic, setPokerSlotsSwapped, dispatchFlow, matchSeed, p2pPerspective, runPhaseTransition]);
+
+  const completeLocalPokerEntryRef = useRef(completePokerEntry);
+  useEffect(() => {
+    completeLocalPokerEntryRef.current = completePokerEntry;
+  }, [completePokerEntry]);
+
+  useEffect(() => {
+    if (isP2PMatch) return;
+    const matchId = ctx?.matchId;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const scheduleLocalPokerEntry = ({ current }: ReturnType<typeof useGameFlowStore.getState>) => {
+      clearTimeout(timeout);
+      if (current?.tag !== 'vs_screen') return;
+      timeout = setTimeout(() => {
+        if (useGameFlowStore.getState().current !== current) return;
+        if (useMatchStore.getState().activeMatch?.matchId !== matchId) return;
+        completeLocalPokerEntryRef.current();
+      }, VS_DURATION_SINGLE_MS);
+    };
+    const unsubscribe = useGameFlowStore.subscribe((state, previousState) => {
+      if (state.current !== previousState.current) scheduleLocalPokerEntry(state);
+    });
+    scheduleLocalPokerEntry(useGameFlowStore.getState());
+    return () => {
+      clearTimeout(timeout);
+      unsubscribe();
+    };
+  }, [ctx?.matchId, isP2PMatch]);
 
   const pokerEntryCombatId = useMemo(() => {
     if (!ctx?.matchId || flowState?.tag !== 'vs_screen') return null;
@@ -740,7 +723,9 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     enabled: isP2PConnected && flowState?.tag === 'vs_screen',
     matchId: ctx?.matchId ?? null,
     combatId: pokerEntryCombatId,
-    onCommitted: handleVsScreenComplete,
+    onCommitted: () => {
+      if (useGameFlowStore.getState().current === flowState) completePokerEntry();
+    },
   });
 
   const resumeHandoffKeyRef = useRef<string | null>(null);
@@ -789,7 +774,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     setPokerSlotsSwapped,
   ]);
 
-  const handleCombatEnd = useCallback((winner: 'player' | 'opponent' | 'draw') => {
+  const handleCombatEnd = useCallback((winner: 'player' | 'opponent' | 'draw', presentation?: HeroDeathPresentation) => {
     try {
       // Match-end already claimed by the single matchEndController.
       // Dispatching COMBAT_RESOLVED here would race GAME_ENDED and flash
@@ -878,6 +863,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       clearPendingCombat();
       setPokerSlotsSwapped(false);
       endCombat();
+      if (presentation) setHeroDeathPresentation(presentation);
 
       runPhaseTransition({
         fromPhase: 'poker_combat',
@@ -1016,20 +1002,22 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   });
 
   useEffect(() => {
-    if (shouldTriggerChessCombatFlow({
-      hasPendingCombat: !!pendingCombat,
-      chessGameStatus: boardState.gameStatus,
-      flowTag: flowState?.tag ?? null,
-      hasPendingAttackAnimation: pendingAttackAnimation !== null,
-    })) {
-      debug.chess('pendingCombat detected, triggering combat flow');
-      if (!pendingCombat) return;
-      const { attacker, defender } = pendingCombat;
+    if (!pendingCombat) return;
+    const currentCombat = useUnifiedCombatStore.getState();
+    const currentFlow = useGameFlowStore.getState().current;
+    if (currentCombat.pendingCombat !== pendingCombat || currentFlow !== flowState) return;
+    if (!shouldTriggerChessCombatFlow({
+      hasPendingCombat: true,
+      chessGameStatus: currentCombat.boardState.gameStatus,
+      flowTag: currentFlow?.tag ?? null,
+    })) return;
+    const attacker = currentCombat.boardState.pieces.find(piece => piece.id === pendingCombat.attacker.id);
+    const defender = currentCombat.boardState.pieces.find(piece => piece.id === pendingCombat.defender.id);
+    if (!attacker || !defender) return;
 
-      dispatchFlow({ type: 'COMBAT_TRIGGERED', pieces: { attacker, defender } });
-      playSoundEffect('card_draw');
-    }
-  }, [pendingCombat, pendingAttackAnimation, boardState.gameStatus, flowState?.tag, playSoundEffect, dispatchFlow]);
+    dispatchFlow({ type: 'COMBAT_TRIGGERED', pieces: { attacker, defender } });
+    playSoundEffect('card_draw');
+  }, [pendingCombat, boardState.gameStatus, flowState, playSoundEffect, dispatchFlow]);
 
   useEffect(() => {
     if (flowState?.tag === 'chess' && boardState.gameStatus === 'playing') {
@@ -1200,9 +1188,12 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   }, [resetBoard, opponentArmy, initializeBoard, resetPlayerTurnCount, resetBossRulesApplied, clearFlow, startFlow, matchEndController]);
 
   const handleBattleMode = useCallback(() => {
+    const combat = useUnifiedCombatStore.getState();
+    if (combat.boardState.gameStatus !== 'playing') return;
+
     // Dev-only Battle Sandbox: hero vs hero so poker has a deck on both sides.
-    const playerPieces = boardState.pieces.filter(p => p.owner === myCanonicalSide && p.type !== 'pawn' && p.type !== 'king');
-    const opponentPieces = boardState.pieces.filter(p => p.owner === enemyCanonicalSide && p.type !== 'pawn' && p.type !== 'king');
+    const playerPieces = combat.boardState.pieces.filter(p => p.owner === myCanonicalSide && p.type !== 'pawn' && p.type !== 'king');
+    const opponentPieces = combat.boardState.pieces.filter(p => p.owner === enemyCanonicalSide && p.type !== 'pawn' && p.type !== 'king');
 
     if (playerPieces.length === 0 || opponentPieces.length === 0) {
       debug.chess('BattleMode: Not enough pieces for test battle');
@@ -1211,15 +1202,11 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
 
     const attacker = playerPieces[Math.floor(cryptoRng() * playerPieces.length)];
     const defender = opponentPieces[Math.floor(cryptoRng() * opponentPieces.length)];
-    const staged = useUnifiedCombatStore.getState().stagePendingPokerCombat(attacker, defender);
+    const staged = combat.stagePendingPokerCombat(attacker, defender);
     if (staged.status !== 'applied') {
-      debug.chess(`BattleMode: failed to stage poker combat (${staged.status === 'rejected' ? staged.reason : 'unknown'})`);
-      return;
+      debug.chess(`BattleMode: failed to stage poker combat (${staged.reason})`);
     }
-
-    dispatchFlow({ type: 'COMBAT_TRIGGERED', pieces: { attacker, defender } });
-    playSoundEffect('card_draw');
-  }, [boardState.pieces, myCanonicalSide, enemyCanonicalSide, playSoundEffect, dispatchFlow]);
+  }, [myCanonicalSide, enemyCanonicalSide]);
 
   const animationsEnabled = useSettingsStore(s => s.animationsEnabled);
   const reduceMotion = useSettingsStore(s => s.reduceMotion);
@@ -1235,7 +1222,6 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   const canLeaveActiveMatch = flowState?.tag === 'chess'
     || flowState?.tag === 'vs_screen'
     || flowState?.tag === 'poker_combat';
-	const isP2PMatch = ctx?.opponent.kind === 'peer';
 	const handleRequestExit = useCallback(() => {
 		if (!isP2PMatch) {
 			setExitPromptOpen(true);
@@ -1263,6 +1249,8 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       className="ragnarok-chess-game relative w-full min-h-dvh h-dvh overflow-hidden"
       data-flow-tag={flowState?.tag ?? undefined}
       data-scene={matchSceneId}
+      onPointerDownCapture={heroDeathPresentation ? () => setHeroDeathPresentation(null) : undefined}
+      onKeyDownCapture={heroDeathPresentation ? () => setHeroDeathPresentation(null) : undefined}
     >
 		{isP2PMatch && flowState?.tag !== 'game_over' ? <P2PMatchPauseOverlay /> : null}
 		<MatchExitControls
@@ -1300,7 +1288,6 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
               boardState={boardState}
               playerArmy={playerArmy}
               opponentArmy={opponentArmy}
-              onCombatTriggered={handleCombatTriggered}
               onBattleMode={handleBattleMode}
               sceneShellClass={chessPhaseSceneShellClass}
               sceneFxEnabled={shouldEnableRagnarokSceneFx(chessRealmClass)}
@@ -1312,7 +1299,6 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
             <VsScreenPhase
               attacker={flowState.pieces.attacker}
               defender={flowState.pieces.defender}
-              onTimeout={handleVsScreenComplete}
               approval={pokerEntryApproval}
               durationMs={isP2PMatch ? undefined : VS_DURATION_SINGLE_MS}
               minDurationMs={isP2PMatch ? undefined : VS_MIN_DURATION_SINGLE_MS}
@@ -1351,6 +1337,17 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
           )}
         </AnimatePresence>
       </Suspense>
+      {heroDeathPresentation && (
+        <Suspense fallback={null}>
+          <HeroDeathAnimation
+            key={heroDeathPresentation.combatId}
+            heroName={heroDeathPresentation.heroName}
+            heroPortrait={heroDeathPresentation.heroId ? resolveHeroPortrait(heroDeathPresentation.heroId) : undefined}
+            isPlayer={heroDeathPresentation.isPlayer}
+            onComplete={() => setHeroDeathPresentation(current => current === heroDeathPresentation ? null : current)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

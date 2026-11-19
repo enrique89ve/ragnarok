@@ -22,7 +22,6 @@ const PIECE_SLIDE_TRANSITION = {
 const PIECE_REST_TRANSITION = { type: 'spring' as const, stiffness: 300, damping: 30 };
 
 interface ChessBoardProps {
-  onCombatTriggered?: (attackerId: string, defenderId: string) => void;
   disabled?: boolean;
 }
 
@@ -56,7 +55,7 @@ const getPieceVisualState = (input: {
   return PIECE_VISUAL_STATES.idle;
 };
 
-const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = false }) => {
+const ChessBoard: React.FC<ChessBoardProps> = ({ disabled = false }) => {
   const boardRef = useRef<HTMLDivElement>(null);
   const previousPiecePositions = useRef<Map<string, { row: number; col: number }>>(new Map());
   const [boardRect, setBoardRect] = useState({ x: 0, y: 0, width: 0, height: 0 });
@@ -83,7 +82,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
     isValidMovePosition,
     isAttackPosition,
     isMinePreviewTile,
-  } = useChessBoardInteractions({ disabled, onCombatTriggered });
+  } = useChessBoardInteractions({ disabled });
 
   useEffect(() => {
     const updateBoardRect = () => {

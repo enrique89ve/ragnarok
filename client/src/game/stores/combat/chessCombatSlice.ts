@@ -363,7 +363,6 @@ export const createChessCombatSlice: StateCreator<
       return { status: 'rejected', reason: result.reason };
     }
 
-    state.recordInstantKill(targetPosition, attacker.type);
     set({
       boardState: {
         ...state.boardState,
@@ -405,6 +404,7 @@ export const createChessCombatSlice: StateCreator<
       type: 'attack',
       message: `${attacker.heroName} instantly killed ${defender.heroName}`
     });
+    get().recordInstantKill(targetPosition, attacker.type);
     return { status: 'applied' };
   },
 
@@ -438,8 +438,9 @@ export const createChessCombatSlice: StateCreator<
       isInstantKill
     };
 
-    get().startAttackAnimation(attacker, defender, isInstantKill);
-    return resolveChessAttackIntent(get, set, attack);
+    const result = resolveChessAttackIntent(get, set, attack);
+    if (result.status === 'applied') get().startAttackAnimation(attacker, defender, isInstantKill);
+    return result;
   },
 
   getThreateningPieces: (kingPosition: ChessBoardPosition, attackerSide: ChessPlayerSide, pieces?: ChessPiece[]): ChessPiece[] =>
@@ -732,19 +733,6 @@ export const createChessCombatSlice: StateCreator<
       defenderPosition: { ...defender.position },
       isInstantKill: false,
     });
-  },
-
-  completeAttackAnimation: () => {
-    const state = get();
-    const animation = state.pendingAttackAnimation;
-
-    if (!animation) {
-      debug.chess('[Chess] No pending animation to clear');
-      return;
-    }
-
-    debug.chess(`[Chess] Clearing attack animation marker: ${animation.attacker.heroName} -> ${animation.defender.heroName}`);
-    state.clearAttackAnimation();
   },
 
   resolveCombat: (result: ChessCombatResult) => {

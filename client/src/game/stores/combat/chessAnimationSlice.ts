@@ -22,11 +22,22 @@ import {
 } from '../../types/ChessTypes';
 import {
   ChessAnimationSlice,
+  PendingAttackAnimation,
   UnifiedCombatStore
 } from './types';
 import { debug } from '../../config/debugConfig';
+import {
+  gameEffectCoordinator,
+  type GameEffectHandle,
+} from '@/game/effects/core/gameEffectCoordinator';
 
 const ATTACK_ANIMATION_BUDGET_MS = 2000;
+let pendingAttackBudgetHandle: GameEffectHandle | null = null;
+
+function cancelAttackAnimationBudget(): void {
+  pendingAttackBudgetHandle?.cancel();
+  pendingAttackBudgetHandle = null;
+}
 
 export const createChessAnimationSlice: StateCreator<
   UnifiedCombatStore,
@@ -39,28 +50,36 @@ export const createChessAnimationSlice: StateCreator<
   lastMineTriggered: null,
 
   startAttackAnimation: (attacker: ChessPiece, defender: ChessPiece, isInstantKill: boolean) => {
-    const timestamp = get()._nextLogTick();
-    set({
-      pendingAttackAnimation: {
-        attacker,
-        defender,
-        attackerPosition: { ...attacker.position },
-        defenderPosition: { ...defender.position },
-        isInstantKill,
-        timestamp,
-      }
+    const animation: PendingAttackAnimation = {
+      attacker,
+      defender,
+      attackerPosition: { ...attacker.position },
+      defenderPosition: { ...defender.position },
+      isInstantKill,
+      timestamp: get()._nextLogTick(),
+    };
+    set({ pendingAttackAnimation: animation });
+    cancelAttackAnimationBudget();
+    pendingAttackBudgetHandle = gameEffectCoordinator.schedule({
+      owner: 'chess-animation',
+      lane: 'attack-budget',
+      key: 'pending-attack',
+      priority: 'high',
+      delayMs: ATTACK_ANIMATION_BUDGET_MS,
+      run: () => {
+        pendingAttackBudgetHandle = null;
+        if (get().clearAttackAnimation(animation)) {
+          debug.chess('[Chess] Attack animation budget exceeded');
+        }
+      },
     });
-    globalThis.setTimeout(() => {
-      const pending = get().pendingAttackAnimation;
-      if (pending && pending.timestamp === timestamp) {
-        debug.chess('[Chess] attack animation budget exceeded — clearing marker so chess can continue');
-        get().clearAttackAnimation();
-      }
-    }, ATTACK_ANIMATION_BUDGET_MS);
   },
 
-  clearAttackAnimation: () => {
+  clearAttackAnimation: (animation) => {
+    if (get().pendingAttackAnimation !== animation) return false;
+    cancelAttackAnimationBudget();
     set({ pendingAttackAnimation: null });
+    return true;
   },
 
   recordInstantKill: (position: ChessBoardPosition, attackerType: ChessPieceType) => {
@@ -84,6 +103,7 @@ export const createChessAnimationSlice: StateCreator<
   },
 
   clearChessAnimations: () => {
+    cancelAttackAnimationBudget();
     set({
       pendingAttackAnimation: null,
       lastInstantKill: null,

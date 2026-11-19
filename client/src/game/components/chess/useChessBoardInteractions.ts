@@ -6,7 +6,7 @@ import { useKingChessAbility } from '../../hooks/useKingChessAbility';
 import { useMatchStore } from '../../match/store';
 import { useGameStore } from '../../stores/gameStore';
 import { usePeerStore } from '../../stores/peerStore';
-import { useUnifiedCombatStore } from '../../stores/unifiedCombatStore';
+import { useUnifiedCombatStore, type PendingAttackAnimation } from '../../stores/unifiedCombatStore';
 import {
   captureChessPrevHashes,
   isChessCommandPending,
@@ -29,7 +29,6 @@ import {
 
 type UseChessBoardInteractionsInput = {
   readonly disabled: boolean;
-  readonly onCombatTriggered?: (attackerId: string, defenderId: string) => void;
 };
 
 type InstantKillFlash = {
@@ -74,7 +73,7 @@ const createPositionSet = (positions: readonly ChessBoardPosition[]): ReadonlySe
 };
 
 export function useChessBoardInteractions(input: UseChessBoardInteractionsInput) {
-  const { disabled, onCombatTriggered } = input;
+  const { disabled } = input;
   const { playSoundEffect } = useAudio();
   const [noMovesMessage, setNoMovesMessage] = useState<string | null>(null);
   const [instantKillFlash, setInstantKillFlash] = useState<InstantKillFlash | null>(null);
@@ -96,8 +95,7 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
     getValidMoves,
     lastInstantKill,
     pendingAttackAnimation,
-    pendingCombat,
-    completeAttackAnimation,
+    clearAttackAnimation,
   } = useChessCombatAdapter();
 
   // Local viewer's canonical side. SP defaults to 'player' (human is first-mover);
@@ -167,6 +165,7 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
     playSoundEffect('attack');
 
     const timeoutId = setTimeout(() => {
+      if (useUnifiedCombatStore.getState().lastMineTriggered !== lastMineTriggered) return;
       setMineTriggerEffect(null);
       setScreenShake(false);
       clearMineTriggered();
@@ -179,9 +178,8 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
     setFallingKingId(getLosingKingId({ gameStatus, pieces }));
   }, [gameStatus, pieces]);
 
-  const handleAttackAnimationComplete = useCallback(() => {
-    const animation = pendingAttackAnimation;
-    if (!animation) return;
+  const handleAttackAnimationComplete = useCallback((animation: PendingAttackAnimation) => {
+    if (!clearAttackAnimation(animation)) return;
 
     playSoundEffect('attack');
 
@@ -196,18 +194,7 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
         instantKillFlashTimeoutRef.current = null;
       }, 600);
     }
-
-    completeAttackAnimation();
-
-    // The animation owns its cycle: only after the strike fully resolves on
-    // the board do we hand off to the VS screen. `pendingCombat` is the
-    // discriminator — it is staged only for poker captures (instant kills
-    // resolve on the board and leave it null), so a resolved-here capture
-    // never emits the combat handoff.
-    if (pendingCombat) {
-      onCombatTriggered?.(pendingCombat.attacker.id, pendingCombat.defender.id);
-    }
-  }, [pendingAttackAnimation, pendingCombat, completeAttackAnimation, playSoundEffect, onCombatTriggered]);
+  }, [clearAttackAnimation, playSoundEffect]);
 
   useEffect(() => {
     if (!lastInstantKill) return undefined;
@@ -243,6 +230,7 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
   );
 
   const handleCellClick = useCallback((row: number, col: number) => {
+    if (useUnifiedCombatStore.getState().boardState.gameStatus !== 'playing') return;
     const position: ChessBoardPosition = { row, col };
     setNoMovesMessage(null);
 
@@ -425,6 +413,7 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
 				}
 
 				const latestBoard = useUnifiedCombatStore.getState().boardState;
+				if (latestBoard.gameStatus !== 'playing') return false;
 				const latestSelected = latestBoard.selectedPiece;
 				const latestMovingPiece = latestBoard.pieces.find(piece => piece.id === movingPiece.id);
 				if (
@@ -531,8 +520,8 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
     getMinePlacementPlan,
     placeMineAtPosition,
     playSoundEffect,
-    validMoves,
-    attackMoves,
+    validMoveSet,
+    attackMoveSet,
     movePiece,
     getPieceAtFromMap,
     getPieceAtFromStore,

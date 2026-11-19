@@ -1,9 +1,7 @@
 /*
   VsScreenPhase — fullscreen attacker-vs-defender splash that runs
-  between chess collision detection and the poker arena. Pure
-  presentation: receives the two pieces and a single onTimeout
-  callback the coordinator wires to dispatch VS_COMPLETE with the
-  CombatHandoff it builds during the timer.
+  between chess collision detection and the poker arena. Renders the
+  accepted collision and peer approval controls.
 
   Lazy-loaded by the coordinator so casual / multiplayer routes that
   initialise straight into chess never bundle the splash UI on first
@@ -25,7 +23,6 @@ import {
 export type VsScreenPhaseProps = {
 	readonly attacker: ChessPiece;
 	readonly defender: ChessPiece;
-	readonly onTimeout: () => void;
 	readonly durationMs?: number;
 	readonly minDurationMs?: number;
 	readonly approval?: PokerEntryApprovalView | null;
@@ -34,7 +31,6 @@ export type VsScreenPhaseProps = {
 const VsScreenPhase: React.FC<VsScreenPhaseProps> = ({
 	attacker,
 	defender,
-	onTimeout,
 	durationMs = VS_DURATION_RANKED_MS,
 	minDurationMs = VS_MIN_DURATION_RANKED_MS,
 	approval = null,
@@ -44,7 +40,6 @@ const VsScreenPhase: React.FC<VsScreenPhaseProps> = ({
 			key="vs"
 			attacker={attacker}
 			defender={defender}
-			onComplete={onTimeout}
 			duration={durationMs}
 			minDurationMs={minDurationMs}
 			approval={approval}

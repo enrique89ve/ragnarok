@@ -5,7 +5,7 @@
  * anticipación -> embestida -> impacto -> estabilización.
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   BOARD_COLS,
@@ -16,6 +16,7 @@ import {
 } from '../../types/ChessTypes';
 import { useGameStore } from '../../stores/gameStore';
 import { useSettingsStore } from '../../stores/settingsStore';
+import type { PendingAttackAnimation } from '../../stores/unifiedCombatStore';
 import { PIECE_COLOR_BY_TYPE } from './pieceVisuals';
 import { PieceGlyph } from './PieceGlyph';
 
@@ -80,18 +81,9 @@ const makeBurstVectors = (seed: number, count: number) =>
     return { angle, range, size };
   });
 
-interface AttackAnimationData {
-  attacker: ChessPiece;
-  defender: ChessPiece;
-  attackerPosition: ChessBoardPosition;
-  defenderPosition: ChessBoardPosition;
-  isInstantKill: boolean;
-  timestamp?: number;
-}
-
 interface ChessAttackAnimationProps {
-  animation: AttackAnimationData | null;
-  onAnimationComplete: () => void;
+  animation: PendingAttackAnimation | null;
+  onAnimationComplete: (animation: PendingAttackAnimation) => void;
   cellSize: number;
   boardOffset: {
     x: number;
@@ -114,9 +106,6 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
   const shouldUseAdvancedAttack = cardQuality !== 'low';
 
   const [phase, setPhase] = useState<AttackPhase>('idle');
-  const animationIdRef = useRef<string | null>(null);
-  const onAnimationCompleteRef = useRef(onAnimationComplete);
-  onAnimationCompleteRef.current = onAnimationComplete;
 
   const attackWeight = getAttackProfile(animation?.attacker.type ?? 'pawn').power;
   const attackSpeedScale = getAttackSpeedScale(animation?.attacker.type ?? 'pawn');
@@ -169,46 +158,32 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
   useEffect(() => {
     if (!animation) {
       setPhase('idle');
-      animationIdRef.current = null;
-      return;
-    }
-
-    const animationSignature = `${animation.attacker.id}-${animation.defender.id}-${animation.timestamp ?? 0}`;
-    if (animationIdRef.current === animationSignature) {
       return;
     }
 
     if (!shouldAnimate) {
-      animationIdRef.current = animationSignature;
       setPhase('done');
-      onAnimationCompleteRef.current();
+      onAnimationComplete(animation);
       return;
     }
 
-    animationIdRef.current = animationSignature;
     setPhase('charge');
 
     const chargeTimeout = window.setTimeout(() => {
-      if (animationIdRef.current !== animationSignature) return;
       setPhase('lunge');
     }, chargeDurationMs);
 
     const lungeTimeout = window.setTimeout(() => {
-      if (animationIdRef.current !== animationSignature) return;
       setPhase('impact');
     }, chargeDurationMs + lungeDurationMs);
 
-      const settleTimeout = window.setTimeout(() => {
-        if (animationIdRef.current !== animationSignature) return;
-        setPhase('settle');
-      }, chargeDurationMs + lungeDurationMs + impactDurationMs);
+    const settleTimeout = window.setTimeout(() => {
+      setPhase('settle');
+    }, chargeDurationMs + lungeDurationMs + impactDurationMs);
 
-      const completeTimeout = window.setTimeout(() => {
-        if (animationIdRef.current !== animationSignature) return;
-        setPhase('done');
-        onAnimationCompleteRef.current();
-      // Do not clear animationIdRef. Parent may re-render before prop nulls,
-      // so this guard avoids replaying stale payload.
+    const completeTimeout = window.setTimeout(() => {
+      setPhase('done');
+      onAnimationComplete(animation);
     }, strikeSafeDelayMs);
 
     return () => {
@@ -219,6 +194,7 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
     };
   }, [
     animation,
+    onAnimationComplete,
     shouldAnimate,
     chargeDurationMs,
     lungeDurationMs,

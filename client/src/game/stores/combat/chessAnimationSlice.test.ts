@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ActiveMine, ChessPiece } from '../../types/ChessTypes';
 import { useUnifiedCombatStore } from '../unifiedCombatStore';
 import { initialBoardState } from './types';
@@ -106,16 +106,25 @@ describe('chessAnimationSlice', () => {
 			},
 		});
 
+		const statusesAtAnimationStart: string[] = [];
+		const unsubscribe = useUnifiedCombatStore.subscribe((state, previousState) => {
+			if (state.pendingAttackAnimation && state.pendingAttackAnimation !== previousState.pendingAttackAnimation) {
+				statusesAtAnimationStart.push(state.boardState.gameStatus);
+			}
+		});
 		const result = useUnifiedCombatStore.getState().beginChessAttack(attacker, defender, false);
+		unsubscribe();
 		const beforeCleanup = useUnifiedCombatStore.getState();
 
 		expect(result).toEqual({ status: 'applied' });
+		expect(statusesAtAnimationStart).toEqual(['combat']);
 		expect(beforeCleanup.pendingAttackAnimation).not.toBeNull();
 		expect(beforeCleanup.pendingCombat?.attacker.id).toBe('a1');
 		expect(beforeCleanup.pendingCombat?.defender.id).toBe('d1');
 		expect(beforeCleanup.boardState.gameStatus).toBe('combat');
 
-		useUnifiedCombatStore.getState().completeAttackAnimation();
+		if (!beforeCleanup.pendingAttackAnimation) throw new Error('Expected a pending animation');
+		useUnifiedCombatStore.getState().clearAttackAnimation(beforeCleanup.pendingAttackAnimation);
 		const afterCleanup = useUnifiedCombatStore.getState();
 
 		expect(afterCleanup.pendingAttackAnimation).toBeNull();
@@ -167,7 +176,8 @@ describe('chessAnimationSlice', () => {
 		expect(beforeCleanup.boardState.pieces.some(piece => piece.id === 'd1')).toBe(false);
 		expect(beforeCleanup.boardState.pieces.find(piece => piece.id === 'a1')?.position).toEqual({ row: 2, col: 2 });
 
-		useUnifiedCombatStore.getState().completeAttackAnimation();
+		if (!beforeCleanup.pendingAttackAnimation) throw new Error('Expected a pending animation');
+		useUnifiedCombatStore.getState().clearAttackAnimation(beforeCleanup.pendingAttackAnimation);
 		const afterCleanup = useUnifiedCombatStore.getState();
 
 		expect(afterCleanup.pendingAttackAnimation).toBeNull();
@@ -182,8 +192,35 @@ describe('chessAnimationSlice', () => {
 		useUnifiedCombatStore.getState().startAttackAnimation(attacker, defender, true);
 		expect(useUnifiedCombatStore.getState().pendingAttackAnimation).not.toBeNull();
 
-		useUnifiedCombatStore.getState().clearAttackAnimation();
+		const animation = useUnifiedCombatStore.getState().pendingAttackAnimation;
+		if (!animation) throw new Error('Expected a pending animation');
+		useUnifiedCombatStore.getState().clearAttackAnimation(animation);
 		expect(useUnifiedCombatStore.getState().pendingAttackAnimation).toBeNull();
+	});
+
+	it('the budget timeout cannot clear a later attack after a match reset', () => {
+		vi.useFakeTimers();
+		try {
+			const attacker = makePiece({ id: 'a1', type: 'pawn', owner: 'player' });
+			const defender = makePiece({ id: 'd1', type: 'queen', owner: 'opponent' });
+			useUnifiedCombatStore.getState().startAttackAnimation(attacker, defender, true);
+			const oldAnimation = useUnifiedCombatStore.getState().pendingAttackAnimation;
+			vi.advanceTimersByTime(1000);
+
+			useUnifiedCombatStore.getState().reset();
+			useUnifiedCombatStore.getState().startAttackAnimation(attacker, defender, true);
+			const newAnimation = useUnifiedCombatStore.getState().pendingAttackAnimation;
+			expect(newAnimation?.timestamp).toBe(oldAnimation?.timestamp);
+			if (!oldAnimation) throw new Error('Expected the previous animation');
+			expect(useUnifiedCombatStore.getState().clearAttackAnimation(oldAnimation)).toBe(false);
+			vi.advanceTimersByTime(1000);
+			expect(useUnifiedCombatStore.getState().pendingAttackAnimation).toBe(newAnimation);
+
+			vi.advanceTimersByTime(1000);
+			expect(useUnifiedCombatStore.getState().pendingAttackAnimation).toBeNull();
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 
 	it('recordInstantKill stores the kill event with position, attacker type, and timestamp', () => {

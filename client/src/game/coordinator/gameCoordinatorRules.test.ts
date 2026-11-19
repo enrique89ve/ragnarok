@@ -331,20 +331,15 @@ describe('gameCoordinatorRules', () => {
     })).toBeNull();
   });
 
-  it('holds chess-to-poker combat until the attack animation marker is cleared', () => {
-    expect(shouldTriggerChessCombatFlow({
+  it.each([true, false])('triggers accepted chess combat with an attack animation marker of %s', (hasPendingAttackAnimation) => {
+    const input = {
       hasPendingCombat: true,
       chessGameStatus: 'combat',
       flowTag: 'chess',
-      hasPendingAttackAnimation: true,
-    })).toBe(false);
+      hasPendingAttackAnimation,
+    } as const;
 
-    expect(shouldTriggerChessCombatFlow({
-      hasPendingCombat: true,
-      chessGameStatus: 'combat',
-      flowTag: 'chess',
-      hasPendingAttackAnimation: false,
-    })).toBe(true);
+    expect(shouldTriggerChessCombatFlow(input)).toBe(true);
   });
 
   it('does not trigger chess-to-poker combat outside the active chess flow', () => {
@@ -352,14 +347,12 @@ describe('gameCoordinatorRules', () => {
       hasPendingCombat: true,
       chessGameStatus: 'combat',
       flowTag: 'vs_screen',
-      hasPendingAttackAnimation: false,
     })).toBe(false);
 
     expect(shouldTriggerChessCombatFlow({
       hasPendingCombat: false,
       chessGameStatus: 'combat',
       flowTag: 'chess',
-      hasPendingAttackAnimation: false,
     })).toBe(false);
   });
 
