@@ -114,8 +114,22 @@ export function CollectionCardRenderer({
         <CardArt
           src={getCardArtPath(card.id) ?? undefined}
           alt={card.name}
-          loading={dataCardSurface === 'mulligan' ? 'eager' : 'lazy'}
-          fetchPriority={dataCardSurface === 'mulligan' ? 'high' : 'auto'}
+          loading={
+            dataCardSurface === 'mulligan'
+            || dataCardSurface === 'battlefield'
+            || dataCardSurface === 'hand'
+            || dataCardSurface === 'poker'
+              ? 'eager'
+              : 'lazy'
+          }
+          fetchPriority={
+            dataCardSurface === 'mulligan'
+            || dataCardSurface === 'battlefield'
+            || dataCardSurface === 'hand'
+            || dataCardSurface === 'poker'
+              ? 'high'
+              : 'auto'
+          }
         />
       )}
       {masteryTier >= 2 && (

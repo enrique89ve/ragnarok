@@ -136,8 +136,12 @@ const CardFrame: React.FC<CardFrameProps> = ({
 
 	const showPng = effectiveRender === 'png' && !pngFailed;
 	const frameSrc = showPng ? framePathFor(rarity, element, frameAsset) : undefined;
+	const surface = (rest as Record<string, unknown>)['data-card-surface'];
 	const prioritizeAssets =
-		(rest as Record<string, unknown>)['data-card-surface'] === 'mulligan';
+		surface === 'mulligan'
+		|| surface === 'battlefield'
+		|| surface === 'hand'
+		|| surface === 'poker';
 
 	return (
 		<CardFrameContext.Provider value={contextValue}>
