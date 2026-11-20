@@ -1,0 +1,25 @@
+/* Adaptive CSS VFX degradation for medium/low/minimal hardware tiers.
+ * Applied via `data-vfx-tier` on the arena coordinate root by PixiParticleCanvas. */
+
+[data-vfx-tier="medium"] .winning-card-glow,
+[data-vfx-tier="medium"] .winner-badge,
+[data-vfx-tier="low"] .winning-card-glow,
+[data-vfx-tier="low"] .winner-badge,
+[data-vfx-tier="minimal"] .winning-card-glow,
+[data-vfx-tier="minimal"] .winner-badge {
+	filter: none;
+}
+
+[data-vfx-tier="low"] .hero-square-pulse,
+[data-vfx-tier="low"] .cinema-lane-slam__title,
+[data-vfx-tier="minimal"] .hero-square-pulse,
+[data-vfx-tier="minimal"] .cinema-lane-slam__title {
+	animation-iteration-count: 1;
+	text-shadow: 0 2px 4px rgb(0 0 0 / 85%);
+}
+
+[data-vfx-tier="minimal"] .vfx-card-deal-slam,
+[data-vfx-tier="minimal"] .vfx-card-deal-slam--river,
+[data-vfx-tier="minimal"] .cinema-lane-slam--active {
+	animation-duration: 0.01ms;
+}

@@ -2,8 +2,6 @@ import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
 	Application,
-	BlurFilter,
-	ColorMatrixFilter,
 	Container,
 	MeshRope,
 	Point,
@@ -16,11 +14,11 @@ import {
 	ARENA_CANVAS_SIZE,
 	getArenaLocalPoint,
 	getArenaVfxCoordinateLayer,
+	observeArenaCoordinateLayer,
 	type QueryRoot,
 } from '../combat/arenaVfxTargets';
 import { useArenaVfxRoot } from '../combat/arenaVfxContext';
 import {
-	buildConvolutionalColorMatrix,
 	evaluateFrameAtmosphere,
 	getEmotionalMoodPreset,
 	rgbToHexNumber,
@@ -30,6 +28,17 @@ import {
 	type EmotionalImpulseState,
 } from '../combat/vfx/emotionalAtmosphere';
 import { vfxOrchestrationDirector } from '../combat/vfx/vfxOrchestrationDirector';
+import {
+	scaleParticleCountByBudget,
+	syncVfxQualityFromEnvironment,
+	vfxQualityController,
+	type VfxQualityBudget,
+} from '../combat/vfx/vfxQualityProfile';
+import {
+	installVfxPerfWindowHandle,
+	vfxPerfProfiler,
+} from '../combat/vfx/vfxPerfProfiler';
+import { useSettingsStore } from '../stores/settingsStore';
 import {
 	ELEMENT_PALETTES,
 	REALM_CONFIGS,
@@ -53,6 +62,11 @@ import {
 	loadNorseVfxArtTextures,
 	type CachedTextures,
 } from './pixi/pixiTextures';
+import {
+	createSpritePool,
+	swapRemoveAt,
+	type SpritePoolStats,
+} from './pixi/spritePool';
 
 export { ELEMENT_PALETTES, resolveElementPalette, type ParticleColor, type ParticleDirection };
 
@@ -179,8 +193,6 @@ let pixiApp: Application | null = null;
 let textures: CachedTextures | null = null;
 let atmosphereContainer: Container | null = null;
 let atmosphereHaloSprite: Sprite | null = null;
-let atmosphereBlurFilter: BlurFilter | null = null;
-let vfxColorMatrixFilter: ColorMatrixFilter | null = null;
 let trailContainer: Container | null = null;
 let burstContainer: Container | null = null;
 let ambientContainer: Container | null = null;
@@ -204,31 +216,106 @@ const simFlashes: SimFlash[] = [];
 const ambientMotes: AmbientMote[] = [];
 let ambientSpawnAccum = 0;
 
-const PARTICLE_CANVAS_MAX_DPR = 1.5;
+const IDLE_FRAMES_BEFORE_PAUSE = 15;
+const AMBIENT_ONLY_FPS_CAP = 20;
+const MAX_ACTIVE_FLASHES = 2;
+const MAX_POOLED_RIBBON_STRANDS = 24;
+let idleFrameCounter = 0;
+let isTickerPausedForIdle = false;
+
+const vfxSpritePool = createSpritePool(512);
+const ribbonStrandPool: Array<{ aura: MeshRope; core: MeshRope; points: Point[] }> = [];
+let ribbonStrandsCreated = 0;
+let ribbonStrandsReused = 0;
+
+export function getVfxSpritePoolStats(): SpritePoolStats {
+	return vfxSpritePool.getStats();
+}
+
+function drainRibbonStrandPool(): void {
+	for (const entry of ribbonStrandPool) {
+		if (!entry.aura.destroyed) entry.aura.destroy({ children: true, texture: false, textureSource: false });
+		if (!entry.core.destroyed) entry.core.destroy({ children: true, texture: false, textureSource: false });
+	}
+	ribbonStrandPool.length = 0;
+}
+
+function budgetedCount(count: number): number {
+	const budget = vfxQualityController.getBudget();
+	if (budget.budgetScale <= 0) return 0;
+	const base = reducedParticleCount(count);
+	return scaleParticleCountByBudget(base, budget.budgetScale);
+}
+
+/**
+ * Wakes the PixiJS ticker if it was auto-paused during idle periods.
+ * Called automatically by all VFX spawners and external container accessors.
+ */
+export function wakePixiSimulation(): void {
+	idleFrameCounter = 0;
+	if (!pixiApp) return;
+	const budget = vfxQualityController.getBudget();
+	if (budget.targetFps <= 0) return;
+	if (pixiApp.ticker.maxFPS !== budget.targetFps) {
+		pixiApp.ticker.maxFPS = budget.targetFps;
+	}
+	if (isTickerPausedForIdle || !pixiApp.ticker.started) {
+		isTickerPausedForIdle = false;
+		pixiApp.ticker.start();
+		vfxQualityController.updateRuntimeCounters({ tickerPaused: false });
+	}
+}
 
 export function getPixiApp(): Application | null { return pixiApp; }
-export function getBurstContainer(): Container | null { return burstContainer; }
-export function getFilterContainer(): Container | null { return filterContainer; }
-export function getEmitterContainer(): Container | null { return emitterContainer; }
-export function getFactionSceneContainer(): Container | null { return factionSceneContainer; }
-export function getThorContainer(): Container | null { return thorContainer; }
+export function getBurstContainer(): Container | null {
+	if (burstContainer) wakePixiSimulation();
+	return burstContainer;
+}
+export function getFilterContainer(): Container | null {
+	if (filterContainer) wakePixiSimulation();
+	return filterContainer;
+}
+export function getEmitterContainer(): Container | null {
+	if (emitterContainer) wakePixiSimulation();
+	return emitterContainer;
+}
+export function getFactionSceneContainer(): Container | null {
+	if (factionSceneContainer) wakePixiSimulation();
+	return factionSceneContainer;
+}
+export function getThorContainer(): Container | null {
+	if (thorContainer) wakePixiSimulation();
+	return thorContainer;
+}
 
 function toArenaPoint(x: number, y: number): { x: number; y: number } | null {
+	if (vfxQualityController.getBudget().budgetScale <= 0) return null;
 	const layer = getArenaVfxCoordinateLayer(activeArenaVfxRoot);
-	return layer ? getArenaLocalPoint({ x, y }, layer) : null;
+	const pt = layer ? getArenaLocalPoint({ x, y }, layer) : null;
+	if (pt) wakePixiSimulation();
+	return pt;
 }
 
 function removeSprite(sprite: Sprite, container: Container): void {
-	if (sprite.parent === container) container.removeChild(sprite);
-	sprite.destroy();
+	vfxSpritePool.release(sprite, container);
 }
 
 function destroyRibbon(ribbon: SimRibbon): void {
 	for (const strand of ribbon.strands) {
 		if (strand.aura.parent === ribbon.container) ribbon.container.removeChild(strand.aura);
 		if (strand.core.parent === ribbon.container) ribbon.container.removeChild(strand.core);
-		strand.aura.destroy({ children: true, texture: false, textureSource: false });
-		strand.core.destroy({ children: true, texture: false, textureSource: false });
+		if (
+			ribbonStrandPool.length < MAX_POOLED_RIBBON_STRANDS
+			&& !strand.aura.destroyed
+			&& !strand.core.destroyed
+		) {
+			strand.aura.visible = false;
+			strand.core.visible = false;
+			ribbonStrandPool.push({ aura: strand.aura, core: strand.core, points: strand.points });
+		} else {
+			if (!strand.aura.destroyed) strand.aura.destroy({ children: true, texture: false, textureSource: false });
+			if (!strand.core.destroyed) strand.core.destroy({ children: true, texture: false, textureSource: false });
+		}
 	}
 }
 
@@ -252,10 +339,7 @@ function clearSimulationArrays(): void {
 	simFlashes.length = 0;
 
 	for (const m of ambientMotes) {
-		if (ambientContainer && m.sprite.parent === ambientContainer) {
-			ambientContainer.removeChild(m.sprite);
-		}
-		m.sprite.destroy();
+		vfxSpritePool.release(m.sprite, ambientContainer);
 	}
 	ambientMotes.length = 0;
 	ambientSpawnAccum = 0;
@@ -263,18 +347,18 @@ function clearSimulationArrays(): void {
 
 function resetPixiGlobals(app: Application) {
 	clearSimulationArrays();
+	vfxSpritePool.drain();
+	drainRibbonStrandPool();
 	destroyCachedTextures(textures);
 	textures = null;
-	atmosphereBlurFilter?.destroy();
-	vfxColorMatrixFilter?.destroy();
-	atmosphereBlurFilter = null;
-	vfxColorMatrixFilter = null;
 	atmosphereContainer = null;
 	atmosphereHaloSprite = null;
 	currentAtmosphere = getEmotionalMoodPreset('calm');
 	targetAtmosphere = getEmotionalMoodPreset('calm');
 	activeEmotionalImpulse = null;
 	atmosphereClockSec = 0;
+	idleFrameCounter = 0;
+	isTickerPausedForIdle = false;
 	if (pixiApp === app) pixiApp = null;
 	trailContainer = null;
 	burstContainer = null;
@@ -285,14 +369,27 @@ function resetPixiGlobals(app: Application) {
 	thorContainer = null;
 	activeArenaVfxRoot = null;
 	currentRealm = undefined;
+	vfxQualityController.updateRuntimeCounters({
+		activeParticles: 0,
+		activeRibbons: 0,
+		activeRings: 0,
+		activeAmbientMotes: 0,
+		tickerPaused: false,
+	});
 }
 
 function pushParticle(p: SimParticle): void {
-	if (simParticles.length >= MAX_ACTIVE_PARTICLES) {
+	const maxParticles = Math.min(MAX_ACTIVE_PARTICLES, vfxQualityController.getBudget().maxParticles);
+	if (maxParticles <= 0) {
+		removeSprite(p.sprite, p.container);
+		return;
+	}
+	while (simParticles.length >= maxParticles) {
 		const evicted = simParticles.shift();
 		if (evicted) removeSprite(evicted.sprite, evicted.container);
 	}
 	simParticles.push(p);
+	wakePixiSimulation();
 }
 
 function spawnInternalGlowMote(
@@ -307,7 +404,7 @@ function spawnInternalGlowMote(
 	peakAlpha = 0.9,
 ): void {
 	if (!textures) return;
-	const sprite = new Sprite(textures.softGlow);
+	const sprite = vfxSpritePool.acquire(textures.softGlow);
 	sprite.anchor.set(0.5);
 	sprite.position.set(x, y);
 	sprite.tint = color;
@@ -353,7 +450,7 @@ function spawnAmbientMote(config: RealmParticleConfig, randomizeY: boolean): voi
 	const color = config.colors[Math.floor(Math.random() * config.colors.length)];
 	const life = config.lifetime[0] + Math.random() * (config.lifetime[1] - config.lifetime[0]);
 
-	const sprite = new Sprite(textures.softGlow);
+	const sprite = vfxSpritePool.acquire(textures.softGlow);
 	sprite.anchor.set(0.5);
 	sprite.tint = color;
 	sprite.blendMode = 'add';
@@ -383,7 +480,25 @@ function stepSimulation(ticker: Ticker): void {
 	const dt = Math.min(ticker.deltaMS, 50) / 1000;
 	if (dt <= 0) return;
 
-	// 0. Convolutional Psychological Atmosphere (GPU BlurFilter + ColorMatrixFilter)
+	const stepStartMs = typeof performance !== 'undefined' ? performance.now() : 0;
+	const budget = vfxQualityController.getBudget();
+	const hasCombatWork = simParticles.length > 0
+		|| simRings.length > 0
+		|| simProjectiles.length > 0
+		|| simRibbons.length > 0
+		|| simFlashes.length > 0
+		|| activeEmotionalImpulse !== null
+		|| (filterContainer?.children.length ?? 0) > 0
+		|| (emitterContainer?.children.length ?? 0) > 0
+		|| (factionSceneContainer?.children.length ?? 0) > 0
+		|| (thorContainer?.children.length ?? 0) > 0;
+
+	if (hasCombatWork) {
+		vfxQualityController.recordActiveFrame(ticker.deltaMS);
+	}
+
+	// 0. Psychological Atmosphere (zero full-screen BlurFilter / ColorMatrixFilter passes;
+	//    atmosphereHalo texture is already Gaussian-convolved on CPU)
 	atmosphereClockSec += dt;
 	const stepped = stepEmotionalAtmosphere(
 		currentAtmosphere,
@@ -393,19 +508,13 @@ function stepSimulation(ticker: Ticker): void {
 	);
 	currentAtmosphere = stepped.state;
 	activeEmotionalImpulse = stepped.nextImpulse;
-	const reduced = prefersReducedMotion();
+	const reduced = prefersReducedMotion() || budget.budgetScale <= 0.2;
 	const frameMood = evaluateFrameAtmosphere(
 		currentAtmosphere,
 		activeEmotionalImpulse,
 		atmosphereClockSec,
 		reduced,
 	);
-	if (atmosphereBlurFilter) {
-		atmosphereBlurFilter.strength = reduced ? 1.2 : frameMood.blurStrength;
-	}
-	if (vfxColorMatrixFilter) {
-		vfxColorMatrixFilter.matrix = buildConvolutionalColorMatrix(frameMood);
-	}
 	const tintHex = rgbToHexNumber(frameMood.tintR, frameMood.tintG, frameMood.tintB);
 	const targetDuck = vfxOrchestrationDirector.getAmbientDuckFactor();
 	if (ambientContainer) {
@@ -414,7 +523,9 @@ function stepSimulation(ticker: Ticker): void {
 	if (atmosphereHaloSprite) {
 		const wave = reduced ? 0.5 : 0.5 + 0.5 * Math.sin(atmosphereClockSec * frameMood.pulseHz * Math.PI * 2);
 		atmosphereHaloSprite.tint = tintHex;
-		atmosphereHaloSprite.alpha = frameMood.edgeAlpha * (0.82 + wave * 0.32) * targetDuck;
+		atmosphereHaloSprite.alpha = budget.budgetScale <= 0
+			? 0
+			: frameMood.edgeAlpha * (0.82 + wave * 0.32) * targetDuck;
 	}
 
 	// 1. Particles
@@ -428,7 +539,7 @@ function stepSimulation(ticker: Ticker): void {
 		const t = p.age / p.life;
 		if (t >= 1) {
 			removeSprite(p.sprite, p.container);
-			simParticles.splice(i, 1);
+			swapRemoveAt(simParticles, i);
 			continue;
 		}
 
@@ -469,7 +580,7 @@ function stepSimulation(ticker: Ticker): void {
 		const t = r.age / r.life;
 		if (t >= 1) {
 			removeSprite(r.sprite, r.container);
-			simRings.splice(i, 1);
+			swapRemoveAt(simRings, i);
 			continue;
 		}
 		const scaleT = r.luminous ? easeOutCubic(t) : easeOutQuad(t);
@@ -526,7 +637,7 @@ function stepSimulation(ticker: Ticker): void {
 			const { screenTx, screenTy, palette, heavy, onImpact } = proj;
 			removeSprite(proj.core, proj.container);
 			removeSprite(proj.halo, proj.container);
-			simProjectiles.splice(i, 1);
+			swapRemoveAt(simProjectiles, i);
 
 			spawnImpactRing(screenTx, screenTy, palette, 'luminous');
 			if (heavy) {
@@ -552,7 +663,7 @@ function stepSimulation(ticker: Ticker): void {
 				r.onImpact?.();
 			}
 			destroyRibbon(r);
-			simRibbons.splice(i, 1);
+			swapRemoveAt(simRibbons, i);
 			continue;
 		}
 
@@ -632,7 +743,7 @@ function stepSimulation(ticker: Ticker): void {
 		const t = f.age / f.life;
 		if (t >= 1) {
 			removeSprite(f.sprite, f.container);
-			simFlashes.splice(i, 1);
+			swapRemoveAt(simFlashes, i);
 			continue;
 		}
 		f.sprite.alpha = t < 0.18
@@ -640,16 +751,22 @@ function stepSimulation(ticker: Ticker): void {
 			: f.peakAlpha * (1 - easeOutQuad((t - 0.18) / 0.82));
 	}
 
-	// 5. Ambient Realm Motes
-	if (currentRealm && ambientContainer && !prefersReducedMotion()) {
+	// 5. Ambient Realm Motes (scaled by hardware/FPS quality budget)
+	if (currentRealm && ambientContainer && !prefersReducedMotion() && budget.enableAmbientMotes && budget.ambientScale > 0) {
 		const config = REALM_CONFIGS[currentRealm] || REALM_CONFIGS.midgard;
+		const targetCount = Math.max(1, Math.round(config.count * budget.ambientScale));
 		const avgLife = (config.lifetime[0] + config.lifetime[1]) * 0.5;
-		const spawnEvery = Math.max(0.18, avgLife / Math.max(1, config.count));
+		const spawnEvery = Math.max(0.18, avgLife / targetCount);
 		ambientSpawnAccum += dt;
-		if (ambientSpawnAccum >= spawnEvery && ambientMotes.length < config.count) {
+		if (ambientSpawnAccum >= spawnEvery && ambientMotes.length < targetCount) {
 			ambientSpawnAccum = 0;
 			spawnAmbientMote(config, false);
 		}
+	} else if (ambientMotes.length > 0 && (!budget.enableAmbientMotes || budget.ambientScale <= 0)) {
+		for (const m of ambientMotes) {
+			vfxSpritePool.release(m.sprite, ambientContainer);
+		}
+		ambientMotes.length = 0;
 	}
 
 	for (let i = ambientMotes.length - 1; i >= 0; i -= 1) {
@@ -657,11 +774,8 @@ function stepSimulation(ticker: Ticker): void {
 		m.age += dt;
 		const t = m.age / m.life;
 		if (t >= 1) {
-			if (ambientContainer && m.sprite.parent === ambientContainer) {
-				ambientContainer.removeChild(m.sprite);
-			}
-			m.sprite.destroy();
-			ambientMotes.splice(i, 1);
+			vfxSpritePool.release(m.sprite, ambientContainer);
+			swapRemoveAt(ambientMotes, i);
 			continue;
 		}
 		m.baseX += m.vx * dt;
@@ -675,6 +789,51 @@ function stepSimulation(ticker: Ticker): void {
 			m.sprite.alpha = m.maxAlpha;
 		}
 	}
+
+	// 6. Idle Auto-Pause & Ambient-Only FPS Throttling (0% CPU/GPU when idle)
+	const stillHasCombatWork = simParticles.length > 0
+		|| simRings.length > 0
+		|| simProjectiles.length > 0
+		|| simRibbons.length > 0
+		|| simFlashes.length > 0
+		|| activeEmotionalImpulse !== null
+		|| (filterContainer?.children.length ?? 0) > 0
+		|| (emitterContainer?.children.length ?? 0) > 0
+		|| (factionSceneContainer?.children.length ?? 0) > 0
+		|| (thorContainer?.children.length ?? 0) > 0;
+
+	const hasAmbientWork = ambientMotes.length > 0
+		|| (Boolean(currentRealm) && budget.enableAmbientMotes && budget.ambientScale > 0 && !prefersReducedMotion());
+
+	if (!stillHasCombatWork && !hasAmbientWork) {
+		idleFrameCounter += 1;
+		if (idleFrameCounter >= IDLE_FRAMES_BEFORE_PAUSE && pixiApp && pixiApp.ticker.started) {
+			isTickerPausedForIdle = true;
+			pixiApp.ticker.stop();
+		}
+	} else {
+		idleFrameCounter = 0;
+		if (pixiApp) {
+			const desiredFps = stillHasCombatWork
+				? budget.targetFps
+				: Math.min(budget.targetFps, AMBIENT_ONLY_FPS_CAP);
+			if (desiredFps > 0 && pixiApp.ticker.maxFPS !== desiredFps) {
+				pixiApp.ticker.maxFPS = desiredFps;
+			}
+		}
+	}
+
+	vfxQualityController.updateRuntimeCounters({
+		activeParticles: simParticles.length,
+		activeRibbons: simRibbons.length,
+		activeRings: simRings.length,
+		activeAmbientMotes: ambientMotes.length,
+		tickerPaused: isTickerPausedForIdle,
+	});
+
+	if (hasCombatWork && typeof performance !== 'undefined') {
+		vfxPerfProfiler.recordSample(ticker.deltaMS, performance.now() - stepStartMs);
+	}
 }
 
 // =========================================================================
@@ -684,12 +843,15 @@ function stepSimulation(ticker: Ticker): void {
 export function startAmbientParticles(realm: string) {
 	stopAmbientParticles();
 	currentRealm = realm;
-	if (prefersReducedMotion()) return;
+	const budget = vfxQualityController.getBudget();
+	if (prefersReducedMotion() || !budget.enableAmbientMotes || budget.ambientScale <= 0) return;
 	const config = REALM_CONFIGS[realm] || REALM_CONFIGS.midgard;
-	const initialCount = Math.min(config.count, 10);
+	const scaledTarget = Math.max(1, Math.round(config.count * budget.ambientScale));
+	const initialCount = Math.min(scaledTarget, 10);
 	for (let i = 0; i < initialCount; i += 1) {
 		spawnAmbientMote(config, true);
 	}
+	wakePixiSimulation();
 }
 
 export function stopAmbientParticles() {
@@ -710,9 +872,15 @@ export function spawnArenaFlash(
 	durationMs = 220,
 ): void {
 	if (!pixiApp || !burstContainer || !textures) return;
-	if (prefersReducedMotion()) return;
+	if (prefersReducedMotion() || vfxQualityController.getBudget().budgetScale <= 0) return;
 
-	const sprite = new Sprite(textures.arenaVignette);
+	// Overdraw guard: never stack > MAX_ACTIVE_FLASHES full-screen additive quads
+	while (simFlashes.length >= MAX_ACTIVE_FLASHES) {
+		const evicted = simFlashes.shift();
+		if (evicted) removeSprite(evicted.sprite, evicted.container);
+	}
+
+	const sprite = vfxSpritePool.acquire(textures.arenaVignette);
 	sprite.anchor.set(0.5);
 	sprite.position.set(ARENA_CANVAS_SIZE.width / 2, ARENA_CANVAS_SIZE.height / 2);
 	sprite.width = ARENA_CANVAS_SIZE.width * 1.15;
@@ -729,6 +897,7 @@ export function spawnArenaFlash(
 		life: motionDuration(durationMs / 1000),
 		peakAlpha: Math.min(0.42, Math.max(0.05, peakAlpha)),
 	});
+	wakePixiSimulation();
 }
 
 export function spawnRunePulse(
@@ -742,7 +911,7 @@ export function spawnRunePulse(
 	const center = toArenaPoint(cx, cy);
 	if (!center) return;
 
-	const sprite = new Sprite(textures.runeSigil);
+	const sprite = vfxSpritePool.acquire(textures.runeSigil);
 	sprite.anchor.set(0.5);
 	sprite.position.set(center.x, center.y);
 	sprite.tint = hexToNum(palette.primary);
@@ -791,7 +960,7 @@ export function spawnSlashTrail(
 	const ctrlX = (start.x + end.x) * 0.5 + nx * curveOffset;
 	const ctrlY = (start.y + end.y) * 0.5 + ny * curveOffset;
 
-	const particleCount = reducedParticleCount(count);
+	const particleCount = budgetedCount(count);
 	const travelSec = motionDuration(Math.max(0.08, durationMs / 1000));
 	const baseAngle = Math.atan2(dy, dx);
 
@@ -800,7 +969,7 @@ export function spawnSlashTrail(
 		const pos = quadraticBezier(start.x, start.y, ctrlX, ctrlY, end.x, end.y, t);
 		const spread = (next() - 0.5) * 22;
 		const isLance = i % 3 === 0;
-		const sprite = new Sprite(isLance ? textures.spark : textures.softGlow);
+		const sprite = vfxSpritePool.acquire(isLance ? textures.spark : textures.softGlow);
 		sprite.anchor.set(0.5);
 		sprite.position.set(pos.x + nx * spread, pos.y + ny * spread);
 		sprite.tint = i % 4 === 0 ? 0xffffff : pickColor(palette, next);
@@ -846,13 +1015,13 @@ export function spawnParticleBurst(
 	const center = toArenaPoint(cx, cy);
 	if (!center) return;
 
-	const particleCount = reducedParticleCount(count);
+	const particleCount = budgetedCount(count);
 	for (let i = 0; i < particleCount; i += 1) {
 		const angle = (Math.PI * 2 * i) / particleCount + (next() - 0.5) * 0.45;
 		const speed = 130 + next() * 270;
 		const scale = 0.2 + next() * 0.42;
 
-		const sprite = new Sprite(textures.softGlow);
+		const sprite = vfxSpritePool.acquire(textures.softGlow);
 		sprite.anchor.set(0.5);
 		sprite.position.set(center.x, center.y);
 		sprite.tint = i % 5 === 0 ? 0xffffff : pickColor(palette, next);
@@ -899,7 +1068,7 @@ export function spawnDirectionalImpactBurst(
 	if (!center) return;
 	const random = seed ? createEffectRandom(`directional-impact:${seed}`) : null;
 	const next = random?.next ?? Math.random;
-	const particleCount = reducedParticleCount(count);
+	const particleCount = budgetedCount(count);
 	const directionalCount = Math.ceil(particleCount * 0.72);
 	const baseAngle = Math.atan2(direction.y, direction.x);
 
@@ -910,7 +1079,7 @@ export function spawnDirectionalImpactBurst(
 		const speed = 150 + next() * 310;
 		const scale = 0.22 + next() * 0.44;
 
-		const sprite = new Sprite(textures.softGlow);
+		const sprite = vfxSpritePool.acquire(textures.softGlow);
 		sprite.anchor.set(0.5);
 		sprite.position.set(center.x, center.y);
 		sprite.tint = i % 5 === 0 ? 0xffffff : pickColor(palette, next);
@@ -956,7 +1125,7 @@ export function spawnImpactRing(
 	const lifeSec = motionDuration(luminous ? 0.48 : 0.34);
 
 	if (luminous) {
-		const bloom = new Sprite(textures.softGlow);
+		const bloom = vfxSpritePool.acquire(textures.softGlow);
 		bloom.anchor.set(0.5);
 		bloom.position.set(center.x, center.y);
 		bloom.tint = hexToNum(palette.primary);
@@ -979,7 +1148,7 @@ export function spawnImpactRing(
 		});
 	}
 
-	const ringSprite = new Sprite(textures.ring);
+	const ringSprite = vfxSpritePool.acquire(textures.ring);
 	ringSprite.anchor.set(0.5);
 	ringSprite.position.set(center.x, center.y);
 	ringSprite.tint = hexToNum(palette.primary);
@@ -1030,7 +1199,7 @@ export function spawnTravelingGlowRing(
 	const ny = len > 0 ? dx / len : 0;
 	const arc = Math.min(110, Math.max(24, len * 0.18)) * (dx >= 0 ? 1 : -1);
 
-	const halo = new Sprite(textures.ring);
+	const halo = vfxSpritePool.acquire(textures.ring);
 	halo.anchor.set(0.5);
 	halo.position.set(start.x, start.y);
 	halo.tint = hexToNum(palette.primary);
@@ -1038,7 +1207,7 @@ export function spawnTravelingGlowRing(
 	halo.alpha = 0.92;
 	trailContainer.addChild(halo);
 
-	const core = new Sprite(textures.softGlow);
+	const core = vfxSpritePool.acquire(textures.softGlow);
 	core.anchor.set(0.5);
 	core.position.set(start.x, start.y);
 	core.tint = 0xffffff;
@@ -1109,7 +1278,7 @@ export function spawnShowdownBlast(
 	const ny = len > 0 ? dx / len : 0;
 	const arc = Math.min(140, Math.max(40, len * 0.22));
 
-	const halo = new Sprite(textures.runeSigil);
+	const halo = vfxSpritePool.acquire(textures.runeSigil);
 	halo.anchor.set(0.5);
 	halo.position.set(start.x, start.y);
 	halo.tint = hexToNum(palette.primary);
@@ -1117,7 +1286,7 @@ export function spawnShowdownBlast(
 	halo.alpha = 0.96;
 	trailContainer.addChild(halo);
 
-	const core = new Sprite(textures.softGlow);
+	const core = vfxSpritePool.acquire(textures.softGlow);
 	core.anchor.set(0.5);
 	core.position.set(start.x, start.y);
 	core.tint = 0xffffff;
@@ -1167,13 +1336,13 @@ export function spawnEmbers(
 	const center = toArenaPoint(cx, cy);
 	if (!center) return;
 
-	const particleCount = reducedParticleCount(count);
+	const particleCount = budgetedCount(count);
 	for (let i = 0; i < particleCount; i += 1) {
 		const angle = Math.random() * Math.PI * 2;
 		const speed = 25 + Math.random() * 75;
 		const scale = 0.14 + Math.random() * 0.2;
 
-		const sprite = new Sprite(textures.softGlow);
+		const sprite = vfxSpritePool.acquire(textures.softGlow);
 		sprite.anchor.set(0.5);
 		sprite.position.set(
 			center.x + (Math.random() - 0.5) * 28,
@@ -1220,10 +1389,10 @@ export function spawnSmokePuff(
 	const random = seed ? createEffectRandom(`smoke-puff:${seed}`) : null;
 	const next = random?.next ?? Math.random;
 
-	const particleCount = reducedParticleCount(count);
+	const particleCount = budgetedCount(count);
 	for (let i = 0; i < particleCount; i += 1) {
 		const startScale = 0.4 + next() * 0.45;
-		const sprite = new Sprite(textures.smoke);
+		const sprite = vfxSpritePool.acquire(textures.smoke);
 		sprite.anchor.set(0.5);
 		sprite.position.set(
 			center.x + (next() - 0.5) * 28,
@@ -1271,7 +1440,7 @@ export function spawnSparkBurst(
 	const random = seed ? createEffectRandom(`spark-burst:${seed}`) : null;
 	const next = random?.next ?? Math.random;
 
-	const particleCount = reducedParticleCount(count);
+	const particleCount = budgetedCount(count);
 	const directionalCount = Math.ceil(particleCount * 0.72);
 	const baseAngle = direction ? Math.atan2(direction.y, direction.x) : 0;
 
@@ -1283,7 +1452,7 @@ export function spawnSparkBurst(
 		const scaleX = 0.45 + next() * 0.55;
 		const scaleY = 0.35 + next() * 0.3;
 
-		const sprite = new Sprite(textures.spark);
+		const sprite = vfxSpritePool.acquire(textures.spark);
 		sprite.anchor.set(0.5);
 		sprite.position.set(center.x, center.y);
 		sprite.tint = i % 3 === 0 ? 0xffffff : pickColor(palette, next);
@@ -1334,13 +1503,13 @@ export function spawnRisingAura(
 
 	spawnImpactRing(cx, cy, palette, 'luminous');
 
-	const particleCount = reducedParticleCount(count);
+	const particleCount = budgetedCount(count);
 	for (let i = 0; i < particleCount; i += 1) {
 		const offsetX = (next() - 0.5) * 68;
 		const offsetY = (next() - 0.5) * 32 + 12;
 		const scale = 0.18 + next() * 0.28;
 
-		const sprite = new Sprite(textures.softGlow);
+		const sprite = vfxSpritePool.acquire(textures.softGlow);
 		sprite.anchor.set(0.5);
 		sprite.position.set(center.x + offsetX, center.y + offsetY);
 		sprite.tint = i % 4 === 0 ? 0xffffff : pickColor(palette, next);
@@ -1389,9 +1558,9 @@ export function spawnDrainStream(
 	const random = seed ? createEffectRandom(`drain-stream:${seed}`) : null;
 	const next = random?.next ?? Math.random;
 
-	const particleCount = reducedParticleCount(count);
+	const particleCount = budgetedCount(count);
 	for (let i = 0; i < particleCount; i += 1) {
-		const sprite = new Sprite(textures.spark);
+		const sprite = vfxSpritePool.acquire(textures.spark);
 		sprite.anchor.set(0.5);
 		sprite.position.set(
 			center.x + (next() - 0.5) * 22,
@@ -1464,7 +1633,7 @@ export function spawnBidirectionalSwapArcs(
 		curveSign: 1 | -1,
 	) => {
 		if (!trailContainer || !textures) return;
-		const halo = new Sprite(textures.ring);
+		const halo = vfxSpritePool.acquire(textures.ring);
 		halo.anchor.set(0.5);
 		halo.position.set(sx, sy);
 		halo.tint = hexToNum(palette.primary);
@@ -1472,7 +1641,7 @@ export function spawnBidirectionalSwapArcs(
 		halo.alpha = 0.92;
 		trailContainer.addChild(halo);
 
-		const core = new Sprite(textures.softGlow);
+		const core = vfxSpritePool.acquire(textures.softGlow);
 		core.anchor.set(0.5);
 		core.position.set(sx, sy);
 		core.tint = 0xffffff;
@@ -1547,7 +1716,13 @@ export function spawnTranslucentRibbon(
 		return;
 	}
 
-	if (simRibbons.length >= MAX_ACTIVE_RIBBONS) {
+	const budget = vfxQualityController.getBudget();
+	const maxRibbons = Math.min(MAX_ACTIVE_RIBBONS, budget.maxRibbons);
+	if (maxRibbons <= 0) {
+		options.onImpact?.();
+		return;
+	}
+	while (simRibbons.length >= maxRibbons) {
 		const evicted = simRibbons.shift();
 		if (evicted) destroyRibbon(evicted);
 	}
@@ -1562,32 +1737,53 @@ export function spawnTranslucentRibbon(
 	const cx = (start.x + end.x) * 0.5 + nx * arcMag;
 	const cy = (start.y + end.y) * 0.5 + ny * arcMag;
 
-	const requestedStrands = prefersReducedMotion() ? 1 : Math.min(3, Math.max(1, options.strands ?? 2));
+	const requestedStrands = prefersReducedMotion()
+		? 1
+		: Math.min(budget.maxStrands, Math.max(1, options.strands ?? 2));
 	const primaryTint = hexToNum(palette.primary);
 	const secondaryTint = hexToNum(palette.secondary);
 	const strands: SimRibbonStrand[] = [];
 
 	for (let s = 0; s < requestedStrands; s += 1) {
-		const points: Point[] = [];
-		for (let i = 0; i < RIBBON_SEGMENTS; i += 1) {
-			points.push(new Point(start.x, start.y));
-		}
 		const tint = s % 2 === 0 ? primaryTint : secondaryTint;
-		const aura = new MeshRope({
-			texture: textures.ribbonAura,
-			points,
-			textureScale: 0,
-		});
+		const pooled = ribbonStrandPool.pop();
+		let points: Point[];
+		let aura: MeshRope;
+		let core: MeshRope;
+
+		if (pooled && !pooled.aura.destroyed && !pooled.core.destroyed) {
+			ribbonStrandsReused += 1;
+			points = pooled.points;
+			for (let i = 0; i < points.length; i += 1) {
+				points[i].set(start.x, start.y);
+			}
+			aura = pooled.aura;
+			core = pooled.core;
+			aura.visible = true;
+			core.visible = true;
+		} else {
+			ribbonStrandsCreated += 1;
+			points = [];
+			for (let i = 0; i < RIBBON_SEGMENTS; i += 1) {
+				points.push(new Point(start.x, start.y));
+			}
+			aura = new MeshRope({
+				texture: textures.ribbonAura,
+				points,
+				textureScale: 0,
+			});
+			core = new MeshRope({
+				texture: textures.ribbonCore,
+				points,
+				textureScale: 0,
+			});
+		}
+
 		aura.tint = tint;
 		aura.blendMode = 'add';
 		aura.alpha = 0.35;
 		trailContainer.addChild(aura);
 
-		const core = new MeshRope({
-			texture: textures.ribbonCore,
-			points,
-			textureScale: 0,
-		});
 		core.tint = s === 0 ? 0xffffff : secondaryTint;
 		core.blendMode = 'add';
 		core.alpha = 0.45;
@@ -1646,7 +1842,7 @@ export function spawnChromaticSlash(
 	const s = scale * slashNorm;
 
 	// Outer colored translucent smear slightly offset for chromatic depth
-	const outer = new Sprite(textures.slashArc);
+	const outer = vfxSpritePool.acquire(textures.slashArc);
 	outer.anchor.set(0.5);
 	outer.position.set(center.x - direction.x * 10, center.y - direction.y * 10);
 	outer.rotation = angle;
@@ -1677,7 +1873,7 @@ export function spawnChromaticSlash(
 	});
 
 	// Razor-hot white-tinted inner blade core
-	const inner = new Sprite(textures.slashArc);
+	const inner = vfxSpritePool.acquire(textures.slashArc);
 	inner.anchor.set(0.5);
 	inner.position.set(center.x, center.y);
 	inner.rotation = angle;
@@ -1723,7 +1919,7 @@ export function spawnStarburstBloom(
 	if (!center) return;
 	const life = motionDuration(durationMs / 1000);
 
-	const outer = new Sprite(textures.starburst);
+	const outer = vfxSpritePool.acquire(textures.starburst);
 	outer.anchor.set(0.5);
 	outer.position.set(center.x, center.y);
 	outer.tint = hexToNum(palette.primary);
@@ -1745,7 +1941,7 @@ export function spawnStarburstBloom(
 		luminous: true,
 	});
 
-	const core = new Sprite(textures.starburst);
+	const core = vfxSpritePool.acquire(textures.starburst);
 	core.anchor.set(0.5);
 	core.position.set(center.x, center.y);
 	core.rotation = Math.PI / 4;
@@ -1785,7 +1981,7 @@ export function spawnDiamondShards(
 	if (!center) return;
 	const random = seed ? createEffectRandom(`diamond-shards:${seed}`) : null;
 	const next = random?.next ?? Math.random;
-	const shardCount = reducedParticleCount(count);
+	const shardCount = budgetedCount(count);
 	const baseAngle = direction ? Math.atan2(direction.y, direction.x) : 0;
 
 	for (let i = 0; i < shardCount; i += 1) {
@@ -1795,7 +1991,7 @@ export function spawnDiamondShards(
 		const speed = 160 + next() * 290;
 		const scale = 0.35 + next() * 0.55;
 
-		const sprite = new Sprite(textures.diamond);
+		const sprite = vfxSpritePool.acquire(textures.diamond);
 		sprite.anchor.set(0.5);
 		sprite.position.set(center.x, center.y);
 		sprite.tint = i % 3 === 0 ? 0xffffff : pickColor(palette, next);
@@ -1842,7 +2038,7 @@ export function spawnShieldDome(
 	const life = motionDuration(durationMs / 1000);
 
 	// Outer iridescent magenta halo ring
-	const magentaRing = new Sprite(textures.ring);
+	const magentaRing = vfxSpritePool.acquire(textures.ring);
 	magentaRing.anchor.set(0.5);
 	magentaRing.position.set(center.x, center.y);
 	magentaRing.tint = hexToNum(palette.secondary);
@@ -1865,7 +2061,7 @@ export function spawnShieldDome(
 	});
 
 	// Inner electric cyan barrier dome
-	const cyanRing = new Sprite(textures.ring);
+	const cyanRing = vfxSpritePool.acquire(textures.ring);
 	cyanRing.anchor.set(0.5);
 	cyanRing.position.set(center.x, center.y);
 	cyanRing.tint = hexToNum(palette.primary);
@@ -1905,7 +2101,7 @@ export function spawnArcaneVortex(
 	const life = motionDuration(durationMs / 1000);
 
 	// Rotating spectral claw / rune vortex crater (uses high-detail Norse art when loaded)
-	const sigil = new Sprite(textures.spectralClaw);
+	const sigil = vfxSpritePool.acquire(textures.spectralClaw);
 	sigil.anchor.set(0.5);
 	sigil.position.set(center.x, center.y);
 	sigil.tint = hexToNum(palette.primary);
@@ -1929,7 +2125,7 @@ export function spawnArcaneVortex(
 	});
 
 	// Secondary void-colored counter-spinning shockwave
-	const ring = new Sprite(textures.ring);
+	const ring = vfxSpritePool.acquire(textures.ring);
 	ring.anchor.set(0.5);
 	ring.position.set(center.x, center.y);
 	ring.tint = hexToNum(palette.secondary);
@@ -2007,7 +2203,7 @@ export function spawnMagicTunnel(
 		const isSigil = i % 3 === 1;
 		const tex = isSigil ? textures.runeSigil : textures.ring;
 		const texNorm = 128 / Math.max(128, tex.width);
-		const sprite = new Sprite(tex);
+		const sprite = vfxSpritePool.acquire(tex);
 		sprite.anchor.set(0.5);
 		sprite.position.set(px, py);
 		sprite.rotation = angle;
@@ -2047,21 +2243,57 @@ export function spawnMagicTunnel(
 }
 
 /**
- * Sets the target psychological emotional atmosphere (smoothly interpolated at 60fps
- * through GPU Gaussian blur & 4x5 RGBA color-matrix convolution).
+ * Sets the target psychological emotional atmosphere (smoothly interpolated
+ * via the pre-convolved atmosphere halo sprite — zero full-screen WebGL filter passes).
  */
 export function setEmotionalAtmosphere(params: EmotionalAtmosphereParams): void {
 	targetAtmosphere = params;
+	wakePixiSimulation();
 }
 
 /**
  * Fires a decaying psychological impulse (critical shock, euphoria, dread, climax)
- * that temporarily amplifies color convolution & peripheral blur diffusion.
+ * that temporarily amplifies peripheral halo diffusion.
  */
 export function triggerEmotionalImpulse(kind: EmotionalImpulseKind, intensity = 0.85): void {
+	if (vfxQualityController.getBudget().budgetScale <= 0) return;
 	const clamped = Math.min(1, Math.max(0.1, intensity));
 	if (!activeEmotionalImpulse || clamped >= activeEmotionalImpulse.strength) {
 		activeEmotionalImpulse = { kind, strength: clamped };
+	}
+	wakePixiSimulation();
+}
+
+function applyBudgetToRuntime(
+	app: Application,
+	budget: VfxQualityBudget,
+	portalTarget: HTMLElement,
+): void {
+	portalTarget.dataset.vfxTier = budget.tier;
+	if (budget.targetFps <= 0) {
+		isTickerPausedForIdle = true;
+		if (app.ticker.started) app.ticker.stop();
+		clearSimulationArrays();
+		vfxQualityController.updateRuntimeCounters({
+			activeParticles: 0,
+			activeRibbons: 0,
+			activeRings: 0,
+			activeAmbientMotes: 0,
+			tickerPaused: true,
+		});
+		return;
+	}
+	app.ticker.maxFPS = budget.targetFps;
+	const nextRes = Math.min(window.devicePixelRatio || 1, budget.maxDpr);
+	if (Math.abs(app.renderer.resolution - nextRes) > 0.05) {
+		app.renderer.resolution = nextRes;
+		app.renderer.resize(ARENA_CANVAS_SIZE.width, ARENA_CANVAS_SIZE.height);
+	}
+	if (!budget.enableAmbientMotes && ambientMotes.length > 0) {
+		for (const m of ambientMotes) {
+			vfxSpritePool.release(m.sprite, ambientContainer);
+		}
+		ambientMotes.length = 0;
 	}
 }
 
@@ -2069,26 +2301,57 @@ export const PixiParticleCanvas: React.FC<{ realm?: string }> = ({ realm }) => {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const arenaRoot = useArenaVfxRoot();
 	const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(null);
+	const animationsEnabled = useSettingsStore((s) => s.animationsEnabled);
+	const reduceMotion = useSettingsStore((s) => s.reduceMotion);
+	const enhancedVFX = useSettingsStore((s) => s.enhancedVFX);
+	const cardQuality = useSettingsStore((s) => s.cardQuality);
+	const vfxQuality = useSettingsStore((s) => s.vfxQuality);
+
+	useEffect(() => {
+		const budget = syncVfxQualityFromEnvironment({
+			animationsEnabled,
+			reduceMotion,
+			enhancedVFX,
+			cardQuality,
+			vfxQuality,
+		});
+		if (portalTarget) {
+			portalTarget.dataset.vfxTier = budget.tier;
+		}
+	}, [animationsEnabled, reduceMotion, enhancedVFX, cardQuality, vfxQuality, portalTarget]);
 
 	useEffect(() => {
 		activeArenaVfxRoot = arenaRoot;
-		setPortalTarget(arenaRoot ? getArenaVfxCoordinateLayer(arenaRoot) : null);
+		const layer = arenaRoot ? getArenaVfxCoordinateLayer(arenaRoot) : null;
+		setPortalTarget(layer);
+		observeArenaCoordinateLayer(layer);
 		return () => {
-			if (activeArenaVfxRoot === arenaRoot) activeArenaVfxRoot = null;
+			if (activeArenaVfxRoot === arenaRoot) {
+				activeArenaVfxRoot = null;
+				observeArenaCoordinateLayer(null);
+			}
 		};
 	}, [arenaRoot]);
 
 	useEffect(() => {
 		if (!containerRef.current || !portalTarget) return;
 
+		const initialBudget = syncVfxQualityFromEnvironment(useSettingsStore.getState());
+		portalTarget.dataset.vfxTier = initialBudget.tier;
+
 		const app = new Application();
 		let mounted = true;
 		let initialized = false;
 		let destroyRequested = false;
 		let destroyed = false;
+		let unsubscribeQuality: (() => void) | null = null;
 
 		const destroyApp = () => {
 			destroyRequested = true;
+			if (unsubscribeQuality) {
+				unsubscribeQuality();
+				unsubscribeQuality = null;
+			}
 			if (initialized) {
 				try {
 					app.ticker.remove(stepSimulation);
@@ -2113,9 +2376,10 @@ export const PixiParticleCanvas: React.FC<{ realm?: string }> = ({ realm }) => {
 			backgroundAlpha: 0,
 			width: ARENA_CANVAS_SIZE.width,
 			height: ARENA_CANVAS_SIZE.height,
-			antialias: true,
-			resolution: Math.min(window.devicePixelRatio || 1, PARTICLE_CANVAS_MAX_DPR),
+			antialias: initialBudget.antialias,
+			resolution: Math.min(window.devicePixelRatio || 1, initialBudget.maxDpr),
 			autoDensity: true,
+			powerPreference: initialBudget.tier === 'ultra' ? 'high-performance' : 'low-power',
 		}).then(() => {
 			initialized = true;
 			if (destroyRequested || !mounted || !containerRef.current) {
@@ -2130,11 +2394,6 @@ export const PixiParticleCanvas: React.FC<{ realm?: string }> = ({ realm }) => {
 			loadNorseVfxArtTextures(mountedTextures, () => mounted && !destroyRequested && textures === mountedTextures);
 
 			atmosphereContainer = new Container();
-			atmosphereBlurFilter = new BlurFilter({ strength: 1.8, quality: 2, kernelSize: 5 });
-			vfxColorMatrixFilter = new ColorMatrixFilter();
-			atmosphereContainer.filterArea = app.screen;
-			atmosphereContainer.filters = [atmosphereBlurFilter];
-
 			atmosphereHaloSprite = new Sprite(textures.atmosphereHalo);
 			atmosphereHaloSprite.anchor.set(0.5);
 			atmosphereHaloSprite.position.set(ARENA_CANVAS_SIZE.width / 2, ARENA_CANVAS_SIZE.height / 2);
@@ -2152,11 +2411,6 @@ export const PixiParticleCanvas: React.FC<{ realm?: string }> = ({ realm }) => {
 			factionSceneContainer = new Container();
 			thorContainer = new Container();
 
-			ambientContainer.filterArea = app.screen;
-			ambientContainer.filters = [vfxColorMatrixFilter];
-			trailContainer.filterArea = app.screen;
-			trailContainer.filters = [vfxColorMatrixFilter];
-
 			app.stage.addChild(atmosphereContainer);
 			app.stage.addChild(ambientContainer);
 			app.stage.addChild(trailContainer);
@@ -2167,6 +2421,27 @@ export const PixiParticleCanvas: React.FC<{ realm?: string }> = ({ realm }) => {
 			app.stage.addChild(burstContainer);
 
 			app.ticker.add(stepSimulation);
+			vfxPerfProfiler.setPoolCountersProvider(() => {
+				const stats = vfxSpritePool.getStats();
+				const totalAcquires = stats.created + stats.reused;
+				return {
+					spriteActive: stats.active,
+					spritePooled: stats.pooled,
+					spriteCreated: stats.created,
+					spriteReused: stats.reused,
+					spriteReuseRatio: totalAcquires > 0 ? Math.round((stats.reused / totalAcquires) * 1000) / 1000 : 0,
+					ribbonStrandsPooled: ribbonStrandPool.length,
+					ribbonStrandsCreated,
+					ribbonStrandsReused,
+				};
+			});
+			installVfxPerfWindowHandle();
+			applyBudgetToRuntime(app, vfxQualityController.getBudget(), portalTarget);
+			unsubscribeQuality = vfxQualityController.subscribe((nextBudget) => {
+				if (mounted && !destroyRequested && pixiApp === app) {
+					applyBudgetToRuntime(app, nextBudget, portalTarget);
+				}
+			});
 			if (currentRealm) {
 				startAmbientParticles(currentRealm);
 			}

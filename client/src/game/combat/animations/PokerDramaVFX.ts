@@ -113,9 +113,17 @@ function stampCssGesture(
 	key: string,
 ): void {
 	if (!el) return;
-	el.classList.remove(className);
-	void el.offsetWidth;
-	el.classList.add(className);
+	if (el.classList.contains(className)) {
+		el.classList.remove(className);
+		// Re-add on next animation frame instead of forcing a synchronous `offsetWidth` reflow
+		if (typeof requestAnimationFrame === 'function') {
+			requestAnimationFrame(() => el.classList.add(className));
+		} else {
+			el.classList.add(className);
+		}
+	} else {
+		el.classList.add(className);
+	}
 	gameEffectCoordinator.schedule({
 		owner: 'poker-drama-dom',
 		lane: 'gesture',

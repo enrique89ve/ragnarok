@@ -934,7 +934,16 @@ function buildImpactPlanNodes(
 		lethal: targetPhase.impact.lethal,
 	});
 	const palette = choreography.palette;
-	const paceDelayMs = vfxOrchestrationDirector.reservePrimaryPaceDelayMs();
+	const targetZone = event.targetId === 'player-hero'
+		? 'playerHero'
+		: event.targetId === 'opponent-hero'
+			? 'opponentHero'
+			: 'board';
+	const cascadeSlot = vfxOrchestrationDirector.reserveCascadeSlot({
+		weight: targetPhase.impact.lethal || targetPhase.impact.level === 'heavy' ? 'heavy' : 'medium',
+		zone: targetZone,
+	});
+	const paceDelayMs = cascadeSlot.delayMs;
 	const nodes: GameEffectNode[] = [
 		{
 			id: 'attack-travel',

@@ -14,6 +14,11 @@
 
 import type { ArenaShakeIntensity } from './arenaShake';
 import type { EmotionalImpulseKind } from './emotionalAtmosphere';
+import {
+	scaleParticleCountByBudget,
+	vfxQualityController,
+	type VfxQualityBudget,
+} from './vfxQualityProfile';
 
 export type BoardDensity = 'empty' | 'skirmish' | 'formation';
 export type PressureTier = 'light' | 'escalated' | 'overdrive';
@@ -249,8 +254,9 @@ export function resetIntensityVariationCounter(): void {
 }
 
 /**
- * Resolves the exact IntensityProfile from the 3x3 matrix and layers organic
- * per-beat dynamism (alternating curve arc + ribbon/tunnel alternation).
+ * Resolves the exact IntensityProfile from the 3x3 matrix, layers organic
+ * per-beat dynamism (alternating curve arc + ribbon/tunnel alternation), and
+ * scales particle/strand counts by the active hardware/FPS VFX quality budget.
  */
 export function resolveDynamicVfxIntensity(input: {
 	readonly opposingCardCount: number;
@@ -259,23 +265,54 @@ export function resolveDynamicVfxIntensity(input: {
 	readonly isAllIn?: boolean;
 	readonly stakeStrength?: 'subtle' | 'firm';
 	readonly beatIndex?: number;
+	readonly qualityBudget?: VfxQualityBudget;
 }): ResolvedDynamicIntensity {
 	const density = classifyBoardDensity(input.opposingCardCount);
 	const pressure = classifyPressureTier(input);
 	const base = VFX_INTENSITY_MATRIX[density][pressure];
+	const budget = input.qualityBudget ?? vfxQualityController.getBudget();
 
 	const beat = input.beatIndex ?? dynamicBeatCounter++;
 	const arcSign: 1 | -1 = beat % 2 === 0 ? 1 : -1;
 	const arcFactors = [0.14, 0.21, 0.17, 0.24] as const;
 	const arcFactor = arcFactors[beat % arcFactors.length];
 
-	const delivery: DeliveryVisualMode = base.alternateDelivery && beat % 2 === 1
+	const delivery: DeliveryVisualMode = budget.budgetScale <= 0.25
 		? 'ribbon'
-		: base.delivery;
+		: base.alternateDelivery && beat % 2 === 1
+			? 'ribbon'
+			: base.delivery;
+
+	if (budget.budgetScale >= 1 && budget.maxStrands >= 3) {
+		return {
+			...base,
+			delivery,
+			arcSign,
+			arcFactor,
+		};
+	}
+
+	const scaledStrands = Math.min(base.strands, budget.maxStrands) as 1 | 2 | 3;
+	const scaledTunnelRings = budget.budgetScale <= 0.25
+		? 0
+		: scaleParticleCountByBudget(base.tunnelRings, budget.budgetScale);
+	const scaledShards = budget.budgetScale <= 0.2
+		? 0
+		: scaleParticleCountByBudget(base.shardCount, budget.budgetScale);
+	const scaledBurst = scaleParticleCountByBudget(base.burstCount, budget.budgetScale);
+	const scaledEchoTargets = (budget.budgetScale <= 0.45
+		? 1
+		: Math.min(base.echoTargets, 2)) as 1 | 2 | 3;
 
 	return {
 		...base,
 		delivery,
+		strands: scaledStrands,
+		tunnelRings: scaledTunnelRings,
+		shardCount: scaledShards,
+		burstCount: scaledBurst,
+		starburstScale: budget.budgetScale <= 0 ? 0 : base.starburstScale,
+		echoTargets: scaledEchoTargets,
 		arcSign,
 		arcFactor,
 	};

@@ -47,6 +47,11 @@ import {
 	showdownImpactMotion,
 	} from '@/game/effects/poker';
 import { shouldAnnounceHandRank } from '../pokerEventFx';
+import {
+	vfxOrchestrationDirector,
+	type VfxCascadeWeight,
+	type VfxFocalZone,
+} from '../vfxOrchestrationDirector';
 import { publishArenaVfxBeat } from '../../../qa/arenaVfxQa';
 import {
 	resolvePokerVfxIntent,
@@ -164,7 +169,18 @@ function handleBettingAction(event: BettingActionEvent): EffectHandle | null {
 	const bettingIntent = rawIntent && event.hpCommitment !== undefined
 		? { ...rawIntent, stakeAmount: event.hpCommitment }
 		: rawIntent;
-	return schedulePokerMotion(motion, [0], () => {
+	const weight: VfxCascadeWeight = event.action === CombatAction.COUNTER_ATTACK || (event.hpCommitment ?? 0) >= 26
+		? 'heavy'
+		: event.action === CombatAction.ATTACK || event.action === CombatAction.ENGAGE
+			? 'medium'
+			: 'light';
+	const zone: VfxFocalZone = event.action === CombatAction.ENGAGE
+		? 'center'
+		: isPlayer
+			? 'opponentHero'
+			: 'playerHero';
+	const slot = vfxOrchestrationDirector.reserveCascadeSlot({ weight, zone });
+	return schedulePokerMotion(motion, [slot.delayMs], () => {
 		maybePublishStakeFloater(event);
 		switch (event.action) {
 			case CombatAction.ATTACK:

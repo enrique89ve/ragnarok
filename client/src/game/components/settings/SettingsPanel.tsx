@@ -1,5 +1,6 @@
 import React from 'react';
 import { useSettingsStore } from '../../stores/settingsStore';
+import type { VfxQualityPreference } from '../../combat/vfx/vfxQualityProfile';
 import { useAudio } from '../../../lib/stores/useAudio';
 import { HiveKeychainLogin } from '../HiveKeychainLogin';
 
@@ -121,6 +122,24 @@ export default function SettingsPanel() {
 					<option value="low">Low</option>
 					<option value="medium">Medium</option>
 					<option value="high">High</option>
+				</select>
+			</div>
+			<div className="flex items-center justify-between gap-4">
+				<div>
+					<span className="text-sm text-gray-300">VFX Quality</span>
+					<p className="text-xs text-gray-500 mt-0.5">Auto scales particles &amp; resolution to your hardware</p>
+				</div>
+				<select
+					value={settings.vfxQuality}
+					onChange={(e) => settings.setSetting('vfxQuality', e.target.value as VfxQualityPreference)}
+					className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-gray-300 focus:outline-hidden focus:border-amber-500"
+				>
+					<option value="auto">Auto (Adaptive)</option>
+					<option value="ultra">Ultra (100%)</option>
+					<option value="high">High (75%)</option>
+					<option value="medium">Medium (45%)</option>
+					<option value="low">Low (Low Spec)</option>
+					<option value="minimal">Minimal (Off)</option>
 				</select>
 			</div>
 

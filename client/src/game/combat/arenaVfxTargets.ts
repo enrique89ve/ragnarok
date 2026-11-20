@@ -46,8 +46,82 @@ export type QueryRoot = Document | Element;
 /** Active poker arena subtree — avoids duplicate `data-vfx-target` hits elsewhere in the document. */
 let boundArenaVfxQueryRoot: QueryRoot | null = null;
 
+// ── Layout-Reflow-Free Anchor Rect Cache ────────────────────────────────────
+interface CachedElementRect {
+	readonly rect: DOMRect;
+	readonly gen: number;
+	readonly ts: number;
+}
+
+const ELEMENT_RECT_TTL_MS = 100;
+const rectCache = new WeakMap<Element, CachedElementRect>();
+let layoutGeneration = 0;
+let windowListenersAttached = false;
+let observedLayer: HTMLElement | null = null;
+let layerResizeObserver: ResizeObserver | null = null;
+
+export function invalidateArenaRectCache(): void {
+	layoutGeneration += 1;
+}
+
+function ensureWindowLayoutListeners(): void {
+	if (windowListenersAttached || typeof window === 'undefined') return;
+	windowListenersAttached = true;
+	window.addEventListener('resize', invalidateArenaRectCache, { passive: true });
+	window.addEventListener('scroll', invalidateArenaRectCache, { passive: true, capture: true });
+}
+
+/**
+ * Observes the arena VFX coordinate layer with a single `ResizeObserver` so
+ * `getArenaLocalPoint` and `getElementCenter` avoid forced synchronous layout
+ * reflows during combat bursts.
+ */
+export function observeArenaCoordinateLayer(layer: HTMLElement | null): void {
+	if (observedLayer === layer) return;
+	if (layerResizeObserver) {
+		layerResizeObserver.disconnect();
+		layerResizeObserver = null;
+	}
+	observedLayer = layer;
+	invalidateArenaRectCache();
+
+	if (!layer || typeof ResizeObserver === 'undefined') return;
+	if (typeof Element !== 'undefined' && !(layer instanceof Element)) return;
+
+	ensureWindowLayoutListeners();
+	layerResizeObserver = new ResizeObserver(() => {
+		invalidateArenaRectCache();
+	});
+	layerResizeObserver.observe(layer);
+}
+
+function getCachedRect(element: Element, ttlMs: number): DOMRect {
+	// Plain mock objects in Node/Vitest bypass the WeakMap cache
+	if (typeof Element === 'undefined' || !(element instanceof Element)) {
+		return element.getBoundingClientRect();
+	}
+	ensureWindowLayoutListeners();
+	const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+	const cached = rectCache.get(element);
+	if (
+		cached
+		&& cached.gen === layoutGeneration
+		&& cached.rect.width > 0
+		&& cached.rect.height > 0
+		&& (ttlMs === Infinity || now - cached.ts <= ttlMs)
+	) {
+		return cached.rect;
+	}
+	const rect = element.getBoundingClientRect();
+	if (rect.width > 0 && rect.height > 0) {
+		rectCache.set(element, { rect, gen: layoutGeneration, ts: now });
+	}
+	return rect;
+}
+
 export function bindArenaVfxQueryRoot(root: QueryRoot | null): void {
 	boundArenaVfxQueryRoot = root;
+	invalidateArenaRectCache();
 }
 
 export function getBoundArenaVfxQueryRoot(): QueryRoot | null {
@@ -109,7 +183,7 @@ export function getArenaLocalPoint(
 	point: { x: number; y: number },
 	layer: HTMLElement,
 ): { x: number; y: number } | null {
-	const rect = layer.getBoundingClientRect();
+	const rect = getCachedRect(layer, Infinity);
 	if (rect.width <= 0 || rect.height <= 0) return null;
 
 	return {
@@ -246,7 +320,7 @@ export function getArenaVfxCombatantTarget(targetId: string, root?: QueryRoot | 
 }
 
 export function getElementCenter(element: Element, yRatio = 0.5): { x: number; y: number } {
-	const rect = element.getBoundingClientRect();
+	const rect = getCachedRect(element, ELEMENT_RECT_TTL_MS);
 	return {
 		x: rect.left + rect.width / 2,
 		y: rect.top + rect.height * yRatio,

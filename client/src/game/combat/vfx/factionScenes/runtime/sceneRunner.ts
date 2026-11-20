@@ -14,7 +14,9 @@ import { debug } from '../../../../config/debugConfig';
 import {
 	getFactionSceneContainer,
 	getPixiApp,
+	wakePixiSimulation,
 } from '../../../../animations/PixiParticleCanvas';
+import { vfxQualityController } from '../../vfxQualityProfile';
 import type { FactionSceneHandle, FactionVfxSceneId } from '../types';
 
 export interface SceneStepState {
@@ -130,9 +132,11 @@ function ensureTickerAttached(app: Application): void {
  * registers it with the unified ticker loop.
  */
 export function runTimedPixiScene(descriptor: TimedSceneDescriptor): FactionSceneHandle | null {
+	if (vfxQualityController.getBudget().budgetScale <= 0) return null;
 	const app = getPixiApp();
 	const root = getFactionSceneContainer();
 	if (typeof window === 'undefined' || !app || !root) return null;
+	wakePixiSimulation();
 
 	const effect = new Container();
 	root.addChild(effect);

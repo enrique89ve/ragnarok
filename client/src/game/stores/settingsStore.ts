@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { StorageKeys } from '../config/storageKeys';
+import type { VfxQualityPreference } from '../combat/vfx/vfxQualityProfile';
 
 export interface SettingsState {
 	musicVolume: number;
@@ -12,6 +13,7 @@ export interface SettingsState {
 	reduceMotion: boolean;
 	enhancedVFX: boolean;
 	cardQuality: 'low' | 'medium' | 'high';
+	vfxQuality: VfxQualityPreference;
 
 	autoEndTurn: boolean;
 	confirmAttacks: boolean;
@@ -42,6 +44,7 @@ const DEFAULT_SETTINGS: SettingsState = {
 	reduceMotion: false,
 	enhancedVFX: true,
 	cardQuality: 'high',
+	vfxQuality: 'auto',
 	autoEndTurn: false,
 	confirmAttacks: false,
 	showDamageNumbers: true,

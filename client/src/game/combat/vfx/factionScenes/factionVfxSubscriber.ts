@@ -24,6 +24,11 @@ import { gameEffectCoordinator } from '@/game/effects/core/gameEffectCoordinator
 import type { CardInstance } from '../../../types';
 import type { ArenaVfxOwner } from '../../arenaVfxTargets';
 import { isVisualEventRendererEnabled, subscribeVisualEvent } from '../emitter';
+import {
+	vfxOrchestrationDirector,
+	type VfxCascadeWeight,
+	type VfxFocalZone,
+} from '../vfxOrchestrationDirector';
 import type { CombatImpactEvent, WagerActivatedEvent } from '../events';
 import { hydrateCardDescriptor, resolveFactionVfxScene } from './classifier';
 import { cancelAllFactionVfxScenes, playFactionVfxScene } from './sceneRegistry';
@@ -119,7 +124,20 @@ function dispatchSceneForDescriptor(params: {
 		});
 	};
 
-	const delay = params.delayMs ?? 0;
+	const isCriticalScene = resolved.sceneId === 'dragon-shadow-flight'
+		|| resolved.sceneId === 'titan-pantheon-descent';
+	const weight: VfxCascadeWeight = isCriticalScene ? 'critical' : 'heavy';
+	const zone: VfxFocalZone = isCriticalScene
+		? 'fullscreen'
+		: params.targetId === 'player-hero'
+			? 'playerHero'
+			: params.targetId === 'opponent-hero'
+				? 'opponentHero'
+				: 'board';
+	const slot = vfxOrchestrationDirector.reserveCascadeSlot({ weight, zone });
+	if (slot.skipped) return;
+
+	const delay = (params.delayMs ?? 0) + slot.delayMs;
 	if (delay <= 0) {
 		runScene();
 		return;
@@ -129,9 +147,7 @@ function dispatchSceneForDescriptor(params: {
 		owner: 'faction-vfx',
 		lane: resolved.sceneId,
 		key: `${resolved.sceneId}:${params.seed}`,
-		priority: (resolved.sceneId === 'dragon-shadow-flight' || resolved.sceneId === 'titan-pantheon-descent')
-			? 'high'
-			: 'normal',
+		priority: isCriticalScene ? 'high' : 'normal',
 		delayMs: delay,
 		run: runScene,
 	});
