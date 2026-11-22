@@ -8,6 +8,11 @@ import { AccountSlot } from '../../../components/account/AccountSlot';
 import { useNFTUsername } from '../../nft/hooks';
 import { isSharedNetworkEnvironment } from '../../config/featureFlags';
 import { resolveProtectedFlowAccess } from '../../auth/protectedFlowAccess';
+import { commitProgressAccountId } from '../../auth/progressAccount';
+import { getCurrentHiveUsername } from '@/data/HiveSessionIdentity';
+import { getRagnarokNetworkConfig } from '../../config/networkConfig';
+import { buildRagnarokRuntimeEvidence } from '@shared/runtimeConfig';
+import { deriveRuneSeasonId } from '@shared/protocol-core/runeSeasonHash';
 import { HiveKeychainLogin } from '../HiveKeychainLogin';
 import { OrnateCorners, SigilBackplate, type Tier } from '../../../components/ornaments/RunicSigils';
 import {
@@ -21,6 +26,7 @@ import type { GreekRealm } from '../../campaign/greekRealms';
 import CinematicCrawl from './CinematicCrawl';
 import CosmicCanvas from './CosmicCanvas';
 import { MapIntroCard, MissionBriefing } from './CampaignStagePanels';
+import { LocalCampaignForge } from './LocalCampaignForge';
 import './constellation-map.css';
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -571,6 +577,11 @@ export default function CampaignPage() {
 	const seenCinematics = useCampaignStore(state => state.seenCinematics);
 	const isAllComplete = useCampaignStore(state => state.isAllBaseChaptersComplete(BASE_CHAPTER_MISSION_IDS));
 	const hiveUsername = useNFTUsername();
+	const runtime = getRagnarokNetworkConfig();
+	const localForgeAccount = buildRagnarokRuntimeEvidence(runtime).phasePolicy.localSettlement
+		? commitProgressAccountId(getCurrentHiveUsername() ?? hiveUsername, runtime.stage)
+		: null;
+	const forgeSeasonId = deriveRuneSeasonId(runtime);
 	const campaignAccess = resolveProtectedFlowAccess({
 		accountId: hiveUsername,
 		authenticatedAccountId: hiveUsername,
@@ -1085,6 +1096,9 @@ export default function CampaignPage() {
 							);
 						})}
 					</nav>
+					{view === 'norse' && localForgeAccount && (
+						<LocalCampaignForge key={`${localForgeAccount}:${forgeSeasonId}`} account={localForgeAccount} seasonId={forgeSeasonId} />
+					)}
 				</div>
 				{view === 'norse' ? (
 					<div ref={campaignBoardScrollRef} className="campaign-board-scroll">

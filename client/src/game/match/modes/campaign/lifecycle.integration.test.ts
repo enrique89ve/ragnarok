@@ -9,6 +9,8 @@ import { settleLocalCampaignMatch } from '../../../campaign/localCampaignSettlem
 import {
 	closeReplayDatabaseForTests,
 	commitLocalCampaignSettlement,
+	forgeLocalCampaignCommon,
+	getLocalCampaignEitr,
 	getLatestLocalCardProgressionByOwner,
 	getLocalCampaignSettlementsByAccount,
 	getLocalLevelUpsByEvent,
@@ -32,7 +34,7 @@ const runtimeConfig = resolveRagnarokRuntimeConfig({
 const runtimeEvidence = buildRagnarokRuntimeEvidence(runtimeConfig);
 const seasonId = deriveRuneSeasonId(runtimeConfig);
 
-function context(matchId: string, matchSeed: string): MatchContext {
+function context(matchId: string, matchSeed: string, missionId = MISSION_ID): MatchContext {
 	return {
 		matchId,
 		matchSeed,
@@ -45,7 +47,7 @@ function context(matchId: string, matchSeed: string): MatchContext {
 			kind: 'scripted',
 			script: {
 				kind: 'campaign-mission',
-				mission: { id: MISSION_ID },
+				mission: { id: missionId },
 				chapter: {},
 				difficulty: 'normal',
 				localRunId: 'local-run-lifecycle',
@@ -91,6 +93,50 @@ beforeEach(async () => resetReplayDatabaseForTests());
 afterEach(async () => resetReplayDatabaseForTests());
 
 describe('F1 campaign lifecycle with real local settlement and IndexedDB', () => {
+	it('credits Norse finale Eitr once, spends it atomically, and expires it on season rollover', async () => {
+		const dependencies: CampaignLifecycleDependencies = {
+			getRuntimeConfig: () => runtimeConfig,
+			getSessionUsername: () => ACCOUNT,
+			getFallbackUsername: () => null,
+			settleLocal: settleLocalCampaignMatch,
+			completeMission: vi.fn(),
+			recordFeedback: vi.fn(),
+			publish: vi.fn(),
+			emitTransactionConfirmed: vi.fn(),
+			now: () => 100,
+		};
+		const end = { iWon: true, turnCount: 9, finalGameState: finalGameState() };
+		const first = context('finale-win', 'finale-seed', 'norse-9');
+		await processCampaignMatchEnd(first, { ...end, iWon: false }, dependencies);
+		expect(await forgeLocalCampaignCommon(ACCOUNT, seasonId, 20001)).toBeUndefined();
+
+		await Promise.all([
+			processCampaignMatchEnd(first, end, dependencies),
+			processCampaignMatchEnd(context('finale-second-win', 'seed-2', 'norse-9'), end, dependencies),
+		]);
+		expect(await getLocalCampaignEitr(ACCOUNT, seasonId)).toEqual({ balance: 40, forgedCardId: null });
+		expect(await getLocalCampaignEitr('other-user', seasonId)).toBeUndefined();
+		const [forge, retry] = await Promise.all([
+			forgeLocalCampaignCommon(ACCOUNT, seasonId, 20001),
+			forgeLocalCampaignCommon(ACCOUNT, seasonId, 20002),
+		]);
+		expect(forge).toEqual({ balance: 0, forgedCardId: 20001 });
+		expect(retry).toEqual(forge);
+
+		await processCampaignMatchEnd(first, end, dependencies);
+		closeReplayDatabaseForTests();
+		expect(await getLocalCampaignEitr(ACCOUNT, seasonId)).toEqual(forge);
+
+		const nextRuntime = { ...runtimeConfig, seasonStart: '2027-01-01T00:00:00Z' };
+		const nextSeason = deriveRuneSeasonId(nextRuntime);
+		expect(await getLocalCampaignEitr(ACCOUNT, nextSeason)).toBeUndefined();
+		await processCampaignMatchEnd(context('finale-next-season', 'seed-3', 'norse-9'), end, {
+			...dependencies,
+			getRuntimeConfig: () => nextRuntime,
+		});
+		expect(await getLocalCampaignEitr(ACCOUNT, nextSeason)).toEqual({ balance: 40, forgedCardId: null });
+	});
+
 	it('settles defeat, first clear, replay, and reload without external authority', async () => {
 		const publish = vi.fn(async () => ({ success: true, trxId: 'must-not-exist' }));
 		const fallbackWalletIdentity = vi.fn(() => 'wallet-user');

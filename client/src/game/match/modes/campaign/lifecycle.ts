@@ -97,6 +97,11 @@ export async function processCampaignMatchEnd(
 			}).catch(error => debug.warn('[Campaign] Failed to close local campaign run:', error));
 		}
 		await deps.completeMission(result.record.missionId, result.record.difficulty, result.record.turnCount);
+		if (result.eitrAwarded > 0) {
+			toast.success(`+${result.eitrAwarded} Eitr`, {
+				description: 'Spend it at the Campaign Forge before the season resets.',
+			});
+		}
 		deps.recordFeedback({
 			campaignId: result.record.campaignId, missionId: result.record.missionId, localRunId: campaignScript.localRunId,
 			difficulty: result.record.difficulty, isFirstClear: result.record.firstClear,

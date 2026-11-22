@@ -9,7 +9,7 @@ import {
 	commitLocalCampaignSettlement,
 	hasLocalCampaignFirstClear,
 	getLatestLocalCardProgressionByOwner,
-	type LocalCampaignSettlementRecord,
+	type LocalCampaignCommitResult,
 } from '@/data/blockchain/replayDB';
 import { createLocalCampaignSettlement } from '@shared/protocol-core/localCampaignSettlement';
 import { getTokenBalance } from '@/data/blockchain/replayDB';
@@ -17,7 +17,7 @@ import { collectLocalWinnerCards } from '../match/localCardProjection';
 import { commitProgressAccountId } from '../auth/progressAccount';
 
 export type LocalCampaignSettlementResult =
-	| { readonly status: 'applied' | 'already_applied' | 'conflict'; readonly record: LocalCampaignSettlementRecord }
+	| LocalCampaignCommitResult
 	| { readonly status: 'skipped'; readonly reason: 'not_local_phase' | 'not_campaign' | 'defeat' | 'missing_account' };
 
 export async function settleLocalCampaignMatch(
@@ -54,7 +54,5 @@ export async function settleLocalCampaignMatch(
 		sourceKey, amount: reward.rune, balanceBefore, balanceAfter: balanceBefore + reward.rune,
 		trxId: base.eventId, blockNum: 0, timestamp: deps.now(),
 	} : undefined;
-	const record: LocalCampaignSettlementRecord = { ...base, ...(runeEntry ? { runeEntry } : {}) };
-	const committed = await commitLocalCampaignSettlement(record);
-	return { status: committed.status, record: committed.record };
+	return commitLocalCampaignSettlement({ ...base, ...(runeEntry ? { runeEntry } : {}) });
 }

@@ -53,10 +53,14 @@ import type {
 	LocalSettlementRecord,
 } from '../../../../shared/protocol-core/localSettlement';
 import type { LocalCampaignSettlementEnvelope } from '../../../../shared/protocol-core/localCampaignSettlement';
+import { CAMPAIGN_ID } from '@shared/campaign/constants';
+import { getEitrForgeCost } from '@shared/protocol-core/eitrEconomy';
 import { createRuntimeDatabaseName } from '../../game/config/networkConfig';
 
 const DB_NAME = createRuntimeDatabaseName('chain-v1');
-const DB_VERSION = 19;
+const DB_VERSION = 20;
+const LOCAL_CAMPAIGN_EITR_STORE = 'local_campaign_eitr';
+const NORSE_FINALE_EITR = { missionId: 'norse-9', amount: 40 } as const;
 
 let _db: IDBDatabase | null = null;
 
@@ -123,6 +127,7 @@ function openDB(): Promise<IDBDatabase> {
 			if (!localCampaigns.indexNames.contains('by_account_mission')) localCampaigns.createIndex('by_account_mission', 'account', { unique: false });
 			if (!localCampaigns.indexNames.contains('by_account')) localCampaigns.createIndex('by_account', 'account', { unique: false });
 			if (!db.objectStoreNames.contains('local_campaign_first_clears')) db.createObjectStore('local_campaign_first_clears', { keyPath: 'key' });
+			if (!db.objectStoreNames.contains(LOCAL_CAMPAIGN_EITR_STORE)) db.createObjectStore(LOCAL_CAMPAIGN_EITR_STORE);
 
 			if (!db.objectStoreNames.contains('sync_cursors')) {
 				db.createObjectStore('sync_cursors', { keyPath: 'account' });
@@ -472,7 +477,41 @@ export const getLocalCardProgressionByOwner = (ownerAccount: string): Promise<Lo
 
 export type LocalCampaignSettlementRecord = LocalCampaignSettlementEnvelope;
 
-export type LocalCampaignCommitResult = { readonly status: 'applied' | 'already_applied' | 'conflict'; readonly record: LocalCampaignSettlementRecord };
+export type LocalCampaignCommitResult = { readonly status: 'applied' | 'already_applied' | 'conflict'; readonly record: LocalCampaignSettlementRecord; readonly eitrAwarded: number };
+
+export type LocalCampaignEitr = {
+	readonly balance: number;
+	readonly forgedCardId: number | null;
+};
+
+function localCampaignEitrKey(account: string, seasonId: string): string {
+	return `${seasonId}:${account}`;
+}
+
+export function getLocalCampaignEitr(account: string, seasonId: string): Promise<LocalCampaignEitr | undefined> {
+	return idbGet<LocalCampaignEitr>(LOCAL_CAMPAIGN_EITR_STORE, localCampaignEitrKey(account, seasonId));
+}
+
+export async function forgeLocalCampaignCommon(account: string, seasonId: string, cardId: number): Promise<LocalCampaignEitr | undefined> {
+	const db = await openDB();
+	return new Promise((resolve, reject) => {
+		const tx = db.transaction(LOCAL_CAMPAIGN_EITR_STORE, 'readwrite');
+		const store = tx.objectStore(LOCAL_CAMPAIGN_EITR_STORE);
+		const key = localCampaignEitrKey(account, seasonId);
+		const request = store.get(key);
+		const cost = getEitrForgeCost('common');
+		let result: LocalCampaignEitr | undefined;
+		request.onsuccess = () => {
+			const current: LocalCampaignEitr | undefined = request.result;
+			result = current;
+			if (!current || current.forgedCardId !== null || current.balance < cost) return;
+			result = { balance: current.balance - cost, forgedCardId: cardId };
+			store.put(result, key);
+		};
+		tx.oncomplete = () => resolve(result);
+		tx.onabort = () => reject(tx.error ?? new Error('Local Forge transaction aborted'));
+	});
+}
 
 export const getLocalCampaignSettlementsByAccount = (account: string): Promise<LocalCampaignSettlementRecord[]> =>
 	idbGetByIndex<LocalCampaignSettlementRecord>('local_campaign_settlements', 'by_account', account);
@@ -492,13 +531,19 @@ export const getLocalLevelUpsByEvent = (eventId: string): Promise<LocalLevelUpRe
 export async function commitLocalCampaignSettlement(record: LocalCampaignSettlementRecord): Promise<LocalCampaignCommitResult> {
 	const db = await openDB();
 	return new Promise((resolve, reject) => {
-		const tx = db.transaction(['local_campaign_settlements', 'local_campaign_first_clears', 'rune_ledger', 'local_card_progression', 'local_level_ups'], 'readwrite');
+		const tx = db.transaction(['local_campaign_settlements', 'local_campaign_first_clears', 'rune_ledger', 'local_card_progression', 'local_level_ups', LOCAL_CAMPAIGN_EITR_STORE], 'readwrite');
 		const campaigns = tx.objectStore('local_campaign_settlements');
 		const firstClear = tx.objectStore('local_campaign_first_clears');
 		const firstClearRequest = firstClear.get(`${record.account}:${record.missionId}`);
+		const eitrStore = tx.objectStore(LOCAL_CAMPAIGN_EITR_STORE);
+		const eitrKey = localCampaignEitrKey(record.account, record.seasonId);
+		const eitrRequest = record.campaignId === CAMPAIGN_ID && record.missionId === NORSE_FINALE_EITR.missionId
+			? eitrStore.get(eitrKey)
+			: undefined;
 		const existing = campaigns.get(record.eventId);
 		let alreadyApplied = false;
 		let conflict = false;
+		let eitrAwarded = 0;
 		let effectiveRecord = record;
 		existing.onsuccess = () => {
 			if (existing.result) {
@@ -506,6 +551,10 @@ export async function commitLocalCampaignSettlement(record: LocalCampaignSettlem
 				alreadyApplied = true;
 				effectiveRecord = existing.result;
 				return;
+			}
+			if (eitrRequest && eitrRequest.result === undefined) {
+				eitrAwarded = NORSE_FINALE_EITR.amount;
+				eitrStore.add({ balance: eitrAwarded, forgedCardId: null } satisfies LocalCampaignEitr, eitrKey);
 			}
 			const priorFirstClear = firstClearRequest.result !== undefined;
 			const appliedRecord = priorFirstClear && record.firstClear ? { ...record, firstClear: false, runeAmount: 0, runeEntry: undefined } : record;
@@ -519,9 +568,9 @@ export async function commitLocalCampaignSettlement(record: LocalCampaignSettlem
 				}
 		};
 		existing.onerror = () => reject(existing.error);
-		tx.oncomplete = () => resolve({ status: alreadyApplied ? 'already_applied' : 'applied', record: effectiveRecord });
+		tx.oncomplete = () => resolve({ status: alreadyApplied ? 'already_applied' : 'applied', record: effectiveRecord, eitrAwarded });
 		tx.onerror = () => reject(tx.error ?? new Error('local campaign transaction error'));
-		tx.onabort = () => conflict ? resolve({ status: 'conflict', record }) : reject(tx.error ?? new Error('local campaign transaction aborted'));
+		tx.onabort = () => conflict ? resolve({ status: 'conflict', record, eitrAwarded: 0 }) : reject(tx.error ?? new Error('local campaign transaction aborted'));
 	});
 }
 
