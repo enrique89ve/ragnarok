@@ -231,7 +231,7 @@ export interface SerializedState {
 const NonNegativeInt = z.number().int().nonnegative().finite();
 const IntNumber = z.number().finite();
 const SafeString = z.string();
-const RuntimeFingerprintSchema = z.object({ stage: z.enum(['local', 'testnet', 'mainnet']), phaseId: z.enum(['local-gameplay-v1', 'hive-testnet-v1', 'mainnet-v1']), protocolId: z.string().min(1), resetEpoch: z.string().min(1), seasonStart: z.string().min(1), indexStartBlock: z.number().int().positive(), representation: z.string().min(1) }).superRefine((value, ctx) => { const expected = createProtocolRuntimeFingerprint(value); if (expected.representation !== value.representation) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'runtime fingerprint representation mismatch', path: ['representation'] }); });
+const RuntimeFingerprintSchema = z.object({ stage: z.enum(['local', 'testnet', 'mainnet']), phaseId: z.enum(['local-gameplay-v1', 'hive-testnet-v1', 'mainnet-v1']), protocolId: z.string().min(1), resetEpoch: z.string().min(1), seasonStart: z.string().min(1), indexStartBlock: z.number().int().positive(), legacyCampaignResultLastBlock: NonNegativeInt.optional(), representation: z.string().min(1) }).superRefine((value, ctx) => { const expected = createProtocolRuntimeFingerprint(value); if (expected.representation !== value.representation) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'runtime fingerprint representation mismatch', path: ['representation'] }); });
 const Timestamp = z.number().finite().nonnegative();
 const Pair = <T>(value: z.ZodType<T>) => z.tuple([SafeString, value]);
 const AcquisitionProvenanceSchema = z.custom<AcquisitionProvenance>(
@@ -329,6 +329,7 @@ const ForgeCommitStateRecordSchema = z.object({
 	commitBlock: NonNegativeInt,
 	debitAmount: NonNegativeInt,
 	revealed: z.boolean(),
+	seasonId: z.string().optional(),
 }).passthrough();
 
 const DuatClaimRecordSchema = z.object({

@@ -8,6 +8,7 @@ export type CampaignRewardFeedbackStatus =
 	| 'first_clear_no_rune'
 	| 'replay_no_reward'
 	| 'defeat_no_reward'
+	| 'verification_required'
 	| 'publish_failed';
 
 export interface CampaignRewardFeedback {
@@ -103,12 +104,18 @@ export function getCampaignBriefingRewardCopy(input: {
 		};
 	}
 
+	if (!local) {
+		return {
+			label: 'Campaign verification required',
+			detail: 'Shared campaign progress and rewards require an independently replayed victory.',
+			tone: 'pending',
+		};
+	}
+
 	if (input.firstClearRune > 0) {
 		return {
-			label: local ? `First clear: +${input.firstClearRune} local RUNE` : `First clear: +${input.firstClearRune} RUNE`,
-			detail: local
-				? 'Committed only after this account\'s first clear is atomically recorded in local IndexedDB/replay. The balance is resettable and never externally published.'
-				: 'Paid only when the campaign result lands as this account\'s first verified clear for the mission.',
+			label: `First clear: +${input.firstClearRune} local RUNE`,
+			detail: 'Committed only after this account\'s first clear is atomically recorded in local IndexedDB/replay. The balance is resettable and never externally published.',
 			capDetail,
 			tone: 'reward',
 		};
@@ -116,9 +123,7 @@ export function getCampaignBriefingRewardCopy(input: {
 
 	return {
 		label: 'First clear: no RUNE',
-		detail: local
-			? 'This mission can be recorded for local progression, but no resettable RUNE reward is configured for its first clear.'
-			: 'This mission can be recorded for progression, but no RUNE reward is configured for its first clear.',
+		detail: 'This mission can be recorded for local progression, but no resettable RUNE reward is configured for its first clear.',
 		capDetail,
 		tone: 'no_reward',
 	};
@@ -135,6 +140,12 @@ export function getCampaignResultRewardCopy(
 	if (!feedback) return null;
 
 	switch (feedback.status) {
+		case 'verification_required':
+			return {
+				label: 'Campaign verification required',
+				detail: 'Shared campaign progress and rewards require an independently replayed victory.',
+				tone: 'pending',
+			};
 		case 'first_clear_pending':
 			return {
 				label: feedback.previewRune > 0

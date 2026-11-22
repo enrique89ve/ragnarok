@@ -24,7 +24,8 @@ const PACK_ACTIONS = new Set<ProtocolAction>([
 export function protocolCapabilityForAction(action: ProtocolAction): ProtocolCapability | null {
 	if (MARKET_ACTIONS.has(action)) return 'marketplace';
 	if (PACK_ACTIONS.has(action)) return 'packs';
-	if (action === 'match_anchor' || action === 'match_result') return 'hiveBroadcast';
+	if (action === 'match_anchor' || action === 'match_result'
+		|| action === 'burn' || action === 'forge_commit' || action === 'forge_reveal') return 'hiveBroadcast';
 	if (action === 'campaign_result') return 'campaignPublish';
 	return null;
 }

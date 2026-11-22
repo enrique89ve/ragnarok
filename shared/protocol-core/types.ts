@@ -13,6 +13,7 @@ import type { AcquisitionProvenance } from './acquisitionProvenance';
 
 import type { RuneLedgerEntry, RuneLedgerEntryQuery, RuneLedgerTotalQuery } from './runeEconomy';
 import type { EitrLedgerEntry, EitrLedgerEntryQuery, EitrLedgerTotalQuery } from './eitrEconomy';
+import type { ForgeMutation } from './forgeMutation';
 import {
 	RAGNAROK_PROTOCOL_IDS,
 	RAGNAROK_RUNTIME_CONFIGS,
@@ -425,6 +426,7 @@ export interface ForgeCommitRecord {
 	commitBlock: number;
 	debitAmount: number;
 	revealed: boolean;
+	seasonId?: string;
 }
 
 export interface TokenBalance {
@@ -557,6 +559,7 @@ export interface StateAdapter {
 	getForgeCommit(trxId: string): Promise<ForgeCommitRecord | null>;
 	putForgeCommit(commit: ForgeCommitRecord): Promise<void>;
 	getUnrevealedForgeCommitsBefore(deadlineBlock: number): Promise<ForgeCommitRecord[]>;
+	applyForgeMutation?(mutation: ForgeMutation): Promise<OpResult>;
 
 	// Reward claims
 	hasRewardClaim(account: string, rewardId: string): Promise<boolean>;

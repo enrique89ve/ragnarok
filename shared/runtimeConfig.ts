@@ -88,6 +88,7 @@ export type RagnarokRuntimeConfig = {
 	readonly acceptsLegacyProtocolIds: boolean;
 	readonly seasonStart: string;
 	readonly indexStartBlock: number;
+	readonly legacyCampaignResultLastBlock?: number;
 	readonly closedBetaNftLoxCollectionProof: boolean;
 	readonly closedBetaHiveKeychainSmoke: boolean;
 	readonly closedBetaTwoBrowserP2PSmoke: boolean;
@@ -130,6 +131,7 @@ export type RagnarokRuntimeEnv = Partial<Record<
 	| 'VITE_RAGNAROK_RESET_EPOCH'
 	| 'VITE_SEASON_START'
 	| 'VITE_RAGNAROK_INDEX_START_BLOCK'
+	| 'VITE_RAGNAROK_LEGACY_CAMPAIGN_RESULT_LAST_BLOCK'
 	| 'RAGNAROK_PROTOCOL_ID'
 	| 'RAGNAROK_RESET_EPOCH'
 	| 'RAGNAROK_ADMIN_OPERATOR_ACCOUNT'
@@ -266,7 +268,7 @@ function optionalPositiveInteger(value: string | undefined, fieldName: string): 
 	const trimmed = value?.trim();
 	if (!trimmed) return undefined;
 	const parsed = Number(trimmed);
-	if (!Number.isInteger(parsed) || parsed < 1) {
+	if (!Number.isSafeInteger(parsed) || parsed < 1) {
 		throw new Error(`${fieldName} must be a positive integer`);
 	}
 	return parsed;
@@ -308,6 +310,10 @@ export function resolveRagnarokRuntimeConfig(env: RagnarokRuntimeEnv): RagnarokR
 		indexStartBlock: optionalPositiveInteger(env.RAGNAROK_INDEX_START_BLOCK, 'RAGNAROK_INDEX_START_BLOCK')
 			?? optionalPositiveInteger(env.VITE_RAGNAROK_INDEX_START_BLOCK, 'VITE_RAGNAROK_INDEX_START_BLOCK')
 			?? base.indexStartBlock,
+		legacyCampaignResultLastBlock: optionalPositiveInteger(
+			env.VITE_RAGNAROK_LEGACY_CAMPAIGN_RESULT_LAST_BLOCK,
+			'VITE_RAGNAROK_LEGACY_CAMPAIGN_RESULT_LAST_BLOCK',
+		),
 		closedBetaNftLoxCollectionProof: evidenceFlag(env.RAGNAROK_NFTLOX_COLLECTION_PROOF),
 		closedBetaHiveKeychainSmoke: evidenceFlag(env.RAGNAROK_HIVE_KEYCHAIN_SMOKE),
 		closedBetaTwoBrowserP2PSmoke: evidenceFlag(env.RAGNAROK_P2P_TWO_BROWSER_SMOKE),
@@ -411,6 +417,7 @@ export function buildRagnarokRuntimeEvidence(config: RagnarokRuntimeConfig): Rag
 			resetEpoch: config.resetEpoch,
 			seasonStart: config.seasonStart,
 			indexStartBlock: config.indexStartBlock,
+			legacyCampaignResultLastBlock: phaseId === 'local-gameplay-v1' ? undefined : config.legacyCampaignResultLastBlock ?? 0,
 		}),
 		seasonStart: config.seasonStart,
 		indexStartBlock: config.indexStartBlock,

@@ -90,6 +90,8 @@ tests/
 __tests__/
 *.test.js
 *.test.ts
+!client/src/data/blockchain/replayDB.forge.test.ts
+!server/services/chainState.forge.test.ts
 !**/protocolConformance.test.ts
 !client/src/game/config/featureFlags.test.ts
 !client/src/game/p2p/transport/WebRTCTransport.test.ts

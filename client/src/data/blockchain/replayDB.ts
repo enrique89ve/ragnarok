@@ -55,9 +55,16 @@ import type {
 import type { LocalCampaignSettlementEnvelope } from '../../../../shared/protocol-core/localCampaignSettlement';
 import { CAMPAIGN_ID } from '@shared/campaign/constants';
 import { getEitrForgeCost } from '@shared/protocol-core/eitrEconomy';
-import { createRuntimeDatabaseName } from '../../game/config/networkConfig';
+import { prepareForgeWrite, type ForgeMutation } from '@shared/protocol-core/forgeMutation';
+import type { OpResult } from '@shared/protocol-core/types';
+import { getProtocolPhaseId, getRagnarokRuntimePhase } from '@shared/runtimeConfig';
+import { createRuntimeDatabaseName, getRagnarokNetworkConfig } from '../../game/config/networkConfig';
 
-const DB_NAME = createRuntimeDatabaseName('chain-v1');
+const replayRuntime = getRagnarokNetworkConfig();
+const replayPhase = getProtocolPhaseId(getRagnarokRuntimePhase(replayRuntime));
+const DB_NAME = createRuntimeDatabaseName(replayPhase === 'local-gameplay-v1'
+	? 'chain-v1'
+	: `chain-v1-campaign-proof-${replayRuntime.legacyCampaignResultLastBlock ?? 0}`);
 const DB_VERSION = 20;
 const LOCAL_CAMPAIGN_EITR_STORE = 'local_campaign_eitr';
 const NORSE_FINALE_EITR = { missionId: 'norse-9', amount: 40 } as const;
@@ -726,6 +733,66 @@ export const getForgeCommit = (trxId: string): Promise<ForgeCommitRecord | undef
 
 export const putForgeCommit = (commit: ForgeCommitRecord): Promise<void> =>
 	idbPut('forge_commits', commit);
+
+export async function commitForgeMutation(
+	mutation: ForgeMutation,
+	toHiveCard: (card: Extract<ForgeMutation, { kind: 'mint' }>['card']) => HiveCardAsset,
+): Promise<OpResult> {
+	const db = await openDB();
+	return new Promise((resolve, reject) => {
+		const tx = db.transaction(['forge_commits', 'eitr_ledger', 'cards', 'supply_counters'], 'readwrite');
+		const commits = tx.objectStore('forge_commits');
+		const ledger = tx.objectStore('eitr_ledger');
+		const cards = tx.objectStore('cards');
+		const supply = tx.objectStore('supply_counters');
+		const current = commits.get(mutation.commit.trxId);
+		let result: OpResult = { status: 'ignored' };
+
+		function finish(snapshot: Parameters<typeof prepareForgeWrite>[1]) {
+			try {
+				const decision = prepareForgeWrite(mutation, snapshot);
+				if (decision.status === 'applied') {
+					if (decision.entry) ledger.add(decision.entry);
+					if (mutation.kind === 'mint') {
+						cards.add(toHiveCard(mutation.card));
+						for (const counter of mutation.supply) {
+							supply.put({ rarity: `${counter.pool}:${counter.key}`, cap: counter.cap, minted: counter.minted });
+						}
+					}
+					commits.put(mutation.commit);
+				}
+				result = decision.status === 'applied' ? { status: 'applied' } : decision;
+			} catch (error) {
+				tx.abort();
+				reject(error);
+			}
+		}
+
+		if (mutation.kind === 'mint') {
+			const [rarity, card] = mutation.supply;
+			const existingCard = cards.getKey(mutation.card.uid);
+			const currentRarity = supply.get(`${rarity.pool}:${rarity.key}`);
+			const currentCard = supply.get(`${card.pool}:${card.key}`);
+			currentCard.onsuccess = () => finish({
+				commit: current.result,
+				cardExists: existingCard.result !== undefined,
+				supply: [currentRarity.result, currentCard.result],
+			});
+		} else {
+			const movement = ledger.getKey(mutation.movement.entryId);
+			const account = ledger.index('by_account').getAll(mutation.movement.account);
+			account.onsuccess = () => {
+				const entries: EitrLedgerEntry[] = account.result;
+				const balance = entries.reduce((total, entry) => entry.seasonId === mutation.movement.seasonId
+					? total + (entry.direction === 'credit' ? entry.amount : -entry.amount)
+					: total, 0);
+				finish({ commit: current.result, movementExists: movement.result !== undefined, balance });
+			};
+		}
+		tx.oncomplete = () => resolve(result);
+		tx.onabort = () => reject(tx.error ?? new Error('Forge transaction aborted'));
+	});
+}
 
 export async function getUnrevealedForgeCommitsBefore(deadlineBlock: number): Promise<ForgeCommitRecord[]> {
 	const all = await idbGetAll<ForgeCommitRecord>('forge_commits');

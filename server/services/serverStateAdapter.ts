@@ -1,3 +1,5 @@
+import { prepareForgeWrite } from '../../shared/protocol-core/forgeMutation';
+
 /**
  * serverStateAdapter.ts — StateAdapter backed by durable chainState.ts
  *
@@ -204,6 +206,40 @@ export const serverStateAdapter: StateAdapter = {
 	async getForgeCommit(trxId) { return csGetForgeCommit(trxId) ?? null; },
 	async putForgeCommit(commit) { csSetForgeCommit(commit); },
 	async getUnrevealedForgeCommitsBefore(deadlineBlock) { return csGetUnrevealedForgeCommitsBefore(deadlineBlock); },
+	async applyForgeMutation(mutation) {
+		// The JSON indexer uses a single writer. This section cannot yield to
+		// another operation or the periodic snapshot between related writes.
+		const commit = csGetForgeCommit(mutation.commit.trxId);
+		if (mutation.kind === 'mint') {
+			const [rarity, card] = mutation.supply;
+			const result = prepareForgeWrite(mutation, {
+				commit,
+				cardExists: csGetCard(mutation.card.uid) !== undefined,
+				supply: [
+					getSupplyCounter(`${rarity.pool}:${rarity.key}`),
+					getSupplyCounter(`${card.pool}:${card.key}`),
+				],
+			});
+			if (result.status !== 'applied') return result;
+			csPutCard(assetToCardRecord(mutation.card));
+			for (const supply of mutation.supply) {
+				setSupplyCounter(`${supply.pool}:${supply.key}`, supplyToRecord(supply));
+			}
+			registerAccount(mutation.card.owner);
+		} else {
+			const { account, seasonId, entryId } = mutation.movement;
+			const result = prepareForgeWrite(mutation, {
+				commit,
+				balance: csGetEitrLedgerTotal({ account, seasonId, direction: 'credit' })
+					- csGetEitrLedgerTotal({ account, seasonId, direction: 'debit' }),
+				movementExists: csGetEitrLedgerEntry(entryId) !== undefined,
+			});
+			if (result.status !== 'applied') return result;
+			if (result.entry) csSetEitrLedgerEntry(result.entry);
+		}
+		csSetForgeCommit(mutation.commit);
+		return { status: 'applied' };
+	},
 
 	async getMatchAnchor(matchId) {
 		const r = csGetMatchAnchor(matchId);

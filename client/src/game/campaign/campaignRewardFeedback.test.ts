@@ -46,7 +46,7 @@ describe('campaignRewardFeedback', () => {
 		expect(copy.capDetail).toContain('Local resettable cap: 20 RUNE');
 	});
 
-	it('keeps Hive wording for F2 campaign briefing', () => {
+	it('does not advertise a RUNE reward for unverified F2 campaign victories', () => {
 		const copy = getCampaignBriefingRewardCopy({
 			completed: false,
 			firstClearRune: 2,
@@ -54,10 +54,9 @@ describe('campaignRewardFeedback', () => {
 			policy: PROTOCOL_PHASE_POLICIES['hive-testnet-v1'],
 		});
 
-		expect(copy.label).toBe('First clear: +2 RUNE');
-		expect(copy.detail).toContain('first verified clear');
-		expect(copy.detail).not.toContain('local IndexedDB');
-		expect(copy.capDetail).toBe('Season cap: 20 RUNE per account from campaign first-clears.');
+		expect(copy.label).toBe('Campaign verification required');
+		expect(copy.tone).toBe('pending');
+		expect(copy.capDetail).toBeUndefined();
 	});
 
 	it('labels completed mission briefing as replay with no new RUNE', () => {

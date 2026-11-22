@@ -107,5 +107,7 @@ describe('protocol phase profiles', () => {
 		expect(createProtocolRuntimeFingerprint(base)).toEqual(fingerprint);
 		expect(createProtocolRuntimeFingerprint({ ...base, resetEpoch: 'alfa-testnet-2' }).representation).not.toBe(fingerprint.representation);
 		expect(createProtocolRuntimeFingerprint({ ...base, phaseId: 'hive-testnet-v1' }).representation).not.toBe(fingerprint.representation);
+		const historical = createProtocolRuntimeFingerprint({ ...base, phaseId: 'hive-testnet-v1', legacyCampaignResultLastBlock: 100 });
+		expect(historical.representation).not.toBe(createProtocolRuntimeFingerprint({ ...historical, legacyCampaignResultLastBlock: 101 }).representation);
 	});
 });

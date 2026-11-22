@@ -92,7 +92,29 @@ async function seedStarterXpToForty(): Promise<void> {
 beforeEach(async () => resetReplayDatabaseForTests());
 afterEach(async () => resetReplayDatabaseForTests());
 
-describe('F1 campaign lifecycle with real local settlement and IndexedDB', () => {
+describe('campaign lifecycle and IndexedDB', () => {
+	it('only records verification feedback after a win in a shared profile', async () => {
+		const completeMission = vi.fn();
+		const settleLocal = vi.fn();
+		const recordFeedback = vi.fn();
+		await processCampaignMatchEnd(context('shared-win', 'seed'), {
+			iWon: true, turnCount: 9, finalGameState: finalGameState(),
+		}, {
+			getRuntimeConfig: () => ({ ...runtimeConfig, resetEpoch: 'closed-beta-integrity' }),
+			getSessionUsername: () => ACCOUNT,
+			getFallbackUsername: () => null,
+			settleLocal,
+			completeMission,
+			recordFeedback,
+			now: () => 100,
+		});
+		expect(settleLocal).not.toHaveBeenCalled();
+		expect(completeMission).not.toHaveBeenCalled();
+		expect(recordFeedback).toHaveBeenCalledWith(expect.objectContaining({
+			status: 'verification_required', previewRune: 0,
+		}));
+	});
+
 	it('credits Norse finale Eitr once, spends it atomically, and expires it on season rollover', async () => {
 		const dependencies: CampaignLifecycleDependencies = {
 			getRuntimeConfig: () => runtimeConfig,
@@ -101,8 +123,6 @@ describe('F1 campaign lifecycle with real local settlement and IndexedDB', () =>
 			settleLocal: settleLocalCampaignMatch,
 			completeMission: vi.fn(),
 			recordFeedback: vi.fn(),
-			publish: vi.fn(),
-			emitTransactionConfirmed: vi.fn(),
 			now: () => 100,
 		};
 		const end = { iWon: true, turnCount: 9, finalGameState: finalGameState() };
@@ -138,9 +158,7 @@ describe('F1 campaign lifecycle with real local settlement and IndexedDB', () =>
 	});
 
 	it('settles defeat, first clear, replay, and reload without external authority', async () => {
-		const publish = vi.fn(async () => ({ success: true, trxId: 'must-not-exist' }));
 		const fallbackWalletIdentity = vi.fn(() => 'wallet-user');
-		const emitTransactionConfirmed = vi.fn();
 		const completed: Array<{ missionId: string; turns: number; settlementCount: number; runeCount: number; xp: number }> = [];
 		const feedback: string[] = [];
 		let now = 100;
@@ -156,8 +174,6 @@ describe('F1 campaign lifecycle with real local settlement and IndexedDB', () =>
 				completed.push({ missionId, turns, settlementCount: settlements.length, runeCount: rune.length, xp: card?.xp ?? -1 });
 			},
 			recordFeedback: input => { feedback.push(input.status); },
-			publish,
-			emitTransactionConfirmed,
 			now: () => now++,
 		};
 
@@ -165,7 +181,6 @@ describe('F1 campaign lifecycle with real local settlement and IndexedDB', () =>
 		expect(await getLocalCampaignSettlementsByAccount(ACCOUNT)).toEqual([]);
 		expect(completed).toEqual([]);
 		expect(feedback).toEqual(['defeat_no_reward']);
-		expect(publish).not.toHaveBeenCalled();
 		expect(fallbackWalletIdentity).not.toHaveBeenCalled();
 
 		await seedStarterXpToForty();
@@ -193,8 +208,6 @@ describe('F1 campaign lifecycle with real local settlement and IndexedDB', () =>
 		expect(await getRuneLedgerEntries({ seasonId, account: ACCOUNT, direction: 'credit', sourceType: 'campaign_first_clear' })).toHaveLength(1);
 		expect((await getLatestLocalCardProgressionByOwner(ACCOUNT)).find(record => record.uid === STARTER_UID)).toMatchObject({ xp: 60, level: 2 });
 		expect(feedback).toEqual(['defeat_no_reward', 'first_clear_local', 'replay_no_reward']);
-		expect(publish).not.toHaveBeenCalled();
-		expect(emitTransactionConfirmed).not.toHaveBeenCalled();
 		expect(fallbackWalletIdentity).not.toHaveBeenCalled();
 	});
 });

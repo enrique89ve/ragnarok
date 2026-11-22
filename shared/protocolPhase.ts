@@ -212,6 +212,7 @@ export type ProtocolRuntimeFingerprintInput = {
 	readonly resetEpoch: string;
 	readonly seasonStart: string;
 	readonly indexStartBlock: number;
+	readonly legacyCampaignResultLastBlock?: number;
 };
 
 export type ProtocolRuntimeFingerprint = ProtocolRuntimeFingerprintInput & {
@@ -228,6 +229,9 @@ export function createProtocolRuntimeFingerprint(
 		resetEpoch: input.resetEpoch,
 		seasonStart: input.seasonStart,
 		indexStartBlock: input.indexStartBlock,
+		...(input.legacyCampaignResultLastBlock === undefined ? {} : {
+			legacyCampaignResultLastBlock: input.legacyCampaignResultLastBlock,
+		}),
 	};
 	return {
 		...normalized,
@@ -238,6 +242,7 @@ export function createProtocolRuntimeFingerprint(
 			normalized.resetEpoch,
 			normalized.seasonStart,
 			normalized.indexStartBlock,
+			...(normalized.legacyCampaignResultLastBlock === undefined ? [] : [normalized.legacyCampaignResultLastBlock]),
 		]),
 	};
 }
@@ -252,12 +257,14 @@ export function parseProtocolRuntimeFingerprint(value: unknown): ProtocolRuntime
 	}
 	const candidate = value as Record<string, unknown>;
 	const stages: readonly RagnarokNetworkStage[] = ['local', 'testnet', 'mainnet'];
+	const lastLegacyBlock = candidate.legacyCampaignResultLastBlock;
 	if (!stages.includes(candidate.stage as RagnarokNetworkStage)
 		|| !PROTOCOL_PHASE_IDS.includes(candidate.phaseId as ProtocolPhaseId)
 		|| typeof candidate.protocolId !== 'string' || candidate.protocolId.length === 0
 		|| typeof candidate.resetEpoch !== 'string' || candidate.resetEpoch.length === 0
 		|| typeof candidate.seasonStart !== 'string' || candidate.seasonStart.length === 0
 		|| typeof candidate.indexStartBlock !== 'number' || !Number.isInteger(candidate.indexStartBlock) || candidate.indexStartBlock < 1
+		|| (lastLegacyBlock !== undefined && (typeof lastLegacyBlock !== 'number' || !Number.isSafeInteger(lastLegacyBlock) || lastLegacyBlock < 0))
 		|| typeof candidate.representation !== 'string') {
 		const error = new Error('invalid protocol runtime fingerprint') as ProtocolFingerprintValidationError;
 		error.code = 'fingerprint_mismatch';
@@ -270,6 +277,7 @@ export function parseProtocolRuntimeFingerprint(value: unknown): ProtocolRuntime
 		resetEpoch: candidate.resetEpoch,
 		seasonStart: candidate.seasonStart,
 		indexStartBlock: candidate.indexStartBlock,
+		legacyCampaignResultLastBlock: lastLegacyBlock,
 	});
 	if (fingerprint.representation !== candidate.representation) {
 		const error = new Error('invalid protocol runtime fingerprint representation') as ProtocolFingerprintValidationError;

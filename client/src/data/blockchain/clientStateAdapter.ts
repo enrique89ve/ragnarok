@@ -22,6 +22,7 @@ import {
 	getEitrLedgerEntries as idbGetEitrLedgerEntries,
 	getEitrLedgerTotal as idbGetEitrLedgerTotal,
 	getForgeCommit as idbGetForgeCommit, putForgeCommit as idbPutForgeCommit,
+	commitForgeMutation,
 	getUnrevealedForgeCommitsBefore as idbGetUnrevealedForgeCommitsBefore,
 	getMatchAnchor, putMatchAnchor,
 	getQueueEntry, putQueueEntry, deleteQueueEntry,
@@ -169,6 +170,7 @@ export const clientStateAdapter: StateAdapter = {
 	async putForgeCommit(commit) {
 		await idbPutForgeCommit(commit);
 	},
+	applyForgeMutation: mutation => commitForgeMutation(mutation, assetToHiveCard),
 	async getUnrevealedForgeCommitsBefore(deadlineBlock) {
 		return idbGetUnrevealedForgeCommitsBefore(deadlineBlock);
 	},

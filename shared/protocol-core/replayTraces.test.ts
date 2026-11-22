@@ -43,6 +43,7 @@ import {
 } from './runeSeason0Smoke';
 import { deriveChallenge, POW_CONFIG } from './pow';
 import { RAGNAROK_RUNTIME_CONFIGS } from '../runtimeConfig';
+import { prepareForgeWrite, type ForgeMutation } from './forgeMutation';
 
 // ============================================================
 // In-Memory StateAdapter (test harness)
@@ -135,6 +136,31 @@ class MemoryState implements StateAdapter {
 	forgeCommits = new Map<string, ForgeCommitRecord>();
 	async getForgeCommit(trxId: string) { return this.forgeCommits.get(trxId) ?? null; }
 	async putForgeCommit(commit: ForgeCommitRecord) { this.forgeCommits.set(commit.trxId, commit); }
+	async applyForgeMutation(mutation: ForgeMutation) {
+		const commit = this.forgeCommits.get(mutation.commit.trxId);
+		const balance = mutation.kind === 'mint' ? undefined : [...this.eitrLedger.values()].reduce((total, entry) =>
+			entry.account === mutation.movement.account && entry.seasonId === mutation.movement.seasonId
+				? total + (entry.direction === 'credit' ? entry.amount : -entry.amount)
+				: total, 0);
+		const result = prepareForgeWrite(mutation, mutation.kind === 'mint'
+			? {
+				commit,
+				cardExists: this.cards.has(mutation.card.uid),
+				supply: [
+					this.supply.get(`pack:${mutation.supply[0].key}`),
+					this.supply.get(`pack:${mutation.supply[1].key}`),
+				],
+			}
+			: { commit, balance, movementExists: this.eitrLedger.has(mutation.movement.entryId) });
+		if (result.status !== 'applied') return result;
+		if (result.entry) this.eitrLedger.set(result.entry.entryId, result.entry);
+		if (mutation.kind === 'mint') {
+			this.cards.set(mutation.card.uid, mutation.card);
+			for (const supply of mutation.supply) this.supply.set(`${supply.pool}:${supply.key}`, supply);
+		}
+		this.forgeCommits.set(mutation.commit.trxId, mutation.commit);
+		return result;
+	}
 	async getUnrevealedForgeCommitsBefore(deadlineBlock: number) {
 		return [...this.forgeCommits.values()].filter(c => !c.revealed && c.commitBlock <= deadlineBlock);
 	}
@@ -243,6 +269,7 @@ const TESTNET_TRACE_RUNTIME = {
 	// Replay conformance exercises Hive handlers; local gameplay capability
 	// rejection is covered by phaseGate tests and dedicated local fixtures.
 	resetEpoch: 'closed-beta',
+	legacyCampaignResultLastBlock: 10_000,
 	adminAccount: 'ragnarok',
 	genesisAccount: 'ragnarok',
 	treasuryAccount: 'ragnarok-treasury',

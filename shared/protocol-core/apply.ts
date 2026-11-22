@@ -74,6 +74,7 @@ import {
 	createDuatPackAcquisition,
 } from './acquisitionProvenance';
 import { checkProtocolActionCapability } from './phaseGate';
+import type { ForgeMutation } from './forgeMutation';
 import { getRagnarokRuntimePhase, getProtocolPhaseId } from '../runtimeConfig';
 
 // ============================================================
@@ -1326,6 +1327,9 @@ async function applyCampaignResult(
 	op: ProtocolOp,
 	deps: ProtocolCoreDeps,
 ): Promise<OpResult> {
+	const lastLegacyBlock = deps.runtime.legacyCampaignResultLastBlock ?? 0;
+	if (!Number.isSafeInteger(op.blockNum) || op.blockNum < 1 || op.blockNum > lastLegacyBlock) return reject('campaign victory requires independent verification');
+
 	const parsed = parseCampaignResultPayload(op);
 	if (isOpResult(parsed)) return parsed;
 
@@ -2351,50 +2355,38 @@ async function applyForgeCommit(op: ProtocolOp, deps: ProtocolCoreDeps): Promise
 	const existing = await deps.state.getForgeCommit(op.trxId);
 	if (existing) return { status: 'ignored' };
 
-	const balance = await getEitrBalanceFor(deps, op.broadcaster);
-	if (balance < cost) return reject('insufficient Eitr');
-
 	const supply = await deps.state.getSupply(rarity, 'pack');
 	if (!supply) return reject('genesis supply missing for rarity');
 
+	const seasonId = activeRuneSeasonId(deps);
 	const sourceKey = createForgeCommitEitrSourceKey({
-		seasonId: activeRuneSeasonId(deps),
+		seasonId,
 		account: op.broadcaster,
 		trxId: op.trxId,
 	});
 	const entryId = createEitrLedgerEntryId({
-		seasonId: activeRuneSeasonId(deps),
+		seasonId,
 		direction: 'debit',
 		sourceType: 'forge_commit',
 		sourceKey,
 	});
 
-	// Ledger debit → commit record (in this order, idempotent recovery on crash).
-	await deps.state.putEitrLedgerEntry({
-		entryId,
-		seasonId: activeRuneSeasonId(deps),
-		account: op.broadcaster,
-		direction: 'debit',
-		sourceType: 'forge_commit',
-		sourceKey,
-		amount: cost,
-		balanceBefore: balance,
-		balanceAfter: balance - cost,
-		trxId: op.trxId,
-		blockNum: op.blockNum,
-		timestamp: op.timestamp,
+	return applyForgeMutation(deps.state, {
+		kind: 'open',
+		movement: {
+			entryId, seasonId, account: op.broadcaster, direction: 'debit', sourceType: 'forge_commit',
+			sourceKey, amount: cost, trxId: op.trxId, blockNum: op.blockNum, timestamp: op.timestamp,
+		},
+		commit: {
+			trxId: op.trxId, account: op.broadcaster, rarity, saltCommit: rawSaltCommit,
+			commitBlock: op.blockNum, debitAmount: cost, revealed: false, seasonId,
+		},
 	});
-	await deps.state.putForgeCommit({
-		trxId: op.trxId,
-		account: op.broadcaster,
-		rarity,
-		saltCommit: rawSaltCommit,
-		commitBlock: op.blockNum,
-		debitAmount: cost,
-		revealed: false,
-	});
+}
 
-	return { status: 'applied' };
+function applyForgeMutation(state: StateAdapter, mutation: ForgeMutation): Promise<OpResult> {
+	if (!state.applyForgeMutation) throw new Error('Atomic Forge storage is unavailable');
+	return state.applyForgeMutation(mutation);
 }
 
 async function applyForgeReveal(op: ProtocolOp, ctx: ReplayContext, deps: ProtocolCoreDeps): Promise<OpResult> {
@@ -2422,33 +2414,36 @@ async function applyForgeReveal(op: ProtocolOp, ctx: ReplayContext, deps: Protoc
 	if (!entropyBlockId) return reject('entropy block id unavailable');
 
 	const seed = await sha256Hash(`${rawUserSalt}${rawCommitTrxId}${entropyBlockId}forge`);
-	await deps.state.putForgeCommit({ ...commit, revealed: true });
-
-	const minted = await drawForgeCard(seed, commit, op.broadcaster, op.trxId, op.blockNum, deps);
-	if (minted) return { status: 'applied' };
-
-	// Exhaustion → refund Eitr (credit reversal).
-	await creditForgeRefund(commit, op, deps);
-	return { status: 'applied' };
+	return settleForge(seed, commit, op, deps);
 }
 
-// Draw a single card_id for forge: iterate available cards in the rarity,
-// skipping per-card caps. Returns true on successful mint.
-async function drawForgeCard(
+async function settleForge(
+	seed: string,
+	commit: ForgeCommitRecord,
+	op: Pick<ProtocolOp, 'trxId' | 'blockNum' | 'timestamp'>,
+	deps: ProtocolCoreDeps,
+	mintBlock = op.blockNum,
+): Promise<OpResult> {
+	const closed = { ...commit, revealed: true };
+	const draw = await selectForgeCard(seed, closed, op.trxId, mintBlock, deps);
+	return applyForgeMutation(deps.state, draw ?? buildForgeRefund(closed, op, deps));
+}
+
+// Preserve the consensus draw order and historical card UIDs.
+async function selectForgeCard(
 	seedHex: string,
 	commit: ForgeCommitRecord,
-	owner: string,
 	trxId: string,
 	blockNum: number,
 	deps: ProtocolCoreDeps,
-): Promise<boolean> {
+): Promise<ForgeMutation | null> {
 	// Forge draws from the full collectible pool; per-card and rarity filters happen inline.
 	const allRanges: readonly [number, number][] = [
 		[1000, 2999], [3000, 3999], [4000, 4999], [5000, 5999], [6000, 6999],
 		[7000, 7999], [8000, 8999], [20000, 29799], [30001, 30410], [31001, 31999], [50000, 50376],
 	];
 	const mintableIds = deps.cards.getCollectibleIdsInRanges(allRanges);
-	if (mintableIds.length === 0) return false;
+	if (mintableIds.length === 0) return null;
 
 	let s = parseInt(seedHex.slice(0, 8), 16) || 1;
 	s = Math.max(s, 1);
@@ -2470,56 +2465,41 @@ async function drawForgeCard(
 		const perCardCap = cardSupply?.cap ?? 2000;
 		if (cardMinted >= perCardCap) continue;
 
-		const uid = `forge:${trxId}`;
-		await deps.state.putCard({
-			uid,
-			cardId,
-			owner,
-			rarity,
-			level: 1,
-			xp: 0,
-			edition: 'alpha',
-			mintSource: 'forge',
-			mintTrxId: trxId,
-			mintBlockNum: blockNum,
-			lastTransferBlock: blockNum,
-		});
-		await deps.state.putSupply({ ...rarSupply, minted: rarSupply.minted + 1 });
-		await deps.state.putSupply({
-			key: cardKey, pool: 'pack', cap: perCardCap, minted: cardMinted + 1,
-		});
-		return true;
+		return {
+			kind: 'mint',
+			commit,
+			card: {
+				uid: `forge:${trxId}`, cardId, owner: commit.account, rarity, level: 1, xp: 0,
+				edition: 'alpha', mintSource: 'forge', mintTrxId: trxId, mintBlockNum: blockNum,
+				lastTransferBlock: blockNum,
+			},
+			supply: [
+				{ ...rarSupply, minted: rarSupply.minted + 1 },
+				{ key: cardKey, pool: 'pack', cap: perCardCap, minted: cardMinted + 1 },
+			],
+		};
 	}
-	return false;
+	return null;
 }
 
-async function creditForgeRefund(commit: ForgeCommitRecord, op: ProtocolOp, deps: ProtocolCoreDeps): Promise<void> {
+function buildForgeRefund(
+	commit: ForgeCommitRecord,
+	op: Pick<ProtocolOp, 'trxId' | 'blockNum' | 'timestamp'>,
+	deps: ProtocolCoreDeps,
+): ForgeMutation {
+	const seasonId = commit.seasonId ?? activeRuneSeasonId(deps);
 	const sourceKey = createForgeRefundEitrSourceKey({
-		seasonId: activeRuneSeasonId(deps),
-		account: commit.account,
-		revealTrxId: op.trxId,
+		seasonId, account: commit.account, revealTrxId: op.trxId,
 	});
-	const entryId = createEitrLedgerEntryId({
-		seasonId: activeRuneSeasonId(deps),
-		direction: 'credit',
-		sourceType: 'forge_refund',
-		sourceKey,
-	});
-	const balanceBefore = await getEitrBalanceFor(deps, commit.account);
-	await deps.state.putEitrLedgerEntry({
-		entryId,
-		seasonId: activeRuneSeasonId(deps),
-		account: commit.account,
-		direction: 'credit',
-		sourceType: 'forge_refund',
-		sourceKey,
-		amount: commit.debitAmount,
-		balanceBefore,
-		balanceAfter: balanceBefore + commit.debitAmount,
-		trxId: op.trxId,
-		blockNum: op.blockNum,
-		timestamp: op.timestamp,
-	});
+	return {
+		kind: 'refund',
+		commit,
+		movement: {
+			entryId: createEitrLedgerEntryId({ seasonId, direction: 'credit', sourceType: 'forge_refund', sourceKey }),
+			seasonId, account: commit.account, direction: 'credit', sourceType: 'forge_refund',
+			sourceKey, amount: commit.debitAmount, trxId: op.trxId, blockNum: op.blockNum, timestamp: op.timestamp,
+		},
+	};
 }
 
 // Auto-finalize unrevealed forge commits past deadline.
@@ -2546,28 +2526,12 @@ export async function autoFinalizeExpiredForgeCommits(
 		if (!entropyBlockId) continue;
 
 		const forfeitSeed = await sha256Hash(`${commit.trxId}${entropyBlockId}forfeit`);
-		await deps.state.putForgeCommit({ ...commit, revealed: true });
-
-		const forfeitTrxId = `${commit.trxId}:forfeit`;
-		const minted = await drawForgeCard(
-			forfeitSeed, commit, commit.account, forfeitTrxId, commit.commitBlock, deps,
-		);
-		if (!minted) {
-			// Refund using a synthetic op for ledger trace
-			const syntheticOp: ProtocolOp = {
-				...({} as ProtocolOp),
-				broadcaster: commit.account,
-				trxId: forfeitTrxId,
-				blockNum: commit.commitBlock + PACK_REVEAL_DEADLINE_BLOCKS,
-				timestamp: 0,
-				action: 'forge_reveal',
-				payload: {},
-				usedActiveAuth: false,
-			};
-			await creditForgeRefund(commit, syntheticOp, deps);
-		}
-
-		finalized++;
+		const result = await settleForge(forfeitSeed, commit, {
+			trxId: `${commit.trxId}:forfeit`,
+			blockNum: deadline,
+			timestamp: 0,
+		}, deps, commit.commitBlock);
+		if (result.status === 'applied') finalized++;
 	}
 
 	return finalized;

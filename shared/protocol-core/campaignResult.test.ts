@@ -34,6 +34,7 @@ const RULESET_HASH = 'ruleset-hash-v1';
 const TESTNET_RUNTIME = {
 	...RAGNAROK_RUNTIME_CONFIGS.testnet,
 	resetEpoch: 'closed-beta-period6-test',
+	legacyCampaignResultLastBlock: 20,
 };
 const TESTNET_SEASON_ID = deriveRuneSeasonId(TESTNET_RUNTIME);
 
@@ -269,6 +270,22 @@ async function applyCampaignResult(
 }
 
 describe('campaign_result protocol op', () => {
+	it('requires proof by default and rejects publications after the historical cutoff before writing any state', async () => {
+		const state = createStateAdapter();
+		const deps = createDeps(state);
+		const noHistory = { ...deps, runtime: { ...TESTNET_RUNTIME, legacyCampaignResultLastBlock: undefined } };
+		expect(await applyCampaignResult(noHistory, { missionId: 'norse-1', nonce: 1 })).toMatchObject({
+			status: 'rejected', reason: 'campaign victory requires independent verification',
+		});
+		expect(await applyCampaignResult(deps, { missionId: 'norse-1', nonce: 1, blockNum: 21 })).toMatchObject({
+			status: 'rejected', reason: 'campaign victory requires independent verification',
+		});
+		expect(state.campaignSubmissions.size).toBe(0);
+		expect(state.campaignProgress.size).toBe(0);
+		expect(state.runeLedger.size).toBe(0);
+		expect((await applyCampaignResult(deps, { missionId: 'norse-1', nonce: 1, blockNum: 20 })).status).toBe('applied');
+	});
+
 	it('marks the submission consumed, writes verified progress, and credits first-clear RUNE inline', async () => {
 		const state = createStateAdapter();
 		const deps = createDeps(state);

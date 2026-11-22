@@ -9,6 +9,10 @@ The current server indexer selection and validation contract lives in
 
 ## Operation
 
+New shared-profile publications require independent victory verification. V1
+envelopes can be replayed only through the explicitly configured irreversible
+legacy cutoff. See [Campaign and Forge integrity](CAMPAIGN_ECONOMIC_INTEGRITY.md).
+
 V1 introduces `rp_campaign_result`, normalized by `protocol-core` to
 `campaign_result`.
 
@@ -112,7 +116,7 @@ The browser stores local run drafts in IndexedDB `campaign_runs`:
 This is a player-side journal. It is useful for retries, diagnostics, and
 building `rp_campaign_result`, but it is not authoritative campaign progress.
 
-## Rewards
+## Historical V1 rewards
 
 `rp_campaign_result` itself credits first-clear RUNE in the same apply step
 that writes `campaignProgress`. There is no separate `reward_claim campaign:*`
