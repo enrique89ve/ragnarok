@@ -26,8 +26,8 @@ describe('MATCH_ECONOMY', () => {
 		});
 	});
 
-	it('campaign reduces Match XP to 10% and projects first-clear RUNE', () => {
-		expect(MATCH_ECONOMY.campaign.matchXpShare).toBeCloseTo(POOL_REWARDS * 0.10, 10);
+	it('campaign projects first-clear RUNE', () => {
+		expect(MATCH_ECONOMY.campaign.matchXpShare).toBe(0);
 		expect(MATCH_ECONOMY.campaign.rune).toBe('campaign_first_clear');
 		expect(MATCH_ECONOMY.campaign.ranking).toBe('none');
 	});
@@ -48,9 +48,9 @@ describe('modeEconomyToReward', () => {
 		});
 	});
 
-	it('maps campaign to Match XP share and first-clear RUNE', () => {
+	it('maps campaign to first-clear RUNE only', () => {
 		expect(modeEconomyToReward(MATCH_ECONOMY.campaign)).toEqual({
-			matchXp: { kind: 'percentage', multiplier: MATCH_ECONOMY.campaign.matchXpShare },
+			matchXp: { kind: 'none' },
 			rune: { kind: 'projected', source: 'campaign_first_clear' },
 			ranking: { kind: 'none' },
 		});
@@ -67,6 +67,6 @@ describe('modeEconomyToReward', () => {
 
 describe('getEconomyFootprint', () => {
 	it('returns the sum of Match XP shares', () => {
-		expect(getEconomyFootprint()).toBeCloseTo(1.1, 10);
+		expect(getEconomyFootprint()).toBe(1);
 	});
 });

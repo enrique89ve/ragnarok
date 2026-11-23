@@ -8,12 +8,10 @@ import type { MatchEndContext } from '../match/onWinDispatch';
 import {
 	commitLocalCampaignSettlement,
 	hasLocalCampaignFirstClear,
-	getLatestLocalCardProgressionByOwner,
 	type LocalCampaignCommitResult,
 } from '@/data/blockchain/replayDB';
 import { createLocalCampaignSettlement } from '@shared/protocol-core/localCampaignSettlement';
 import { getTokenBalance } from '@/data/blockchain/replayDB';
-import { collectLocalWinnerCards } from '../match/localCardProjection';
 import { commitProgressAccountId } from '../auth/progressAccount';
 
 export type LocalCampaignSettlementResult =
@@ -45,8 +43,21 @@ export async function settleLocalCampaignMatch(
 		campaign: { missionId: mission.id, isFirstClear: firstClear },
 	});
 	const sourceKey = createCampaignFirstClearRuneSourceKey(account, CAMPAIGN_ID, mission.id, seasonId);
-	const progression = await getLatestLocalCardProgressionByOwner(account);
-	const base = createLocalCampaignSettlement({ runtimeFingerprint: deps.runtimeEvidence.runtimeFingerprint, account, campaignId: CAMPAIGN_ID, missionId: mission.id, difficulty, matchId: ctx.matchId, matchSeed: ctx.matchSeed, turnCount: end.turnCount, firstClear, runeAmount: reward.rune, seasonId, matchXpShown: reward.matchXp, cards: collectLocalWinnerCards(end.finalGameState, account, progression), timestamp: deps.now() });
+	const base = createLocalCampaignSettlement({
+		runtimeFingerprint: deps.runtimeEvidence.runtimeFingerprint,
+		account,
+		campaignId: CAMPAIGN_ID,
+		missionId: mission.id,
+		difficulty,
+		matchId: ctx.matchId,
+		matchSeed: ctx.matchSeed,
+		turnCount: end.turnCount,
+		firstClear,
+		runeAmount: reward.rune,
+		seasonId,
+		matchXpShown: reward.matchXp,
+		timestamp: deps.now(),
+	});
 	const balanceBefore = (await getTokenBalance(account, seasonId)).RUNE;
 	const runeEntry = firstClear && reward.rune > 0 ? {
 		entryId: createRuneLedgerEntryId({ seasonId, direction: 'credit', sourceType: 'campaign_first_clear', sourceKey }),

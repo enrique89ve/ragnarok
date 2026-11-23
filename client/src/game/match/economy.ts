@@ -8,7 +8,7 @@ import type { RewardChannel, RuneRewardSource } from './types';
 export const POOL_REWARDS = 1.0;
 
 const SINGLE_MATCH_XP_SHARE = 0;
-const CAMPAIGN_MATCH_XP_SHARE = POOL_REWARDS * 0.10;
+const CAMPAIGN_MATCH_XP_SHARE = 0;
 const P2P_MATCH_XP_SHARE = POOL_REWARDS * 1.00;
 
 export interface ModeEconomy {
@@ -49,6 +49,13 @@ if (!Number.isFinite(POOL_REWARDS) || POOL_REWARDS <= 0) {
 	throw new Error(
 		`[match/economy] POOL_REWARDS must be a positive finite number, ` +
 		`got ${POOL_REWARDS}.`,
+	);
+}
+const economyFootprint = getEconomyFootprint();
+if (economyFootprint > POOL_REWARDS) {
+	throw new Error(
+		`[match/economy] Match XP shares must not exceed POOL_REWARDS ` +
+		`(${POOL_REWARDS}); got footprint ${economyFootprint}.`,
 	);
 }
 
