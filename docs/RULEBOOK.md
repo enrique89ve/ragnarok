@@ -70,6 +70,8 @@ Scripted single-player missions grouped into faction chapters (Norse,
 Twilight, Greek, Egyptian, Celtic, Eastern). Each victory broadcasts a
 single `rp_campaign_result` op which writes verified campaign progress
 and credits any first-clear RUNE in the same chain apply step.
+Campaign victories do **not** award Match XP or Card XP in Alfa; only eligible
+PvP matches feed those progression channels.
 
 Alfa Testnet gates **one Norse mission** end-to-end. Remaining chapters are
 content, not the release gate.

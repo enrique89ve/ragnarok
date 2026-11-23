@@ -134,6 +134,11 @@ later mission ordinal is narrative-only (0 RUNE). Chapter mission counts are
 narrative; only the first six ordinals across all chapters participate in the
 campaign economy.
 
+Alfa local campaign replay credits first-clear RUNE only. Campaign victories do
+not award Match XP or Card XP; only eligible PvP matches feed those channels.
+Mainnet finale RUNE, Eitr, and forge policy are documented in
+[`README_EITR_FINALES.md`](./README_EITR_FINALES.md).
+
 ## Registry
 
 The verification registry lives at:
