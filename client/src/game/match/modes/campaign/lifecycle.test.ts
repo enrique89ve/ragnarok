@@ -7,13 +7,14 @@ vi.mock('../../../nft', () => ({ getNFTBridge: () => ({ getUsername: () => 'alic
 vi.mock('../../../../config/networkConfig', () => ({ getRagnarokNetworkConfig: () => ({ stage: 'testnet' }) }));
 vi.mock('@shared/runtimeConfig', async importOriginal => ({ ...(await importOriginal<typeof import('@shared/runtimeConfig')>()), buildRagnarokRuntimeEvidence: () => ({ phasePolicy: { localSettlement: true } }) }));
 import { onCampaignMatchEnd } from './lifecycle';
+import { MATCH_ECONOMY, modeEconomyToReward } from '../../economy';
 import type { MatchContext } from '../../types';
-const ctx = { matchId: 'life-match', matchSeed: 'life-seed', reward: { matchXp: { kind: 'percentage', multiplier: 1 }, rune: { kind: 'projected', source: 'campaign_first_clear' }, ranking: { kind: 'none' } }, opponent: { kind: 'scripted', script: { kind: 'campaign-mission', mission: { id: 'life-mission' }, difficulty: 'normal', chapter: {}, localRunId: null } } } as unknown as MatchContext;
+const ctx = { matchId: 'life-match', matchSeed: 'life-seed', reward: modeEconomyToReward(MATCH_ECONOMY.campaign), opponent: { kind: 'scripted', script: { kind: 'campaign-mission', mission: { id: 'life-mission' }, difficulty: 'normal', chapter: {}, localRunId: null } } } as unknown as MatchContext;
 describe('campaign local lifecycle boundary', () => {
 	it('commits before completing and never publishes externally', async () => {
 		let resolve!: (value: unknown) => void; settle.mockImplementationOnce(() => new Promise(done => { resolve = done; }));
 		onCampaignMatchEnd(ctx, { iWon: true, turnCount: 2 }); expect(completeMission).not.toHaveBeenCalled(); expect(publish).not.toHaveBeenCalled();
-		resolve({ status: 'applied', record: { campaignId: 'ragnarok', missionId: 'life-mission', difficulty: 'normal', turnCount: 2, firstClear: true, runeEntry: { amount: 2 }, matchXpShown: 10 } });
+		resolve({ status: 'applied', record: { campaignId: 'ragnarok', missionId: 'life-mission', difficulty: 'normal', turnCount: 2, firstClear: true, runeEntry: { amount: 2 }, matchXpShown: 0 } });
 		await vi.waitFor(() => expect(completeMission).toHaveBeenCalledTimes(1)); expect(publish).not.toHaveBeenCalled();
 	});
 	it('defeat does not settle, publish, or complete', () => { settle.mockClear(); publish.mockClear(); completeMission.mockClear(); onCampaignMatchEnd(ctx, { iWon: false, turnCount: 2 }); expect(settle).not.toHaveBeenCalled(); expect(publish).not.toHaveBeenCalled(); expect(completeMission).not.toHaveBeenCalled(); });

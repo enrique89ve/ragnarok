@@ -30,7 +30,7 @@ describe('resolveCampaign', () => {
 		const result = resolveCampaign({ identity: TEST_IDENTITY, missionId: KNOWN_MISSION_ID, difficulty: 'normal' });
 		if (!result.ok) throw new Error('expected ok');
 		expect(result.ctx.reward).toEqual({
-			matchXp: { kind: 'percentage', multiplier: 0.1 },
+			matchXp: { kind: 'none' },
 			rune: { kind: 'projected', source: 'campaign_first_clear' },
 			ranking: { kind: 'none' },
 		});

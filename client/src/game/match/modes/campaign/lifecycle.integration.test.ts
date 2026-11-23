@@ -2,18 +2,15 @@ import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildRagnarokRuntimeEvidence, resolveRagnarokRuntimeConfig } from '@shared/runtimeConfig';
 import { deriveRuneSeasonId } from '@shared/protocol-core/runeSeasonHash';
-import { createLocalCampaignSettlement } from '@shared/protocol-core/localCampaignSettlement';
 import type { GameState } from '../../../types';
 import type { MatchContext } from '../../types';
+import { MATCH_ECONOMY, modeEconomyToReward } from '../../economy';
 import { settleLocalCampaignMatch } from '../../../campaign/localCampaignSettlement';
 import {
 	closeReplayDatabaseForTests,
-	commitLocalCampaignSettlement,
 	forgeLocalCampaignCommon,
 	getLocalCampaignEitr,
-	getLatestLocalCardProgressionByOwner,
 	getLocalCampaignSettlementsByAccount,
-	getLocalLevelUpsByEvent,
 	getMatchAnchor,
 	getMatchesByAccount,
 	getRuneLedgerEntries,
@@ -23,7 +20,6 @@ import { processCampaignMatchEnd, type CampaignLifecycleDependencies } from './l
 
 const ACCOUNT = 'f1-user';
 const MISSION_ID = 'lifecycle-1';
-const STARTER_UID = 'starter-100';
 const runtimeConfig = resolveRagnarokRuntimeConfig({
 	VITE_NETWORK_STAGE: 'testnet',
 	VITE_RAGNAROK_PROTOCOL_ID: 'rk_game_testnet',
@@ -38,11 +34,7 @@ function context(matchId: string, matchSeed: string, missionId = MISSION_ID): Ma
 	return {
 		matchId,
 		matchSeed,
-		reward: {
-			matchXp: { kind: 'percentage', multiplier: 1 },
-			rune: { kind: 'projected', source: 'campaign_first_clear' },
-			ranking: { kind: 'none' },
-		},
+		reward: modeEconomyToReward(MATCH_ECONOMY.campaign),
 		opponent: {
 			kind: 'scripted',
 			script: {
@@ -66,27 +58,6 @@ function finalGameState(): GameState {
 			},
 		},
 	} as unknown as GameState;
-}
-
-async function seedStarterXpToForty(): Promise<void> {
-	for (let win = 0; win < 4; win += 1) {
-		const record = createLocalCampaignSettlement({
-			runtimeFingerprint: runtimeEvidence.runtimeFingerprint,
-			account: ACCOUNT,
-			campaignId: 'war-of-pantheons',
-			missionId: `xp-prelude-${win + 10}`,
-			difficulty: 'normal',
-			matchId: `xp-prelude-match-${win}`,
-			matchSeed: `xp-prelude-seed-${win}`,
-			turnCount: 1,
-			firstClear: false,
-			runeAmount: 0,
-			seasonId,
-			cards: [{ uid: STARTER_UID, ownerAccount: ACCOUNT, cardId: 100, rarity: 'common', xpBefore: win * 10 }],
-			timestamp: 10 + win,
-		});
-		expect((await commitLocalCampaignSettlement(record)).status).toBe('applied');
-	}
 }
 
 beforeEach(async () => resetReplayDatabaseForTests());
@@ -159,7 +130,7 @@ describe('campaign lifecycle and IndexedDB', () => {
 
 	it('settles defeat, first clear, replay, and reload without external authority', async () => {
 		const fallbackWalletIdentity = vi.fn(() => 'wallet-user');
-		const completed: Array<{ missionId: string; turns: number; settlementCount: number; runeCount: number; xp: number }> = [];
+		const completed: Array<{ missionId: string; turns: number; settlementCount: number; runeCount: number }> = [];
 		const feedback: string[] = [];
 		let now = 100;
 		const dependencies: CampaignLifecycleDependencies = {
@@ -170,8 +141,7 @@ describe('campaign lifecycle and IndexedDB', () => {
 			completeMission: async (missionId, _difficulty, turns) => {
 				const settlements = (await getLocalCampaignSettlementsByAccount(ACCOUNT)).filter(record => record.missionId === MISSION_ID);
 				const rune = await getRuneLedgerEntries({ seasonId, account: ACCOUNT, direction: 'credit', sourceType: 'campaign_first_clear' });
-				const card = (await getLatestLocalCardProgressionByOwner(ACCOUNT)).find(record => record.uid === STARTER_UID);
-				completed.push({ missionId, turns, settlementCount: settlements.length, runeCount: rune.length, xp: card?.xp ?? -1 });
+				completed.push({ missionId, turns, settlementCount: settlements.length, runeCount: rune.length });
 			},
 			recordFeedback: input => { feedback.push(input.status); },
 			now: () => now++,
@@ -183,14 +153,12 @@ describe('campaign lifecycle and IndexedDB', () => {
 		expect(feedback).toEqual(['defeat_no_reward']);
 		expect(fallbackWalletIdentity).not.toHaveBeenCalled();
 
-		await seedStarterXpToForty();
 		await processCampaignMatchEnd(context('first-win-match', 'first-win-seed'), { iWon: true, turnCount: 8, finalGameState: finalGameState() }, dependencies);
 		const firstRecord = (await getLocalCampaignSettlementsByAccount(ACCOUNT)).find(record => record.matchId === 'first-win-match');
-		expect(firstRecord).toMatchObject({ kind: 'local_campaign_settlement_v1', scope: 'local-replay', firstClear: true, runeAmount: 2 });
+		expect(firstRecord).toMatchObject({ kind: 'local_campaign_settlement_v1', scope: 'local-replay', firstClear: true, runeAmount: 2, matchXpShown: 0, cardXp: [] });
 		expect(firstRecord?.anchor).toMatchObject({ matchId: 'first-win-match' });
 		expect(firstRecord?.result).toMatchObject({ matchId: 'first-win-match', matchSeed: 'first-win-seed', winner: ACCOUNT });
-		expect(completed[0]).toEqual({ missionId: MISSION_ID, turns: 8, settlementCount: 1, runeCount: 1, xp: 50 });
-		expect(await getLocalLevelUpsByEvent(firstRecord!.eventId)).toEqual([expect.objectContaining({ uid: STARTER_UID, newLevel: 2 })]);
+		expect(completed[0]).toEqual({ missionId: MISSION_ID, turns: 8, settlementCount: 1, runeCount: 1 });
 		expect(await getMatchAnchor('first-win-match')).toBeUndefined();
 		expect(await getMatchesByAccount(ACCOUNT)).toEqual([]);
 
@@ -198,15 +166,14 @@ describe('campaign lifecycle and IndexedDB', () => {
 		const missionSettlements = (await getLocalCampaignSettlementsByAccount(ACCOUNT)).filter(record => record.missionId === MISSION_ID);
 		const secondRecord = missionSettlements.find(record => record.matchId === 'second-win-match');
 		expect(missionSettlements).toHaveLength(2);
-		expect(secondRecord).toMatchObject({ firstClear: false, runeAmount: 0 });
+		expect(secondRecord).toMatchObject({ firstClear: false, runeAmount: 0, matchXpShown: 0, cardXp: [] });
 		expect(secondRecord?.runeEntry).toBeUndefined();
 		expect(await getRuneLedgerEntries({ seasonId, account: ACCOUNT, direction: 'credit', sourceType: 'campaign_first_clear' })).toHaveLength(1);
-		expect(completed[1]).toEqual({ missionId: MISSION_ID, turns: 5, settlementCount: 2, runeCount: 1, xp: 60 });
+		expect(completed[1]).toEqual({ missionId: MISSION_ID, turns: 5, settlementCount: 2, runeCount: 1 });
 
 		closeReplayDatabaseForTests();
 		expect((await getLocalCampaignSettlementsByAccount(ACCOUNT)).filter(record => record.missionId === MISSION_ID)).toHaveLength(2);
 		expect(await getRuneLedgerEntries({ seasonId, account: ACCOUNT, direction: 'credit', sourceType: 'campaign_first_clear' })).toHaveLength(1);
-		expect((await getLatestLocalCardProgressionByOwner(ACCOUNT)).find(record => record.uid === STARTER_UID)).toMatchObject({ xp: 60, level: 2 });
 		expect(feedback).toEqual(['defeat_no_reward', 'first_clear_local', 'replay_no_reward']);
 		expect(fallbackWalletIdentity).not.toHaveBeenCalled();
 	});

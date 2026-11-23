@@ -1,17 +1,12 @@
 /**
  * Resolves a Campaign match — scripted opponent (mission + boss rules
- * + scripted deck), Match XP share + first-clear RUNE from MATCH_ECONOMY.campaign,
+ * + scripted deck), first-clear RUNE from MATCH_ECONOMY.campaign,
  * no ranking.
  *
  * Returns a Result because the missionId may not exist in the registry
  * (`getMission` returns null for unknown ids). Callers — menu / mission
  * picker / deep-link handlers — MUST handle the failure case rather
  * than getting a thrown error during navigation.
- *
- * Per-mission multiplier override is a future capability: extend
- * CampaignMission with `rewardMultiplier?: number` and pick per-mission
- * OR `MATCH_ECONOMY.campaign.matchXpShare` here. The override does NOT
- * change MATCH_ECONOMY itself — it lives at the resolver layer.
  *
  * matchId / matchSeed are supplied by the setup boundary through
  * MatchIdentityFactory so this resolver remains input -> output.
