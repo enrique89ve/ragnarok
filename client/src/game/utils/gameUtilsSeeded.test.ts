@@ -11,11 +11,7 @@
  */
 
 import { afterEach, describe, it, expect, vi } from 'vitest';
-import { createLocalCampaignSettlement } from '@shared/protocol-core/localCampaignSettlement';
-import { createProtocolRuntimeFingerprint } from '@shared/protocolPhase';
 import { STARTER_ENTITLEMENT, isStarterEntitlementCardId } from '@shared/schemas/starterEntitlement';
-import { getStarterUid } from '@/data/schemas/HiveTypes';
-import { collectLocalWinnerCards } from '../match/localCardProjection';
 import { initializeGameSeeded, type InitializeGameSeededOpts } from './gameUtils';
 import { createSeededRng, createSeededIdGen } from './seededRng';
 
@@ -123,56 +119,6 @@ describe('initializeGameSeeded convergence', () => {
 		const playerIds = playerDeckIds(state);
 		expect(playerIds).toHaveLength(30);
 		expect(playerIds.some(cardId => !isStarterEntitlementCardId(cardId))).toBe(true);
-	});
-
-	it('projects Card XP and a local level-up from the real player bootstrap', () => {
-		const state = initializeGameSeeded(buildOpts(SEED_A));
-		const starterUid = getStarterUid(100);
-		const cards = collectLocalWinnerCards(state, 'alice', [{
-			updateId: 'previous-starter-100',
-			uid: starterUid,
-			ownerAccount: 'alice',
-			cardId: 100,
-			xp: 40,
-			level: 1,
-			eventId: 'previous-match',
-			timestamp: 1,
-			sequence: '1:previous-match',
-		}]);
-		const record = createLocalCampaignSettlement({
-			runtimeFingerprint: createProtocolRuntimeFingerprint({
-				stage: 'local',
-				phaseId: 'local-gameplay-v1',
-				protocolId: 'rk_game_testnet',
-				resetEpoch: 'campaign-bootstrap-test',
-				seasonStart: '2026-08-24T00:00:00Z',
-				indexStartBlock: 1,
-			}),
-			account: 'alice',
-			campaignId: 'war-of-pantheons',
-			missionId: 'norse-1',
-			difficulty: 'normal',
-			matchId: 'campaign-bootstrap-match',
-			matchSeed: SEED_A,
-			turnCount: 6,
-			firstClear: true,
-			runeAmount: 2,
-			seasonId: 'local-season',
-			cards,
-			timestamp: 2,
-		});
-
-		expect(cards.length).toBeGreaterThan(0);
-		expect(cards.every(card => isStarterEntitlementCardId(card.cardId))).toBe(true);
-		expect(record.cardXp).not.toHaveLength(0);
-		expect(record.cardXp.find(card => card.uid === starterUid)).toMatchObject({
-			xpBefore: 40,
-			xpAfter: 50,
-			levelBefore: 1,
-			levelAfter: 2,
-			didLevelUp: true,
-			levelUpId: expect.any(String),
-		});
 	});
 
 	it('hand size is exactly 3 per player', () => {

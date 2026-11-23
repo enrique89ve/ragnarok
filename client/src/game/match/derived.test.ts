@@ -10,6 +10,7 @@ import {
 	deriveOpponentArmyForMode,
 	derivePlayableMatchMode,
 } from './derived';
+import { MATCH_ECONOMY, modeEconomyToReward } from './economy';
 import type { MatchContext } from './types';
 
 const KNOWN_CHAPTER = ALL_CHAPTERS[0];
@@ -23,7 +24,7 @@ const baseIdentity = {
 const aiCtx: MatchContext = {
 	...baseIdentity,
 	opponent: { kind: 'ai', difficulty: 'normal', deckSource: 'warband' },
-	reward: { matchXp: { kind: 'none' }, rune: { kind: 'none' }, ranking: { kind: 'none' } },
+	reward: modeEconomyToReward(MATCH_ECONOMY.single),
 };
 
 const scriptedCtx: MatchContext = {
@@ -38,7 +39,7 @@ const scriptedCtx: MatchContext = {
 			localRunId: 'run-1',
 		},
 	},
-	reward: { matchXp: { kind: 'percentage', multiplier: 0.1 }, rune: { kind: 'projected', source: 'campaign_first_clear' }, ranking: { kind: 'none' } },
+	reward: modeEconomyToReward(MATCH_ECONOMY.campaign),
 };
 
 const peerCtx: MatchContext = {
@@ -49,7 +50,7 @@ const peerCtx: MatchContext = {
 		myRole: 'first-mover',
 		opponentUsername: null,
 	},
-	reward: { matchXp: { kind: 'percentage', multiplier: 1 }, rune: { kind: 'projected', source: 'p2p_ranked' }, ranking: { kind: 'elo' } },
+	reward: modeEconomyToReward(MATCH_ECONOMY.p2pRanked),
 };
 
 describe('deriveAuthority', () => {
