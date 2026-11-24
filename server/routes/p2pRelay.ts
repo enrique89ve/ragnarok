@@ -67,6 +67,7 @@ import {
 	p2pPokerTimeNotary,
 } from '../services/p2pReferee';
 import { log } from '../static';
+import { trySendP2PFrame } from '../services/p2pSocketSend';
 
 type RoomMember = {
 	readonly peerId: string;
@@ -148,7 +149,7 @@ const relayEnvelopeSchema = z.object({
 	type: z.string().min(1).max(64),
 }).passthrough();
 
-type ValidationOk = { readonly ok: true; readonly type: string };
+type ValidationOk = { readonly ok: true; readonly type: string; readonly payload: unknown };
 type ValidationFail = { readonly ok: false; readonly reason: string };
 export type P2PRelayFrameValidationResult = ValidationOk | ValidationFail;
 type RelayUpgradeAccess =
@@ -293,14 +294,18 @@ export function validateP2PRelayFrame(text: string): P2PRelayFrameValidationResu
 		return { ok: false, reason: `unknown_type:${type}` };
 	}
 
-	return { ok: true, type };
+	return { ok: true, type, payload: parsed };
+}
+
+function sendRelayFrame(ws: WebSocket, frame: string): boolean {
+	const result = trySendP2PFrame(ws, frame);
+	if (result === 'backpressure') recordP2PRelayDrop(result);
+	if (result === 'send_failed') recordP2PRelayError(result);
+	return result === 'queued';
 }
 
 function sendSys(ws: WebSocket, payload: Record<string, unknown>): void {
-	if (ws.readyState !== WebSocket.OPEN) return;
-	try {
-		ws.send(JSON.stringify({ type: '__sys', ...payload }));
-	} catch { /* socket closed mid-send */ }
+	sendRelayFrame(ws, JSON.stringify({ type: '__sys', ...payload }));
 }
 
 function sendPhaseCheckpoint(
@@ -539,10 +544,7 @@ export function attachP2PRelay(server: HttpServer): void {
 					recordP2PRelayDrop('phase_checkpoint_rate_limited');
 					return;
 				}
-				let parsedJson: unknown;
-				try { parsedJson = JSON.parse(text); }
-				catch { return; }
-				const proposal = tryParsePhaseCheckpointProposal(parsedJson);
+				const proposal = tryParsePhaseCheckpointProposal(validation.payload);
 				if (!proposal) {
 					recordP2PRelayDrop('malformed_phase_checkpoint');
 					return;
@@ -566,10 +568,7 @@ export function attachP2PRelay(server: HttpServer): void {
 					recordP2PRelayDrop('poker_turn_notary_rate_limited');
 					return;
 				}
-				let parsedTurn: unknown;
-				try { parsedTurn = JSON.parse(text); }
-				catch { return; }
-				const proposal = tryParsePokerTurnClockProposal(parsedTurn);
+				const proposal = tryParsePokerTurnClockProposal(validation.payload);
 				if (!proposal) {
 					recordP2PRelayDrop('malformed_poker_turn_notary');
 					return;
@@ -593,10 +592,7 @@ export function attachP2PRelay(server: HttpServer): void {
 			}
 
 			if (validation.type === 'poker_action') {
-				let parsedAction: unknown;
-				try { parsedAction = JSON.parse(text); }
-				catch { return; }
-				const gateInput = tryParsePokerActionTimeGate(parsedAction);
+				const gateInput = tryParsePokerActionTimeGate(validation.payload);
 				if (!gateInput) {
 					recordP2PRelayDrop('malformed_poker_action_time_gate');
 					return;
@@ -628,8 +624,8 @@ export function attachP2PRelay(server: HttpServer): void {
 					return;
 				}
 
-				// Do not acknowledge an allowed action until the other room member has
-				// accepted the frame. The local reducer commits only after this ack;
+				// Queue the action for the other room member before acknowledging it.
+				// The local reducer commits only after this ack;
 				// acknowledging first would let a VPN/NIC dropout create a local-only
 				// Poker decision with no replay path.
 				const other = currentRoom.find(m => m.peerId !== peerId);
@@ -637,13 +633,8 @@ export function attachP2PRelay(server: HttpServer): void {
 					recordP2PRelayDrop('opponent_unavailable');
 					return;
 				}
-				try {
-					other.ws.send(text);
-					recordP2PRelayMessage();
-				} catch {
-					recordP2PRelayError('send_failed');
-					return;
-				}
+				if (!sendRelayFrame(other.ws, text)) return;
+				recordP2PRelayMessage();
 				if (gateInput.decisionId !== undefined && gateInput.seq !== undefined) {
 					try {
 						sendSys(ws, {
@@ -666,12 +657,7 @@ export function attachP2PRelay(server: HttpServer): void {
 			const other = currentRoom.find(m => m.peerId !== peerId);
 			if (!other || other.ws.readyState !== WebSocket.OPEN) return;
 
-			try {
-				other.ws.send(text);
-				recordP2PRelayMessage();
-			} catch {
-				recordP2PRelayError('send_failed');
-			}
+			if (sendRelayFrame(other.ws, text)) recordP2PRelayMessage();
 		});
 
 		const handleDeparture = () => {

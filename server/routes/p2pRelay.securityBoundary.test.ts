@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { WebSocket } from 'ws';
+import { P2P_MAX_PENDING_SEND_BYTES, trySendP2PFrame } from '../services/p2pSocketSend';
 
 import {
 	decodeWireGameState,
@@ -111,6 +113,7 @@ describe('p2pRelay security boundary', () => {
 		expect(validateP2PRelayFrame(proposal)).toEqual({
 			ok: true,
 			type: 'phase_checkpoint_propose_v1',
+			payload: { type: 'phase_checkpoint_propose_v1' },
 		});
 		expect(validateP2PRelayFrame(forgedCommit)).toEqual({
 			ok: false,
@@ -126,6 +129,7 @@ describe('p2pRelay security boundary', () => {
 		expect(validateP2PRelayFrame(JSON.stringify({ type: 'poker_turn_started' }))).toEqual({
 			ok: true,
 			type: 'poker_turn_started',
+			payload: { type: 'poker_turn_started' },
 		});
 		expect(validateP2PRelayFrame(JSON.stringify({ type: 'poker_turn_notary_commit_v1' }))).toEqual({
 			ok: false,
@@ -148,6 +152,35 @@ describe('p2pRelay security boundary', () => {
 		expect(validateP2PRelayFrame(JSON.stringify({ type: 'poker_hash_check' }))).toEqual({
 			ok: true,
 			type: 'poker_hash_check',
+			payload: { type: 'poker_hash_check' },
 		});
+	});
+});
+
+describe('P2P WebSocket send budget', () => {
+	it('queues a frame that fits, counting UTF-8 bytes and the frame header', () => {
+		const socket = {
+			readyState: WebSocket.OPEN,
+			bufferedAmount: P2P_MAX_PENDING_SEND_BYTES - 12,
+			send: vi.fn(),
+			terminate: vi.fn(),
+		};
+
+		expect(trySendP2PFrame(socket, 'é')).toBe('queued');
+		expect(socket.send).toHaveBeenCalledExactlyOnceWith('é');
+		expect(socket.terminate).not.toHaveBeenCalled();
+	});
+
+	it('terminates a saturated socket without queuing the frame', () => {
+		const socket = {
+			readyState: WebSocket.OPEN,
+			bufferedAmount: P2P_MAX_PENDING_SEND_BYTES - 11,
+			send: vi.fn(),
+			terminate: vi.fn(),
+		};
+
+		expect(trySendP2PFrame(socket, 'é')).toBe('backpressure');
+		expect(socket.send).not.toHaveBeenCalled();
+		expect(socket.terminate).toHaveBeenCalledOnce();
 	});
 });

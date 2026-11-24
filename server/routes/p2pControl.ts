@@ -43,6 +43,7 @@ import { hasP2PControlProtocol, readP2PControlTicketToken } from '../services/p2
 import { verifyP2PActiveMatchTicket } from '../services/p2pActiveMatchRegistry';
 import { decideControlAdmission } from '../services/p2pAdmissionGate';
 import { claimControlSlot } from '../services/p2pConnectionRegistry';
+import { trySendP2PFrame } from '../services/p2pSocketSend';
 import {
 	markP2PActiveMatchTerminalFromCheckpoint,
 	markP2PRefereePlaneConnected,
@@ -295,13 +296,10 @@ function rejectUpgrade(socket: { write: (chunk: string) => unknown; destroy: () 
 
 function sendMessage(ws: WebSocket, message: P2PControlServerMessage | Record<string, unknown>): boolean {
 	if (ws.readyState !== WebSocket.OPEN) return false;
-	try {
-		ws.send(JSON.stringify(message));
-		return true;
-	} catch {
-		recordP2PControlError('send_failed');
-		return false;
-	}
+	const result = trySendP2PFrame(ws, JSON.stringify(message));
+	if (result === 'backpressure') recordP2PControlDrop(result);
+	if (result === 'send_failed') recordP2PControlError(result);
+	return result === 'queued';
 }
 
 function sendError(ws: WebSocket, code: 'protocol' | 'match_mismatch' | 'role_required' | 'role_conflict' | 'rate_limited'): void {
