@@ -165,6 +165,7 @@ __tests__/
 !server/services/chainStateMigration.test.ts
 !server/services/chainState.contract.test.ts
 !server/services/chainState.persistence.test.ts
+!server/services/indexerShutdown.test.ts
 !server/services/pgStateAdapter.test.ts
 !server/viteLogger.test.ts
 !client/src/game/match/modes/p2p/lifecycle.test.ts

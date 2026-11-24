@@ -375,20 +375,23 @@ app.use('/api/testnet/rune', (_req, res) => {
   async function shutdown(signal: string) {
     if (isShuttingDown) return;
     isShuttingDown = true;
-    log(`received ${signal}, flushing chain state`);
+    const indexerWorkerEnabled = process.env.ENABLE_CHAIN_INDEXER !== 'false';
+    log(`received ${signal}, shutting down (indexerWorker=${indexerWorkerEnabled})`);
 
-    try {
-      const { stopIndexerWorker } = await import("./services/indexerManager");
-      stopIndexerWorker();
-    } catch (err) {
-      log(`[shutdown] failed to stop chain indexer worker: ${formatShutdownError(err)}`);
-    }
-
-    try {
-      const { flushPersistenceAsync } = await import('./services/chainState');
-      await flushPersistenceAsync();
-    } catch (err) {
-      log(`[shutdown] failed to flush chain state: ${formatShutdownError(err)}`);
+    if (indexerWorkerEnabled) {
+      try {
+        const { stopIndexerWorker } = await import('./services/indexerManager');
+        await stopIndexerWorker();
+      } catch (err) {
+        log(`[shutdown] failed to stop chain indexer worker: ${formatShutdownError(err)}`);
+      }
+    } else {
+      try {
+        const { stopPersistenceAsync } = await import('./services/chainState');
+        await stopPersistenceAsync();
+      } catch (err) {
+        log(`[shutdown] failed to flush chain state: ${formatShutdownError(err)}`);
+      }
     }
 
     await stunService.stop();

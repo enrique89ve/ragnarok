@@ -67,7 +67,7 @@ import {
 	p2pPokerTimeNotary,
 } from '../services/p2pReferee';
 import { log } from '../static';
-import { trySendP2PFrame } from '../services/p2pSocketSend';
+import { canQueueP2PFrame, trySendP2PFrame } from '../services/p2pSocketSend';
 
 type RoomMember = {
 	readonly peerId: string;
@@ -633,23 +633,32 @@ export function attachP2PRelay(server: HttpServer): void {
 					recordP2PRelayDrop('opponent_unavailable');
 					return;
 				}
+
+				let ackFrame: string | undefined;
+				if (gateInput.decisionId !== undefined && gateInput.seq !== undefined) {
+					ackFrame = JSON.stringify({
+						type: '__sys',
+						event: 'poker_action_time_gate',
+						message: buildPokerActionTimeGateAck({
+							matchId: roomId,
+							turnId: gateInput.turnId,
+							decisionId: gateInput.decisionId,
+							seq: gateInput.seq,
+							allowed: true,
+						}),
+					});
+					if (!canQueueP2PFrame(ws, ackFrame)) {
+						recordP2PRelayDrop('backpressure');
+						ws.terminate();
+						return;
+					}
+				}
+
 				if (!sendRelayFrame(other.ws, text)) return;
 				recordP2PRelayMessage();
-				if (gateInput.decisionId !== undefined && gateInput.seq !== undefined) {
-					try {
-						sendSys(ws, {
-							event: 'poker_action_time_gate',
-							message: buildPokerActionTimeGateAck({
-								matchId: roomId,
-								turnId: gateInput.turnId,
-								decisionId: gateInput.decisionId,
-								seq: gateInput.seq,
-								allowed: true,
-							}),
-						});
-					} catch {
-						recordP2PRelayError('socket_error');
-					}
+				if (ackFrame !== undefined && !sendRelayFrame(ws, ackFrame)) {
+					other.ws.terminate();
+					return;
 				}
 				return;
 			}

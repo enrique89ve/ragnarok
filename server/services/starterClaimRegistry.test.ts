@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import fssync from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -134,6 +135,74 @@ describe('starterClaimRegistry', () => {
 
 		mod.resetStarterClaimRegistryForTests();
 		await expect(mod.hasStarterCeremonyClaim('alice')).rejects.toThrow(/invalid protocol runtime fingerprint/i);
+	});
+
+	it('migrates legacy data/starter-claims.json v1 into alfa-testnet v2 on first load', async () => {
+		const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'starter-claims-legacy-'));
+		const dataDir = path.join(workDir, 'data');
+		await fs.mkdir(dataDir, { recursive: true });
+		const legacyFile = path.join(dataDir, 'starter-claims.json');
+		await fs.writeFile(legacyFile, `${JSON.stringify({
+			version: 1,
+			claims: [{ account: 'legacyalice', claimedAt: 1_700_000_000_000 }],
+		}, null, 2)}\n`);
+
+		const previousCwd = process.cwd();
+		process.chdir(workDir);
+		vi.unstubAllEnvs();
+		vi.stubEnv('NODE_ENV', 'development');
+		delete process.env.RAGNAROK_STARTER_CLAIMS_FILE;
+		vi.stubEnv('VITE_NETWORK_STAGE', 'testnet');
+		vi.stubEnv('VITE_RAGNAROK_PROTOCOL_ID', 'rk_game_testnet');
+		vi.stubEnv('VITE_RAGNAROK_RESET_EPOCH', 'alfa-testnet-full-nft-2026-05-22');
+		vi.stubEnv('RAGNAROK_PROTOCOL_ID', 'rk_game_testnet');
+		vi.stubEnv('RAGNAROK_RESET_EPOCH', 'alfa-testnet-full-nft-2026-05-22');
+
+		vi.resetModules();
+		const mod = await import('./starterClaimRegistry');
+		mod.resetStarterClaimRegistryForTests();
+
+		expect(await mod.hasStarterCeremonyClaim('legacyalice')).toBe(true);
+
+		const phaseFile = mod.resolveStarterClaimsFilePath();
+		const migrated = JSON.parse(await fs.readFile(phaseFile, 'utf8')) as { version: number; claims: unknown[] };
+		expect(migrated.version).toBe(2);
+		expect(migrated.claims).toHaveLength(1);
+
+		process.chdir(previousCwd);
+		await fs.rm(workDir, { recursive: true, force: true });
+	});
+
+	it('does not migrate legacy v1 starter claims for closed-beta', async () => {
+		const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'starter-claims-legacy-beta-'));
+		const dataDir = path.join(workDir, 'data');
+		await fs.mkdir(dataDir, { recursive: true });
+		const legacyFile = path.join(dataDir, 'starter-claims.json');
+		await fs.writeFile(legacyFile, `${JSON.stringify({
+			version: 1,
+			claims: [{ account: 'legacybob', claimedAt: 1_700_000_000_001 }],
+		}, null, 2)}\n`);
+
+		const previousCwd = process.cwd();
+		process.chdir(workDir);
+		vi.unstubAllEnvs();
+		vi.stubEnv('NODE_ENV', 'test');
+		delete process.env.RAGNAROK_STARTER_CLAIMS_FILE;
+		vi.stubEnv('VITE_NETWORK_STAGE', 'testnet');
+		vi.stubEnv('VITE_RAGNAROK_PROTOCOL_ID', 'rk_game_testnet');
+		vi.stubEnv('VITE_RAGNAROK_RESET_EPOCH', 'closed-beta');
+		vi.stubEnv('RAGNAROK_PROTOCOL_ID', 'rk_game_testnet');
+		vi.stubEnv('RAGNAROK_RESET_EPOCH', 'closed-beta');
+
+		vi.resetModules();
+		const mod = await import('./starterClaimRegistry');
+		mod.resetStarterClaimRegistryForTests();
+
+		expect(await mod.hasStarterCeremonyClaim('legacybob')).toBe(false);
+		expect(fssync.existsSync(mod.resolveStarterClaimsFilePath())).toBe(false);
+
+		process.chdir(previousCwd);
+		await fs.rm(workDir, { recursive: true, force: true });
 	});
 
 	it('partitions the default path by runtime phase when no override is set', async () => {

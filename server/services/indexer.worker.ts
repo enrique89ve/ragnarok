@@ -7,7 +7,7 @@
 
 import { parentPort, workerData } from 'worker_threads';
 import { startIndexer, syncAccountNow, stopIndexer } from './chainIndexer';
-import { exportState, getBlockCursor } from './chainState';
+import { exportState, flushPersistenceAsync, getBlockCursor } from './chainState';
 
 if (!parentPort) {
   throw new Error('This file must be run as a worker');
@@ -56,6 +56,7 @@ parentPort.on('message', async (msg) => {
         console.log('[IndexerWorker] Stopping...');
         clearInterval(stateSyncInterval);
         stopIndexer();
+        await flushPersistenceAsync();
         process.exit(0);
         break;
 

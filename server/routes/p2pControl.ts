@@ -43,7 +43,7 @@ import { hasP2PControlProtocol, readP2PControlTicketToken } from '../services/p2
 import { verifyP2PActiveMatchTicket } from '../services/p2pActiveMatchRegistry';
 import { decideControlAdmission } from '../services/p2pAdmissionGate';
 import { claimControlSlot } from '../services/p2pConnectionRegistry';
-import { trySendP2PFrame } from '../services/p2pSocketSend';
+import { canQueueP2PFrame, trySendP2PFrame } from '../services/p2pSocketSend';
 import {
 	markP2PActiveMatchTerminalFromCheckpoint,
 	markP2PRefereePlaneConnected,
@@ -781,6 +781,24 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 					recordP2PControlDrop('opponent_unavailable');
 					return;
 				}
+
+				let ackMessage: ReturnType<typeof buildPokerActionTimeGateAck> | undefined;
+				if (message.decisionId !== undefined && message.seq !== undefined) {
+					ackMessage = buildPokerActionTimeGateAck({
+						matchId: roomId,
+						turnId: message.turnId,
+						decisionId: message.decisionId,
+						seq: message.seq,
+						allowed: true,
+					});
+					const ackFrame = JSON.stringify(ackMessage);
+					if (!canQueueP2PFrame(ws, ackFrame)) {
+						recordP2PControlDrop('backpressure');
+						ws.terminate();
+						return;
+					}
+				}
+
 				// The sender commits its local reducer only after the ack below. Forward
 				// first so an opponent disconnect cannot turn a referee decision into a
 				// local-only Poker action.
@@ -788,14 +806,9 @@ export function attachP2PControl(server: HttpServer, options: P2PControlServerOp
 					recordP2PControlDrop('opponent_unavailable');
 					return;
 				}
-				if (message.decisionId !== undefined && message.seq !== undefined) {
-					sendMessage(ws, buildPokerActionTimeGateAck({
-						matchId: roomId,
-						turnId: message.turnId,
-						decisionId: message.decisionId,
-						seq: message.seq,
-						allowed: true,
-					}));
+				if (ackMessage !== undefined && !sendMessage(ws, ackMessage)) {
+					opponent.ws.terminate();
+					return;
 				}
 				recordP2PControlMessage();
 				return;

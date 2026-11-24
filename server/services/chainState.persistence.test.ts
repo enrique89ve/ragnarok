@@ -127,6 +127,103 @@ describe('chainState async persistence', () => {
 
 		restoreEnv();
 	});
+
+	it('does not regress persisted state when a newer sync saveState completes before an older async save', async () => {
+		const { dir, stateFile } = createTempFile();
+		cleanupDirs.push(dir);
+		const restoreEnv = setStateFileEnv(stateFile);
+
+		const originalRename = fsPromises.rename.bind(fsPromises);
+		let releaseRename: (() => void) | undefined;
+		const renameGate = new Promise<void>((resolve) => {
+			releaseRename = resolve;
+		});
+		vi.spyOn(fsPromises, 'rename').mockImplementation(async (src, dest) => {
+			await renameGate;
+			return originalRename(src, dest);
+		});
+
+		chainState.putCard({
+			uid: 'card-async-stale',
+			cardId: 1,
+			owner: 'alice',
+			rarity: 'common',
+			level: 1,
+			xp: 0,
+		});
+		const asyncSave = chainState.saveStateAsync();
+
+		chainState.importState({
+			runtimeFingerprint: chainState.getCurrentServerProtocolRuntimeFingerprint(),
+			players: [],
+			cards: [],
+			matches: [],
+			knownAccounts: [],
+			syncCursors: [],
+			lastSyncedAt: 0,
+			playerNonces: [],
+		});
+		chainState.putCard({
+			uid: 'card-sync-newer',
+			cardId: 2,
+			owner: 'bob',
+			rarity: 'rare',
+			level: 1,
+			xp: 0,
+		});
+		chainState.saveState();
+		releaseRename?.();
+
+		await asyncSave;
+		await chainState.flushPersistenceAsync();
+
+		const saved = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+		const uids = saved.cards.map((entry: [string, unknown]) => entry[0]);
+		expect(uids).toContain('card-sync-newer');
+		expect(uids).not.toContain('card-async-stale');
+
+		restoreEnv();
+	});
+
+	it('skips main-process flush when the indexer worker owns chain-state persistence', async () => {
+		const { dir, stateFile } = createTempFile();
+		cleanupDirs.push(dir);
+		const restoreEnv = setStateFileEnv(stateFile);
+		vi.stubEnv('ENABLE_CHAIN_INDEXER', 'true');
+
+		chainState.putCard({
+			uid: 'worker-owned-card',
+			cardId: 1,
+			owner: 'alice',
+			rarity: 'common',
+			level: 1,
+			xp: 0,
+		});
+		fs.writeFileSync(stateFile, JSON.stringify(chainState.exportState()), 'utf8');
+
+		chainState.importState({
+			runtimeFingerprint: chainState.getCurrentServerProtocolRuntimeFingerprint(),
+			players: [],
+			cards: [],
+			matches: [],
+			knownAccounts: [],
+			syncCursors: [],
+			lastSyncedAt: 0,
+			playerNonces: [],
+		});
+
+		const indexerOwnsPersistence = process.env.ENABLE_CHAIN_INDEXER !== 'false';
+		if (!indexerOwnsPersistence) {
+			await chainState.flushPersistenceAsync();
+		}
+
+		const persisted = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+		const uids = persisted.cards.map((entry: [string, unknown]) => entry[0]);
+		expect(uids).toEqual(['worker-owned-card']);
+
+		restoreEnv();
+		vi.unstubAllEnvs();
+	});
 });
 
 describe('chainState corrupt recovery', () => {

@@ -90,6 +90,51 @@ function readSerializedStarterClaims(value: unknown): SerializedStarterClaims | 
 	return null;
 }
 
+function legacyStarterClaimsV1Path(): string {
+	return path.join(process.cwd(), 'data', 'starter-claims.json');
+}
+
+async function tryMigrateLegacyStarterClaimsV1(): Promise<boolean> {
+	if (process.env.RAGNAROK_STARTER_CLAIMS_FILE) return false;
+
+	const phase = getRagnarokRuntimePhase(getRagnarokServerRuntimeConfig());
+	if (phase !== 'alfa-testnet' && phase !== 'local') return false;
+
+	const legacyPath = legacyStarterClaimsV1Path();
+	let raw: string;
+	try {
+		raw = await fs.readFile(legacyPath, 'utf8');
+	} catch (error) {
+		if (isRecord(error) && error.code === 'ENOENT') return false;
+		throw error;
+	}
+
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(raw);
+	} catch {
+		return false;
+	}
+	if (!isRecord(parsed) || parsed.version !== 1 || !Array.isArray(parsed.claims)) return false;
+
+	const migratedClaims = parsed.claims
+		.map(readStarterClaimRecord)
+		.filter((claim): claim is StarterClaimRecord => claim !== null);
+	claims.clear();
+	for (const claim of migratedClaims) claims.set(claim.account, claim);
+
+	const targetFile = resolveStarterClaimsFilePath();
+	if (!shouldSkipDiskWrites()) {
+		const payload: SerializedStarterClaimsV2 = {
+			version: 2,
+			runtimeFingerprint: buildRagnarokRuntimeEvidence(getRagnarokServerRuntimeConfig()).runtimeFingerprint,
+			claims: [...claims.values()].sort((a, b) => a.account.localeCompare(b.account)),
+		};
+		await writeStarterClaimsAtomic(targetFile, payload);
+	}
+	return true;
+}
+
 async function loadStarterClaimsFromDisk(): Promise<void> {
 	const file = resolveStarterClaimsFilePath();
 	try {
@@ -105,7 +150,10 @@ async function loadStarterClaimsFromDisk(): Promise<void> {
 		claims.clear();
 		for (const claim of serialized.claims) claims.set(claim.account, claim);
 	} catch (error) {
-		if (isRecord(error) && error.code === 'ENOENT') return;
+		if (isRecord(error) && error.code === 'ENOENT') {
+			if (await tryMigrateLegacyStarterClaimsV1()) return;
+			return;
+		}
 		if (isProtocolFingerprintError(error)) throw error;
 		claims.clear();
 	}

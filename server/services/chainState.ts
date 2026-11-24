@@ -624,6 +624,8 @@ const QUEUE_STATE_EXPIRY_MS = 10 * 60 * 1000;
 
 let _saveTimer: ReturnType<typeof setInterval> | null = null;
 let _dirty = false;
+let _writeGeneration = 0;
+let _lastPublishedGeneration = 0;
 let _saveSeq = 0;
 let _saveInFlight: Promise<void> | null = null;
 let _savePendingAgain = false;
@@ -687,7 +689,7 @@ function writeSerializedStateSync(json: string, stateFile: string): void {
 	}
 }
 
-async function writeSerializedStateAsync(json: string, stateFile: string): Promise<void> {
+async function writeSerializedStateAsync(json: string, stateFile: string, generation: number): Promise<void> {
 	const tmpFile = nextTempStatePath(stateFile);
 	try {
 		ensureDataDir();
@@ -695,7 +697,12 @@ async function writeSerializedStateAsync(json: string, stateFile: string): Promi
 		await fileHandle.writeFile(json, 'utf8');
 		await fileHandle.sync();
 		await fileHandle.close();
+		if (generation < _lastPublishedGeneration) {
+			await fsPromises.unlink(tmpFile);
+			return;
+		}
 		await fsPromises.rename(tmpFile, stateFile);
+		_lastPublishedGeneration = Math.max(_lastPublishedGeneration, generation);
 	} catch (err) {
 		try {
 			await fsPromises.unlink(tmpFile);
@@ -934,8 +941,10 @@ export function loadState(): void {
 export function saveState(): void {
 	if (!_dirty) return;
 	try {
+		const gen = ++_writeGeneration;
 		const stateFile = getStateFilePath();
 		writeSerializedStateSync(JSON.stringify(exportState()), stateFile);
+		_lastPublishedGeneration = Math.max(_lastPublishedGeneration, gen);
 		_dirty = false;
 	} catch (err) {
 		console.warn('[chainState] Failed to save state:', err);
@@ -950,8 +959,9 @@ async function runAsyncSaveLoop(): Promise<void> {
 			_savePendingAgain = false;
 			if (!_dirty) continue;
 			_dirty = false;
+			const gen = ++_writeGeneration;
 			const stateFile = getStateFilePath();
-			await writeSerializedStateAsync(JSON.stringify(exportState()), stateFile);
+			await writeSerializedStateAsync(JSON.stringify(exportState()), stateFile, gen);
 		}
 	} catch (err) {
 		console.warn('[chainState] Failed to save state asynchronously:', err);
@@ -979,6 +989,14 @@ export async function saveStateAsync(): Promise<void> {
 export async function flushPersistenceAsync(): Promise<void> {
 	if (_saveInFlight) await _saveInFlight;
 	await saveStateAsync();
+}
+
+export async function stopPersistenceAsync(): Promise<void> {
+	if (_saveTimer) {
+		clearInterval(_saveTimer);
+		_saveTimer = null;
+	}
+	await flushPersistenceAsync();
 }
 
 export function exportState(): SerializedState {

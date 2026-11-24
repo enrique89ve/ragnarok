@@ -63,10 +63,29 @@ export function startIndexerWorker(): void {
   console.log('[IndexerManager] Indexer worker started');
 }
 
-export function stopIndexerWorker(): void {
-  if (worker) {
-    worker.postMessage({ type: 'STOP' });
-  }
+export function stopIndexerWorker(timeoutMs = 5_000): Promise<void> {
+	const activeWorker = worker;
+	if (!activeWorker) return Promise.resolve();
+
+	return new Promise<void>((resolve) => {
+		let settled = false;
+		const finish = () => {
+			if (settled) return;
+			settled = true;
+			activeWorker.off('exit', finish);
+			if (worker === activeWorker) worker = null;
+			clearTimeout(timer);
+			resolve();
+		};
+
+		activeWorker.once('exit', finish);
+		activeWorker.postMessage({ type: 'STOP' });
+
+		const timer = setTimeout(() => {
+			void activeWorker.terminate().finally(finish);
+		}, timeoutMs);
+		timer.unref?.();
+	});
 }
 
 export async function syncAccountNow(username: string): Promise<void> {

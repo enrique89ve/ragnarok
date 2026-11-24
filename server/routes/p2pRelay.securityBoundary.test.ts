@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
 import { WebSocket } from 'ws';
-import { P2P_MAX_PENDING_SEND_BYTES, trySendP2PFrame } from '../services/p2pSocketSend';
+import { canQueueP2PFrame, P2P_MAX_PENDING_SEND_BYTES, trySendP2PFrame } from '../services/p2pSocketSend';
 
 import {
 	decodeWireGameState,
@@ -169,6 +169,25 @@ describe('P2P WebSocket send budget', () => {
 		expect(trySendP2PFrame(socket, 'é')).toBe('queued');
 		expect(socket.send).toHaveBeenCalledExactlyOnceWith('é');
 		expect(socket.terminate).not.toHaveBeenCalled();
+	});
+
+	it('reports queue budget with canQueueP2PFrame without terminating the socket', () => {
+		const socket = {
+			readyState: WebSocket.OPEN,
+			bufferedAmount: P2P_MAX_PENDING_SEND_BYTES - 12,
+			send: vi.fn(),
+			terminate: vi.fn(),
+		};
+
+		expect(canQueueP2PFrame(socket, 'é')).toBe(true);
+		expect(socket.terminate).not.toHaveBeenCalled();
+
+		const saturated = {
+			...socket,
+			bufferedAmount: P2P_MAX_PENDING_SEND_BYTES - 11,
+		};
+		expect(canQueueP2PFrame(saturated, 'é')).toBe(false);
+		expect(saturated.terminate).not.toHaveBeenCalled();
 	});
 
 	it('terminates a saturated socket without queuing the frame', () => {
