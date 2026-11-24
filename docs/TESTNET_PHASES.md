@@ -52,10 +52,11 @@ wallet extension. This is the supported path for structural browser automation
 and LLM testers. It does not apply to the shared Alfa deployment: shared Alfa
 still requires an account identity before starter, social or P2P flows. Once
 that identity exists, an F1 starter receipt is server-issued without a second
-Keychain signature. Quick Match search/queue also uses that reusable HTTP
-session without a signature. When a server offer arrives, `Accept` is the
-single match-specific Posting signature; `session_authorize` reuses that proof
-and does not prompt again. Anonymous progress sentinels (`guest`, legacy
+Keychain signature. Quick Match `Find` signs one Posting delegation proof
+(`p2p_matchmaking_delegation`) per match search; when a server offer arrives,
+`Accept` signs locally with the delegated ephemeral key (`sessionSig`, no second
+Keychain prompt), and `session_authorize` reuses that proof without prompting
+again. Anonymous progress sentinels (`guest`, legacy
 `local`) are reserved for `dev/local` IndexedDB only. Shared Alfa/testnet
 never writes RUNE, ELO, SeasonScore or CardXP under those ids.
 
@@ -78,7 +79,8 @@ These are not Hive operations. F1 never emits canonical `match_anchor` or
 `match_result`, canonical RUNE ledger entries, official ranking, NFT CardXP,
 Hive `level_up`, IPFS, outbox, `custom_json`, or a non-acceptance wallet prompt.
 Identity login is allowed; the only match-specific wallet invocation is the
-explicit Quick Match `Accept` proof. Marketplace, packs and NFTLox writes are
+explicit Quick Match `Find` delegation proof (`Accept` is local via `sessionSig`).
+Marketplace, packs and NFTLox writes are
 disabled and must not mount mutation surfaces.
 
 ## Phase 2 — Hive testnet replay
@@ -145,9 +147,16 @@ gates (`PixiParticleCanvas` only while motion is on and the duel is live;
 `GameOverScreen` only at `game_over`). `testnetdev.ragnaroknft.quest` keeps
 the previous bundle until the next Alfa deploy.
 
-As of 2026-10-16 the active order is the roadmap in
-[TESTNET_READINESS_FAST_TRACK.md](./TESTNET_READINESS_FAST_TRACK.md): F1 poker
-and funnel readability, then deployed Alfa evidence, then the F2 Hive-testnet
+As of 2026-11-24, the joint readiness audit and follow-up hardening pass closed
+data persistence phases 0–3, Helmet CSP, PWA update controls, RUNE-only Alfa
+campaign rewards (plus the `norse-9` local Eitr pilot outside the Alfa gate),
+symmetric P2P ack backpressure, starter claim client/server reconciliation,
+daily claim F1/F2 guards, DUAT F1 phase gating/error display, deterministic
+IDs/RNG in legacy card handlers and poker spells, `accountScopedStorage`
+account-switch reset, and async indexer flush. Remaining known frictions and
+gates are tracked in [TESTNET_READINESS_FAST_TRACK.md](./TESTNET_READINESS_FAST_TRACK.md).
+The active order remains unchanged: deployed Alfa evidence (deploy + two-browser
+Keychain smoke + human `norse-1` win + visual pass), then F2 Hive-testnet
 cutover, then the explicit ADR 0008 ranked slice, then F3 economy. Rotating
 `VITE_NETWORK_STAGE` or the reset epoch does not skip a step.
 

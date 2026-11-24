@@ -6,6 +6,9 @@ import { routes } from '../../lib/routes';
 import { getWarbandEntryRoute } from '../../lib/warbandRoutes';
 import { getStarterCards, STARTER_PACK_NAME } from '../data/starterSet';
 import { claimStarterEntitlement } from '../data/starterClaim';
+import { buildRagnarokRuntimeEvidence } from '@shared/runtimeConfig';
+import { resolveStarterClaimAuthMode } from '@shared/starterClaimAuth';
+import { getRagnarokNetworkConfig } from '../config/networkConfig';
 import PackOpeningAnimation from './packs/PackOpeningAnimation';
 import TreasureChestSVG from './packs/TreasureChestSVG';
 import CeremonyEvidenceButton from './CeremonyEvidenceButton';
@@ -40,6 +43,8 @@ export default function StarterPackCeremony({
 	const claimButtonRef = useRef<HTMLButtonElement | null>(null);
 
 	const starterCards = getStarterCards();
+	const requiresWalletSignature =
+		resolveStarterClaimAuthMode(buildRagnarokRuntimeEvidence(getRagnarokNetworkConfig()).phasePolicy) === 'hive-body-auth';
 
 	const revealCards = starterCards.map(card => ({
 		id: card.id as number,
@@ -223,7 +228,7 @@ export default function StarterPackCeremony({
 							className="btn-runic btn-runic--gold btn-runic--lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-200 focus-visible:outline-offset-2"
 						>
 							<span className="btn-runic-stud" aria-hidden />
-							{isClaiming ? 'Signing...' : 'Reveal Your Birthright'}
+							{isClaiming ? (requiresWalletSignature ? 'Signing...' : 'Claiming...') : 'Reveal Your Birthright'}
 							<span className="btn-runic-stud" aria-hidden />
 						</button>
 

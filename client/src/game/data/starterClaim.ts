@@ -34,11 +34,70 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-export async function hasSharedNetworkStarterClaimReceipt(accountId: string): Promise<boolean> {
-	const response = await fetch(`/api/starter/status/${encodeURIComponent(accountId)}`);
-	if (!response.ok) return false;
+export async function fetchSharedNetworkStarterClaimStatus(
+	accountId: string,
+): Promise<{ readonly ok: true; readonly claimed: boolean } | { readonly ok: false }> {
+	const normalizedAccountId = normalizeAccountId(accountId);
+	if (!normalizedAccountId) return { ok: false };
+	const response = await fetch(`/api/starter/status/${encodeURIComponent(normalizedAccountId)}`);
+	if (!response.ok) return { ok: false };
 	const payload: unknown = await response.json().catch(() => null);
-	return isRecord(payload) && payload.success === true && payload.claimed === true;
+	if (!isRecord(payload) || payload.success !== true) return { ok: false };
+	return { ok: true, claimed: payload.claimed === true };
+}
+
+export async function hasSharedNetworkStarterClaimReceipt(accountId: string): Promise<boolean> {
+	const status = await fetchSharedNetworkStarterClaimStatus(accountId);
+	return status.ok && status.claimed;
+}
+
+export async function syncSharedNetworkStarterClaimStatus(
+	accountId: string | null | undefined,
+): Promise<{ readonly synced: boolean; readonly claimed: boolean }> {
+	const normalizedAccountId = normalizeAccountId(accountId);
+	if (!normalizedAccountId) return { synced: false, claimed: false };
+
+	const status = await fetchSharedNetworkStarterClaimStatus(normalizedAccountId);
+	if (!status.ok) return { synced: false, claimed: false };
+
+	if (status.claimed) {
+		useStarterStore.getState().reconcileServerClaimStatus(normalizedAccountId, true);
+		return { synced: true, claimed: true };
+	}
+
+	const localClaimed = useStarterStore.getState().hasClaimed(normalizedAccountId);
+	const policy = buildRagnarokRuntimeEvidence(getRagnarokNetworkConfig()).phasePolicy;
+	if (localClaimed && resolveStarterClaimAuthMode(policy) === 'unsigned-local') {
+		const repaired = await ensureSharedNetworkStarterClaimReceipt(normalizedAccountId);
+		if (repaired.success) {
+			useStarterStore.getState().reconcileServerClaimStatus(normalizedAccountId, true);
+			return { synced: true, claimed: true };
+		}
+		// Do not clear a valid local F1 starter claim on a transient server/network
+		// error during auto-repair; report unsynced so callers can retry safely.
+		return { synced: false, claimed: false };
+	}
+
+	useStarterStore.getState().reconcileServerClaimStatus(normalizedAccountId, false);
+	return { synced: true, claimed: false };
+}
+
+export async function reconcileSharedNetworkStarterClaimReceipt(
+	accountId: string,
+): Promise<StarterClaimReceiptResult> {
+	const normalizedAccountId = normalizeAccountId(accountId);
+	if (!normalizedAccountId) {
+		return { success: false, error: 'Hive account required to verify starter claim.' };
+	}
+
+	const synced = await syncSharedNetworkStarterClaimStatus(normalizedAccountId);
+	if (!synced.synced) {
+		return { success: false, error: 'Could not verify starter claim status with the server. Try again.' };
+	}
+	if (synced.claimed) {
+		return { success: true };
+	}
+	return { success: false, error: 'Complete the starter claim before searching for a PvP opponent.' };
 }
 
 export async function ensureSharedNetworkStarterClaimReceipt(accountId: string): Promise<StarterClaimReceiptResult> {

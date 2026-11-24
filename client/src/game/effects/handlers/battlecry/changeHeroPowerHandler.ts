@@ -9,6 +9,7 @@ import { debug } from '../../../config/debugConfig';
 import { GameContext } from '../../../GameContext';
 import { Card, BattlecryEffect, CardInstance } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
+import { cryptoIdGen } from '../../../utils/seededRng';
 
 export default function executeChangeHeroPower(
   context: GameContext, 
@@ -24,7 +25,7 @@ export default function executeChangeHeroPower(
     }
     
     const newHeroPower: CardInstance = {
-      instanceId: 'hero-power-' + Date.now(),
+      instanceId: `hero-power-${cryptoIdGen()}`,
       card: {
         id: effect.newHeroPower.id || 99999,
         name: effect.newHeroPower.name || effect.name || 'New Hero Power',

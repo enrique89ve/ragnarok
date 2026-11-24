@@ -83,4 +83,16 @@ describe('useStarterStore starter reputation', () => {
 			updatedAt: 123,
 		});
 	});
+
+	it('reconciles server starter claim status without affecting other accounts', () => {
+		useStarterStore.getState().markClaimed('alice');
+		useStarterStore.getState().markClaimed('bob');
+
+		useStarterStore.getState().reconcileServerClaimStatus('alice', false);
+		expect(useStarterStore.getState().hasClaimed('alice')).toBe(false);
+		expect(useStarterStore.getState().hasClaimed('bob')).toBe(true);
+
+		useStarterStore.getState().reconcileServerClaimStatus('carol', true);
+		expect(useStarterStore.getState().hasClaimed('carol')).toBe(true);
+	});
 });

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { toast } from 'sonner';
-import { TESTNET_RUNE_ECONOMY, MAINNET_RUNE_ECONOMY, getRuneEconomy, createDailyQuestRuneSourceKey, createRuneLedgerEntryId } from '@shared/protocol-core/runeEconomy';
+import { getRuneEconomy, createDailyQuestRuneSourceKey, createRuneLedgerEntryId } from '@shared/protocol-core/runeEconomy';
 import { getRuntimeExecutionMode } from '../config/featureFlags';
 import { accountScopedStorage, registerAccountScopedStore } from '../../lib/storage/accountScopedStorage';
 import { pickRandomQuests, type DailyQuestType, type QuestTemplate } from '../data/dailyQuestPool';
@@ -183,13 +183,6 @@ export async function settleLocalDailyQuestClaimsToLedger(
 	return { claimedIds, history, runeEarned, alreadyClaimedCount };
 }
 
-function emitClaimToast(quest: DailyQuest, slotOrdinal: number): void {
-	toast.success(quest.title, {
-		description: `+${quest.reward.rune} RUNE · Slot ${slotOrdinal} of ${TESTNET_RUNE_ECONOMY.dailyQuestSlotsPerDay} today`,
-		duration: 4000,
-	});
-}
-
 function buildClaimFeedback(input: Omit<DailyQuestClaimFeedback, 'updatedAt'>): DailyQuestClaimFeedback {
 	return {
 		...input,
@@ -337,34 +330,62 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 						rejectSharedDailyQuestWithoutAccount();
 						return;
 					}
-					const ledger = await settleLocalDailyQuestClaimsToLedger(pending, account);
-					const settled = {
-						...ledger,
-						feedback: buildClaimFeedback({
-							status: ledger.alreadyClaimedCount === pending.length ? 'already_claimed' : 'claimed',
-							claimedCount: ledger.claimedIds.length - ledger.alreadyClaimedCount,
-							alreadyClaimedCount: ledger.alreadyClaimedCount,
-							runeEarned: ledger.runeEarned,
-							errors: [],
-						}),
-					};
-					const claimed = new Set(settled.claimedIds);
-					set((state) => ({
-						quests: state.quests.map((quest) => (
-							claimed.has(quest.id) ? { ...quest, claimed: true } : quest
-						)),
-						totalCompleted: state.totalCompleted + settled.feedback.claimedCount,
-						claimHistory: { ...state.claimHistory, ...settled.history },
-						lastClaimFeedback: settled.feedback,
-					}));
-					recordCeremonyFeedbackEvent('daily_quest_claim', 'local_recorded', {
-						status: settled.feedback.status,
-						claimedCount: settled.feedback.claimedCount,
-						runeEarned: settled.feedback.runeEarned,
-					});
-					toast.info('Daily quests recorded locally.', {
-						description: `${settled.feedback.runeEarned} RUNE committed locally. Duplicate claim is a no-op.`,
-					});
+					set({ flushing: true });
+					try {
+						const ledger = await settleLocalDailyQuestClaimsToLedger(pending, account);
+						const settled = {
+							...ledger,
+							feedback: buildClaimFeedback({
+								status: ledger.alreadyClaimedCount === pending.length ? 'already_claimed' : 'claimed',
+								claimedCount: ledger.claimedIds.length - ledger.alreadyClaimedCount,
+								alreadyClaimedCount: ledger.alreadyClaimedCount,
+								runeEarned: ledger.runeEarned,
+								errors: [],
+							}),
+						};
+						const claimed = new Set(settled.claimedIds);
+						set((state) => ({
+							quests: state.quests.map((quest) => (
+								claimed.has(quest.id) ? { ...quest, claimed: true } : quest
+							)),
+							totalCompleted: state.totalCompleted + settled.feedback.claimedCount,
+							claimHistory: { ...state.claimHistory, ...settled.history },
+							lastClaimFeedback: settled.feedback,
+						}));
+						recordCeremonyFeedbackEvent('daily_quest_claim', 'local_recorded', {
+							status: settled.feedback.status,
+							claimedCount: settled.feedback.claimedCount,
+							runeEarned: settled.feedback.runeEarned,
+						});
+						if (settled.feedback.status === 'already_claimed') {
+							toast.info('Daily quest rewards already recorded locally.', {
+								description: 'Duplicate claim is a no-op.',
+							});
+						} else {
+							toast.info('Daily quests recorded locally.', {
+								description: `${settled.feedback.runeEarned} RUNE committed locally. Duplicate claim is a no-op.`,
+							});
+						}
+					} catch (err: unknown) {
+						const message = err instanceof Error ? err.message : 'Local daily quest settlement failed.';
+						const feedback = buildClaimFeedback({
+							status: 'rejected',
+							claimedCount: 0,
+							alreadyClaimedCount: 0,
+							runeEarned: 0,
+							errors: [message],
+						});
+						set({ lastClaimFeedback: feedback });
+						recordCeremonyFeedbackEvent('daily_quest_claim', 'local_failed', {
+							status: feedback.status,
+							errors: feedback.errors,
+						});
+						toast.error('Daily quest local commit failed.', {
+							description: message,
+						});
+					} finally {
+						set({ flushing: false });
+					}
 					return;
 				}
 

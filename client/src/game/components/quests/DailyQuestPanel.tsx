@@ -29,12 +29,13 @@ import { getDailyQuestClaimPresentation } from './dailyQuestClaimPresentation';
  *   amber    -> completed, local commit or Hive replay pending
  *   emerald  -> the active authority has acknowledged the claim
  */
-function QuestRow({ quest, onReroll, onClaim, canReroll, claiming, claimPresentation }: {
+function QuestRow({ quest, onReroll, onClaim, canReroll, claiming, awaitingReplay, claimPresentation }: {
 	quest: DailyQuest;
 	onReroll: () => void;
 	onClaim: () => void;
 	canReroll: boolean;
 	claiming: boolean;
+	awaitingReplay: boolean;
 	claimPresentation: ReturnType<typeof getDailyQuestClaimPresentation>;
 }) {
 	const pct = Math.min((quest.progress / quest.goal) * 100, 100);
@@ -102,7 +103,13 @@ function QuestRow({ quest, onReroll, onClaim, canReroll, claiming, claimPresenta
 							Active
 						</span>
 					)}
-					{isAwaitingClaim && (
+					{isAwaitingClaim && awaitingReplay && (
+						<span className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase text-bifrost-200">
+							<Clock size={11} strokeWidth={2} />
+							Awaiting
+						</span>
+					)}
+					{isAwaitingClaim && !awaitingReplay && (
 						<button
 							type="button"
 							onClick={onClaim}
@@ -132,6 +139,7 @@ export default function DailyQuestPanel() {
 	const quests = useDailyQuestStore(s => s.quests);
 	const rerollsUsed = useDailyQuestStore(s => s.rerollsUsedToday);
 	const claiming = useDailyQuestStore(s => s.flushing);
+	const claimHistory = useDailyQuestStore(s => s.claimHistory);
 	const claimFeedback = useDailyQuestStore(s => s.lastClaimFeedback);
 	const refreshIfNeeded = useDailyQuestStore(s => s.refreshIfNeeded);
 	const rerollQuest = useDailyQuestStore(s => s.rerollQuest);
@@ -142,7 +150,7 @@ export default function DailyQuestPanel() {
 		buildRagnarokRuntimeEvidence(getRagnarokNetworkConfig()).phasePolicy,
 	);
 
-	useEffect(() => { void refreshIfNeeded(); }, [refreshIfNeeded]);
+	useEffect(() => { void refreshIfNeeded(); }, [refreshIfNeeded, account]);
 
 	const claimPending = () => {
 		if (claimPresentation.mode === 'local') {
@@ -179,6 +187,7 @@ export default function DailyQuestPanel() {
 						onClaim={claimPending}
 						canReroll={rerollsUsed < 1}
 						claiming={claiming}
+						awaitingReplay={Boolean(claimHistory[`${quest.ymdUtc}:${quest.slot}`]?.startsWith('awaiting-replay:'))}
 						claimPresentation={claimPresentation}
 					/>
 				))}
@@ -262,6 +271,12 @@ function getDailyQuestStatusCopy(input: {
 	if (input.claimFeedback?.status === 'claimed' && input.claimFeedback.runeEarned === 0) {
 		return {
 			title: 'Daily quests recorded locally',
+			detail: input.claimPresentation.recordedDetail,
+		};
+	}
+	if (input.claimFeedback?.status === 'awaiting_replay') {
+		return {
+			title: 'Daily claim awaiting chain replay',
 			detail: input.claimPresentation.recordedDetail,
 		};
 	}

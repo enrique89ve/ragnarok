@@ -14,6 +14,8 @@ import { recordSessionEvent } from '../../data/blockchain/transcriptBuilder';
 import { debug } from '../config/debugConfig';
 import { getNFTBridge } from '../nft';
 import { isHiveMode, isSharedNetworkEnvironment } from '../config/featureFlags';
+import { getRagnarokNetworkConfig } from '../config/networkConfig';
+import { buildRagnarokRuntimeEvidence } from '@shared/runtimeConfig';
 import { createDuatPackAcquisition } from '@shared/protocol-core/acquisitionProvenance';
 import {
 	assertClientWalletInvocation,
@@ -94,12 +96,18 @@ async function findDuatEligibility(account: string, allowDemoFallback: boolean):
 	let claimReady = true;
 	let claimBlockedReason: string | null = null;
 	if (!allowDemoFallback) {
-		const genesis = await getGenesisState();
-		// Protocol-core rejects DUAT claims before genesis exists. The user can
-		// still see the snapshot entitlement, but the claim button must stay
-		// closed until replay has the collection prerequisite.
-		claimReady = Boolean(genesis.version && genesis.sealed);
-		claimBlockedReason = claimReady ? null : 'Ragnarok collection is not initialized yet.';
+		const phasePolicy = buildRagnarokRuntimeEvidence(getRagnarokNetworkConfig()).phasePolicy;
+		if (!phasePolicy.hiveBroadcast || !phasePolicy.packs) {
+			claimReady = false;
+			claimBlockedReason = 'DUAT pack claims are disabled in this testnet phase (enabled in Mainnet F3).';
+		} else {
+			const genesis = await getGenesisState();
+			// Protocol-core rejects DUAT claims before genesis exists. The user can
+			// still see the snapshot entitlement, but the claim button must stay
+			// closed until replay has the collection prerequisite.
+			claimReady = Boolean(genesis.version && genesis.sealed);
+			claimBlockedReason = claimReady ? null : 'Ragnarok collection is not initialized yet.';
+		}
 	}
 
 	const claim = await getDuatClaim(account);

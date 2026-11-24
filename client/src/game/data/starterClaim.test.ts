@@ -3,7 +3,9 @@ import { buildStarterClaimAuthMessage } from '@shared/starterClaimAuth';
 
 const starterClaimMocks = vi.hoisted(() => ({
 	authenticatedHiveUsername: null as string | null,
+	hasClaimed: vi.fn(() => false),
 	markClaimed: vi.fn(),
+	reconcileServerClaimStatus: vi.fn(),
 	seedStarterHeroDecks: vi.fn(),
 	signHiveMessage: vi.fn(),
 }));
@@ -16,7 +18,9 @@ vi.mock('./starterSet', () => ({
 vi.mock('../stores/starterStore', () => ({
 	useStarterStore: {
 		getState: () => ({
+			hasClaimed: starterClaimMocks.hasClaimed,
 			markClaimed: starterClaimMocks.markClaimed,
+			reconcileServerClaimStatus: starterClaimMocks.reconcileServerClaimStatus,
 		}),
 	},
 }));
@@ -47,7 +51,9 @@ describe('claimStarterEntitlement', () => {
 		vi.unstubAllEnvs();
 		vi.unstubAllGlobals();
 		starterClaimMocks.authenticatedHiveUsername = null;
+		starterClaimMocks.hasClaimed.mockReset().mockReturnValue(false);
 		starterClaimMocks.markClaimed.mockReset();
+		starterClaimMocks.reconcileServerClaimStatus.mockReset();
 		starterClaimMocks.seedStarterHeroDecks.mockReset();
 		starterClaimMocks.signHiveMessage.mockReset();
 		vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ success: true }), { status: 200 })));
@@ -175,5 +181,70 @@ describe('claimStarterEntitlement', () => {
 		expect(result.success).toBe(true);
 		expect(starterClaimMocks.signHiveMessage).not.toHaveBeenCalled();
 		expect(starterClaimMocks.markClaimed).toHaveBeenCalledWith('alice');
+	});
+
+	it('reconciles a missing F1 server receipt automatically when local state already claimed', async () => {
+		starterClaimMocks.hasClaimed.mockReturnValue(true);
+		vi.stubGlobal('fetch', vi.fn(async (url: string, init?: { readonly method?: string }) => {
+			if (url.startsWith('/api/starter/status/')) {
+				return new Response(JSON.stringify({ success: true, claimed: false }), { status: 200 });
+			}
+			if (url === '/api/starter/claim' && init?.method === 'POST') {
+				return new Response(JSON.stringify({ success: true }), { status: 200 });
+			}
+			return new Response(JSON.stringify({ success: false }), { status: 404 });
+		}));
+		vi.resetModules();
+		vi.stubEnv('VITE_NETWORK_STAGE', 'testnet');
+		vi.stubEnv('VITE_RAGNAROK_RESET_EPOCH', 'alfa-testnet-starter-claim');
+		const mod = await import('./starterClaim');
+
+		const result = await mod.reconcileSharedNetworkStarterClaimReceipt('alice');
+
+		expect(result).toEqual({ success: true });
+		expect(starterClaimMocks.signHiveMessage).not.toHaveBeenCalled();
+		expect(starterClaimMocks.reconcileServerClaimStatus).toHaveBeenCalledWith('alice', true);
+	});
+
+	it('clears stale local F2 starter claim instead of prompting Keychain when server lacks receipt', async () => {
+		starterClaimMocks.hasClaimed.mockReturnValue(true);
+		vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+			if (url.startsWith('/api/starter/status/')) {
+				return new Response(JSON.stringify({ success: true, claimed: false }), { status: 200 });
+			}
+			return new Response(JSON.stringify({ success: false }), { status: 404 });
+		}));
+		vi.resetModules();
+		vi.stubEnv('VITE_NETWORK_STAGE', 'testnet');
+		vi.stubEnv('VITE_RAGNAROK_RESET_EPOCH', 'closed-beta-starter-claim');
+		const mod = await import('./starterClaim');
+
+		const result = await mod.reconcileSharedNetworkStarterClaimReceipt('alice');
+
+		expect(result.success).toBe(false);
+		expect(starterClaimMocks.signHiveMessage).not.toHaveBeenCalled();
+		expect(starterClaimMocks.reconcileServerClaimStatus).toHaveBeenCalledWith('alice', false);
+	});
+
+	it('preserves local F1 starter claim when auto-repair fails due to a transient server error', async () => {
+		starterClaimMocks.hasClaimed.mockReturnValue(true);
+		vi.stubGlobal('fetch', vi.fn(async (url: string, init?: { readonly method?: string }) => {
+			if (url.startsWith('/api/starter/status/')) {
+				return new Response(JSON.stringify({ success: true, claimed: false }), { status: 200 });
+			}
+			if (url === '/api/starter/claim' && init?.method === 'POST') {
+				return new Response(JSON.stringify({ success: false }), { status: 503 });
+			}
+			return new Response(JSON.stringify({ success: false }), { status: 404 });
+		}));
+		vi.resetModules();
+		vi.stubEnv('VITE_NETWORK_STAGE', 'testnet');
+		vi.stubEnv('VITE_RAGNAROK_RESET_EPOCH', 'alfa-testnet-starter-claim');
+		const mod = await import('./starterClaim');
+
+		const result = await mod.reconcileSharedNetworkStarterClaimReceipt('alice');
+
+		expect(result.success).toBe(false);
+		expect(starterClaimMocks.reconcileServerClaimStatus).not.toHaveBeenCalled();
 	});
 });

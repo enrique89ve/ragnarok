@@ -33,6 +33,7 @@ import type { Difficulty } from "./game/campaign/campaignTypes";
 import { useCampaignStore } from "./game/campaign/campaignStore";
 import { selectSingleStreakLabel, useSingleRecordStore } from "./game/data/singleRecord";
 import { useStarterStore } from "./game/stores/starterStore";
+import { syncSharedNetworkStarterClaimStatus } from "./game/data/starterClaim";
 import type { AiStyle } from "./game/match/types";
 import { useNFTUsername } from './game/nft/hooks';
 import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from "./data/HiveSessionIdentity";
@@ -639,6 +640,7 @@ function HomePage() {
 	const currentMissionId = campaignProgressStatus === 'ready' ? storedCurrentMissionId : null;
 	const singleStreak = useSingleRecordStore(selectSingleStreakLabel);
 	const hiveUsername = useStoredHiveUsername();
+	const authenticatedHiveUsername = useAuthenticatedHiveUsername();
 	const isHiveMode = useIsHiveMode();
 	const sharedNetwork = isSharedNetworkEnvironment();
 	const starterClaimAccountId = hiveUsername;
@@ -654,15 +656,17 @@ function HomePage() {
 	const [canInstall, setCanInstall] = useState(!!deferredInstallPrompt);
 	const starterClaimAccess = resolveProtectedFlowAccess({
 		accountId: hiveUsername,
-		authenticatedAccountId: hiveUsername,
+		authenticatedAccountId: authenticatedHiveUsername,
 		sharedNetwork,
 		surface: 'starter_claim',
-		requiresAuthenticatedSession: false,
+		requiresAuthenticatedSession: true,
 	});
 	const openStarterCeremony = () => {
 		if (starterClaimAccess.kind === 'allowed') {
 			setStarterCeremony({ accountId: starterClaimAccess.accountId });
+			return;
 		}
+		setShowHiveLogin(true);
 	};
 
 	const completedMissionCount = Object.keys(completedMissions).length;
@@ -743,6 +747,9 @@ function HomePage() {
 		// (bridgeRuntime.ts). Here we only need the legacy claim sync so the
 		// starter store reflects the active account.
 		syncLegacyStarterClaim(syncAccountId);
+		if (sharedNetwork && syncAccountId) {
+			void syncSharedNetworkStarterClaimStatus(syncAccountId).catch(() => { /* best effort; Find retries */ });
+		}
 	}, [hiveUsername, isHiveMode, sharedNetwork, syncLegacyStarterClaim]);
 
 	useEffect(() => {

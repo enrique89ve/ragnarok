@@ -123,6 +123,7 @@ export const resolvePokerSpellEffect = (
     playerHoleCards: PokerCard[];
     opponentHoleCards: PokerCard[];
     deck: PokerCard[];
+    canonicalPlayerRole?: 'attacker' | 'defender';
   }
 ): SpellCastResult => {
   const effect = spell.pokerSpellEffect;
@@ -252,10 +253,22 @@ const resolveStaminaShield = (
 const resolveHoleSwap = (
   caster: 'player' | 'opponent',
   currentState: PokerSpellState,
-  context: { playerHoleCards: PokerCard[]; opponentHoleCards: PokerCard[] }
+  context: {
+    playerHoleCards: PokerCard[];
+    opponentHoleCards: PokerCard[];
+    canonicalPlayerRole?: 'attacker' | 'defender';
+  }
 ): SpellCastResult => {
-  const playerCardIndex = Math.floor(cryptoRng() * context.playerHoleCards.length);
-  const opponentCardIndex = Math.floor(cryptoRng() * context.opponentHoleCards.length);
+  void caster;
+  void currentState;
+  // Draw attacker first, defender second so both P2P perspectives resolve the
+  // exact same canonical hole-card indices under a shared deterministic RNG.
+  const attackerRoll = cryptoRng();
+  const defenderRoll = cryptoRng();
+  const playerRoll = context.canonicalPlayerRole === 'defender' ? defenderRoll : attackerRoll;
+  const opponentRoll = context.canonicalPlayerRole === 'defender' ? attackerRoll : defenderRoll;
+  const playerCardIndex = Math.floor(playerRoll * context.playerHoleCards.length);
+  const opponentCardIndex = Math.floor(opponentRoll * context.opponentHoleCards.length);
   
   return {
     success: true,

@@ -9,6 +9,7 @@ import { isMinion, getAttack, getHealth } from './cards/typeGuards';
 import { debug } from '../config/debugConfig';
 import { MAX_HAND_SIZE } from '../constants/gameConstants';
 import { cardsRng } from './cardsCommandRng';
+import { cryptoIdGen } from './seededRng';
 
 /**
  * Filter cards based on discovery parameters
@@ -167,7 +168,7 @@ export function createDiscoveryFromSpell(
         
         if (selectedCard) {
           // Create a unique instance ID for the discovered card
-          const instanceId = idGen?.() ?? `discovered_${Date.now()}`;
+          const instanceId = idGen?.() ?? `discovered_${cryptoIdGen()}`;
           
           // Build the card instance
           const cardInstance = {

@@ -113,4 +113,24 @@ describe('daily quest local claim', () => {
 		expect(makeQuest().claimed).toBe(false);
 		expect({ claimedCount: 0, runeEarned: 0 }).toEqual({ claimedCount: 0, runeEarned: 0 });
 	});
+
+	it('releases flushing guard and records rejected feedback if local commit fails', async () => {
+		const replayDB = await import('../../data/blockchain/replayDB');
+		const commitSpy = vi.spyOn(replayDB, 'commitLocalDailyQuestLedger').mockRejectedValueOnce(new Error('idb_write_failed'));
+		useDailyQuestStore.setState({
+			quests: [makeQuest({ id: 'dq-local-fail', slot: 2 })],
+			lastClaimFeedback: null,
+			claimHistory: {},
+			flushing: false,
+		});
+
+		await useDailyQuestStore.getState().flushPendingClaims(null);
+
+		const state = useDailyQuestStore.getState();
+		expect(state.flushing).toBe(false);
+		expect(state.lastClaimFeedback?.status).toBe('rejected');
+		expect(state.lastClaimFeedback?.errors).toContain('idb_write_failed');
+		expect(state.quests[0]?.claimed).toBe(false);
+		commitSpy.mockRestore();
+	});
 });

@@ -16,7 +16,10 @@ import {
 	type MatchOffer,
 } from '@shared/p2pMatchAcceptance';
 import { useStarterStore } from '../stores/starterStore';
-import { hasSharedNetworkStarterClaimReceipt } from '../data/starterClaim';
+import {
+	reconcileSharedNetworkStarterClaimReceipt,
+	syncSharedNetworkStarterClaimStatus,
+} from '../data/starterClaim';
 import { getCardRegistryHash } from '../data/effects/registryHash';
 import { getWasmHash, loadWasmEngine } from '../engine/wasmLoader';
 import { bindSessionKey, generateEphemeralSigningKey, generateSessionKey } from '../protocol/sessionKey';
@@ -416,9 +419,8 @@ async function readSharedNetworkStarterReceiptError(input: {
 	readonly accountId: string | null;
 }): Promise<string | null> {
 	if (!input.sharedNetwork || !input.accountId) return null;
-	return await hasSharedNetworkStarterClaimReceipt(input.accountId)
-		? null
-		: 'Complete the starter claim before searching for a PvP opponent.';
+	const reconciled = await reconcileSharedNetworkStarterClaimReceipt(input.accountId);
+	return reconciled.success ? null : reconciled.error;
 }
 
 export async function readMatchmakingError(response: Response): Promise<string> {
@@ -602,7 +604,7 @@ export function useMatchmaking() {
 			authenticatedHiveUsername: getAuthenticatedHiveUsername(),
 		});
 		if (!accountId) return;
-		void hasSharedNetworkStarterClaimReceipt(accountId).catch(error => {
+		void syncSharedNetworkStarterClaimStatus(accountId).catch(error => {
 			debug.warn('[useMatchmaking] starter status prewarm failed; Find will retry it', error);
 		});
 	}, [hiveUsername]);

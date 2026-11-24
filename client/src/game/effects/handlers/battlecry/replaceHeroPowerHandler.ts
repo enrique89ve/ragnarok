@@ -9,6 +9,7 @@ import { debug } from '../../../config/debugConfig';
 import { GameContext } from '../../../GameContext';
 import { Card, BattlecryEffect, CardInstance } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
+import { cryptoIdGen } from '../../../utils/seededRng';
 
 const UPGRADED_HERO_POWERS: Record<string, any> = {
   'Fireblast': { name: 'Fireblast Rank 2', description: 'Deal 2 damage.', value: 2 },
@@ -51,7 +52,7 @@ export default function executeReplaceHeroPower(
     }
     
     const newHeroPower: CardInstance = {
-      instanceId: 'upgraded-hero-power-' + Date.now(),
+      instanceId: `upgraded-hero-power-${cryptoIdGen()}`,
       card: {
         id: 99997,
         name: upgradedPower.name,

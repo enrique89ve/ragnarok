@@ -38,7 +38,7 @@ import {
 	loadState,
 	startPersistence,
 	stopPersistence,
-	saveState,
+	saveStateAsync,
 } from './chainState';
 import { maybePublishIndexCheckpoint } from './indexCheckpointPublisher';
 import { shouldAcceptCustomJsonId } from '../../shared/runtimeConfig';
@@ -901,7 +901,7 @@ async function scanBlocks(): Promise<number> {
 			hasProgress = hasProgress || result.blocks > 0;
 			if (result.blocks === 0) break;
 			if (result.blocks > 0) {
-				saveState();
+				await saveStateAsync();
 			}
 			continue;
 		}
@@ -957,7 +957,7 @@ async function scanBlocks(): Promise<number> {
 			totalBlocks += fallback.blocks;
 			hasProgress = hasProgress || fallback.blocks > 0;
 			current += fallback.blocks;
-			saveState();
+			await saveStateAsync();
 			continue;
 		}
 
@@ -971,11 +971,11 @@ async function scanBlocks(): Promise<number> {
 			hasProgress = hasProgress || segmentResult.blocks > 0;
 		}
 
-		if (hasProgress) saveState();
+		if (hasProgress) await saveStateAsync();
 	}
 
 	if (totalApplied > 0 || totalBlocks > 0) {
-		saveState();
+		await saveStateAsync();
 	}
 
 	if (totalBlocks > 0) {

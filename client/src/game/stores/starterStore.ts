@@ -29,6 +29,7 @@ interface StarterState {
 	legacyClaimAccountId: string | null;
 	starterReputationByAccount: StarterReputationByAccount;
 	markClaimed: (accountId?: string | null) => void;
+	reconcileServerClaimStatus: (accountId: string | null | undefined, claimed: boolean) => void;
 	hasClaimed: (accountId?: string | null) => boolean;
 	syncLegacyClaimToAccount: (accountId?: string | null) => void;
 	recordStarterReputation: (params: RecordStarterReputationParams) => void;
@@ -106,6 +107,36 @@ export const useStarterStore = create<StarterState>()(
 						[claimAccountId]: true,
 					},
 				}));
+			},
+			reconcileServerClaimStatus: (accountId, serverClaimed) => {
+				const claimAccountId = starterClaimAccountId(accountId);
+				if (claimAccountId === LOCAL_STARTER_CLAIM_ID) return;
+
+				set((state) => {
+					if (serverClaimed) {
+						if (state.claimedByAccount[claimAccountId]) return state;
+						return {
+							claimed: true,
+							claimedByAccount: {
+								...state.claimedByAccount,
+								[claimAccountId]: true,
+							},
+						};
+					}
+
+					const hadAccountClaim = Boolean(state.claimedByAccount[claimAccountId]);
+					const hadLegacyFallback = state.claimed && !state.legacyClaimAccountId && hasOnlyLocalClaim(state.claimedByAccount);
+					if (!hadAccountClaim && !hadLegacyFallback) return state;
+
+					const nextClaimedByAccount: StarterClaimByAccount = { ...state.claimedByAccount };
+					delete nextClaimedByAccount[claimAccountId];
+					const remainingAccounts = Object.keys(nextClaimedByAccount).filter(id => id !== LOCAL_STARTER_CLAIM_ID);
+					return {
+						claimed: remainingAccounts.length > 0,
+						claimedByAccount: nextClaimedByAccount,
+						legacyClaimAccountId: state.legacyClaimAccountId === claimAccountId ? null : state.legacyClaimAccountId,
+					};
+				});
 			},
 			hasClaimed: (accountId) => {
 				const claimAccountId = starterClaimAccountId(accountId);

@@ -24,6 +24,7 @@ import {
   clearCombatSpellEffects
 } from '../../utils/poker/pokerSpellUtils';
 import { emitSpellCast, emitStaminaChanged, wagerMinionSource } from '../../combat/vfx/events';
+import { seededRngFromString, withDeterministicRng } from '../../utils/seededRng';
 
 const initialState: PokerSpellSliceState = {
   pokerSpellState: null,
@@ -76,15 +77,25 @@ export const createPokerSpellSlice: StateCreator<
       };
     }
     
-    const result = resolvePokerSpellEffect(
-      spell,
-      caster,
-      pokerSpellState,
-      {
-        playerHoleCards: pokerCombatState.player.holeCards,
-        opponentHoleCards: pokerCombatState.opponent.holeCards,
-        deck: state.pokerDeck
-      }
+    const playerRole = pokerCombatState.deterministicPlayerRole;
+    const canonicalCaster = playerRole
+      ? (caster === 'player' ? playerRole : (playerRole === 'attacker' ? 'defender' : 'attacker'))
+      : caster;
+    const revealedTotal = pokerSpellState.revealedPlayerCards.length + pokerSpellState.revealedOpponentCards.length;
+    const spellSeedKey = `poker-spell:${pokerCombatState.combatId}:${pokerCombatState.handNumber}:${pokerCombatState.phase}:${canonicalCaster}:${spell.id}:${pokerSpellState.activeSpells.length}:${revealedTotal}`;
+    const result = withDeterministicRng(
+      seededRngFromString(spellSeedKey),
+      () => resolvePokerSpellEffect(
+        spell,
+        caster,
+        pokerSpellState,
+        {
+          playerHoleCards: pokerCombatState.player.holeCards,
+          opponentHoleCards: pokerCombatState.opponent.holeCards,
+          deck: state.pokerDeck,
+          canonicalPlayerRole: playerRole,
+        }
+      ),
     );
     
     if (result.success) {

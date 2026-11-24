@@ -11,6 +11,7 @@ import { Card, BattlecryEffect, CardInstance } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
 import { MAX_BATTLEFIELD_SIZE, MAX_HAND_SIZE } from '../../../constants/gameConstants';
 import { cardsRng } from '../../../utils/cardsCommandRng';
+import { cryptoIdGen } from '../../../utils/seededRng';
 
 const ROD_MAX_ITERATIONS = 50;
 
@@ -55,7 +56,7 @@ const YOGG_WHEEL_EFFECTS = [
         };
         
         const randomMinion: CardInstance = {
-          instanceId: 'yogg-minion-' + Date.now() + '-' + i,
+          instanceId: `yogg-minion-${cryptoIdGen()}-${i}`,
           card: {
             id: 99900 + i,
             name: `Yogg's Creation ${i + 1}`,
@@ -95,7 +96,7 @@ const YOGG_WHEEL_EFFECTS = [
         const spellName = spellTypes[Math.floor(cardsRng() * spellTypes.length)];
         
         const spell: CardInstance = {
-          instanceId: 'yogg-spell-' + Date.now() + '-' + i,
+          instanceId: `yogg-spell-${cryptoIdGen()}-${i}`,
           card: {
             id: 99800 + i,
             name: `${spellName} (Free)`,
@@ -130,7 +131,7 @@ const YOGG_WHEEL_EFFECTS = [
       for (let i = 0; i < friendlySlots; i++) {
         const stats = { attack: Math.floor(cardsRng() * 6) + 1, health: Math.floor(cardsRng() * 6) + 1 };
         const minion: CardInstance = {
-          instanceId: 'curse-friendly-' + Date.now() + '-' + i,
+          instanceId: `curse-friendly-${cryptoIdGen()}-${i}`,
           card: {
             id: 99700 + i,
             name: 'Flesh Horror',
@@ -156,7 +157,7 @@ const YOGG_WHEEL_EFFECTS = [
       for (let i = 0; i < enemySlots; i++) {
         const stats = { attack: Math.floor(cardsRng() * 6) + 1, health: Math.floor(cardsRng() * 6) + 1 };
         const minion: CardInstance = {
-          instanceId: 'curse-enemy-' + Date.now() + '-' + i,
+          instanceId: `curse-enemy-${cryptoIdGen()}-${i}`,
           card: {
             id: 99600 + i,
             name: 'Flesh Horror',

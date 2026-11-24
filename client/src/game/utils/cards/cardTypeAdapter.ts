@@ -25,6 +25,7 @@ import {
   isCardEffectObject 
 } from './cardDataValidator';
 import { debug } from '../../config/debugConfig';
+import { cryptoIdGen } from '../seededRng';
 
 /**
  * Unified card type that can represent both legacy CardData and CardInstanceWithCardData
@@ -196,7 +197,7 @@ export function createCardInstance(card: CardData): CardInstanceWithCardData {
   }
 
   return {
-    instanceId: `instance-${card.id}-${Date.now()}`,
+    instanceId: `instance-${card.id}-${cryptoIdGen()}`,
     card,
     // Add default instance properties
     currentHealth,

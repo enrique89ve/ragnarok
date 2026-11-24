@@ -43,6 +43,20 @@ vigente es la hoja de ruta de abajo. El diagrama de septiembre queda como
 historial: la spine, las dualidades P0 y la seguridad de tickets ya no son el
 trabajo siguiente.
 
+Actualizacion 2026-11-24 (auditoria conjunta sobre `main` `8143d7d0`): desde el
+corte de octubre cerraron en codigo el modal PWA de nueva version (`version.json`),
+Fases 0-3 de `DATA_PERSISTENCE_AND_CACHE_PLAN.md` (`engine.wasm` versionado,
+anti-drift de JSON estaticos, `starterClaimRegistry` atomico por epoch,
+`idbLifecycle` + validacion en `replayDB`, liquidaciones atomicas, eliminacion de
+proyecciones duplicadas en `HiveDataLayer`, `saveStateManager` con Zod/checksum,
+flush async de 30s en `chainState` y paridad de `pgStateAdapter`), backpressure
+simetrico en relay P2P, VFX de arena, CSP de produccion via Helmet
+(`server/index.ts`), y el cambio de campana a solo RUNE mas el piloto local de
+Eitr en `norse-9`. Validacion local al corte: `pnpm run check` verde,
+`pnpm run lint:css` 0 warnings, `bash scripts/p2p-ticket-security-check.sh`
+26/26 suites (235/235 tests). Siguen pendientes los gates operativos de Alfa y
+se registran abajo las fricciones/riesgos P1 detectados en auditoria de codigo.
+
 ## Hoja de ruta
 
 La autoridad la decide el perfil de `shared/protocolPhase.ts`, no el nombre
@@ -104,25 +118,88 @@ El front de este corte obedece estas restricciones:
 - Single no muestra recompensa. Campana y P2P muestran la proyeccion local
   de IndexedDB. Esa proyeccion no se presenta como saldo Hive, ranking
   oficial ni propiedad NFT.
-- Quick Match conserva una sola firma de `Accept`. La partida, el reconnect
-  y `game_over` no abren Keychain.
+- Quick Match conserva una sola firma Keychain en `Find` (delegacion Posting);
+  `Accept` es confirmacion local (`sessionSig`). La partida, el reconnect y
+  `game_over` no abren Keychain.
 - Marketplace y packs siguen como superficie deshabilitada. Montar su
   mutacion seria un cambio de fase.
 
 ### 2. Cerrar Alfa Player-Ready
 
-La spine, el settlement local, las dualidades P0 y la seguridad de tickets
-ya tienen evidencia de codigo. Falta evidencia operativa:
+La spine, el settlement local, las dualidades P0, la persistencia F0-F3 y la
+seguridad de tickets ya tienen evidencia de codigo. Falta evidencia operativa
+sobre el arbol actual (`8143d7d0`) y conviene resolver antes de invitar manos
+externas las fricciones P1 de claim/P2P listadas en la seccion de auditoria:
 
-1. Desplegar este arbol. `testnetdev.ragnaroknft.quest` sigue con el bundle
-   anterior hasta ese deploy.
-2. Smoke de dos cuentas Hive con Keychain: login, cola sin firma, una firma
-   en `Accept` por jugador, checkpoints `chess ↔ poker_combat` y
-   `* → game_over`, reconnect corto, resultado local, export JSON y cero
-   prompts o `custom_json` despues de `Accept`.
-3. Victoria jugada de norse-1 en el navegador. El first-clear local ya esta
-   cubierto por tests; falta la partida humana.
-4. El pase visual del punto 1, en los viewports de arriba.
+1. Desplegar este arbol (`8143d7d0`). `testnetdev.ragnaroknft.quest` sigue con
+   el bundle anterior hasta ese deploy. Validar `/api/health`,
+   `/api/admin/config`, `/api/admin/p2p/status` y la CSP de Helmet en vivo.
+2. Smoke de dos cuentas Hive con Keychain: login, una sola firma Posting en
+   `Find` (delegacion) por jugador, `Accept` local (`sessionSig`), checkpoints
+   `chess ↔ poker_combat` y `* → game_over`, reconnect corto, resultado local,
+   export JSON y cero prompts o `custom_json` despues de `Find`.
+3. Victoria jugada de `norse-1` en el navegador. El first-clear local (solo
+   RUNE) ya esta cubierto por tests; falta la partida humana.
+4. El pase visual del punto 1 en 1366x768, 1920x1080, ultrawide y un telefono
+   fisico en landscape.
+
+### 2b. Hallazgos P1 de auditoria (2026-11-24) — Estado de cierre
+
+1. **Flujos de Claim — CERRADO EN CODIGO (2026-11-24):**
+   - *Starter claim*: `useStarterStore.reconcileServerClaimStatus` y
+     `syncSharedNetworkStarterClaimStatus` / `reconcileSharedNetworkStarterClaimReceipt`
+     reconcilian `localStorage` con `GET /api/starter/status/:username` en
+     `HomePage` y `useMatchmaking` (auto-registrando en F1 si ya hubo claim
+     local, o limpiando el estado stale en F2 sin deadlock ni prompt sorpresa).
+     `HomePage` usa `authenticatedHiveUsername` + `requiresAuthenticatedSession: true`
+     y `StarterPackCeremony.tsx` muestra `'Claiming...'` en F1 (`'Signing...'`
+     solo en `hive-body-auth`).
+   - *Daily quest claim*: `dailyQuestStore.ts` protege el commit local F1 con
+     `flushing: true` + `try/catch/finally` y feedback `rejected` visible;
+     `DailyQuestPanel.tsx` re-ejecuta `refreshIfNeeded` al cambiar `account` y
+     maneja `awaiting_replay` (sin botón duplicado ni copy ambiguo en F2).
+   - *DUAT en F1*: `duatClaimStore.ts` bloquea `claimReady` cuando
+     `!phasePolicy.hiveBroadcast || !phasePolicy.packs` con mensaje explicito de
+     fase (`Mainnet F3`), y `DuatClaimPopup.tsx` renderiza `store.error` y
+     etiqueta `'Unavailable in Phase'`.
+2. **Mecanicas de juego y determinismo P2P — CERRADO EN CODIGO (2026-11-24):**
+   - *IDs/RNG deterministas*: `wheelOfYoggHandler.ts`,
+     `changeHeroPowerHandler.ts`, `replaceHeroPowerHandler.ts`,
+     `cardTypeAdapter.ts` y fallback de `discoveryUtils.ts` usan `cryptoIdGen()`
+     (enlazado a `withDeterministicIdGen` en P2P) en lugar de `Date.now()`.
+     `pokerSpellSlice.ts` envuelve `resolvePokerSpellEffect` en
+     `withDeterministicRng(seededRngFromString(...))` y `resolveHoleSwap` es
+     invariante a perspectiva (`attacker`/`defender`).
+   - *Techo de showdown (aceptado)*: `SHOWDOWN_PRESENTATION_BUDGET_MS` = **21s**
+     (`pokerResolutionOutcome.ts:4`). Red de seguridad; el camino feliz no debe
+     dispararlo.
+   - *Paridad WASM vs TS (deuda estructural post-Alfa)*: chess/poker en vivo
+     corren en TS; `engine.wasm` solo hashea y provee helpers de poker
+     (`applyChessActionWasm` sin llamadores; `assembly/effects/effectInterpreter.ts`
+     ignora patrones desconocidos; `customHandler.ts:70-78` retorna `success: true`).
+3. **P2P practico para testers — ABIERTOS COMO FRICCION CONOCIDA:**
+   - *Recarga dura (F5 / tab kill movil)*: `useP2PMatchResume.ts:36-55` mantiene
+     `renewalAvailable: false` (Fase 4 bloqueada hasta ceremonia `session_renewal`),
+     descartando el snapshot y sacando al tester al lobby. Aceptado para Alfa
+     cerrada; prioritario antes de abrir beta mas amplia.
+   - *Emparejamiento directo*: salas manuales por ID estan deshabilitadas en red
+     compartida (`MultiplayerLobby.tsx:216`); dos testers deben usar Quick Match
+     o ser amigos aceptados en `FriendsPanel` (cola de retos en memoria). Evaluar
+     codigo de sala privada firmado o incluir Warband Challenge en el smoke.
+   - *Backpressure del relay*: superar 256 KiB pendientes cierra el socket
+     (`p2pSocketSend.ts`, `p2pRelay.ts:650-653`) y el usuario solo percibe
+     desconexion.
+4. **Consistencia de datos residual — CERRADO EN CODIGO (excepto Postgres/F4):**
+   - *Cambio de cuenta en caliente (CERRADO)*: `accountScopedStorage.ts`
+     normaliza usernames, rastrea la cuenta activa sin carrera contra
+     `localStorage`, y resetea en memoria las stores registradas (con escrituras
+     suprimidas) antes de `rehydrate()` para evitar fuga de estado al cambiar de
+     cuenta.
+   - *Indexador async (CERRADO)*: `server/services/chainIndexer.ts` usa
+     `await saveStateAsync()` por lote en lugar de `saveState()` sincrono.
+   - *PostgreSQL (P2 post-Alfa)*: esquema y `pgStateAdapter` tienen paridad de
+     codigo, pero Alfa sigue operando en `json-file` (1 instancia). Activar
+     Postgres antes de escalar beta/multi-instancia.
 
 ### 3. Closed Beta F2
 
@@ -154,9 +231,12 @@ de Alfa ni en la invitacion de Closed Beta.
 ### Fuera de esta hoja
 
 Hasta cerrar el punto 2 quedan fuera: settlement ranked, replay del
-action-log firmado, CSP de produccion, auditoria del catalogo, fusion de los
-CSS de poker, borrar `GameBoard` / `SimpleGame` / `legacyBridge`, y el resto
-de misiones de campana.
+action-log firmado, auditoria completa del catalogo de 2400 cartas, fusion de
+los CSS de poker, borrar `GameBoard` / `SimpleGame` / `legacyBridge`, activar
+PostgreSQL como runtime principal, reanudacion P2P tras recarga dura (Fase 4 /
+`session_renewal`), el piloto Eitr de `norse-9` y el resto de misiones de
+campana. La CSP de produccion ya esta aplicada via Helmet (`server/index.ts`);
+solo falta verificarla en el host desplegado.
 
 ## Verdad actual
 
@@ -264,11 +344,13 @@ Alfa esta lista para mas manos internas cuando todo esto sea verdad:
    cartas, apuesta/riesgo, accion disponible, conexion P2P y resultado.
    Home / warband / briefing de campana / game-over tienen una CTA primaria.
 3. Un smoke humano con Hive Keychain valida login previo, session reuse y dos
-   perfiles reales. Quick Match muestra `Offer → Accept → Ready`: una firma
-   visible en `Accept` por jugador y ningun prompt posterior hasta el resultado.
+   perfiles reales. Quick Match muestra `Find (delegacion) → Offer → Accept → Ready`:
+   una sola firma Posting visible en `Find` por jugador, `Accept` local
+   (`sessionSig`) y ningun prompt posterior hasta el resultado.
 4. Practica y campana (1 mision Norse) completan el script de spine local:
    quiet move, instant kill, captura a poker, resolucion, retorno a chess,
-   `game_over`. El backup timer de showdown (9s) no dispara en el camino feliz.
+   `game_over`. El backup timer de showdown (`SHOWDOWN_PRESENTATION_BUDGET_MS`,
+   21s) no dispara en el camino feliz.
 5. El P2P de dos browsers cubre el mismo script mas checkpoints
    `chess ↔ poker_combat`, checkpoint terminal, reconnect corto, reload local
    snapshot + rejoin, resultado local y export JSON sin operacion Hive.
@@ -356,10 +438,10 @@ conserva el diff historico del 2026-09-01; no describe este arbol.
 | 2 | Poker board + funnel | Funnel y telefono landscape cerrados; pass amplio abierto | El contrato SSR prueba labels visibles dinamicos Bet/Raise y Check/Call, Fold, Frontline, All in, HP, aria/title y razones disabled; la geometria `117x99` queda fijada por test. Browser 844x390 confirma starter, warband, deckbuilder y combate lado a lado; portrait muestra el gate de rotacion. Atlas 844x390 muestra mapa+dossier y 390x844 sigue responsive, sin relajar CSP. Falta el pass visual humano 1366/1920/ultrawide/dispositivo fisico. |
 | 3 | Runtime Alfa desplegable | Host inspeccionado; arbol actual no desplegado | `build:alfa-testnet` pasa. En `testnetdev.ragnaroknft.quest`, health/admin/p2p status, sync, headers y cache pasaron; challenge signing figura `source=env`, `required=true`, `ready=true`. El host todavia sirve copy/API anteriores (por ejemplo daily claim) y no prueba este workspace hasta el siguiente deploy. |
 | 4 | Hive session | Abierto P0 humano | Login real con Keychain; Quick Match queue unsigned, una firma Find/delegation por jugador y cero prompts Keychain posteriores o claims F1. |
-| 5 | Campana 1 mision + daily quest | Persistencia local automatizada cerrada | Claim diario local: commit IDB `claimed` / `already_claimed` con RUNE local una vez. Campana: first-clear concede RUNE/CardXP/level local una sola vez, el replay persiste tras cerrar/reabrir IndexedDB y una derrota no completa la mision. Falta evidencia jugada en browser de una victoria norse-1. |
-| 6 | Dualidades P0 | Cerrado | Fin de partida unico (`matchEndController` cableado). Lookup de cartas unico en `data/cardRegistry`; `allCards.ts` y `cardManagement/cardRegistry.ts` son adaptadores sin dataset propio. Docs: Standard Match historico. OPEN-8 cerrado. Showdown 9s queda como red de seguridad aceptada. |
+| 5 | Campana 1 mision + daily quest | Persistencia local automatizada cerrada | Claim diario local: commit IDB `claimed` / `already_claimed` con RUNE local una vez (`Commit`, sin wallet). Campana: first-clear concede solo RUNE local una sola vez (sin Match XP ni CardXP en Alfa; `norse-9` tiene piloto local de Eitr fuera del gate), el replay persiste tras cerrar/reabrir IndexedDB y una derrota no completa la mision. Falta evidencia jugada en browser de una victoria `norse-1`. |
+| 6 | Dualidades P0 | Cerrado | Fin de partida unico (`matchEndController` cableado). Lookup de cartas unico en `data/cardRegistry`; `allCards.ts` y `cardManagement/cardRegistry.ts` son adaptadores sin dataset propio. Docs: Standard Match historico. OPEN-8 cerrado. Showdown backup (21s) queda como red de seguridad aceptada. |
 | 7 | P2P smoke dos browsers | Automatizacion cerrada; P0 humano abierto | El tracer usa dos perfiles aislados y prueba spine + checkpoints + reload serializado + settlement local externamente silencioso. Los tests de relay y control añaden cambio de `X-Forwarded-For`, reemplazo de socket con la misma sesión/ticket/`peerId` y rechazo de ticket distinto sin expulsar al miembro. El transporte conserva frames de referee que llegan antes del listener, no duplica timers de reconnect y no reprograma un reconnect cuyo room ya perdió ownership; una sala nueva cancela la ventana anterior. `transport_ready_v1` es solo anuncio: WebRTC/relay no publican gameplay hasta el `transport_committed_v1` bilateral; una carrera de kinds fuerza fallback coordinado y permite recuperación por relay. El reducer de combate y el smoke de battlecry prueban IDs deterministas para Overkill, deathrattle draw, tokens materializados y Discover después de aplicar local/remoto. La habilidad de Rey usa `chess_mine_placement` firmado y tile-set determinista, pero falta evidencia de dos browsers/Keychain reales, relay desplegado, desconexion/reconexion de transporte y export. |
-| 8 | Seguridad P2P enfocada | Verde | `bash scripts/p2p-ticket-security-check.sh`: 26/26 suites y 209/209 tests (2026-09-01). El tracer multiperfil y la suite global tambien pasan; esto no sustituye el smoke humano de dos browsers. |
+| 8 | Seguridad P2P enfocada | Verde | `bash scripts/p2p-ticket-security-check.sh`: 26/26 suites y 235/235 tests (2026-11-24). El tracer multiperfil y la suite global tambien pasan; esto no sustituye el smoke humano de dos browsers. |
 | 9 | Closed Beta cutover | Bloqueado | F2 epoch `closed-beta-*`, env evidence y operator sign-off. NFTLox proof es F3 futuro, no gate F2. |
 
 Validacion del arbol local al cierre de este corte: TypeScript, build Alfa,
@@ -398,8 +480,9 @@ P0, dos verdades que causan bugs o mentiras:
 1. Fin de partida: **cerrado 2026-08-19.** Chess terminal, hero HP=0 y Leave
    Match pasan por `createMatchEndController`. No hay segundo pipeline inline.
 2. Showdown que no llama `onCombatEnd`: **aceptado.** `ShowdownCelebration`
-   garantiza `onComplete` en ≤8s. El timer de 9s en
-   `useRagnarokCombatController` es red de seguridad, no el camino feliz.
+   garantiza `onComplete` dentro del techo `SHOWDOWN_PRESENTATION_BUDGET_MS`
+   (21s en `pokerResolutionOutcome.ts`). El timer es red de seguridad, no el
+   camino feliz.
 3. Lookup de cartas: **cerrado 2026-08-23.** Canon de definiciones y lecturas =
    `client/src/game/data/cardRegistry/`. `allCards.ts` y
    `cardManagement/cardRegistry.ts` preservan imports legacy, pero delegan al
@@ -631,7 +714,12 @@ Flujo minimo:
 - Replay determinista del `action-log` firmado (ranked). El snapshot local
   de hard reload ya esta en [`P2P_MATCH_RESUME.md`](./P2P_MATCH_RESUME.md).
 - Dedupe de CSS/Tailwind pendiente en poker.
-- CSP explicita para assets, Hive APIs, WebSocket y fuentes.
+- CSP de produccion ya aplicada via Helmet (`server/index.ts`); verificar en
+  el host desplegado y endurecer antes de beta publica.
+- Auditar/migrar handlers legacy restantes con `Date.now()` fuera del subconjunto
+  cerrado en § 2b y cerrar paridad WASM vs TS antes de ranked.
+- Evaluar proteccion de `/api/admin/config` y `/api/admin/p2p/status` y sanitizar
+  el stack trace en `ErrorBoundary` antes de abrir testers externos.
 - Auditoria de vulnerabilidades de produccion antes de abrir testers externos.
 - Resto de capitulos de campana (el gate Alfa ya cerro con 1 mision Norse).
 

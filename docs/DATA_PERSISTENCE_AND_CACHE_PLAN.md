@@ -14,9 +14,22 @@ Eliminar deuda técnica en persistencia cliente/servidor y en artefactos estáti
 
 ---
 
-## 2. Mapa Actual de Almacenamiento y Hallazgos
+## 2. Mapa de Almacenamiento y Hallazgos (Baseline histórico `349dcd83` vs Residuales 2026-11-24)
 
-### 2.1 IndexedDB en el cliente (5 bases independientes)
+> **Estado tras Fases 0–3 (`8143d7d0`, 2026-11-24):** Los hallazgos base de las
+> subsecciones 2.1–2.4 ya fueron cerrados en código (`engine.wasm` versionado,
+> tests anti-drift de JSON estáticos, `starterClaimRegistry` atómico por epoch,
+> `idbLifecycle` + validación en `replayDB`, liquidaciones atómicas,
+> `HiveDataLayer` persistiendo solo `user`, `saveStateManager` con Zod/checksum,
+> flush async de 30 s en `chainState` y paridad de `pgStateAdapter`).
+>
+> **Residuales cerrados y abiertos (ver `docs/TESTNET_READINESS_FAST_TRACK.md` § 2b):**
+> 1. *(Cerrado 2026-11-24)* `server/services/chainIndexer.ts` migrado de `saveState()` síncrono a `await saveStateAsync()` por lote.
+> 2. *(Cerrado 2026-11-24)* `client/src/lib/storage/accountScopedStorage.ts` normaliza cuentas, sigue la cuenta activa en memoria y resetea stores registradas con escrituras suprimidas antes de `rehydrate()`.
+> 3. El runtime de Alfa sigue en `json-file` (PostgreSQL tiene esquema y adaptador listos pero no activados en producción).
+> 4. **Fase 4** (reanudación P2P verificable tras recarga dura) sigue bloqueada hasta `session_renewal`.
+
+### 2.1 IndexedDB en el cliente (5 bases independientes — baseline previo a F1)
 
 | Base (`createRuntimeDatabaseName`) | Archivo | Versión / Stores | Hallazgos principales |
 |---|---|---|---|

@@ -40,11 +40,21 @@ function getLocalStorage(): Storage | null {
 	return typeof localStorage === 'undefined' ? null : localStorage;
 }
 
+function normalizeHiveAccount(username: string | null | undefined): string {
+	const normalized = typeof username === 'string' ? username.trim().toLowerCase().replace(/^@/, '') : '';
+	return normalized.length > 0 ? normalized : GUEST_BUCKET;
+}
+
+let activeAccountFromStore: string | null = null;
+
 /**
  * Reads the current Hive account directly from the persisted hive
- * blob (sync, no zustand-init dependency). Falls back to `guest`.
+ * blob (sync, no zustand-init dependency), preferring the live account
+ * tracked by `useHiveDataStore.subscribe` once a runtime switch occurs.
+ * Falls back to `guest`.
  */
 function readHiveAccount(): string {
+	if (activeAccountFromStore !== null) return activeAccountFromStore;
 	try {
 		const storage = getLocalStorage();
 		if (!storage) return GUEST_BUCKET;
@@ -52,8 +62,7 @@ function readHiveAccount(): string {
 		const legacyRaw = raw ?? (shouldMigrateLegacyStorage() ? storage.getItem(LEGACY_HIVE_STORE_KEY) : null);
 		if (!legacyRaw) return GUEST_BUCKET;
 		const parsed = JSON.parse(legacyRaw) as PersistedHiveBlob;
-		const username = parsed.state?.user?.hiveUsername;
-		return typeof username === 'string' && username.length > 0 ? username : GUEST_BUCKET;
+		return normalizeHiveAccount(parsed.state?.user?.hiveUsername);
 	} catch {
 		return GUEST_BUCKET;
 	}
@@ -99,6 +108,8 @@ function migrateUnscopedKey(name: string, account: string): void {
 	storage.removeItem(name);
 }
 
+let suppressAccountScopedWrites = false;
+
 export const accountScopedStorage: StateStorage = {
 	getItem: (name) => {
 		const storage = getLocalStorage();
@@ -108,11 +119,13 @@ export const accountScopedStorage: StateStorage = {
 		return storage.getItem(storageKey(name, account));
 	},
 	setItem: (name, value) => {
+		if (suppressAccountScopedWrites) return;
 		const storage = getLocalStorage();
 		if (!storage) return;
 		storage.setItem(storageKey(name, readHiveAccount()), value);
 	},
 	removeItem: (name) => {
+		if (suppressAccountScopedWrites) return;
 		const storage = getLocalStorage();
 		if (!storage) return;
 		storage.removeItem(storageKey(name, readHiveAccount()));
@@ -121,6 +134,8 @@ export const accountScopedStorage: StateStorage = {
 
 interface PersistableStore {
 	persist: { rehydrate: () => Promise<void> | void };
+	getInitialState?: () => unknown;
+	setState?: (state: never, replace: true) => void;
 }
 
 const registeredStores = new Set<PersistableStore>();
@@ -176,10 +191,25 @@ if (lastAccount !== GUEST_BUCKET) {
 }
 
 useHiveDataStore.subscribe((state) => {
-	const next = state.user?.hiveUsername ?? GUEST_BUCKET;
+	const next = normalizeHiveAccount(state.user?.hiveUsername);
+	activeAccountFromStore = next;
 	if (next === lastAccount) return;
 	if (lastAccount === GUEST_BUCKET) migrateGuestBucketTo(next);
 	lastAccount = next;
+	// Reset in-memory state with writes suppressed so switching to an account
+	// with no saved bucket never retains the previous account's state (Zustand's
+	// rehydrate() is a no-op when storage returns null) and never overwrites an
+	// existing bucket for the new account before rehydrate() reads it.
+	suppressAccountScopedWrites = true;
+	try {
+		for (const store of registeredStores) {
+			if (typeof store.getInitialState === 'function' && typeof store.setState === 'function') {
+				store.setState(store.getInitialState() as never, true);
+			}
+		}
+	} finally {
+		suppressAccountScopedWrites = false;
+	}
 	for (const store of registeredStores) {
 		void store.persist.rehydrate();
 	}

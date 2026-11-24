@@ -24,6 +24,7 @@ export default function DuatClaimPopup() {
 	const dismissed = useDuatClaimStore(s => s.dismissed);
 	const claimPromptOpen = useDuatClaimStore(s => s.claimPromptOpen);
 	const claiming = useDuatClaimStore(s => s.claiming);
+	const claimError = useDuatClaimStore(s => s.error);
 	const pendingClaimTrxId = useDuatClaimStore(s => s.pendingClaimTrxId);
 	const checkAccount = useDuatClaimStore(s => s.checkAccount);
 	const claimPacks = useDuatClaimStore(s => s.claimPacks);
@@ -221,6 +222,12 @@ export default function DuatClaimPopup() {
 										{claimBlockedReason ?? 'Claim once with Hive Keychain. Packs appear after chain confirmation.'}
 									</p>
 
+									{claimError && (
+										<p role="alert" className="text-ember-300 text-xs mb-4 leading-relaxed">
+											{claimError}
+										</p>
+									)}
+
 									<div className="flex gap-3">
 										<button
 											onClick={dismiss}
@@ -250,7 +257,7 @@ export default function DuatClaimPopup() {
 												boxShadow: claimDisabled ? 'none' : '0 0 20px rgba(201, 164, 76, 0.3)',
 											}}
 										>
-											{claiming ? 'Claiming...' : !eligible ? 'Not Eligible' : claimBlockedReason ? 'Collection Pending' : 'Claim Packs'}
+											{claiming ? 'Claiming...' : !eligible ? 'Not Eligible' : claimBlockedReason ? (claimBlockedReason.includes('disabled in this testnet phase') ? 'Unavailable in Phase' : 'Collection Pending') : 'Claim Packs'}
 										</button>
 									</div>
 								</>

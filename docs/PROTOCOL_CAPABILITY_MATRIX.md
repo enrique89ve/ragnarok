@@ -68,8 +68,9 @@ an explicit Period 6 task.
 
 F1 `walletLogin=true` and `walletInvocation=false` is intentional: identity
 may be established, generic gameplay/claim wallet operations remain closed,
-and Quick Match is the sole narrow exception: `Accept` uses the separate
-`p2pMatchAcceptance=true` capability exactly once per player. Queue/search is
-unsigned and reuses the HTTP session; `session_authorize` reuses the accepted
-proof and never opens Keychain again. See the
+and Quick Match is the sole narrow exception: `Find` uses the separate
+`p2pMatchAcceptance=true` capability exactly once per player to sign the
+Posting delegation proof. `Accept` signs locally with the delegated ephemeral
+key (`sessionSig`), and `session_authorize` reuses the accepted proof without
+opening Keychain again. See the
 [phase explanation](./TESTNET_PHASES.md) and [migration runbook](./PHASE_MIGRATION_RUNBOOK.md).
