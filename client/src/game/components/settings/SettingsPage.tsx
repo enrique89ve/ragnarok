@@ -1,13 +1,33 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useSyncExternalStore } from 'react';
 import SettingsPanel from './SettingsPanel';
 import { useNFTUsername } from '../../nft/hooks';
 import { MetaPageHeader } from '../../../components/navigation/MetaPageHeader';
+import {
+	appUpdateManager,
+	formatVersionLabel,
+} from '../../../lib/appUpdateManager';
+import { RAGNAROK_NETWORK_CONFIG } from '../../config/networkConfig';
+
+function formatLastChecked(lastCheckedAt: number | null): string {
+	if (lastCheckedAt === null) return 'Not checked yet';
+	const deltaMs = Date.now() - lastCheckedAt;
+	if (deltaMs < 60_000) return 'Last checked just now';
+	const minutes = Math.floor(deltaMs / 60_000);
+	if (minutes < 60) return `Last checked ${minutes}m ago`;
+	const hours = Math.floor(minutes / 60);
+	return `Last checked ${hours}h ago`;
+}
 
 export default function SettingsPage() {
 	const hiveUsername = useNFTUsername();
 	const [saveStatus, setSaveStatus] = useState<string | null>(null);
 	const [saving, setSaving] = useState(false);
 	const fileRef = useRef<HTMLInputElement>(null);
+	const updateState = useSyncExternalStore(
+		appUpdateManager.subscribe,
+		appUpdateManager.getSnapshot,
+		appUpdateManager.getSnapshot,
+	);
 
 	const handleExportFile = async () => {
 		const { exportToFile } = await import('../../stores/saveStateManager');
@@ -27,6 +47,11 @@ export default function SettingsPage() {
 		if (fileRef.current) fileRef.current.value = '';
 	};
 
+	const installedLabel = formatVersionLabel(
+		updateState.currentAppVersion,
+		updateState.currentBuildHash,
+	);
+
 	return (
 		<div className="min-h-dvh w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-home-nav) text-ink-0">
 			<MetaPageHeader
@@ -37,6 +62,63 @@ export default function SettingsPage() {
 			/>
 
 			<main className="n-page-gutter mx-auto w-full max-w-2xl py-8">
+				<div className="bg-gray-900/60 border border-gray-800/60 rounded-xl p-6 mb-6">
+					<h2 className="text-lg font-bold text-amber-300 mb-1">App Version & Updates</h2>
+					<p className="text-gray-400 text-sm mb-4">
+						Installed build and manual update checks for Alfa Testnet deployments.
+					</p>
+
+					<div className="bg-gray-800/40 border border-gray-700/40 rounded-lg p-4 mb-4">
+						<div className="text-gray-300 text-sm font-bold mb-1">Installed</div>
+						<p className="text-white text-sm font-medium">{installedLabel}</p>
+						<p className="text-gray-500 text-xs mt-1">
+							Reset epoch: <span className="text-gray-400">{RAGNAROK_NETWORK_CONFIG.resetEpoch}</span>
+						</p>
+					</div>
+
+					{updateState.updateAvailable ? (
+						<div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-950/30 p-4">
+							<div className="text-amber-300 text-sm font-bold mb-1">Update available</div>
+							<p className="text-amber-100/90 text-sm mb-3">
+								{updateState.latestAppVersion || updateState.latestBuildHash
+									? formatVersionLabel(updateState.latestAppVersion, updateState.latestBuildHash)
+									: 'New version ready'}
+							</p>
+							<button
+								type="button"
+								disabled={updateState.isApplying}
+								onClick={() => void appUpdateManager.applyUpdate()}
+								className="w-full px-3 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-60 text-obsidian-950 text-sm rounded-lg transition-colors font-bold"
+							>
+								{updateState.isApplying ? 'Installing...' : 'Install New Version'}
+							</button>
+						</div>
+					) : (
+						<p className="text-gray-500 text-xs mb-4">
+							{updateState.isChecking ? 'Checking for updates...' : `Up to date · ${formatLastChecked(updateState.lastCheckedAt)}`}
+						</p>
+					)}
+
+					<div className="flex flex-wrap gap-2">
+						<button
+							type="button"
+							disabled={updateState.isChecking || updateState.isApplying}
+							onClick={() => void appUpdateManager.checkForUpdate()}
+							className="flex-1 min-w-[140px] px-3 py-2 bg-amber-700 hover:bg-amber-600 disabled:opacity-60 text-white text-sm rounded-lg transition-colors font-medium"
+						>
+							{updateState.isChecking ? 'Checking...' : 'Check for Updates'}
+						</button>
+						<button
+							type="button"
+							disabled={updateState.isApplying}
+							onClick={() => void appUpdateManager.forceReloadFresh()}
+							className="flex-1 min-w-[140px] px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-60 text-white text-sm rounded-lg transition-colors font-medium"
+						>
+							Refresh Cache
+						</button>
+					</div>
+				</div>
+
 				{/* ── Portable Save Section ── */}
 				<div className="bg-gray-900/60 border border-gray-800/60 rounded-xl p-6 mb-6">
 					<h2 className="text-lg font-bold text-amber-300 mb-1">Portable Save</h2>

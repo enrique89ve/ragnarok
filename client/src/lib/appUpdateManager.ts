@@ -1,10 +1,15 @@
+import { CAMPAIGN_REGISTRY_HASH } from '@shared/campaign/constants';
+import { RAGNAROK_NETWORK_CONFIG } from '../game/config/networkConfig';
 import { CHUNK_CACHE_BUST_QUERY } from './chunkLoadRecovery';
 
+declare const __APP_VERSION__: string | undefined;
 declare const __BUILD_HASH__: string;
+declare const __WASM_HASH__: string | undefined;
 
 export interface VersionManifest {
 	readonly buildHash: string;
 	readonly builtAt?: string;
+	readonly appVersion?: string;
 	readonly wasmHash?: string;
 	readonly campaignRegistryHash?: string;
 	readonly resetEpoch?: string;
@@ -15,14 +20,23 @@ export type AppUpdateReason = 'version-manifest' | 'service-worker' | null;
 export interface AppUpdateState {
 	readonly updateAvailable: boolean;
 	readonly isApplying: boolean;
+	readonly isChecking: boolean;
 	readonly currentBuildHash: string;
+	readonly currentAppVersion: string;
 	readonly latestBuildHash: string | null;
+	readonly latestAppVersion: string | null;
+	readonly latestBuiltAt: string | null;
+	readonly lastCheckedAt: number | null;
 	readonly reason: AppUpdateReason;
 	readonly dismissedForKey: string | null;
 }
 
 export interface AppUpdateManagerDeps {
 	readonly currentBuildHash?: string;
+	readonly currentAppVersion?: string;
+	readonly currentWasmHash?: string;
+	readonly currentCampaignRegistryHash?: string;
+	readonly currentResetEpoch?: string;
 	readonly baseUrl?: string;
 	readonly fetchImpl?: typeof fetch;
 	readonly isOnline?: () => boolean;
@@ -38,6 +52,7 @@ export interface AppUpdateManager {
 	attachServiceWorkerRegistration(registration: ServiceWorkerRegistration): void;
 	checkForUpdate(): Promise<boolean>;
 	applyUpdate(): Promise<void>;
+	forceReloadFresh(): Promise<void>;
 	dismissUpdate(): void;
 	startPolling(options?: {
 		readonly initialDelayMs?: number;
@@ -57,6 +72,40 @@ export function getCurrentBuildHash(): string {
 		: 'dev';
 }
 
+function getDefaultAppVersion(): string {
+	return typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION__
+		? String(__APP_VERSION__).trim()
+		: '0.0.0';
+}
+
+function getDefaultWasmHash(): string {
+	return typeof __WASM_HASH__ !== 'undefined' && __WASM_HASH__
+		? String(__WASM_HASH__).trim()
+		: '';
+}
+
+function getDefaultCampaignRegistryHash(): string {
+	return typeof CAMPAIGN_REGISTRY_HASH === 'string' ? CAMPAIGN_REGISTRY_HASH.trim() : '';
+}
+
+function getDefaultResetEpoch(): string {
+	return typeof RAGNAROK_NETWORK_CONFIG.resetEpoch === 'string'
+		? RAGNAROK_NETWORK_CONFIG.resetEpoch.trim()
+		: '';
+}
+
+export function formatVersionLabel(
+	appVersion: string | null | undefined,
+	buildHash: string | null | undefined,
+): string {
+	const version = typeof appVersion === 'string' ? appVersion.trim() : '';
+	const hash = typeof buildHash === 'string' ? buildHash.trim() : '';
+	if (version && hash) return `v${version} · ${hash}`;
+	if (version) return `v${version}`;
+	if (hash) return `Build ${hash}`;
+	return 'Unknown';
+}
+
 export function parseVersionManifest(payload: unknown): VersionManifest | null {
 	if (!payload || typeof payload !== 'object') return null;
 	const record = payload as Record<string, unknown>;
@@ -64,6 +113,7 @@ export function parseVersionManifest(payload: unknown): VersionManifest | null {
 	const buildHash = record.buildHash.trim();
 	if (!buildHash) return null;
 
+	const appVersion = typeof record.appVersion === 'string' ? record.appVersion.trim() : '';
 	const wasmHash = typeof record.wasmHash === 'string' ? record.wasmHash.trim() : '';
 	const campaignRegistryHash = typeof record.campaignRegistryHash === 'string'
 		? record.campaignRegistryHash.trim()
@@ -72,10 +122,41 @@ export function parseVersionManifest(payload: unknown): VersionManifest | null {
 	return {
 		buildHash,
 		builtAt: typeof record.builtAt === 'string' ? record.builtAt : undefined,
+		...(appVersion ? { appVersion } : {}),
 		...(wasmHash ? { wasmHash } : {}),
 		...(campaignRegistryHash ? { campaignRegistryHash } : {}),
 		...(resetEpoch ? { resetEpoch } : {}),
 	};
+}
+
+function fieldDiffers(
+	manifestValue: string | undefined,
+	currentValue: string,
+): boolean {
+	const remote = manifestValue?.trim() ?? '';
+	const current = currentValue.trim();
+	return Boolean(remote && current && remote !== current);
+}
+
+export function hasManifestUpdate(
+	manifest: VersionManifest,
+	currentBuildHash: string,
+	currentAppVersion: string,
+	currentWasmHash: string,
+	currentCampaignRegistryHash: string,
+	currentResetEpoch: string,
+): boolean {
+	const current = currentBuildHash.trim();
+	if (!current || current === 'dev') return false;
+
+	const remoteBuild = manifest.buildHash.trim();
+	if (remoteBuild === 'dev') return false;
+	if (remoteBuild && remoteBuild !== current) return true;
+	if (fieldDiffers(manifest.appVersion, currentAppVersion)) return true;
+	if (fieldDiffers(manifest.wasmHash, currentWasmHash)) return true;
+	if (fieldDiffers(manifest.campaignRegistryHash, currentCampaignRegistryHash)) return true;
+	if (fieldDiffers(manifest.resetEpoch, currentResetEpoch)) return true;
+	return false;
 }
 
 export function isNewerBuildHash(
@@ -89,8 +170,14 @@ export function isNewerBuildHash(
 	return current !== remote;
 }
 
-export function getUpdateDismissKey(state: Pick<AppUpdateState, 'latestBuildHash' | 'reason'>): string | null {
+export function getUpdateDismissKey(
+	state: Pick<AppUpdateState, 'latestBuildHash' | 'latestAppVersion' | 'reason'>,
+): string | null {
+	if (state.latestBuildHash && state.latestAppVersion) {
+		return `${state.latestBuildHash}:${state.latestAppVersion}`;
+	}
 	if (state.latestBuildHash) return state.latestBuildHash;
+	if (state.latestAppVersion) return state.latestAppVersion;
 	if (state.reason === 'service-worker') return 'service-worker';
 	return null;
 }
@@ -123,8 +210,24 @@ function resolveVersionManifestUrl(baseUrl: string, timestamp: number): string {
 	return `${normalizedBase}version.json?t=${timestamp}`;
 }
 
+function appUpdateStateChanged(prev: AppUpdateState, next: AppUpdateState): boolean {
+	return prev.updateAvailable !== next.updateAvailable
+		|| prev.isApplying !== next.isApplying
+		|| prev.isChecking !== next.isChecking
+		|| prev.latestBuildHash !== next.latestBuildHash
+		|| prev.latestAppVersion !== next.latestAppVersion
+		|| prev.latestBuiltAt !== next.latestBuiltAt
+		|| prev.lastCheckedAt !== next.lastCheckedAt
+		|| prev.reason !== next.reason
+		|| prev.dismissedForKey !== next.dismissedForKey;
+}
+
 export function createAppUpdateManager(deps: AppUpdateManagerDeps = {}): AppUpdateManager {
 	const currentBuildHash = deps.currentBuildHash ?? getCurrentBuildHash();
+	const currentAppVersion = deps.currentAppVersion ?? getDefaultAppVersion();
+	const currentWasmHash = deps.currentWasmHash ?? getDefaultWasmHash();
+	const currentCampaignRegistryHash = deps.currentCampaignRegistryHash ?? getDefaultCampaignRegistryHash();
+	const currentResetEpoch = deps.currentResetEpoch ?? getDefaultResetEpoch();
 	const baseUrl = deps.baseUrl ?? (import.meta.env?.BASE_URL || '/');
 	const fetchImpl = deps.fetchImpl ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
 	const isOnline = deps.isOnline ?? (() => (typeof navigator === 'undefined' ? true : navigator.onLine !== false));
@@ -142,8 +245,13 @@ export function createAppUpdateManager(deps: AppUpdateManagerDeps = {}): AppUpda
 	let state: AppUpdateState = {
 		updateAvailable: false,
 		isApplying: false,
+		isChecking: false,
 		currentBuildHash,
+		currentAppVersion,
 		latestBuildHash: null,
+		latestAppVersion: null,
+		latestBuiltAt: null,
+		lastCheckedAt: null,
 		reason: null,
 		dismissedForKey: null,
 	};
@@ -156,12 +264,7 @@ export function createAppUpdateManager(deps: AppUpdateManagerDeps = {}): AppUpda
 
 	function setState(patch: Partial<AppUpdateState>): void {
 		const next: AppUpdateState = { ...state, ...patch };
-		const changed = next.updateAvailable !== state.updateAvailable
-			|| next.isApplying !== state.isApplying
-			|| next.latestBuildHash !== state.latestBuildHash
-			|| next.reason !== state.reason
-			|| next.dismissedForKey !== state.dismissedForKey;
-		if (!changed) return;
+		if (!appUpdateStateChanged(state, next)) return;
 		state = next;
 		emit();
 	}
@@ -194,44 +297,65 @@ export function createAppUpdateManager(deps: AppUpdateManagerDeps = {}): AppUpda
 	}
 
 	async function checkForUpdate(): Promise<boolean> {
-		if (!isOnline()) return state.updateAvailable;
 		if (inFlightCheck) return inFlightCheck;
 
 		inFlightCheck = (async () => {
-			lastCheckAt = now();
-
-			if (registration) {
-				try {
-					await registration.update();
-				} catch {
-					// Non-fatal: continue with version.json check.
-				}
-				if (registration.waiting && Boolean(getSwContainer()?.controller)) {
-					markServiceWorkerUpdateAvailable();
-				}
-			}
+			setState({ isChecking: true });
+			const checkedAt = now();
+			lastCheckAt = checkedAt;
 
 			try {
-				const response = await fetchImpl(resolveVersionManifestUrl(baseUrl, now()), {
-					cache: 'no-store',
-					headers: { Accept: 'application/json' },
-				});
-				if (response.ok) {
-					const manifest = parseVersionManifest(await response.json());
-					if (manifest && isNewerBuildHash(currentBuildHash, manifest.buildHash)) {
-						setState({
-							updateAvailable: true,
-							latestBuildHash: manifest.buildHash,
-							reason: 'version-manifest',
-						});
-						return true;
+				if (!isOnline()) {
+					return state.updateAvailable;
+				}
+
+				if (registration) {
+					try {
+						await registration.update();
+					} catch {
+						// Non-fatal: continue with version.json check.
+					}
+					if (registration.waiting && Boolean(getSwContainer()?.controller)) {
+						markServiceWorkerUpdateAvailable();
 					}
 				}
-			} catch {
-				// Network hiccup or offline — ignore until next check.
-			}
 
-			return state.updateAvailable;
+				try {
+					const response = await fetchImpl(resolveVersionManifestUrl(baseUrl, now()), {
+						cache: 'no-store',
+						headers: { Accept: 'application/json' },
+					});
+					if (response.ok) {
+						const manifest = parseVersionManifest(await response.json());
+						if (
+							manifest
+							&& hasManifestUpdate(
+								manifest,
+								currentBuildHash,
+								currentAppVersion,
+								currentWasmHash,
+								currentCampaignRegistryHash,
+								currentResetEpoch,
+							)
+						) {
+							setState({
+								updateAvailable: true,
+								latestBuildHash: manifest.buildHash,
+								latestAppVersion: manifest.appVersion ?? null,
+								latestBuiltAt: manifest.builtAt ?? null,
+								reason: 'version-manifest',
+							});
+							return true;
+						}
+					}
+				} catch {
+					// Network hiccup or offline — ignore until next check.
+				}
+
+				return state.updateAvailable;
+			} finally {
+				setState({ isChecking: false, lastCheckedAt: checkedAt });
+			}
 		})().finally(() => {
 			inFlightCheck = null;
 		});
@@ -291,6 +415,10 @@ export function createAppUpdateManager(deps: AppUpdateManagerDeps = {}): AppUpda
 		}
 
 		reloadPage();
+	}
+
+	async function forceReloadFresh(): Promise<void> {
+		await applyUpdate();
 	}
 
 	function dismissUpdate(): void {
@@ -356,6 +484,7 @@ export function createAppUpdateManager(deps: AppUpdateManagerDeps = {}): AppUpda
 		attachServiceWorkerRegistration,
 		checkForUpdate,
 		applyUpdate,
+		forceReloadFresh,
 		dismissUpdate,
 		startPolling,
 	};

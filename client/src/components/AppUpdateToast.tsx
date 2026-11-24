@@ -1,9 +1,15 @@
-import React, { useSyncExternalStore } from 'react';
+import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { RotateCw, X } from 'lucide-react';
 import {
 	appUpdateManager,
+	formatVersionLabel,
 	isAppUpdateToastVisible,
 } from '../lib/appUpdateManager';
+
+function isLiveMatchRoute(): boolean {
+	if (typeof window === 'undefined') return false;
+	return /^#\/(game|multiplayer)\b/i.test(window.location.hash);
+}
 
 export const AppUpdateToast: React.FC = () => {
 	const state = useSyncExternalStore(
@@ -11,14 +17,22 @@ export const AppUpdateToast: React.FC = () => {
 		appUpdateManager.getSnapshot,
 		appUpdateManager.getSnapshot,
 	);
+	const [inLiveMatch, setInLiveMatch] = useState<boolean>(isLiveMatchRoute);
+
+	useEffect(() => {
+		const handleHashChange = () => setInLiveMatch(isLiveMatchRoute());
+		window.addEventListener('hashchange', handleHashChange);
+		return () => window.removeEventListener('hashchange', handleHashChange);
+	}, []);
 
 	if (!isAppUpdateToastVisible(state)) {
 		return null;
 	}
 
-	const revisionLabel = state.latestBuildHash
-		? `Build ${state.latestBuildHash}`
-		: 'New revision ready';
+	const hasVersionMeta = Boolean(state.latestAppVersion || state.latestBuildHash);
+	const revisionLabel = hasVersionMeta
+		? formatVersionLabel(state.latestAppVersion, state.latestBuildHash)
+		: 'New version ready';
 
 	return (
 		<div
@@ -41,16 +55,21 @@ export const AppUpdateToast: React.FC = () => {
 					</span>
 					<span className="min-w-0 flex-1">
 						<span className="block font-display text-xs font-bold uppercase tracking-[0.14em] text-gold-300">
-							{state.isApplying ? 'Updating Ragnarok...' : 'Update Available'}
+							{state.isApplying ? 'Installing...' : 'Update Available'}
 						</span>
 						<span className="mt-0.5 block text-xs text-ink-200">
 							{state.isApplying
 								? 'Refreshing workers & assets'
-								: `${revisionLabel} · Click to refresh`}
+								: `${revisionLabel} · Click to install`}
 						</span>
+						{!state.isApplying && inLiveMatch && (
+							<span className="mt-1 block text-[11px] text-ink-400">
+								Finish match before installing
+							</span>
+						)}
 					</span>
 					<span className="shrink-0 rounded border border-gold-300/60 bg-linear-to-b from-gold-300 to-gold-500 px-2.5 py-1 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-obsidian-950 transition-transform group-hover:scale-[1.03]">
-						{state.isApplying ? '...' : 'Update'}
+						{state.isApplying ? 'Installing...' : 'Install New Version'}
 					</span>
 				</button>
 

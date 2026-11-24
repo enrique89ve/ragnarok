@@ -16,12 +16,38 @@ const HIVE_PRIVATE_KEY_VALUE_RE = /^(?:PVT_[A-Z0-9]+_[1-9A-HJ-NP-Za-km-z]+|[5KL]
 const URL_CREDENTIALS_RE = /^[a-z][a-z0-9+.-]*:\/\/[^/?#\s:@]+:[^/?#\s@]+@/i;
 const URL_SECRET_QUERY_RE = /[?&](?:api_?key|key|secret|token|password|private)=/i;
 
-let buildHash = "dev";
-try {
-  buildHash = execSync("git rev-parse --short HEAD").toString().trim();
-} catch {
-  buildHash = Date.now().toString(36);
+const pkgJson = JSON.parse(
+  fs.readFileSync(path.resolve(__dirname, "package.json"), "utf8"),
+) as { version?: string };
+const appVersion = typeof pkgJson.version === "string" && pkgJson.version.trim()
+  ? pkgJson.version.trim()
+  : "0.0.0";
+
+function normalizeShaToShort(value: string): string {
+  const trimmed = value.trim();
+  if (/^[0-9a-f]{40}$/i.test(trimmed)) return trimmed.slice(0, 8);
+  return trimmed;
 }
+
+function resolveBuildHash(): string {
+  const envCandidates = [
+    process.env.VITE_BUILD_HASH,
+    process.env.SOURCE_COMMIT,
+    process.env.GIT_SHA,
+  ];
+  for (const raw of envCandidates) {
+    if (typeof raw !== "string" || !raw.trim()) continue;
+    const normalized = normalizeShaToShort(raw);
+    if (normalized) return normalized;
+  }
+  try {
+    return execSync("git rev-parse --short HEAD").toString().trim();
+  } catch {
+    return Date.now().toString(36);
+  }
+}
+
+const buildHash = resolveBuildHash();
 
 function computeWasmHash(): string {
   const wasmPath = path.resolve(__dirname, "client/public/engine.wasm");
@@ -37,6 +63,7 @@ const wasmHash = computeWasmHash();
 
 type VersionManifestFields = {
   readonly buildHash: string;
+  readonly appVersion: string;
   readonly wasmHash?: string;
   readonly campaignRegistryHash?: string;
   readonly resetEpoch?: string;
@@ -77,6 +104,7 @@ function emitVersionManifestPlugin(manifest: VersionManifestFields): Plugin {
     generateBundle() {
       const payload: Record<string, string> = {
         buildHash: manifest.buildHash,
+        appVersion: manifest.appVersion,
         builtAt: new Date().toISOString(),
       };
       if (manifest.wasmHash) payload.wasmHash = manifest.wasmHash;
@@ -101,6 +129,7 @@ export default defineConfig(({ command, mode }) => {
   const resetEpoch = String(resolvedEnv.VITE_RAGNAROK_RESET_EPOCH ?? '').trim();
   const versionManifest: VersionManifestFields = {
     buildHash,
+    appVersion,
     ...(wasmHash ? { wasmHash } : {}),
     ...(CAMPAIGN_REGISTRY_HASH ? { campaignRegistryHash: CAMPAIGN_REGISTRY_HASH } : {}),
     ...(resetEpoch ? { resetEpoch } : {}),
@@ -109,6 +138,7 @@ export default defineConfig(({ command, mode }) => {
   return {
     base: process.env.VITE_BASE_PATH || (command === 'build' ? './' : '/'),
     define: {
+      __APP_VERSION__: JSON.stringify(appVersion),
       __BUILD_HASH__: JSON.stringify(buildHash),
       __WASM_HASH__: JSON.stringify(wasmHash),
     },
