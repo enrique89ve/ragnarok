@@ -80,6 +80,16 @@ export function serveStatic(app: Express) {
         return;
       }
 
+      if (filePath.endsWith(".wasm") && !filePath.includes(`${path.sep}assets${path.sep}`)) {
+        res.setHeader("Cache-Control", "no-cache, must-revalidate");
+        return;
+      }
+
+      if (filePath.includes(`${path.sep}data${path.sep}`) && filePath.endsWith(".json")) {
+        res.setHeader("Cache-Control", "no-cache, must-revalidate");
+        return;
+      }
+
       if (filePath.includes(`${path.sep}assets${path.sep}`)) {
         res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
       }

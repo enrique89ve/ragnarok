@@ -98,6 +98,36 @@ function isVersionManifestRequest(url) {
 	return normalized === '/version.json';
 }
 
+function isNoCacheManifestRequest(url) {
+	var parsed = new URL(url);
+	var base = getBase();
+	var normalized = parsed.pathname.startsWith(base)
+		? '/' + parsed.pathname.slice(base.length)
+		: parsed.pathname;
+	return normalized === '/version.json' || normalized === '/manifest.json';
+}
+
+var VERSIONED_WASM_PATH_RE = /\/assets\/[^/]+[-.][A-Za-z0-9_-]{8,}\.wasm$/;
+var VERSIONED_WASM_QUERY_RE = /^[a-f0-9]{16,}$/i;
+
+function isWasmRequest(url) {
+	try {
+		return new URL(url).pathname.endsWith('.wasm');
+	} catch (error) {
+		return String(url).split('?')[0].endsWith('.wasm');
+	}
+}
+
+function isVersionedWasmRequest(url) {
+	if (VERSIONED_WASM_PATH_RE.test(url)) return true;
+	try {
+		var v = new URL(url).searchParams.get('v');
+		return Boolean(v && VERSIONED_WASM_QUERY_RE.test(v.trim()));
+	} catch (error) {
+		return false;
+	}
+}
+
 // Install: pre-cache index.html for offline navigation.
 // Do NOT auto-skipWaiting so active tabs can prompt the user before reloading.
 self.addEventListener('install', function(event) {
@@ -153,8 +183,14 @@ self.addEventListener('fetch', function(event) {
 	// They must never be served from an offline cache fallback.
 	if (isRuntimeApiRequest(request.url)) return;
 
-	// Build version manifest must always bypass cache so clients detect new deploys.
-	if (isVersionManifestRequest(request.url)) return;
+	// Build/version manifests must always bypass cache so clients detect new deploys.
+	if (isNoCacheManifestRequest(request.url)) return;
+
+	// Caller-controlled cache bypass (e.g. WASM hash-mismatch retry).
+	if (request.cache === 'no-store') {
+		event.respondWith(fetch(request));
+		return;
+	}
 
 	// Navigation: network-first with offline fallback to cached index.html
 	if (request.mode === 'navigate') {
@@ -218,12 +254,26 @@ self.addEventListener('fetch', function(event) {
 		return;
 	}
 
-	// WASM: cache-first (same binary per build)
-	if (request.url.endsWith('.wasm')) {
-		event.respondWith(
-			caches.match(request).then(function(cached) {
-				if (cached) return cached;
-				return fetch(request).then(function(response) {
+	// WASM: cache-first only when the URL carries an immutable content hash
+	if (isWasmRequest(request.url)) {
+		if (isVersionedWasmRequest(request.url)) {
+			event.respondWith(
+				caches.match(request).then(function(cached) {
+					if (cached) return cached;
+					return fetch(request).then(function(response) {
+						if (response.ok) {
+							var clone = response.clone();
+							caches.open(CACHE_NAME).then(function(cache) {
+								cache.put(request, clone);
+							});
+						}
+						return response;
+					});
+				})
+			);
+		} else {
+			event.respondWith(
+				fetch(request).then(function(response) {
 					if (response.ok) {
 						var clone = response.clone();
 						caches.open(CACHE_NAME).then(function(cache) {
@@ -231,9 +281,13 @@ self.addEventListener('fetch', function(event) {
 						});
 					}
 					return response;
-				});
-			})
-		);
+				}).catch(function() {
+					return caches.match(request).then(function(cached) {
+						return cached || new Response('', { status: 504, statusText: 'Gateway Timeout' });
+					});
+				})
+			);
+		}
 		return;
 	}
 

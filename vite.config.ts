@@ -5,6 +5,9 @@ import path, { dirname } from "path";
 import { fileURLToPath } from "url";
 import { execSync } from "child_process";
 import { visualizer } from "rollup-plugin-visualizer";
+import crypto from "node:crypto";
+import fs from "node:fs";
+import { CAMPAIGN_REGISTRY_HASH } from "./shared/campaign/constants";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -19,6 +22,25 @@ try {
 } catch {
   buildHash = Date.now().toString(36);
 }
+
+function computeWasmHash(): string {
+  const wasmPath = path.resolve(__dirname, "client/public/engine.wasm");
+  try {
+    if (!fs.existsSync(wasmPath)) return "";
+    return crypto.createHash("sha256").update(fs.readFileSync(wasmPath)).digest("hex");
+  } catch {
+    return "";
+  }
+}
+
+const wasmHash = computeWasmHash();
+
+type VersionManifestFields = {
+  readonly buildHash: string;
+  readonly wasmHash?: string;
+  readonly campaignRegistryHash?: string;
+  readonly resetEpoch?: string;
+};
 
 function assertNoSensitivePublicEnv(env: Record<string, string | undefined>): void {
   const blockedNames: string[] = [];
@@ -48,42 +70,52 @@ function assertNoSensitivePublicEnv(env: Record<string, string | undefined>): vo
   );
 }
 
-function emitVersionManifestPlugin(hash: string): Plugin {
+function emitVersionManifestPlugin(manifest: VersionManifestFields): Plugin {
   return {
     name: 'ragnarok-version-manifest',
     apply: 'build',
     generateBundle() {
+      const payload: Record<string, string> = {
+        buildHash: manifest.buildHash,
+        builtAt: new Date().toISOString(),
+      };
+      if (manifest.wasmHash) payload.wasmHash = manifest.wasmHash;
+      if (manifest.campaignRegistryHash) payload.campaignRegistryHash = manifest.campaignRegistryHash;
+      if (manifest.resetEpoch) payload.resetEpoch = manifest.resetEpoch;
       this.emitFile({
         type: 'asset',
         fileName: 'version.json',
-        source: JSON.stringify(
-          {
-            buildHash: hash,
-            builtAt: new Date().toISOString(),
-          },
-          null,
-          2,
-        ),
+        source: JSON.stringify(payload, null, 2),
       });
     },
   };
 }
 
 export default defineConfig(({ command, mode }) => {
-  assertNoSensitivePublicEnv({
+  const resolvedEnv = {
     ...process.env,
     ...loadEnv(mode, process.cwd(), ''),
-  });
+  };
+  assertNoSensitivePublicEnv(resolvedEnv);
+
+  const resetEpoch = String(resolvedEnv.VITE_RAGNAROK_RESET_EPOCH ?? '').trim();
+  const versionManifest: VersionManifestFields = {
+    buildHash,
+    ...(wasmHash ? { wasmHash } : {}),
+    ...(CAMPAIGN_REGISTRY_HASH ? { campaignRegistryHash: CAMPAIGN_REGISTRY_HASH } : {}),
+    ...(resetEpoch ? { resetEpoch } : {}),
+  };
 
   return {
     base: process.env.VITE_BASE_PATH || (command === 'build' ? './' : '/'),
     define: {
       __BUILD_HASH__: JSON.stringify(buildHash),
+      __WASM_HASH__: JSON.stringify(wasmHash),
     },
     plugins: [
       react(),
       tailwindcss(),
-      emitVersionManifestPlugin(buildHash),
+      emitVersionManifestPlugin(versionManifest),
       ...(command === 'build' ? [visualizer({ filename: 'dist/bundle-stats.html', gzipSize: true, brotliSize: true })] : []),
     ],
     resolve: {

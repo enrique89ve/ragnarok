@@ -5,6 +5,9 @@ declare const __BUILD_HASH__: string;
 export interface VersionManifest {
 	readonly buildHash: string;
 	readonly builtAt?: string;
+	readonly wasmHash?: string;
+	readonly campaignRegistryHash?: string;
+	readonly resetEpoch?: string;
 }
 
 export type AppUpdateReason = 'version-manifest' | 'service-worker' | null;
@@ -61,9 +64,17 @@ export function parseVersionManifest(payload: unknown): VersionManifest | null {
 	const buildHash = record.buildHash.trim();
 	if (!buildHash) return null;
 
+	const wasmHash = typeof record.wasmHash === 'string' ? record.wasmHash.trim() : '';
+	const campaignRegistryHash = typeof record.campaignRegistryHash === 'string'
+		? record.campaignRegistryHash.trim()
+		: '';
+	const resetEpoch = typeof record.resetEpoch === 'string' ? record.resetEpoch.trim() : '';
 	return {
 		buildHash,
 		builtAt: typeof record.builtAt === 'string' ? record.builtAt : undefined,
+		...(wasmHash ? { wasmHash } : {}),
+		...(campaignRegistryHash ? { campaignRegistryHash } : {}),
+		...(resetEpoch ? { resetEpoch } : {}),
 	};
 }
 

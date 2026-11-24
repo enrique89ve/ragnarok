@@ -24,6 +24,31 @@ describe('appUpdateManager', () => {
 		expect(parseVersionManifest({})).toBeNull();
 	});
 
+	it('parses optional wasm, campaign registry, and reset epoch fields only when non-empty', () => {
+		const wasmHash = 'f'.repeat(64);
+		expect(parseVersionManifest({
+			buildHash: 'abc123',
+			wasmHash,
+			campaignRegistryHash: 'reg789',
+			resetEpoch: 'alfa-testnet',
+		})).toEqual({
+			buildHash: 'abc123',
+			builtAt: undefined,
+			wasmHash,
+			campaignRegistryHash: 'reg789',
+			resetEpoch: 'alfa-testnet',
+		});
+		expect(parseVersionManifest({
+			buildHash: 'abc123',
+			wasmHash: '   ',
+			campaignRegistryHash: '',
+			resetEpoch: '  ',
+		})).toEqual({
+			buildHash: 'abc123',
+			builtAt: undefined,
+		});
+	});
+
 	it('detects newer build hashes and ignores dev builds', () => {
 		expect(isNewerBuildHash('abc1234', 'def5678')).toBe(true);
 		expect(isNewerBuildHash('abc1234', 'abc1234')).toBe(false);

@@ -14,6 +14,8 @@ import { serializeGameState } from './stateSerializer';
 import { exportCardDataToWasm } from './cardDataExporter';
 import type { WasmCardLoader } from './cardDataExporter';
 
+declare const __WASM_HASH__: string | undefined;
+
 let wasmExports: WasmExports | null = null;
 let wasmBinaryHash: string | null = null;
 let loadError: string | null = null;
@@ -40,18 +42,42 @@ async function computeBinaryHash(bytes: ArrayBuffer): Promise<string> {
 	return Array.from(hashArray).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+function getExpectedWasmHash(): string {
+	return typeof __WASM_HASH__ !== 'undefined' ? __WASM_HASH__.trim() : '';
+}
+
+function resolveWasmFetchUrl(): string {
+	const baseUrl = import.meta.env.BASE_URL + 'engine.wasm';
+	const expectedWasmHash = getExpectedWasmHash();
+	if (!expectedWasmHash) return baseUrl;
+	const separator = baseUrl.includes('?') ? '&' : '?';
+	return `${baseUrl}${separator}v=${encodeURIComponent(expectedWasmHash)}`;
+}
+
+async function fetchWasmBytes(init?: RequestInit): Promise<ArrayBuffer> {
+	const response = await fetch(resolveWasmFetchUrl(), init);
+	if (!response.ok) {
+		throw new Error('WASM module not found at /engine.wasm');
+	}
+	return response.arrayBuffer();
+}
+
 export async function initializeWasm(): Promise<boolean> {
 	if (wasmExports) return true;
 
 	try {
-		const response = await fetch(import.meta.env.BASE_URL + 'engine.wasm');
-		if (!response.ok) {
-			loadError = 'WASM module not found at /engine.wasm';
-			return false;
-		}
-
-		const bytes = await response.arrayBuffer();
+		const expectedWasmHash = getExpectedWasmHash();
+		let bytes = await fetchWasmBytes();
 		wasmBinaryHash = await computeBinaryHash(bytes);
+		if (expectedWasmHash && wasmBinaryHash !== expectedWasmHash) {
+			bytes = await fetchWasmBytes({ cache: 'no-store' });
+			wasmBinaryHash = await computeBinaryHash(bytes);
+			if (wasmBinaryHash !== expectedWasmHash) {
+				loadError = `WASM binary hash mismatch: expected ${expectedWasmHash}, got ${wasmBinaryHash}`;
+				wasmBinaryHash = null;
+				return false;
+			}
+		}
 
 		const adaptedImports = {
 			env: Object.setPrototypeOf({
@@ -197,7 +223,11 @@ export async function initializeWasm(): Promise<boolean> {
 
 		return true;
 	} catch (err) {
-		loadError = err instanceof Error ? err.message : 'Failed to load WASM';
+		if (err instanceof Error && err.message === 'WASM module not found at /engine.wasm') {
+			loadError = err.message;
+		} else {
+			loadError = err instanceof Error ? err.message : 'Failed to load WASM';
+		}
 		return false;
 	}
 }

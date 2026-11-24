@@ -167,6 +167,7 @@ __tests__/
 !client/src/game/match/localCardProjection.test.ts
 !client/src/game/match/modes/campaign/lifecycle.test.ts
 !shared/protocolPhaseMigration.test.ts
+!shared/staticDataIntegrity.test.ts
 !client/src/game/stores/dailyQuestClaim.test.ts
 !client/src/data/HiveSync.test.ts
 !server/middleware/protocolCapabilityGate.test.ts
@@ -287,6 +288,7 @@ __tests__/
 !server/routes/socialRoutes.starterGate.test.ts
 !server/routes/socialRoutes.ticketBoundary.test.ts
 !server/routes/starterClaimRoutes.test.ts
+!server/services/starterClaimRegistry.test.ts
 !server/services/httpRateLimitPolicy.test.ts
 !shared/p2pAvailability.test.ts
 !shared/p2pAvailability.securityBoundary.test.ts

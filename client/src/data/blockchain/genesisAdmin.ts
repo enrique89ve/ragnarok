@@ -23,6 +23,16 @@ import { RAGNAROK_APP_ID } from '../schemas/HiveTypes';
 import { getRagnarokCollectionId } from '../../game/config/networkConfig';
 import { debug } from '../../game/config/debugConfig';
 
+declare const __WASM_HASH__: string | undefined;
+
+function resolveEngineWasmUrl(): string {
+	const baseUrl = import.meta.env.BASE_URL + 'engine.wasm';
+	const expectedWasmHash = typeof __WASM_HASH__ !== 'undefined' ? __WASM_HASH__.trim() : '';
+	if (!expectedWasmHash) return baseUrl;
+	const separator = baseUrl.includes('?') ? '&' : '?';
+	return `${baseUrl}${separator}v=${encodeURIComponent(expectedWasmHash)}`;
+}
+
 /** Per-card supply caps — each unique card_id can have at most this many NFTs */
 const SUPPLY_CAPS: Record<string, number> = {
 	common:    2_000,
@@ -47,7 +57,7 @@ function requireGenesisSigner(): HiveBroadcastResult | null {
 export async function broadcastGenesis(): Promise<HiveBroadcastResult> {
 	let readerHash = '';
 	try {
-		const wasmBinary = await fetch(import.meta.env.BASE_URL + 'engine.wasm').then(r => r.arrayBuffer());
+		const wasmBinary = await fetch(resolveEngineWasmUrl()).then(r => r.arrayBuffer());
 		const hashBuffer = await crypto.subtle.digest('SHA-256', wasmBinary);
 		readerHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 	} catch (err) {
@@ -128,7 +138,7 @@ export async function buildUnsignedGenesisTx(): Promise<UnsignedGenesisTx> {
 
 	let readerHash = '';
 	try {
-		const wasmBinary = await fetch(import.meta.env.BASE_URL + 'engine.wasm').then(r => r.arrayBuffer());
+		const wasmBinary = await fetch(resolveEngineWasmUrl()).then(r => r.arrayBuffer());
 		const hashBuffer = await crypto.subtle.digest('SHA-256', wasmBinary);
 		readerHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 	} catch {
