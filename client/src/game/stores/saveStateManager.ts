@@ -9,12 +9,15 @@
  * starter card IDs — starter is a fixed entitlement reconstructed from code.
  */
 
+import { z } from 'zod';
 import { debug } from '../config/debugConfig';
 import { createRuntimeStorageKey } from '../config/networkConfig';
+import { StorageKeys } from '../config/storageKeys';
+import type { Difficulty } from '../campaign/campaignTypes';
 import { getNFTBridge } from '../nft';
 import { useStarterStore } from './starterStore';
 
-const LEGACY_STARTER_DECKS_STORAGE_KEY = createRuntimeStorageKey('ragnarok-decks');
+const STARTER_DECKS_STORAGE_KEY = createRuntimeStorageKey(StorageKeys.STARTER_DECKS);
 
 // ── Auto-Save on Milestones ──
 
@@ -65,12 +68,66 @@ export interface PortableSaveState {
 	checksum?: string;
 }
 
-function isObjectRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null;
+const DifficultySchema = z.enum(['normal', 'heroic', 'mythic']).catch('normal' as const);
+
+export const PortableSaveStateSchema = z.object({
+	version: z.literal(3),
+	timestamp: z.number().finite().nonnegative(),
+	campaign: z.object({
+		completedMissions: z.array(z.string().min(1)),
+		rewardsClaimed: z.array(z.string()).optional().default([]),
+		difficulty: DifficultySchema,
+	}),
+	decks: z.array(z.object({
+		name: z.string(),
+		heroId: z.string(),
+		cardIds: z.array(z.number().int()),
+	})),
+	quests: z.object({
+		activeQuestIds: z.array(z.string()),
+		completedToday: z.array(z.string()),
+		lastRefresh: z.number(),
+	}).optional(),
+	eitr: z.number().optional().default(0),
+	tutorialCompleted: z.boolean(),
+	tutorialStep: z.number().int().nonnegative(),
+	starterClaimed: z.boolean(),
+	settings: z.record(z.string(), z.unknown()),
+	checksum: z.string().optional(),
+});
+
+function parsePortableSaveState(input: unknown): { success: true; data: PortableSaveState } | { success: false; error: string } {
+	const result = PortableSaveStateSchema.safeParse(input);
+	if (!result.success) {
+		return { success: false, error: 'Invalid save file format' };
+	}
+	const parsed = result.data;
+	return {
+		success: true,
+		data: {
+			...parsed,
+			campaign: {
+				completedMissions: parsed.campaign.completedMissions,
+				rewardsClaimed: parsed.campaign.rewardsClaimed ?? [],
+				difficulty: parsed.campaign.difficulty,
+			},
+			quests: parsed.quests ?? {
+				activeQuestIds: [],
+				completedToday: [],
+				lastRefresh: 0,
+			},
+			eitr: parsed.eitr ?? 0,
+		},
+	};
 }
 
-function hasValidStarterClaimFlag(value: unknown): value is Pick<PortableSaveState, 'starterClaimed'> {
-	return isObjectRecord(value) && typeof value.starterClaimed === 'boolean';
+function isVolumeInRange(value: unknown): value is number {
+	return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1;
+}
+
+function resolveImportDifficulty(raw: string): Difficulty {
+	if (raw === 'heroic' || raw === 'mythic') return raw;
+	return 'normal';
 }
 
 // ── Collect State from All Stores ──
@@ -82,7 +139,7 @@ export async function collectSaveState(): Promise<PortableSaveState> {
 	const { useSettingsStore } = await import('./settingsStore');
 
 	const campaign = useCampaignStore.getState() as unknown as Record<string, unknown>;
-	const tutorial = useTutorialStore.getState() as unknown as Record<string, unknown>;
+	const tutorial = useTutorialStore.getState();
 	const starter = useStarterStore.getState();
 	const settings = useSettingsStore.getState() as unknown as Record<string, unknown>;
 
@@ -93,7 +150,7 @@ export async function collectSaveState(): Promise<PortableSaveState> {
 		: Array.isArray(rawMissions) ? rawMissions as string[] : [];
 
 	// Collect deck configs from localStorage
-	const decksRaw = localStorage.getItem(LEGACY_STARTER_DECKS_STORAGE_KEY);
+	const decksRaw = localStorage.getItem(STARTER_DECKS_STORAGE_KEY);
 	let decks: PortableSaveState['decks'] = [];
 	if (decksRaw) {
 		try {
@@ -114,7 +171,7 @@ export async function collectSaveState(): Promise<PortableSaveState> {
 		campaign: {
 			completedMissions: missionIds,
 			rewardsClaimed: [],
-			difficulty: String(campaign.difficulty ?? 'normal'),
+			difficulty: String(campaign.currentDifficulty ?? campaign.difficulty ?? 'normal'),
 		},
 		decks,
 		quests: {
@@ -123,8 +180,8 @@ export async function collectSaveState(): Promise<PortableSaveState> {
 			lastRefresh: 0,
 		},
 		eitr: 0,
-		tutorialCompleted: !!(tutorial.completed ?? tutorial.isComplete ?? false),
-		tutorialStep: Number(tutorial.currentStep ?? tutorial.step ?? 0),
+		tutorialCompleted: tutorial.tutorialDismissed,
+		tutorialStep: tutorial.currentStepIndex,
 		starterClaimed: starter.claimed ?? false,
 		settings: {
 			masterVolume: settings.masterVolume ?? settings.volume,
@@ -140,53 +197,81 @@ export async function collectSaveState(): Promise<PortableSaveState> {
 
 // ── Restore State to All Stores ──
 
-export async function restoreSaveState(state: PortableSaveState): Promise<{ success: boolean; error?: string }> {
+export async function restoreSaveState(
+	state: PortableSaveState,
+	options?: { allowInvalidChecksum?: boolean },
+): Promise<{ success: boolean; error?: string }> {
+	const parsed = parsePortableSaveState(state);
+	if (!parsed.success) {
+		return { success: false, error: parsed.error };
+	}
+	const validated = parsed.data;
+
 	try {
-		// Validate checksum
-		if (state.checksum) {
-			const expected = state.checksum;
-			const copy = { ...state, checksum: undefined };
+		if (validated.checksum) {
+			const expected = validated.checksum;
+			const copy = { ...validated, checksum: undefined };
 			const actual = await computeChecksum(copy);
 			if (actual !== expected) {
-				debug.warn('[SaveState] Checksum mismatch — state may have been tampered with');
-				// Continue anyway — starter entitlement has no economic value
+				if (!options?.allowInvalidChecksum) {
+					return { success: false, error: 'Save file checksum mismatch' };
+				}
+				debug.warn('[SaveState] Checksum mismatch — override allowed');
 			}
 		}
 
 		const { useCampaignStore } = await import('../campaign/campaignStore');
 		const { useTutorialStore } = await import('../tutorial/tutorialStore');
+		const { useSettingsStore } = await import('./settingsStore');
 
-		// Restore campaign (set state directly via Zustand).
-		// `rewardsClaimed` from v3 saves is intentionally ignored — the per-mission
-		// reward claim was collapsed into `rp_campaign_result` and the field is
-		// no longer part of the campaign store.
-		if (state.campaign) {
-			const campStore = useCampaignStore.getState() as unknown as Record<string, unknown>;
-			campStore.completedMissions = state.campaign.completedMissions;
-		}
+		const importDifficulty = resolveImportDifficulty(validated.campaign.difficulty);
+
+		useCampaignStore.setState((prev) => {
+			const merged = { ...prev.completedMissions };
+			for (const missionId of validated.campaign.completedMissions) {
+				const existing = merged[missionId];
+				if (existing) {
+					continue;
+				}
+				merged[missionId] = {
+					difficulty: importDifficulty,
+					completedAt: validated.timestamp,
+					bestTurns: 99,
+					bestDifficulty: importDifficulty,
+				};
+			}
+			return { completedMissions: merged };
+		});
 
 		// Eitr is chain-derived per ADR 0001 — no local restore. The vestigial
 		// `state.eitr` field is ignored; balance always comes from the chain.
 
-		// Restore tutorial state
-		if (state.tutorialCompleted) {
-			const tutStore = useTutorialStore.getState() as unknown as Record<string, unknown>;
-			const completeFn = (tutStore.complete ?? tutStore.markComplete) as (() => void) | undefined;
-			if (completeFn) completeFn();
+		useTutorialStore.setState({
+			tutorialDismissed: validated.tutorialCompleted,
+			currentStepIndex: validated.tutorialStep,
+		});
+
+		const settings = validated.settings;
+		const settingsStore = useSettingsStore.getState();
+		if (isVolumeInRange(settings.musicVolume)) {
+			settingsStore.setSetting('musicVolume', settings.musicVolume);
+		}
+		if (isVolumeInRange(settings.sfxVolume)) {
+			settingsStore.setSetting('sfxVolume', settings.sfxVolume);
 		}
 
 		// Restore starter claimed. Ownership is universal (no materialization);
 		// the seed of hero decks happens via ensureBridgeRuntime on next boot.
-		if (state.starterClaimed) {
+		if (validated.starterClaimed) {
 			useStarterStore.getState().markClaimed(getNFTBridge().getUsername());
 		}
 
 		// Restore decks
-		if (state.decks.length > 0) {
-			localStorage.setItem(LEGACY_STARTER_DECKS_STORAGE_KEY, JSON.stringify(state.decks));
+		if (validated.decks.length > 0) {
+			localStorage.setItem(STARTER_DECKS_STORAGE_KEY, JSON.stringify(validated.decks));
 		}
 
-		debug.log(`[SaveState] Restored: starter=${state.starterClaimed}, ${state.decks.length} decks, Eitr: ${state.eitr}`);
+		debug.log(`[SaveState] Restored: starter=${validated.starterClaimed}, ${validated.decks.length} decks, Eitr: ${validated.eitr}`);
 		return { success: true };
 	} catch (err) {
 		debug.warn('[SaveState] Restore failed:', err);
@@ -228,16 +313,11 @@ export async function importFromFile(file: File): Promise<{ success: boolean; er
 	try {
 		const text = await file.text();
 		const parsed: unknown = JSON.parse(text);
-		if (!isObjectRecord(parsed)) {
-			return { success: false, error: 'Invalid save file format' };
+		const validated = parsePortableSaveState(parsed);
+		if (!validated.success) {
+			return { success: false, error: validated.error };
 		}
-
-		if (parsed.version !== 3 || typeof parsed.timestamp !== 'number' || !hasValidStarterClaimFlag(parsed)) {
-			return { success: false, error: 'Invalid save file format' };
-		}
-
-		const state = parsed as PortableSaveState;
-		return restoreSaveState(state);
+		return restoreSaveState(validated.data);
 	} catch (err) {
 		return { success: false, error: `Failed to parse save file: ${err}` };
 	}
@@ -249,7 +329,11 @@ async function computeChecksum(state: Omit<PortableSaveState, 'checksum'>): Prom
 	const str = JSON.stringify({
 		v: state.version,
 		t: state.timestamp,
-		c: state.campaign.completedMissions.sort(),
+		c: [...state.campaign.completedMissions].sort(),
+		d: state.campaign.difficulty,
+		decks: state.decks,
+		tc: state.tutorialCompleted,
+		ts: state.tutorialStep,
 		e: state.eitr,
 		s: state.starterClaimed,
 	});

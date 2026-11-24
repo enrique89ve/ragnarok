@@ -31,6 +31,7 @@ import {
 } from './schemas/HiveTypes';
 import { signHiveMessage } from './HiveAuth';
 import { createRuntimeStorageKey } from '../game/config/networkConfig';
+import { StorageKeys } from '../game/config/storageKeys';
 
 type BattleHiveSignatureOptions = Readonly<{
   username?: string;
@@ -58,6 +59,8 @@ function buildBattleHiveSignatureOptions(
 }
 
 interface HiveDataStore extends HiveGameState {
+  isHydrated: boolean;
+  hydratedAccount: string | null;
   setUser: (user: HiveUserRecord) => void;
   updateStats: (stats: Partial<HivePlayerStats>) => void;
   recordMatchResult: (match: HiveMatchResult, opponentElo?: number) => void;
@@ -73,6 +76,28 @@ interface HiveDataStore extends HiveGameState {
   logout: () => void;
 }
 
+export const HIVE_DATA_PERSIST_VERSION = 2;
+
+export function partializeHiveDataPersistState(state: HiveDataStore): Partial<HiveDataStore> {
+	return { user: state.user };
+}
+
+export function migrateHiveDataPersistState(persistedState: unknown, fromVersion: number): unknown {
+	if (fromVersion < HIVE_DATA_PERSIST_VERSION) {
+		const legacy = (persistedState ?? {}) as Record<string, unknown>;
+		const rawUser = legacy.user;
+		let user: HiveUserRecord | null = null;
+		if (rawUser && typeof rawUser === 'object') {
+			const hiveUsername = (rawUser as HiveUserRecord).hiveUsername;
+			if (typeof hiveUsername === 'string' && hiveUsername.length > 0) {
+				user = rawUser as HiveUserRecord;
+			}
+		}
+		return { user };
+	}
+	return persistedState;
+}
+
 // Register on globalThis so game-engine can access without circular import
 export const useHiveDataStore = create<HiveDataStore>()(
   persist(
@@ -84,11 +109,28 @@ export const useHiveDataStore = create<HiveDataStore>()(
       tokenBalance: null,
       recentMatches: [],
       pendingTransactions: [],
+      isHydrated: false,
+      hydratedAccount: null,
 
-      setUser: (user) => set({
-        user,
-        stats: get().stats || { ...DEFAULT_PLAYER_STATS },
-        tokenBalance: get().tokenBalance || { ...DEFAULT_TOKEN_BALANCE, hiveUsername: user.hiveUsername },
+      setUser: (user) => set((state) => {
+        if (state.user?.hiveUsername !== user.hiveUsername) {
+          return {
+            user,
+            cardCollection: [],
+            packCollection: [],
+            recentMatches: [],
+            pendingTransactions: [],
+            stats: { ...DEFAULT_PLAYER_STATS },
+            tokenBalance: { ...DEFAULT_TOKEN_BALANCE, hiveUsername: user.hiveUsername },
+            isHydrated: false,
+            hydratedAccount: null,
+          };
+        }
+        return {
+          user,
+          stats: state.stats || { ...DEFAULT_PLAYER_STATS },
+          tokenBalance: state.tokenBalance || { ...DEFAULT_TOKEN_BALANCE, hiveUsername: user.hiveUsername },
+        };
       }),
 
       updateStats: (statsUpdate) => set((state) => ({
@@ -180,6 +222,8 @@ export const useHiveDataStore = create<HiveDataStore>()(
         tokenBalance: hiveState.tokenBalance ?? state.tokenBalance,
         recentMatches: hiveState.recentMatches ?? state.recentMatches,
         pendingTransactions: [],
+        isHydrated: true,
+        hydratedAccount: hiveState.user?.hiveUsername ?? state.user?.hiveUsername ?? null,
       })),
 
       logout: () => set({
@@ -190,18 +234,16 @@ export const useHiveDataStore = create<HiveDataStore>()(
         tokenBalance: null,
         recentMatches: [],
         pendingTransactions: [],
+        isHydrated: false,
+        hydratedAccount: null,
       }),
     }),
     {
-      name: createRuntimeStorageKey('ragnarok-hive-data'),
-      partialize: (state) => ({
-        user: state.user,
-        stats: state.stats,
-        cardCollection: state.cardCollection,
-        packCollection: state.packCollection ?? [],
-        tokenBalance: state.tokenBalance,
-        recentMatches: state.recentMatches.slice(0, 20),
-      }),
+      name: createRuntimeStorageKey(StorageKeys.HIVE_DATA),
+      version: HIVE_DATA_PERSIST_VERSION,
+      migrate: (persistedState, fromVersion) =>
+        migrateHiveDataPersistState(persistedState, fromVersion) as Partial<HiveDataStore>,
+      partialize: (state): Partial<HiveDataStore> => partializeHiveDataPersistState(state),
     }
   )
 );

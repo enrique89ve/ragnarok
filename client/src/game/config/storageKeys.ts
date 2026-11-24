@@ -3,13 +3,18 @@
  *
  * Centralized localStorage keys used across the project.
  * Avoids magic strings and simplifies maintenance.
- * 
+ *
  * Added from Enrique's fork - Jan 31, 2026
  */
 
 export const StorageKeys = {
+	// Hive session identity (minimal bootstrap for accountScopedStorage)
+	HIVE_DATA: 'ragnarok-hive-data',
+
 	// Decks
+	/** Legacy underscore key; prefer STARTER_DECKS (`ragnarok-decks`) at runtime via createRuntimeStorageKey. */
 	RAGNAROK_DECKS: 'ragnarok_decks',
+	STARTER_DECKS: 'ragnarok-decks',
 	DECK_BUILDER: 'deck-builder-storage',
 	HERO_DECKS: 'ragnarok-hero-decks',
 	LAST_PLAYED_DECK_ID: 'lastPlayedDeckId',

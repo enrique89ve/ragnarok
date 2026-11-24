@@ -25,10 +25,11 @@ import {
 	createRuntimeStorageKey,
 	getRagnarokNetworkConfig,
 } from '../../game/config/networkConfig';
+import { StorageKeys } from '../../game/config/storageKeys';
 
 export const GUEST_ACCOUNT_ID = 'guest';
 const GUEST_BUCKET = GUEST_ACCOUNT_ID;
-const LEGACY_HIVE_STORE_KEY = 'ragnarok-hive-data';
+const LEGACY_HIVE_STORE_KEY = StorageKeys.HIVE_DATA;
 const HIVE_STORE_KEY = createRuntimeStorageKey(LEGACY_HIVE_STORE_KEY);
 
 interface PersistedHiveBlob {
