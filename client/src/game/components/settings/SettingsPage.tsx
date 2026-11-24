@@ -103,7 +103,7 @@ export default function SettingsPage() {
 						<button
 							type="button"
 							disabled={updateState.isChecking || updateState.isApplying}
-							onClick={() => void appUpdateManager.checkForUpdate()}
+							onClick={() => void appUpdateManager.checkForUpdate({ forcePrompt: true })}
 							className="flex-1 min-w-[140px] px-3 py-2 bg-amber-700 hover:bg-amber-600 disabled:opacity-60 text-white text-sm rounded-lg transition-colors font-medium"
 						>
 							{updateState.isChecking ? 'Checking...' : 'Check for Updates'}

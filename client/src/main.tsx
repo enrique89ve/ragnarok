@@ -92,7 +92,7 @@ function registerProductionServiceWorker(): void {
 
   if (!hasServiceWorkerSupport()) return;
 
-  window.addEventListener('load', () => {
+  const registerSw = (): void => {
     const resetEpoch = encodeURIComponent(RAGNAROK_NETWORK_CONFIG.resetEpoch);
     const swPath = `${import.meta.env.BASE_URL}sw.js?resetEpoch=${resetEpoch}`;
     navigator.serviceWorker.register(swPath, { scope: import.meta.env.BASE_URL, updateViaCache: 'none' })
@@ -100,7 +100,13 @@ function registerProductionServiceWorker(): void {
         appUpdateManager.attachServiceWorkerRegistration(reg);
       })
       .catch(() => {});
-  });
+  };
+
+  if (document.readyState === 'complete') {
+    registerSw();
+  } else {
+    window.addEventListener('load', registerSw, { once: true });
+  }
 }
 
 function renderApp(): void {

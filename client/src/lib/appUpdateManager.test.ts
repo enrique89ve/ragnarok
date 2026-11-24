@@ -3,6 +3,7 @@ import {
 	createAppUpdateManager,
 	formatVersionLabel,
 	hasManifestUpdate,
+	isAppUpdatePromptVisible,
 	isAppUpdateToastVisible,
 	isNewerBuildHash,
 	parseVersionManifest,
@@ -347,6 +348,71 @@ describe('appUpdateManager', () => {
 		expect(clearRagnarokCaches).toHaveBeenCalledTimes(1);
 		expect(postMessage).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
 		expect(reloadPage).toHaveBeenCalledTimes(1);
+	});
+
+	it('checkForUpdate with forcePrompt clears dismissal when update is already available', async () => {
+		const manager = createAppUpdateManager({
+			currentBuildHash: 'rev1111',
+			currentAppVersion: '1.0.0',
+			fetchImpl: vi.fn<typeof fetch>().mockResolvedValue(
+				createFakeResponse({ buildHash: 'rev2222', appVersion: '1.1.0' }),
+			),
+			isOnline: () => true,
+		});
+
+		await manager.checkForUpdate();
+		expect(isAppUpdatePromptVisible(manager.getSnapshot())).toBe(true);
+
+		manager.dismissUpdate();
+		expect(isAppUpdatePromptVisible(manager.getSnapshot())).toBe(false);
+		expect(manager.getSnapshot().dismissedForKey).not.toBeNull();
+
+		const found = await manager.checkForUpdate({ forcePrompt: true });
+		expect(found).toBe(true);
+		expect(manager.getSnapshot().dismissedForKey).toBeNull();
+		expect(isAppUpdatePromptVisible(manager.getSnapshot())).toBe(true);
+	});
+
+	it('checkForUpdate with forcePrompt clears dismissal when update is newly discovered', async () => {
+		const manager = createAppUpdateManager({
+			currentBuildHash: 'rev1111',
+			currentAppVersion: '1.0.0',
+			fetchImpl: vi.fn<typeof fetch>().mockResolvedValue(
+				createFakeResponse({ buildHash: 'rev2222', appVersion: '1.1.0' }),
+			),
+			isOnline: () => true,
+		});
+
+		manager.dismissUpdate();
+		expect(manager.getSnapshot().dismissedForKey).toBeNull();
+
+		const found = await manager.checkForUpdate({ forcePrompt: true });
+		expect(found).toBe(true);
+		expect(manager.getSnapshot().dismissedForKey).toBeNull();
+		expect(isAppUpdatePromptVisible(manager.getSnapshot())).toBe(true);
+	});
+
+	it('checkForUpdate without forcePrompt keeps dismissedForKey when still on same version', async () => {
+		const manager = createAppUpdateManager({
+			currentBuildHash: 'rev1111',
+			currentAppVersion: '1.0.0',
+			fetchImpl: vi.fn<typeof fetch>().mockResolvedValue(
+				createFakeResponse({ buildHash: 'rev2222', appVersion: '1.1.0' }),
+			),
+			isOnline: () => true,
+		});
+
+		await manager.checkForUpdate();
+		manager.dismissUpdate();
+		const dismissedKey = manager.getSnapshot().dismissedForKey;
+		expect(dismissedKey).not.toBeNull();
+
+		await manager.checkForUpdate();
+		expect(manager.getSnapshot().dismissedForKey).toBe(dismissedKey);
+		expect(isAppUpdateToastVisible(manager.getSnapshot())).toBe(false);
+
+		await manager.checkForUpdate({ forcePrompt: false });
+		expect(manager.getSnapshot().dismissedForKey).toBe(dismissedKey);
 	});
 
 	it('forceReloadFresh delegates to applyUpdate', async () => {

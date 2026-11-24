@@ -50,7 +50,7 @@ export interface AppUpdateManager {
 	getSnapshot(): AppUpdateState;
 	subscribe(listener: () => void): () => void;
 	attachServiceWorkerRegistration(registration: ServiceWorkerRegistration): void;
-	checkForUpdate(): Promise<boolean>;
+	checkForUpdate(options?: { readonly forcePrompt?: boolean }): Promise<boolean>;
 	applyUpdate(): Promise<void>;
 	forceReloadFresh(): Promise<void>;
 	dismissUpdate(): void;
@@ -61,7 +61,7 @@ export interface AppUpdateManager {
 	}): () => void;
 }
 
-const DEFAULT_INITIAL_DELAY_MS = 5_000;
+const DEFAULT_INITIAL_DELAY_MS = 2_000;
 const DEFAULT_POLL_INTERVAL_MS = 3 * 60 * 1000;
 const DEFAULT_VISIBILITY_THROTTLE_MS = 30_000;
 const CONTROLLER_CHANGE_TIMEOUT_MS = 1_500;
@@ -188,6 +188,9 @@ export function isAppUpdateToastVisible(state: AppUpdateState): boolean {
 	return key === null || state.dismissedForKey !== key;
 }
 
+/** Alias for prompt visibility (modal or toast). */
+export const isAppUpdatePromptVisible = isAppUpdateToastVisible;
+
 async function defaultClearRagnarokCaches(): Promise<void> {
 	if (typeof window === 'undefined' || !('caches' in window)) return;
 	const cacheNames = await window.caches.keys();
@@ -296,8 +299,21 @@ export function createAppUpdateManager(deps: AppUpdateManagerDeps = {}): AppUpda
 		});
 	}
 
-	async function checkForUpdate(): Promise<boolean> {
-		if (inFlightCheck) return inFlightCheck;
+	function applyForcePromptIfNeeded(
+		found: boolean,
+		options?: { readonly forcePrompt?: boolean },
+	): boolean {
+		if (options?.forcePrompt && found) {
+			setState({ dismissedForKey: null });
+		}
+		return found;
+	}
+
+	async function checkForUpdate(options?: { readonly forcePrompt?: boolean }): Promise<boolean> {
+		if (inFlightCheck) {
+			const found = await inFlightCheck;
+			return applyForcePromptIfNeeded(found, options);
+		}
 
 		inFlightCheck = (async () => {
 			setState({ isChecking: true });
@@ -360,7 +376,8 @@ export function createAppUpdateManager(deps: AppUpdateManagerDeps = {}): AppUpda
 			inFlightCheck = null;
 		});
 
-		return inFlightCheck;
+		const found = await inFlightCheck;
+		return applyForcePromptIfNeeded(found, options);
 	}
 
 	async function activateWaitingServiceWorker(): Promise<void> {
