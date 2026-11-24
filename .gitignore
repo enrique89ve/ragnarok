@@ -163,6 +163,9 @@ __tests__/
 !client/src/game/match/modes/campaign/lifecycle.integration.test.ts
 !shared/verifyRuntimeEnv.test.ts
 !server/services/chainStateMigration.test.ts
+!server/services/chainState.contract.test.ts
+!server/services/chainState.persistence.test.ts
+!server/services/pgStateAdapter.test.ts
 !server/viteLogger.test.ts
 !client/src/game/match/modes/p2p/lifecycle.test.ts
 !client/src/game/runtime/phaseCapabilityGate.test.ts

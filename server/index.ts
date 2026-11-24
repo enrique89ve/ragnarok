@@ -384,6 +384,13 @@ app.use('/api/testnet/rune', (_req, res) => {
       log(`[shutdown] failed to stop chain indexer worker: ${formatShutdownError(err)}`);
     }
 
+    try {
+      const { flushPersistenceAsync } = await import('./services/chainState');
+      await flushPersistenceAsync();
+    } catch (err) {
+      log(`[shutdown] failed to flush chain state: ${formatShutdownError(err)}`);
+    }
+
     await stunService.stop();
 
     const forcedExit = setTimeout(() => {

@@ -1,7 +1,7 @@
 # Plan de Mejoras de Base de Datos, Datos Estáticos, Caché y Reconciliación
 
-Estado: propuesto  
-Base revisada: `main` (`349dcd83`)  
+Estado: Fases 0–3 implementadas y verificadas (Fase 4 bloqueada hasta ceremonia `session_renewal` aprobada)  
+Base inicial: `main` (`349dcd83`)  
 Referencias normativas: `docs/adr/0002-state-authority-boundaries.md`, `docs/adr/0009-local-settlement-and-phase-profiles.md`, `docs/PHASE_MIGRATION_RUNBOOK.md`
 
 ## 1. Objetivo

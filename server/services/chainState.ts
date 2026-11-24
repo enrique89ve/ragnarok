@@ -11,6 +11,7 @@
  */
 
 import fs from 'fs';
+import fsPromises from 'fs/promises';
 import path from 'path';
 import { z } from 'zod';
 import type {
@@ -483,23 +484,15 @@ const ChainStateContractSchema = z.object({
 	syncTargetBlock: NonNegativeInt.default(0).catch(0),
 });
 
+/** Stricter players validation when loading from disk (no .catch on players). */
+const ChainStatePersistedFileSchema = ChainStateContractSchema.extend({
+	players: z.array(Pair(PlayerRecordSchema)).default([]),
+});
+
 type ChainStateContract = z.infer<typeof ChainStateContractSchema>;
 
-function parseChainStatePayload(raw: string, initialBlockCursor: number): ChainStateContract {
-	let payload: unknown;
-	try {
-		payload = JSON.parse(raw);
-	} catch (err) {
-		console.warn('[chainState] Invalid JSON in state file, using defaults:', err);
-		return normalizeChainStatePayload(undefined, initialBlockCursor, true);
-	}
-	if (payload && typeof payload === 'object' && !('runtimeFingerprint' in payload)) {
-		const error = new Error('persisted chain state missing runtime fingerprint') as Error & { code: string };
-		error.code = 'fingerprint_mismatch';
-		throw error;
-	}
-
-	return normalizeChainStatePayload(payload, initialBlockCursor, false);
+function chainStateParseFailureIsFingerprintMismatch(issues: z.ZodIssue[]): boolean {
+	return issues.some((issue) => issue.path[0] === 'runtimeFingerprint');
 }
 
 function normalizeChainStatePayload(
@@ -631,6 +624,87 @@ const QUEUE_STATE_EXPIRY_MS = 10 * 60 * 1000;
 
 let _saveTimer: ReturnType<typeof setInterval> | null = null;
 let _dirty = false;
+let _saveSeq = 0;
+let _saveInFlight: Promise<void> | null = null;
+let _savePendingAgain = false;
+const RECOVERY_MODE_ENV = 'RAGNAROK_CHAIN_STATE_RECOVERY_MODE';
+
+type ChainStateRecoveryMode = 'rebuild' | 'fail';
+
+function getChainStateRecoveryMode(): ChainStateRecoveryMode {
+	const configured = process.env[RECOVERY_MODE_ENV]?.trim();
+	return configured === 'fail' ? 'fail' : 'rebuild';
+}
+
+function nextTempStatePath(stateFile: string): string {
+	return `${stateFile}.${process.pid}.${Date.now()}.${++_saveSeq}.tmp`;
+}
+
+function quarantineCorruptStateFile(stateFile: string): string | undefined {
+	const quarantinePath = `${stateFile}.corrupt-${Date.now()}`;
+	try {
+		fs.copyFileSync(stateFile, quarantinePath);
+		fs.unlinkSync(stateFile);
+		console.warn(
+			`[chainState] Quarantined corrupt persisted chain state to ${getStateFileDisplayPath(quarantinePath)}`,
+		);
+		return quarantinePath;
+	} catch (err) {
+		console.warn('[chainState] Failed to quarantine corrupt chain state file:', err);
+		return undefined;
+	}
+}
+
+function handleCorruptPersistedState(stateFile: string, initialBlockCursor: number): void {
+	quarantineCorruptStateFile(stateFile);
+	if (getChainStateRecoveryMode() === 'fail') {
+		const error = new Error('persisted chain state file is corrupt') as Error & { code: string };
+		error.code = 'chain_state_corrupt';
+		throw error;
+	}
+	importState(createEmptyChainStateSnapshot(getCurrentServerProtocolRuntimeFingerprint(), initialBlockCursor));
+	console.log(
+		`[chainState] Rebuilt empty state after corrupt file: blockCursor=${lastIrreversibleBlockProcessed}, target=${_syncTargetBlock}`,
+	);
+}
+
+function writeSerializedStateSync(json: string, stateFile: string): void {
+	const tmpFile = nextTempStatePath(stateFile);
+	try {
+		ensureDataDir();
+		const fd = fs.openSync(tmpFile, 'w', STATE_FILE_MODE);
+		fs.writeFileSync(fd, json, { encoding: 'utf8' });
+		fs.fsyncSync(fd);
+		fs.closeSync(fd);
+		fs.renameSync(tmpFile, stateFile);
+	} catch (err) {
+		try {
+			if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile);
+		} catch {
+			// best-effort temp cleanup
+		}
+		throw err;
+	}
+}
+
+async function writeSerializedStateAsync(json: string, stateFile: string): Promise<void> {
+	const tmpFile = nextTempStatePath(stateFile);
+	try {
+		ensureDataDir();
+		const fileHandle = await fsPromises.open(tmpFile, 'w', STATE_FILE_MODE);
+		await fileHandle.writeFile(json, 'utf8');
+		await fileHandle.sync();
+		await fileHandle.close();
+		await fsPromises.rename(tmpFile, stateFile);
+	} catch (err) {
+		try {
+			await fsPromises.unlink(tmpFile);
+		} catch {
+			// best-effort temp cleanup
+		}
+		throw err;
+	}
+}
 
 // ---------------------------------------------------------------------------
 // Persistence
@@ -732,7 +806,43 @@ export function loadState(): void {
 			return;
 		}
 		const raw = fs.readFileSync(stateFile, 'utf8');
-		const data = parseChainStatePayload(raw, initialBlockCursor);
+		let payload: unknown;
+		try {
+			payload = JSON.parse(raw);
+		} catch {
+			handleCorruptPersistedState(stateFile, initialBlockCursor);
+			return;
+		}
+		if (payload && typeof payload === 'object' && !('runtimeFingerprint' in payload)) {
+			const error = new Error('persisted chain state missing runtime fingerprint') as Error & { code: string };
+			error.code = 'fingerprint_mismatch';
+			throw error;
+		}
+		const parsed = ChainStatePersistedFileSchema.safeParse(payload);
+		if (!parsed.success) {
+			if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+				handleCorruptPersistedState(stateFile, initialBlockCursor);
+				return;
+			}
+			if (chainStateParseFailureIsFingerprintMismatch(parsed.error.issues)) {
+				const error = new Error('invalid persisted runtime fingerprint') as Error & { code: string };
+				error.code = 'fingerprint_mismatch';
+				throw error;
+			}
+			handleCorruptPersistedState(stateFile, initialBlockCursor);
+			return;
+		}
+		const data = {
+			...parsed.data,
+			lastIrreversibleBlockProcessed: Math.max(
+				parsed.data.lastIrreversibleBlockProcessed ?? initialBlockCursor,
+				initialBlockCursor,
+			),
+			syncTargetBlock:
+				parsed.data.syncTargetBlock
+				?? parsed.data.irreversibleBlock
+				?? parsed.data.lastIrreversibleBlockProcessed,
+		};
 		assertProtocolRuntimeFingerprint(currentFingerprint, data.runtimeFingerprint);
 
 		players.clear();
@@ -816,6 +926,7 @@ export function loadState(): void {
 		console.log(`[chainState] Loaded: file=${getStateFileDisplayPath(stateFile)}, ${players.size} players, ${cards.size} cards, ${matches.length} matches, blockCursor=${lastIrreversibleBlockProcessed}, target=${_syncTargetBlock}, blocksBehind=${getCurrentBlocksBehind()}, inSync=${_inSync}`);
 	} catch (err) {
 		if (err instanceof Error && (err as { code?: string }).code === 'fingerprint_mismatch') throw err;
+		if (err instanceof Error && (err as { code?: string }).code === 'chain_state_corrupt') throw err;
 		console.warn('[chainState] Failed to load state:', err);
 	}
 }
@@ -823,16 +934,51 @@ export function loadState(): void {
 export function saveState(): void {
 	if (!_dirty) return;
 	try {
-		ensureDataDir();
-		const data = exportState();
 		const stateFile = getStateFilePath();
-		const tmpFile = `${stateFile}.tmp`;
-		fs.writeFileSync(tmpFile, JSON.stringify(data), { encoding: 'utf8', mode: STATE_FILE_MODE });
-		fs.renameSync(tmpFile, stateFile);
+		writeSerializedStateSync(JSON.stringify(exportState()), stateFile);
 		_dirty = false;
 	} catch (err) {
 		console.warn('[chainState] Failed to save state:', err);
 	}
+}
+
+async function runAsyncSaveLoop(): Promise<void> {
+	let failed = false;
+	try {
+		for (;;) {
+			if (!_dirty && !_savePendingAgain) break;
+			_savePendingAgain = false;
+			if (!_dirty) continue;
+			_dirty = false;
+			const stateFile = getStateFilePath();
+			await writeSerializedStateAsync(JSON.stringify(exportState()), stateFile);
+		}
+	} catch (err) {
+		console.warn('[chainState] Failed to save state asynchronously:', err);
+		_dirty = true;
+		failed = true;
+	} finally {
+		_saveInFlight = null;
+		if (!failed && (_dirty || _savePendingAgain)) {
+			void saveStateAsync();
+		}
+	}
+}
+
+export async function saveStateAsync(): Promise<void> {
+	if (_saveInFlight) {
+		if (_dirty) _savePendingAgain = true;
+		return _saveInFlight;
+	}
+	if (!_dirty && !_savePendingAgain) return;
+
+	_saveInFlight = runAsyncSaveLoop();
+	return _saveInFlight;
+}
+
+export async function flushPersistenceAsync(): Promise<void> {
+	if (_saveInFlight) await _saveInFlight;
+	await saveStateAsync();
 }
 
 export function exportState(): SerializedState {
@@ -960,7 +1106,9 @@ function markDirty(): void {
 export function startPersistence(): void {
 	if (_saveTimer) return;
 	assertStateFileWritable();
-	_saveTimer = setInterval(saveState, SAVE_INTERVAL_MS);
+	_saveTimer = setInterval(() => {
+		void saveStateAsync();
+	}, SAVE_INTERVAL_MS);
 }
 
 export function stopPersistence(): void {
