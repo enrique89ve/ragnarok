@@ -10,6 +10,7 @@ import { readP2PMatchTicket, type P2PMatchTicket } from '@shared/p2pAvailability
 import { sha256 } from '@noble/hashes/sha2.js';
 
 import { createRuntimeDatabaseName, createRuntimeStorageKey, getRagnarokNetworkConfig } from '../config/networkConfig';
+import { createManagedIndexedDB } from '../../lib/storage/idbLifecycle';
 import type { GameState } from '../types';
 import type { ArmySelection } from '../types/ChessTypes';
 import type { RoundFlowState } from '../flow/round/types';
@@ -22,6 +23,16 @@ export const P2P_MATCH_REJOIN_ATTEMPTS = 2;
 const SESSION_KEY = createRuntimeStorageKey('p2p-match-resume');
 const DB_NAME = createRuntimeDatabaseName('p2p-match-resume');
 const STORE_NAME = 'records';
+
+const resumeIdb = createManagedIndexedDB({
+	name: DB_NAME,
+	version: 1,
+	onUpgrade: (db) => {
+		if (!db.objectStoreNames.contains(STORE_NAME)) {
+			db.createObjectStore(STORE_NAME, { keyPath: 'account' });
+		}
+	},
+});
 
 export type P2PCombatResumeSnapshot = {
 	readonly chessPieces: unknown;
@@ -436,22 +447,11 @@ function clearSessionRecord(): void {
 
 function openResumeDb(): Promise<IDBDatabase | null> {
 	if (typeof indexedDB === 'undefined') return Promise.resolve(null);
-	return new Promise((resolve) => {
-		let req: IDBOpenDBRequest;
-		try {
-			req = indexedDB.open(DB_NAME, 1);
-		} catch {
-			resolve(null);
-			return;
-		}
-		req.onupgradeneeded = () => {
-			if (!req.result.objectStoreNames.contains(STORE_NAME)) {
-				req.result.createObjectStore(STORE_NAME, { keyPath: 'account' });
-			}
-		};
-		req.onsuccess = () => resolve(req.result);
-		req.onerror = () => resolve(null);
-	});
+	return resumeIdb.open().catch(() => null);
+}
+
+export function closeP2PResumeDBForTests(): void {
+	resumeIdb.close();
 }
 
 let saveQueue: Promise<boolean> = Promise.resolve(false);
@@ -509,7 +509,6 @@ async function saveResumeExclusive(record: P2PMatchResumeRecord): Promise<boolea
 		tx.oncomplete = () => resolve(accepted);
 		tx.onerror = () => resolve(false);
 	});
-	db.close();
 	if (wrote) commitAcceptedRecord(record);
 	return wrote;
 }
@@ -528,7 +527,6 @@ async function readIndexedRecord(account: string, now: number): Promise<P2PMatch
 		req.onsuccess = () => resolve(req.result ?? null);
 		req.onerror = () => resolve(null);
 	});
-	db.close();
 	const parsed = readP2PMatchResumeRecord(stored, now);
 	return parsed && parsed.account === account ? parsed : null;
 }
@@ -553,5 +551,4 @@ export async function clearP2PMatchResume(): Promise<void> {
 		tx.oncomplete = () => resolve();
 		tx.onerror = () => resolve();
 	});
-	db.close();
 }

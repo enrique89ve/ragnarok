@@ -11,59 +11,79 @@ import type {
 	IndexEntry, LeaderboardEntry, IndexSyncMeta,
 } from '../../../../shared/indexer-types';
 import { createRuntimeDatabaseName } from '../../game/config/networkConfig';
+import { createManagedIndexedDB } from '../../lib/storage/idbLifecycle';
 
 const DB_NAME = createRuntimeDatabaseName('index-v1');
 const DB_VERSION = 1;
 
-let dbInstance: IDBDatabase | null = null;
-let dbPending: Promise<IDBDatabase> | null = null;
+const indexIdb = createManagedIndexedDB({
+	name: DB_NAME,
+	version: DB_VERSION,
+	onUpgrade: (db) => {
+		if (!db.objectStoreNames.contains('global_ops')) {
+			const opsStore = db.createObjectStore('global_ops', {
+				keyPath: ['trxId', 'opIndexInBlock'],
+			});
+			opsStore.createIndex('by_player', 'player', { unique: false });
+			opsStore.createIndex('by_action', 'action', { unique: false });
+			opsStore.createIndex('by_block', 'blockNum', { unique: false });
+			opsStore.createIndex('by_player_action', ['player', 'action'], { unique: false });
+			opsStore.createIndex('by_counterparty', 'counterparty', { unique: false });
+		}
+
+		if (!db.objectStoreNames.contains('global_leaderboard')) {
+			db.createObjectStore('global_leaderboard', { keyPath: 'username' });
+		}
+
+		if (!db.objectStoreNames.contains('global_supply')) {
+			db.createObjectStore('global_supply', { keyPath: 'key' });
+		}
+
+		if (!db.objectStoreNames.contains('index_sync')) {
+			db.createObjectStore('index_sync', { keyPath: 'key' });
+		}
+	},
+});
 
 export function getIndexDB(): Promise<IDBDatabase> {
-	if (dbInstance) return Promise.resolve(dbInstance);
-	if (dbPending) return dbPending;
+	return indexIdb.open();
+}
 
-	dbPending = new Promise<IDBDatabase>((resolve, reject) => {
-		const request = indexedDB.open(DB_NAME, DB_VERSION);
+export function closeIndexDBForTests(): void {
+	indexIdb.close();
+}
 
-		request.onupgradeneeded = () => {
-			const db = request.result;
+// ============================================================
+// Runtime validation
+// ============================================================
 
-			if (!db.objectStoreNames.contains('global_ops')) {
-				const opsStore = db.createObjectStore('global_ops', {
-					keyPath: ['trxId', 'opIndexInBlock'],
-				});
-				opsStore.createIndex('by_player', 'player', { unique: false });
-				opsStore.createIndex('by_action', 'action', { unique: false });
-				opsStore.createIndex('by_block', 'blockNum', { unique: false });
-				opsStore.createIndex('by_player_action', ['player', 'action'], { unique: false });
-				opsStore.createIndex('by_counterparty', 'counterparty', { unique: false });
-			}
+function parseLeaderboardEntry(raw: unknown): LeaderboardEntry | undefined {
+	if (!raw || typeof raw !== 'object') return undefined;
+	const row = raw as Record<string, unknown>;
+	if (typeof row.username !== 'string' || row.username.length === 0) return undefined;
+	if (typeof row.elo !== 'number' || !Number.isFinite(row.elo)) return undefined;
+	if (typeof row.wins !== 'number' || !Number.isSafeInteger(row.wins) || row.wins < 0) return undefined;
+	if (typeof row.losses !== 'number' || !Number.isSafeInteger(row.losses) || row.losses < 0) return undefined;
+	if (typeof row.rank !== 'number' || !Number.isSafeInteger(row.rank)) return undefined;
+	return raw as LeaderboardEntry;
+}
 
-			if (!db.objectStoreNames.contains('global_leaderboard')) {
-				db.createObjectStore('global_leaderboard', { keyPath: 'username' });
-			}
+function parseSupplyRow(raw: unknown): { key: string; pool: string; cap: number; minted: number } | undefined {
+	if (!raw || typeof raw !== 'object') return undefined;
+	const row = raw as Record<string, unknown>;
+	if (typeof row.key !== 'string') return undefined;
+	if (typeof row.pool !== 'string') return undefined;
+	if (typeof row.cap !== 'number' || !Number.isFinite(row.cap)) return undefined;
+	if (typeof row.minted !== 'number' || !Number.isFinite(row.minted)) return undefined;
+	return { key: row.key, pool: row.pool, cap: row.cap, minted: row.minted };
+}
 
-			if (!db.objectStoreNames.contains('global_supply')) {
-				db.createObjectStore('global_supply', { keyPath: 'key' });
-			}
-
-			if (!db.objectStoreNames.contains('index_sync')) {
-				db.createObjectStore('index_sync', { keyPath: 'key' });
-			}
-		};
-
-		request.onsuccess = () => {
-			dbInstance = request.result;
-			resolve(dbInstance);
-		};
-
-		request.onerror = () => {
-			dbPending = null;
-			reject(request.error);
-		};
-	});
-
-	return dbPending;
+function parseIndexSyncMeta(raw: unknown): IndexSyncMeta | undefined {
+	if (!raw || typeof raw !== 'object') return undefined;
+	const row = raw as Record<string, unknown>;
+	if (typeof row.key !== 'string') return undefined;
+	if (typeof row.value !== 'string' && typeof row.value !== 'number') return undefined;
+	return { key: row.key, value: row.value };
 }
 
 // ============================================================
@@ -71,33 +91,29 @@ export function getIndexDB(): Promise<IDBDatabase> {
 // ============================================================
 
 async function idbPut<T>(storeName: string, value: T): Promise<void> {
-	const db = await getIndexDB();
-	return new Promise((resolve, reject) => {
-		const tx = db.transaction(storeName, 'readwrite');
+	await indexIdb.runWriteTransaction(storeName, (tx) => {
 		tx.objectStore(storeName).put(value);
-		tx.oncomplete = () => resolve();
-		tx.onerror = () => reject(tx.error);
 	});
 }
 
 async function idbGet<T>(storeName: string, key: string | number | string[]): Promise<T | undefined> {
-	const db = await getIndexDB();
-	return new Promise((resolve, reject) => {
-		const tx = db.transaction(storeName, 'readonly');
-		const req = tx.objectStore(storeName).get(key);
-		req.onsuccess = () => resolve(req.result as T | undefined);
-		req.onerror = () => reject(req.error);
-	});
+	return indexIdb.runReadTransaction(storeName, 'readonly', (tx) =>
+		new Promise((resolve, reject) => {
+			const req = tx.objectStore(storeName).get(key);
+			req.onsuccess = () => resolve(req.result as T | undefined);
+			req.onerror = () => reject(req.error);
+		}),
+	);
 }
 
 async function idbGetAll<T>(storeName: string): Promise<T[]> {
-	const db = await getIndexDB();
-	return new Promise((resolve, reject) => {
-		const tx = db.transaction(storeName, 'readonly');
-		const req = tx.objectStore(storeName).getAll();
-		req.onsuccess = () => resolve(req.result as T[]);
-		req.onerror = () => reject(req.error);
-	});
+	return indexIdb.runReadTransaction(storeName, 'readonly', (tx) =>
+		new Promise((resolve, reject) => {
+			const req = tx.objectStore(storeName).getAll();
+			req.onsuccess = () => resolve(req.result as T[]);
+			req.onerror = () => reject(req.error);
+		}),
+	);
 }
 
 async function idbGetByIndex<T>(
@@ -105,23 +121,13 @@ async function idbGetByIndex<T>(
 	indexName: string,
 	key: string | number | string[],
 ): Promise<T[]> {
-	const db = await getIndexDB();
-	return new Promise((resolve, reject) => {
-		const tx = db.transaction(storeName, 'readonly');
-		const req = tx.objectStore(storeName).index(indexName).getAll(key);
-		req.onsuccess = () => resolve(req.result as T[]);
-		req.onerror = () => reject(req.error);
-	});
-}
-
-async function idbClear(storeName: string): Promise<void> {
-	const db = await getIndexDB();
-	return new Promise((resolve, reject) => {
-		const tx = db.transaction(storeName, 'readwrite');
-		tx.objectStore(storeName).clear();
-		tx.oncomplete = () => resolve();
-		tx.onerror = () => reject(tx.error);
-	});
+	return indexIdb.runReadTransaction(storeName, 'readonly', (tx) =>
+		new Promise((resolve, reject) => {
+			const req = tx.objectStore(storeName).index(indexName).getAll(key);
+			req.onsuccess = () => resolve(req.result as T[]);
+			req.onerror = () => reject(req.error);
+		}),
+	);
 }
 
 // ============================================================
@@ -130,15 +136,11 @@ async function idbClear(storeName: string): Promise<void> {
 
 export async function putIndexEntries(entries: IndexEntry[]): Promise<void> {
 	if (entries.length === 0) return;
-	const db = await getIndexDB();
-	return new Promise((resolve, reject) => {
-		const tx = db.transaction('global_ops', 'readwrite');
+	await indexIdb.runWriteTransaction('global_ops', (tx) => {
 		const store = tx.objectStore('global_ops');
 		for (const entry of entries) {
 			store.put(entry);
 		}
-		tx.oncomplete = () => resolve();
-		tx.onerror = () => reject(tx.error);
 	});
 }
 
@@ -159,21 +161,20 @@ export async function getOpsByBlock(blockNum: number): Promise<IndexEntry[]> {
 // ============================================================
 
 export async function putLeaderboard(entries: LeaderboardEntry[]): Promise<void> {
-	await idbClear('global_leaderboard');
-	const db = await getIndexDB();
-	return new Promise((resolve, reject) => {
-		const tx = db.transaction('global_leaderboard', 'readwrite');
+	await indexIdb.runWriteTransaction('global_leaderboard', (tx) => {
 		const store = tx.objectStore('global_leaderboard');
+		store.clear();
 		for (const entry of entries) {
 			store.put(entry);
 		}
-		tx.oncomplete = () => resolve();
-		tx.onerror = () => reject(tx.error);
 	});
 }
 
 export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
-	const entries = await idbGetAll<LeaderboardEntry>('global_leaderboard');
+	const rows = await idbGetAll<unknown>('global_leaderboard');
+	const entries = rows
+		.map(parseLeaderboardEntry)
+		.filter((entry): entry is LeaderboardEntry => entry !== undefined);
 	return entries.sort((a, b) => a.rank - b.rank);
 }
 
@@ -186,21 +187,18 @@ export async function updateLeaderboardEntry(entry: LeaderboardEntry): Promise<v
 // ============================================================
 
 export async function putSupplyCounters(counters: Record<string, { pool: string; cap: number; minted: number }>): Promise<void> {
-	await idbClear('global_supply');
-	const db = await getIndexDB();
-	return new Promise((resolve, reject) => {
-		const tx = db.transaction('global_supply', 'readwrite');
+	await indexIdb.runWriteTransaction('global_supply', (tx) => {
 		const store = tx.objectStore('global_supply');
+		store.clear();
 		for (const [key, value] of Object.entries(counters)) {
 			store.put({ key, ...value });
 		}
-		tx.oncomplete = () => resolve();
-		tx.onerror = () => reject(tx.error);
 	});
 }
 
 export async function getSupplyCounter(key: string): Promise<{ pool: string; cap: number; minted: number } | undefined> {
-	return idbGet('global_supply', key);
+	const raw = await idbGet<unknown>('global_supply', key);
+	return raw === undefined ? undefined : parseSupplyRow(raw);
 }
 
 // ============================================================
@@ -208,7 +206,8 @@ export async function getSupplyCounter(key: string): Promise<{ pool: string; cap
 // ============================================================
 
 export async function getSyncMeta(key: string): Promise<string | number | undefined> {
-	const record = await idbGet<IndexSyncMeta>('index_sync', key);
+	const raw = await idbGet<unknown>('index_sync', key);
+	const record = raw === undefined ? undefined : parseIndexSyncMeta(raw);
 	return record?.value;
 }
 
@@ -226,15 +225,21 @@ export async function applyOptimisticElo(
 	wins: number,
 	losses: number,
 ): Promise<void> {
-	const existing = await idbGet<LeaderboardEntry>('global_leaderboard', username);
-	const entry: LeaderboardEntry = {
-		username,
-		elo: eloAfter,
-		wins: existing ? existing.wins + wins : wins,
-		losses: existing ? existing.losses + losses : losses,
-		rank: existing?.rank ?? 9999,
-	};
-	await idbPut('global_leaderboard', entry);
+	await indexIdb.runWriteTransaction('global_leaderboard', (tx) => {
+		const store = tx.objectStore('global_leaderboard');
+		const request = store.get(username);
+		request.onsuccess = () => {
+			const existing = parseLeaderboardEntry(request.result);
+			const entry: LeaderboardEntry = {
+				username,
+				elo: eloAfter,
+				wins: existing ? existing.wins + wins : wins,
+				losses: existing ? existing.losses + losses : losses,
+				rank: existing?.rank ?? 9999,
+			};
+			store.put(entry);
+		};
+	});
 }
 
 // ============================================================
@@ -242,8 +247,12 @@ export async function applyOptimisticElo(
 // ============================================================
 
 export async function clearAllIndexData(): Promise<void> {
-	await idbClear('global_ops');
-	await idbClear('global_leaderboard');
-	await idbClear('global_supply');
-	await idbClear('index_sync');
+	await indexIdb.runWriteTransaction(
+		['global_ops', 'global_leaderboard', 'global_supply', 'index_sync'],
+		(tx) => {
+			for (const name of ['global_ops', 'global_leaderboard', 'global_supply', 'index_sync'] as const) {
+				tx.objectStore(name).clear();
+			}
+		},
+	);
 }

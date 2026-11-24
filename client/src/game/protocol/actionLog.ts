@@ -32,6 +32,7 @@
 import { canonicalize } from './canonicalJson';
 import type { ActionLeaf } from './transcript';
 import { createRuntimeDatabaseName } from '../config/networkConfig';
+import { createManagedIndexedDB } from '../../lib/storage/idbLifecycle';
 
 // ─── Public surface ────────────────────────────────────────────────────────
 
@@ -41,6 +42,17 @@ const DB_NAME = createRuntimeDatabaseName('action-log');
 const DB_VERSION = 1;
 const STORE_NAME = 'leaves';
 const INDEX_BY_MATCH = 'byMatch';
+
+const actionLogIdb = createManagedIndexedDB({
+	name: DB_NAME,
+	version: DB_VERSION,
+	onUpgrade: (db) => {
+		if (!db.objectStoreNames.contains(STORE_NAME)) {
+			const store = db.createObjectStore(STORE_NAME, { keyPath: ['matchId', 'seq'] });
+			store.createIndex(INDEX_BY_MATCH, 'matchId', { unique: false });
+		}
+	},
+});
 const HKDF_INFO = new TextEncoder().encode('ragnarok-action-log-v1');
 const QUOTA_WARNING_MESSAGE = 'Storage unavailable — using in-memory action log.';
 
@@ -99,24 +111,7 @@ export async function open(): Promise<DbHandle> {
 }
 
 function openRealDb(): Promise<IDBDatabase> {
-	return new Promise((resolve, reject) => {
-		let req: IDBOpenDBRequest;
-		try {
-			req = indexedDB.open(DB_NAME, DB_VERSION);
-		} catch (err) {
-			reject(err);
-			return;
-		}
-		req.onupgradeneeded = () => {
-			const db = req.result;
-			if (!db.objectStoreNames.contains(STORE_NAME)) {
-				const store = db.createObjectStore(STORE_NAME, { keyPath: ['matchId', 'seq'] });
-				store.createIndex(INDEX_BY_MATCH, 'matchId', { unique: false });
-			}
-		};
-		req.onsuccess = () => resolve(req.result);
-		req.onerror = () => reject(req.error);
-	});
+	return actionLogIdb.open();
 }
 
 // ─── deriveEncKey ──────────────────────────────────────────────────────────
@@ -200,10 +195,10 @@ export async function appendLeaf(
 function txPut(db: IDBDatabase, row: CipherRow): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const tx = db.transaction(STORE_NAME, 'readwrite');
-		const store = tx.objectStore(STORE_NAME);
-		const req = store.put(row);
-		req.onsuccess = () => resolve();
-		req.onerror = () => reject(req.error);
+		tx.objectStore(STORE_NAME).put(row);
+		tx.oncomplete = () => resolve();
+		tx.onerror = () => reject(tx.error);
+		tx.onabort = () => reject(tx.error ?? new Error('action log write aborted'));
 	});
 }
 
@@ -299,4 +294,5 @@ export function _resetForTests(): void {
 	inMemoryFallback = false;
 	inMemoryStore.clear();
 	quotaWarningEmitted = false;
+	actionLogIdb.close();
 }

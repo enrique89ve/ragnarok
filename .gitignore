@@ -141,6 +141,10 @@ __tests__/
 !client/src/data/blockchain/replayDB.localCampaign.test.ts
 !client/src/data/blockchain/replayDB.localDailyQuest.test.ts
 !client/src/data/blockchain/replayDB.phaseMigration.test.ts
+!client/src/lib/storage/idbLifecycle.test.ts
+!client/src/data/blockchain/replayDB.hardening.test.ts
+!client/src/data/indexer/indexDB.test.ts
+!client/src/data/blockchain/transcriptIPFS.test.ts
 !client/src/game/subscribers/localP2PSettlement.test.ts
 !client/src/game/p2p/deckHandshakeAuthority.test.ts
 !client/src/game/p2p/p2pMultiProfileF1.integration.test.ts

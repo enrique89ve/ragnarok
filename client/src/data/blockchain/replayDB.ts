@@ -29,10 +29,25 @@
  *   forge_commits    keyed by trxId             — forge commit-reveal records (ADR 0001 §3)
  *
  * All writes are idempotent — safe to re-apply the same op.
- * DB version 19 — upgrade handler creates any missing stores.
+ * DB version 21 — upgrade handler creates any missing stores; v21 adds corrupt_records.
  */
 
 import type { HiveCardAsset, HiveMatchResult, HiveTokenBalance } from '../schemas/HiveTypes';
+import { createManagedIndexedDB } from '../../lib/storage/idbLifecycle';
+import { calculateSeasonScore } from '@shared/protocol-core/runeEconomy';
+import { projectEloMatch } from '@shared/protocol-core/eloEconomy';
+import {
+	corruptRecordId,
+	parseEitrLedgerEntry,
+	parseEloRating,
+	parseHiveCardAsset,
+	parseRuneLedgerEntry,
+	parseSyncCursor,
+	parseTokenBalance,
+	parseLocalSettlementRecord,
+	parseLocalCampaignSettlement,
+	type CorruptRecordRow,
+} from './replayDBValidation';
 import type { MigrationDecision } from '@shared/protocolPhaseMigration';
 import { DEFAULT_TOKEN_BALANCE } from '../schemas/HiveTypes';
 import { DEFAULT_ELO_RATING } from './hiveConfig';
@@ -65,11 +80,170 @@ const replayPhase = getProtocolPhaseId(getRagnarokRuntimePhase(replayRuntime));
 const DB_NAME = createRuntimeDatabaseName(replayPhase === 'local-gameplay-v1'
 	? 'chain-v1'
 	: `chain-v1-campaign-proof-${replayRuntime.legacyCampaignResultLastBlock ?? 0}`);
-const DB_VERSION = 20;
+const DB_VERSION = 21;
+const CORRUPT_RECORDS_STORE = 'corrupt_records';
 const LOCAL_CAMPAIGN_EITR_STORE = 'local_campaign_eitr';
 const NORSE_FINALE_EITR = { missionId: 'norse-9', amount: 40 } as const;
 
-let _db: IDBDatabase | null = null;
+function installReplayDbStores(db: IDBDatabase, upgradeTransaction: IDBTransaction | null): void {
+	if (!db.objectStoreNames.contains('phase_migrations')) db.createObjectStore('phase_migrations', { keyPath: 'migrationId' });
+
+	if (!db.objectStoreNames.contains('cards')) {
+		const cards = db.createObjectStore('cards', { keyPath: 'uid' });
+		cards.createIndex('by_owner', 'ownerId', { unique: false });
+	}
+
+	if (!db.objectStoreNames.contains('matches')) {
+		const matches = db.createObjectStore('matches', { keyPath: 'matchId' });
+		matches.createIndex('by_participant', 'participants', {
+			unique: false,
+			multiEntry: true,
+		});
+	}
+
+	const settlements = db.objectStoreNames.contains('local_settlements')
+		? upgradeTransaction!.objectStore('local_settlements')
+		: db.createObjectStore('local_settlements', { keyPath: 'eventId' });
+	if (!settlements.indexNames.contains('by_match_id')) settlements.createIndex('by_match_id', 'matchId', { unique: false });
+	if (!settlements.indexNames.contains('by_reset_epoch')) settlements.createIndex('by_reset_epoch', 'resetEpoch', { unique: false });
+	if (!settlements.indexNames.contains('by_account')) settlements.createIndex('by_account', 'participants', { unique: false, multiEntry: true });
+	const localCards = db.objectStoreNames.contains('local_card_progression')
+		? upgradeTransaction!.objectStore('local_card_progression')
+		: db.createObjectStore('local_card_progression', { keyPath: 'updateId' });
+	if (!localCards.indexNames.contains('by_uid')) localCards.createIndex('by_uid', 'uid', { unique: false });
+	if (!localCards.indexNames.contains('by_event_id')) localCards.createIndex('by_event_id', 'eventId', { unique: false });
+	if (!localCards.indexNames.contains('by_owner_account')) localCards.createIndex('by_owner_account', 'ownerAccount', { unique: false });
+	const localLevelUps = db.objectStoreNames.contains('local_level_ups')
+		? upgradeTransaction!.objectStore('local_level_ups')
+		: db.createObjectStore('local_level_ups', { keyPath: 'levelUpId' });
+	if (!localLevelUps.indexNames.contains('by_event_id')) localLevelUps.createIndex('by_event_id', 'eventId', { unique: false });
+	const localCampaigns = db.objectStoreNames.contains('local_campaign_settlements')
+		? upgradeTransaction!.objectStore('local_campaign_settlements')
+		: db.createObjectStore('local_campaign_settlements', { keyPath: 'eventId' });
+	if (!localCampaigns.indexNames.contains('by_account_mission')) localCampaigns.createIndex('by_account_mission', 'account', { unique: false });
+	if (!localCampaigns.indexNames.contains('by_account')) localCampaigns.createIndex('by_account', 'account', { unique: false });
+	if (!db.objectStoreNames.contains('local_campaign_first_clears')) db.createObjectStore('local_campaign_first_clears', { keyPath: 'key' });
+	if (!db.objectStoreNames.contains(LOCAL_CAMPAIGN_EITR_STORE)) db.createObjectStore(LOCAL_CAMPAIGN_EITR_STORE);
+
+	if (!db.objectStoreNames.contains('sync_cursors')) {
+		db.createObjectStore('sync_cursors', { keyPath: 'account' });
+	}
+
+	if (!db.objectStoreNames.contains('token_balances')) {
+		db.createObjectStore('token_balances', { keyPath: 'hiveUsername' });
+	}
+
+	if (!db.objectStoreNames.contains('genesis_state')) {
+		db.createObjectStore('genesis_state', { keyPath: 'key' });
+	}
+
+	if (!db.objectStoreNames.contains('supply_counters')) {
+		db.createObjectStore('supply_counters', { keyPath: 'rarity' });
+	}
+
+	if (!db.objectStoreNames.contains('match_anchors')) {
+		db.createObjectStore('match_anchors', { keyPath: 'matchId' });
+	}
+
+	if (!db.objectStoreNames.contains('queue_entries')) {
+		db.createObjectStore('queue_entries', { keyPath: 'account' });
+	}
+
+	if (!db.objectStoreNames.contains('slashed_accounts')) {
+		db.createObjectStore('slashed_accounts', { keyPath: 'account' });
+	}
+
+	if (!db.objectStoreNames.contains('player_nonces')) {
+		db.createObjectStore('player_nonces', { keyPath: 'account' });
+	}
+
+	if (!db.objectStoreNames.contains('elo_ratings')) {
+		db.createObjectStore('elo_ratings', { keyPath: 'account' });
+	}
+
+	if (!db.objectStoreNames.contains('pending_slashes')) {
+		db.createObjectStore('pending_slashes', { keyPath: 'evidenceKey' });
+	}
+
+	if (!db.objectStoreNames.contains('reward_claims')) {
+		db.createObjectStore('reward_claims', { keyPath: 'claimKey' });
+	}
+
+	if (!db.objectStoreNames.contains('campaign_nonces')) {
+		db.createObjectStore('campaign_nonces', { keyPath: 'account' });
+	}
+	if (!db.objectStoreNames.contains('campaign_runs')) {
+		const runs = db.createObjectStore('campaign_runs', { keyPath: 'localRunId' });
+		runs.createIndex('by_account', 'account', { unique: false });
+		runs.createIndex('by_mission', 'missionId', { unique: false });
+		runs.createIndex('by_status', 'status', { unique: false });
+	}
+	if (!db.objectStoreNames.contains('campaign_submissions')) {
+		const submissions = db.createObjectStore('campaign_submissions', { keyPath: 'submissionKey' });
+		submissions.createIndex('by_account', 'account', { unique: false });
+		submissions.createIndex('by_mission', 'missionId', { unique: false });
+	}
+	if (!db.objectStoreNames.contains('campaign_progress')) {
+		const progress = db.createObjectStore('campaign_progress', { keyPath: 'progressKey' });
+		progress.createIndex('by_account', 'account', { unique: false });
+		progress.createIndex('by_mission', 'missionId', { unique: false });
+	}
+	if (!db.objectStoreNames.contains('rune_ledger')) {
+		const ledger = db.createObjectStore('rune_ledger', { keyPath: 'entryId' });
+		ledger.createIndex('by_account', 'account', { unique: false });
+		ledger.createIndex('by_source_type', 'sourceType', { unique: false });
+	}
+
+	if (!db.objectStoreNames.contains('eitr_ledger')) {
+		const eitr = db.createObjectStore('eitr_ledger', { keyPath: 'entryId' });
+		eitr.createIndex('by_account', 'account', { unique: false });
+		eitr.createIndex('by_source_type', 'sourceType', { unique: false });
+	}
+
+	if (!db.objectStoreNames.contains('forge_commits')) {
+		const forge = db.createObjectStore('forge_commits', { keyPath: 'trxId' });
+		forge.createIndex('by_account', 'account', { unique: false });
+		forge.createIndex('by_revealed', 'revealed', { unique: false });
+	}
+
+	if (!db.objectStoreNames.contains('packs')) {
+		const packs = db.createObjectStore('packs', { keyPath: 'uid' });
+		packs.createIndex('by_owner', 'owner', { unique: false });
+		packs.createIndex('by_sealed', 'sealed', { unique: false });
+	}
+	if (!db.objectStoreNames.contains('pack_supply')) {
+		db.createObjectStore('pack_supply', { keyPath: 'packType' });
+	}
+
+	if (!db.objectStoreNames.contains('duat_claims')) {
+		db.createObjectStore('duat_claims', { keyPath: 'account' });
+	}
+
+	if (!db.objectStoreNames.contains('market_listings')) {
+		const listings = db.createObjectStore('market_listings', { keyPath: 'listingId' });
+		listings.createIndex('by_seller', 'seller', { unique: false });
+		listings.createIndex('by_nft_uid', 'nftUid', { unique: false });
+	}
+	if (!db.objectStoreNames.contains('market_offers')) {
+		const offers = db.createObjectStore('market_offers', { keyPath: 'offerId' });
+		offers.createIndex('by_nft_uid', 'nftUid', { unique: false });
+		offers.createIndex('by_buyer', 'buyer', { unique: false });
+	}
+
+	if (!db.objectStoreNames.contains(CORRUPT_RECORDS_STORE)) {
+		const corrupt = db.createObjectStore(CORRUPT_RECORDS_STORE, { keyPath: 'id' });
+		corrupt.createIndex('by_store', 'storeName', { unique: false });
+	}
+}
+
+const replayIdb = createManagedIndexedDB({
+	name: DB_NAME,
+	version: DB_VERSION,
+	onUpgrade: (db, event) => {
+		const upgradeTransaction = (event.target as IDBOpenDBRequest).transaction;
+		installReplayDbStores(db, upgradeTransaction);
+	},
+});
 
 export interface SyncCursor {
 	account: string;
@@ -87,210 +261,97 @@ interface StoredMatch extends HiveMatchResult {
 // ---------------------------------------------------------------------------
 
 function openDB(): Promise<IDBDatabase> {
-	if (_db) return Promise.resolve(_db);
-
-	return new Promise((resolve, reject) => {
-		const req = indexedDB.open(DB_NAME, DB_VERSION);
-
-			req.onupgradeneeded = (e) => {
-			const db = (e.target as IDBOpenDBRequest).result;
-			if (!db.objectStoreNames.contains('phase_migrations')) db.createObjectStore('phase_migrations', { keyPath: 'migrationId' });
-
-			if (!db.objectStoreNames.contains('cards')) {
-				const cards = db.createObjectStore('cards', { keyPath: 'uid' });
-				cards.createIndex('by_owner', 'ownerId', { unique: false });
-			}
-
-			if (!db.objectStoreNames.contains('matches')) {
-				const matches = db.createObjectStore('matches', { keyPath: 'matchId' });
-				// multiEntry index so each participant name is a separate index entry
-				matches.createIndex('by_participant', 'participants', {
-					unique: false,
-					multiEntry: true,
-				});
-			}
-
-			// v16: local gameplay settlement is separate from canonical Hive replay.
-			const upgradeTransaction = (e.target as IDBOpenDBRequest).transaction;
-			const settlements = db.objectStoreNames.contains('local_settlements')
-				? upgradeTransaction!.objectStore('local_settlements')
-				: db.createObjectStore('local_settlements', { keyPath: 'eventId' });
-			if (!settlements.indexNames.contains('by_match_id')) settlements.createIndex('by_match_id', 'matchId', { unique: false });
-			if (!settlements.indexNames.contains('by_reset_epoch')) settlements.createIndex('by_reset_epoch', 'resetEpoch', { unique: false });
-			if (!settlements.indexNames.contains('by_account')) settlements.createIndex('by_account', 'participants', { unique: false, multiEntry: true });
-			const localCards = db.objectStoreNames.contains('local_card_progression')
-				? upgradeTransaction!.objectStore('local_card_progression')
-				: db.createObjectStore('local_card_progression', { keyPath: 'updateId' });
-			if (!localCards.indexNames.contains('by_uid')) localCards.createIndex('by_uid', 'uid', { unique: false });
-			if (!localCards.indexNames.contains('by_event_id')) localCards.createIndex('by_event_id', 'eventId', { unique: false });
-			if (!localCards.indexNames.contains('by_owner_account')) localCards.createIndex('by_owner_account', 'ownerAccount', { unique: false });
-			const localLevelUps = db.objectStoreNames.contains('local_level_ups')
-				? upgradeTransaction!.objectStore('local_level_ups')
-				: db.createObjectStore('local_level_ups', { keyPath: 'levelUpId' });
-			if (!localLevelUps.indexNames.contains('by_event_id')) localLevelUps.createIndex('by_event_id', 'eventId', { unique: false });
-			const localCampaigns = db.objectStoreNames.contains('local_campaign_settlements')
-				? upgradeTransaction!.objectStore('local_campaign_settlements')
-				: db.createObjectStore('local_campaign_settlements', { keyPath: 'eventId' });
-			if (!localCampaigns.indexNames.contains('by_account_mission')) localCampaigns.createIndex('by_account_mission', 'account', { unique: false });
-			if (!localCampaigns.indexNames.contains('by_account')) localCampaigns.createIndex('by_account', 'account', { unique: false });
-			if (!db.objectStoreNames.contains('local_campaign_first_clears')) db.createObjectStore('local_campaign_first_clears', { keyPath: 'key' });
-			if (!db.objectStoreNames.contains(LOCAL_CAMPAIGN_EITR_STORE)) db.createObjectStore(LOCAL_CAMPAIGN_EITR_STORE);
-
-			if (!db.objectStoreNames.contains('sync_cursors')) {
-				db.createObjectStore('sync_cursors', { keyPath: 'account' });
-			}
-
-			if (!db.objectStoreNames.contains('token_balances')) {
-				db.createObjectStore('token_balances', { keyPath: 'hiveUsername' });
-			}
-
-			if (!db.objectStoreNames.contains('genesis_state')) {
-				db.createObjectStore('genesis_state', { keyPath: 'key' });
-			}
-
-			if (!db.objectStoreNames.contains('supply_counters')) {
-				db.createObjectStore('supply_counters', { keyPath: 'rarity' });
-			}
-
-			if (!db.objectStoreNames.contains('match_anchors')) {
-				db.createObjectStore('match_anchors', { keyPath: 'matchId' });
-			}
-
-			if (!db.objectStoreNames.contains('queue_entries')) {
-				db.createObjectStore('queue_entries', { keyPath: 'account' });
-			}
-
-			if (!db.objectStoreNames.contains('slashed_accounts')) {
-				db.createObjectStore('slashed_accounts', { keyPath: 'account' });
-			}
-
-			if (!db.objectStoreNames.contains('player_nonces')) {
-				db.createObjectStore('player_nonces', { keyPath: 'account' });
-			}
-
-			if (!db.objectStoreNames.contains('elo_ratings')) {
-				db.createObjectStore('elo_ratings', { keyPath: 'account' });
-			}
-
-			if (!db.objectStoreNames.contains('pending_slashes')) {
-				db.createObjectStore('pending_slashes', { keyPath: 'evidenceKey' });
-			}
-
-			if (!db.objectStoreNames.contains('reward_claims')) {
-				db.createObjectStore('reward_claims', { keyPath: 'claimKey' });
-			}
-
-			if (!db.objectStoreNames.contains('campaign_nonces')) {
-				db.createObjectStore('campaign_nonces', { keyPath: 'account' });
-			}
-			if (!db.objectStoreNames.contains('campaign_runs')) {
-				const runs = db.createObjectStore('campaign_runs', { keyPath: 'localRunId' });
-				runs.createIndex('by_account', 'account', { unique: false });
-				runs.createIndex('by_mission', 'missionId', { unique: false });
-				runs.createIndex('by_status', 'status', { unique: false });
-			}
-			if (!db.objectStoreNames.contains('campaign_submissions')) {
-				const submissions = db.createObjectStore('campaign_submissions', { keyPath: 'submissionKey' });
-				submissions.createIndex('by_account', 'account', { unique: false });
-				submissions.createIndex('by_mission', 'missionId', { unique: false });
-			}
-			if (!db.objectStoreNames.contains('campaign_progress')) {
-				const progress = db.createObjectStore('campaign_progress', { keyPath: 'progressKey' });
-				progress.createIndex('by_account', 'account', { unique: false });
-				progress.createIndex('by_mission', 'missionId', { unique: false });
-			}
-			if (!db.objectStoreNames.contains('rune_ledger')) {
-				const ledger = db.createObjectStore('rune_ledger', { keyPath: 'entryId' });
-				ledger.createIndex('by_account', 'account', { unique: false });
-				ledger.createIndex('by_source_type', 'sourceType', { unique: false });
-			}
-
-			// v14: Eitr ledger (canonical per docs/adr/0001-eitr-v1-canonical.md)
-			if (!db.objectStoreNames.contains('eitr_ledger')) {
-				const eitr = db.createObjectStore('eitr_ledger', { keyPath: 'entryId' });
-				eitr.createIndex('by_account', 'account', { unique: false });
-				eitr.createIndex('by_source_type', 'sourceType', { unique: false });
-			}
-
-			// v15: Forge commits (ADR 0001 §3 commit-reveal forge)
-			if (!db.objectStoreNames.contains('forge_commits')) {
-				const forge = db.createObjectStore('forge_commits', { keyPath: 'trxId' });
-				forge.createIndex('by_account', 'account', { unique: false });
-				forge.createIndex('by_revealed', 'revealed', { unique: false });
-			}
-
-			// v1.1: Pack NFTs
-			if (!db.objectStoreNames.contains('packs')) {
-				const packs = db.createObjectStore('packs', { keyPath: 'uid' });
-				packs.createIndex('by_owner', 'owner', { unique: false });
-				packs.createIndex('by_sealed', 'sealed', { unique: false });
-			}
-			if (!db.objectStoreNames.contains('pack_supply')) {
-				db.createObjectStore('pack_supply', { keyPath: 'packType' });
-			}
-
-			// v1.2: DUAT Airdrop claims
-			if (!db.objectStoreNames.contains('duat_claims')) {
-				db.createObjectStore('duat_claims', { keyPath: 'account' });
-			}
-
-			// v1.2: Marketplace
-			if (!db.objectStoreNames.contains('market_listings')) {
-				const listings = db.createObjectStore('market_listings', { keyPath: 'listingId' });
-				listings.createIndex('by_seller', 'seller', { unique: false });
-				listings.createIndex('by_nft_uid', 'nftUid', { unique: false });
-			}
-			if (!db.objectStoreNames.contains('market_offers')) {
-				const offers = db.createObjectStore('market_offers', { keyPath: 'offerId' });
-				offers.createIndex('by_nft_uid', 'nftUid', { unique: false });
-				offers.createIndex('by_buyer', 'buyer', { unique: false });
-			}
-		};
-
-		req.onsuccess = () => {
-			_db = req.result;
-			resolve(_db);
-		};
-
-		req.onerror = () => reject(req.error);
-	});
+	return replayIdb.open();
 }
 
 // ---------------------------------------------------------------------------
 // Generic IDB promise helpers
 // ---------------------------------------------------------------------------
 
-function idbGet<T>(store: string, key: string): Promise<T | undefined> {
+function idbGetRaw(store: string, key: string): Promise<unknown> {
 	return openDB().then(
 		(db) =>
 			new Promise((resolve, reject) => {
-				const req = db.transaction(store, 'readonly').objectStore(store).get(key);
-				req.onsuccess = () => resolve(req.result as T | undefined);
+				const tx = db.transaction(store, 'readonly');
+				const req = tx.objectStore(store).get(key);
+				req.onsuccess = () => resolve(req.result);
 				req.onerror = () => reject(req.error);
 			}),
 	);
+}
+
+function idbGet<T>(store: string, key: string): Promise<T | undefined> {
+	return idbGetRaw(store, key).then((result) => result as T | undefined);
 }
 
 function idbPut(store: string, value: unknown): Promise<void> {
-	return openDB().then(
-		(db) =>
-			new Promise((resolve, reject) => {
-				const req = db.transaction(store, 'readwrite').objectStore(store).put(value);
-				req.onsuccess = () => resolve();
-				req.onerror = () => reject(req.error);
-			}),
-	);
+	return replayIdb.runWriteTransaction(store, (tx) => {
+		tx.objectStore(store).put(value);
+	});
 }
 
 function idbDelete(store: string, key: string): Promise<void> {
-	return openDB().then(
-		(db) =>
-			new Promise((resolve, reject) => {
-				const req = db.transaction(store, 'readwrite').objectStore(store).delete(key);
-				req.onsuccess = () => resolve();
-				req.onerror = () => reject(req.error);
-			}),
-	);
+	return replayIdb.runWriteTransaction(store, (tx) => {
+		tx.objectStore(store).delete(key);
+	});
+}
+
+export async function quarantineCorruptRecord(
+	storeName: string,
+	key: string,
+	raw: unknown,
+): Promise<void> {
+	const row: CorruptRecordRow = {
+		id: corruptRecordId(storeName, key),
+		storeName,
+		key,
+		raw,
+		quarantinedAt: Date.now(),
+	};
+	await replayIdb.runWriteTransaction([CORRUPT_RECORDS_STORE, storeName], (tx) => {
+		tx.objectStore(CORRUPT_RECORDS_STORE).put(row);
+		tx.objectStore(storeName).delete(key);
+	});
+}
+
+function scheduleQuarantine(storeName: string, key: string, raw: unknown): void {
+	void quarantineCorruptRecord(storeName, key, raw).catch(() => undefined);
+}
+
+export async function getCorruptRecords(): Promise<CorruptRecordRow[]> {
+	return idbGetAll<CorruptRecordRow>(CORRUPT_RECORDS_STORE);
+}
+
+type SeasonRuneBreakdown = {
+	readonly p2pRuneEarned: number;
+	readonly campaignRuneEarned: number;
+	readonly dailyQuestRuneEarned: number;
+};
+
+function runeBreakdownForAccount(record: LocalSettlementRecord, account: string): SeasonRuneBreakdown {
+	let p2pRuneEarned = 0;
+	let campaignRuneEarned = 0;
+	let dailyQuestRuneEarned = 0;
+	for (const entry of record.runeEntries) {
+		if (entry.account !== account || entry.direction !== 'credit') continue;
+		if (entry.sourceType === 'p2p_ranked') p2pRuneEarned += entry.amount;
+		else if (entry.sourceType === 'campaign_first_clear') campaignRuneEarned += entry.amount;
+		else if (entry.sourceType === 'daily_quest_claim') dailyQuestRuneEarned += entry.amount;
+	}
+	return { p2pRuneEarned, campaignRuneEarned, dailyQuestRuneEarned };
+}
+
+function liveEloSnapshot(
+	raw: unknown,
+	account: string,
+	projection: LocalSettlementRecord['elo'][number],
+): { elo: number; wins: number; losses: number } {
+	const parsed = parseEloRating(raw, account);
+	return {
+		elo: parsed?.elo ?? projection.eloBefore,
+		wins: parsed?.wins ?? projection.winsBefore,
+		losses: parsed?.losses ?? projection.lossesBefore,
+	};
 }
 
 function idbGetByIndex<T>(store: string, indexName: string, key: string): Promise<T[]> {
@@ -332,8 +393,13 @@ function idbGetAll<T>(store: string): Promise<T[]> {
 
 /** Test-only namespace cleanup; closes this module's handle before deletion. */
 export function closeReplayDatabaseForTests(): void {
-	_db?.close();
-	_db = null;
+	replayIdb.close();
+}
+
+export const closeReplayDBForTests = closeReplayDatabaseForTests;
+
+export function resetReplayDBConnection(): Promise<void> {
+	return resetReplayDatabaseForTests();
 }
 
 export function resetReplayDatabaseForTests(): Promise<void> {
@@ -350,8 +416,16 @@ export function resetReplayDatabaseForTests(): Promise<void> {
 // Cards API
 // ---------------------------------------------------------------------------
 
-export const getCard = (uid: string): Promise<HiveCardAsset | undefined> =>
-	idbGet<HiveCardAsset>('cards', uid);
+export async function getCard(uid: string): Promise<HiveCardAsset | undefined> {
+	const raw = await idbGetRaw('cards', uid);
+	if (raw === undefined) return undefined;
+	const parsed = parseHiveCardAsset(raw);
+	if (!parsed) {
+		scheduleQuarantine('cards', uid, raw);
+		return undefined;
+	}
+	return parsed;
+}
 
 export const putCard = (card: HiveCardAsset): Promise<void> =>
 	idbPut('cards', card);
@@ -359,8 +433,20 @@ export const putCard = (card: HiveCardAsset): Promise<void> =>
 export const deleteCard = (uid: string): Promise<void> =>
 	idbDelete('cards', uid);
 
-export const getCardsByOwner = (ownerId: string): Promise<HiveCardAsset[]> =>
-	idbGetByIndex<HiveCardAsset>('cards', 'by_owner', ownerId);
+export async function getCardsByOwner(ownerId: string): Promise<HiveCardAsset[]> {
+	const rows = await idbGetByIndex<unknown>('cards', 'by_owner', ownerId);
+	const cards: HiveCardAsset[] = [];
+	for (const row of rows) {
+		const parsed = parseHiveCardAsset(row);
+		if (parsed) {
+			cards.push(parsed);
+			continue;
+		}
+		const uid = (row as { uid?: string })?.uid;
+		if (uid) scheduleQuarantine('cards', uid, row);
+	}
+	return cards;
+}
 
 // ---------------------------------------------------------------------------
 // Matches API
@@ -412,38 +498,111 @@ export async function commitLocalSettlement(record: LocalSettlementRecord): Prom
 				alreadyApplied = true;
 				return;
 			}
-			settlements.put(record);
-			const runeLedger = tx.objectStore('rune_ledger');
-			for (const entry of record.runeEntries) runeLedger.put(entry);
+			const winnerAccount = record.result.winnerAccount;
+			const loserAccount = record.result.loserAccount;
+			const winnerProj = record.elo.find((row) => row.account === winnerAccount);
+			const loserProj = record.elo.find((row) => row.account === loserAccount);
+			if (!winnerProj || !loserProj) {
+				reject(new Error('local settlement missing elo projections'));
+				tx.abort();
+				return;
+			}
+
 			const eloRatings = tx.objectStore('elo_ratings');
-			for (const projection of record.elo) {
+			const winnerReq = eloRatings.get(winnerAccount);
+			const loserReq = eloRatings.get(loserAccount);
+			let winnerRaw: unknown;
+			let loserRaw: unknown;
+			let eloReadsDone = 0;
+
+			const finishApply = () => {
+				const winnerLive = liveEloSnapshot(winnerRaw, winnerAccount, winnerProj);
+				const loserLive = liveEloSnapshot(loserRaw, loserAccount, loserProj);
+				const stale = winnerLive.elo !== winnerProj.eloBefore
+					|| winnerLive.wins !== winnerProj.winsBefore
+					|| winnerLive.losses !== winnerProj.lossesBefore
+					|| loserLive.elo !== loserProj.eloBefore
+					|| loserLive.wins !== loserProj.winsBefore
+					|| loserLive.losses !== loserProj.lossesBefore;
+
+				let winnerAfter = winnerProj.eloAfter;
+				let loserAfter = loserProj.eloAfter;
+				let winnerWinsAfter = winnerProj.winsAfter;
+				let winnerLossesAfter = winnerProj.lossesAfter;
+				let loserWinsAfter = loserProj.winsAfter;
+				let loserLossesAfter = loserProj.lossesAfter;
+				let winnerSeasonScore = winnerProj.seasonScoreAfter;
+				let loserSeasonScore = loserProj.seasonScoreAfter;
+
+				if (stale) {
+					const eloMatch = projectEloMatch({ winnerElo: winnerLive.elo, loserElo: loserLive.elo });
+					winnerAfter = eloMatch.winner.after;
+					loserAfter = eloMatch.loser.after;
+					winnerWinsAfter = winnerLive.wins + 1;
+					winnerLossesAfter = winnerLive.losses;
+					loserWinsAfter = loserLive.wins;
+					loserLossesAfter = loserLive.losses + 1;
+					const winnerRune = runeBreakdownForAccount(record, winnerAccount);
+					const loserRune = runeBreakdownForAccount(record, loserAccount);
+					winnerSeasonScore = calculateSeasonScore({ finalElo: winnerAfter, ...winnerRune });
+					loserSeasonScore = calculateSeasonScore({ finalElo: loserAfter, ...loserRune });
+				}
+
+				settlements.put(record);
+				const runeLedger = tx.objectStore('rune_ledger');
+				for (const entry of record.runeEntries) runeLedger.put(entry);
 				eloRatings.put({
-					account: projection.account,
-					elo: projection.eloAfter,
-					wins: projection.winsAfter,
-					losses: projection.lossesAfter,
+					account: winnerAccount,
+					elo: winnerAfter,
+					wins: winnerWinsAfter,
+					losses: winnerLossesAfter,
 					lastMatchBlock: 0,
-					seasonScore: projection.seasonScoreAfter,
+					seasonScore: winnerSeasonScore,
 				});
-			}
-			const cardProgression = tx.objectStore('local_card_progression');
-			for (const projection of record.cardXp) {
-				cardProgression.put({
-					uid: projection.uid,
-					ownerAccount: projection.ownerAccount,
-					cardId: projection.cardId,
-					xp: projection.xpAfter,
-					level: projection.levelAfter,
-					eventId: record.eventId,
-					updateId: projection.updateId,
-					timestamp: record.timestamp,
-					sequence: `${record.timestamp}:${record.eventId}`,
+				eloRatings.put({
+					account: loserAccount,
+					elo: loserAfter,
+					wins: loserWinsAfter,
+					losses: loserLossesAfter,
+					lastMatchBlock: 0,
+					seasonScore: loserSeasonScore,
 				});
-			}
-			const levelUps = tx.objectStore('local_level_ups');
-			for (const projection of record.levelUps) {
-				levelUps.put({ ...projection, eventId: record.eventId });
-			}
+				const cardProgression = tx.objectStore('local_card_progression');
+				for (const projection of record.cardXp) {
+					cardProgression.put({
+						uid: projection.uid,
+						ownerAccount: projection.ownerAccount,
+						cardId: projection.cardId,
+						xp: projection.xpAfter,
+						level: projection.levelAfter,
+						eventId: record.eventId,
+						updateId: projection.updateId,
+						timestamp: record.timestamp,
+						sequence: `${record.timestamp}:${record.eventId}`,
+					});
+				}
+				const levelUps = tx.objectStore('local_level_ups');
+				for (const projection of record.levelUps) {
+					levelUps.put({ ...projection, eventId: record.eventId });
+				}
+			};
+
+			const maybeFinishEloReads = () => {
+				eloReadsDone += 1;
+				if (eloReadsDone < 2) return;
+				finishApply();
+			};
+
+			winnerReq.onsuccess = () => {
+				winnerRaw = winnerReq.result;
+				maybeFinishEloReads();
+			};
+			loserReq.onsuccess = () => {
+				loserRaw = loserReq.result;
+				maybeFinishEloReads();
+			};
+			winnerReq.onerror = () => reject(winnerReq.error);
+			loserReq.onerror = () => reject(loserReq.error);
 		};
 		getRequest.onerror = () => reject(getRequest.error);
 		tx.oncomplete = () => resolve(alreadyApplied ? 'already_applied' : 'applied');
@@ -464,8 +623,20 @@ export async function commitLocalSettlement(record: LocalSettlementRecord): Prom
 	});
 }
 
-export const getLocalSettlementsByAccount = (account: string): Promise<LocalSettlementRecord[]> =>
-	idbGetByIndex<LocalSettlementRecord>('local_settlements', 'by_account', account);
+export async function getLocalSettlementsByAccount(account: string): Promise<LocalSettlementRecord[]> {
+	const rows = await idbGetByIndex<unknown>('local_settlements', 'by_account', account);
+	const valid: LocalSettlementRecord[] = [];
+	for (const row of rows) {
+		const parsed = parseLocalSettlementRecord(row);
+		if (parsed) {
+			valid.push(parsed);
+			continue;
+		}
+		const key = (row as { eventId?: string })?.eventId;
+		if (key) scheduleQuarantine('local_settlements', key, row);
+	}
+	return valid;
+}
 
 export type LocalCardProgressionRecord = {
 	readonly updateId: string;
@@ -520,8 +691,24 @@ export async function forgeLocalCampaignCommon(account: string, seasonId: string
 	});
 }
 
-export const getLocalCampaignSettlementsByAccount = (account: string): Promise<LocalCampaignSettlementRecord[]> =>
-	idbGetByIndex<LocalCampaignSettlementRecord>('local_campaign_settlements', 'by_account', account);
+export async function getLocalCampaignSettlementsByAccount(account: string): Promise<LocalCampaignSettlementRecord[]> {
+	const rows = await idbGetByIndex<unknown>('local_campaign_settlements', 'by_account', account);
+	return filterValidatedLocalCampaignSettlementRows(rows);
+}
+
+function filterValidatedLocalCampaignSettlementRows(rows: unknown[]): LocalCampaignSettlementRecord[] {
+	const valid: LocalCampaignSettlementRecord[] = [];
+	for (const row of rows) {
+		const parsed = parseLocalCampaignSettlement(row);
+		if (parsed) {
+			valid.push(parsed);
+			continue;
+		}
+		const key = (row as { eventId?: string })?.eventId;
+		if (key) scheduleQuarantine('local_campaign_settlements', key, row);
+	}
+	return valid;
+}
 
 export type LocalLevelUpRecord = {
 	readonly levelUpId: string;
@@ -582,7 +769,8 @@ export async function commitLocalCampaignSettlement(record: LocalCampaignSettlem
 }
 
 export async function hasLocalCampaignFirstClear(account: string, missionId: string): Promise<boolean> {
-	const records = await idbGetByIndex<LocalCampaignSettlementRecord>('local_campaign_settlements', 'by_account', account);
+	const rows = await idbGetByIndex<unknown>('local_campaign_settlements', 'by_account', account);
+	const records = filterValidatedLocalCampaignSettlementRows(rows);
 	return records.some(record => record.missionId === missionId && record.firstClear);
 }
 
@@ -604,8 +792,16 @@ export async function getLatestLocalCardProgressionByOwner(ownerAccount: string)
 // Sync cursor API
 // ---------------------------------------------------------------------------
 
-export const getSyncCursor = (account: string): Promise<SyncCursor | undefined> =>
-	idbGet<SyncCursor>('sync_cursors', account);
+export async function getSyncCursor(account: string): Promise<SyncCursor | undefined> {
+	const raw = await idbGetRaw('sync_cursors', account);
+	if (raw === undefined) return undefined;
+	const parsed = parseSyncCursor(raw);
+	if (!parsed) {
+		scheduleQuarantine('sync_cursors', account, raw);
+		return undefined;
+	}
+	return parsed;
+}
 
 export const putSyncCursor = (cursor: SyncCursor): Promise<void> =>
 	idbPut('sync_cursors', cursor);
@@ -619,8 +815,10 @@ export const putSyncCursor = (cursor: SyncCursor): Promise<void> =>
 // the token_balances store; RUNE always derives from the local rune_ledger.
 
 export async function getTokenBalance(username: string, seasonId: string): Promise<HiveTokenBalance> {
-	const stored = await idbGet<HiveTokenBalance>('token_balances', username);
-	const base = stored ?? { ...DEFAULT_TOKEN_BALANCE, hiveUsername: username };
+	const raw = await idbGetRaw('token_balances', username);
+	const parsed = raw === undefined ? undefined : parseTokenBalance(raw);
+	if (raw !== undefined && !parsed) scheduleQuarantine('token_balances', username, raw);
+	const base = parsed ?? { ...DEFAULT_TOKEN_BALANCE, hiveUsername: username };
 	const credits = await getRuneLedgerTotal({ seasonId, account: username, direction: 'credit' });
 	const debits = await getRuneLedgerTotal({ seasonId, account: username, direction: 'debit' });
 	return { ...base, RUNE: credits - debits };
@@ -630,8 +828,16 @@ export async function getTokenBalance(username: string, seasonId: string): Promi
 // RUNE Ledger API
 // ---------------------------------------------------------------------------
 
-export const getRuneLedgerEntry = (entryId: string): Promise<RuneLedgerEntry | undefined> =>
-	idbGet<RuneLedgerEntry>('rune_ledger', entryId);
+export async function getRuneLedgerEntry(entryId: string): Promise<RuneLedgerEntry | undefined> {
+	const raw = await idbGetRaw('rune_ledger', entryId);
+	if (raw === undefined) return undefined;
+	const parsed = parseRuneLedgerEntry(raw);
+	if (!parsed) {
+		scheduleQuarantine('rune_ledger', entryId, raw);
+		return undefined;
+	}
+	return parsed;
+}
 
 export const putRuneLedgerEntry = (entry: RuneLedgerEntry): Promise<void> =>
 	idbPut('rune_ledger', entry);
@@ -672,14 +878,28 @@ export async function commitLocalDailyQuestLedger(entries: readonly RuneLedgerEn
 	});
 }
 
+function filterValidatedRuneLedgerRows(rows: unknown[]): RuneLedgerEntry[] {
+	const valid: RuneLedgerEntry[] = [];
+	for (const row of rows) {
+		const parsed = parseRuneLedgerEntry(row);
+		if (parsed) {
+			valid.push(parsed);
+			continue;
+		}
+		const key = (row as { entryId?: string })?.entryId;
+		if (key) scheduleQuarantine('rune_ledger', key, row);
+	}
+	return valid;
+}
+
 export async function getRuneLedgerEntries(query: RuneLedgerEntryQuery): Promise<RuneLedgerEntry[]> {
 	const candidates = query.account
-		? await idbGetByIndex<RuneLedgerEntry>('rune_ledger', 'by_account', query.account)
+		? await idbGetByIndex<unknown>('rune_ledger', 'by_account', query.account)
 		: query.sourceType
-			? await idbGetByIndex<RuneLedgerEntry>('rune_ledger', 'by_source_type', query.sourceType)
-			: await idbGetAll<RuneLedgerEntry>('rune_ledger');
+			? await idbGetByIndex<unknown>('rune_ledger', 'by_source_type', query.sourceType)
+			: await idbGetAll<unknown>('rune_ledger');
 
-	return candidates
+	return filterValidatedRuneLedgerRows(candidates)
 		.filter(entry => entry.seasonId === query.seasonId)
 		.filter(entry => query.direction === undefined || entry.direction === query.direction)
 		.filter(entry => query.sourceType === undefined || entry.sourceType === query.sourceType)
@@ -697,20 +917,42 @@ export async function getRuneLedgerTotal(query: RuneLedgerTotalQuery): Promise<n
 // Eitr Ledger API (canonical per docs/adr/0001-eitr-v1-canonical.md)
 // ---------------------------------------------------------------------------
 
-export const getEitrLedgerEntry = (entryId: string): Promise<EitrLedgerEntry | undefined> =>
-	idbGet<EitrLedgerEntry>('eitr_ledger', entryId);
+export async function getEitrLedgerEntry(entryId: string): Promise<EitrLedgerEntry | undefined> {
+	const raw = await idbGetRaw('eitr_ledger', entryId);
+	if (raw === undefined) return undefined;
+	const parsed = parseEitrLedgerEntry(raw);
+	if (!parsed) {
+		scheduleQuarantine('eitr_ledger', entryId, raw);
+		return undefined;
+	}
+	return parsed;
+}
 
 export const putEitrLedgerEntry = (entry: EitrLedgerEntry): Promise<void> =>
 	idbPut('eitr_ledger', entry);
 
+function filterValidatedEitrLedgerRows(rows: unknown[]): EitrLedgerEntry[] {
+	const valid: EitrLedgerEntry[] = [];
+	for (const row of rows) {
+		const parsed = parseEitrLedgerEntry(row);
+		if (parsed) {
+			valid.push(parsed);
+			continue;
+		}
+		const key = (row as { entryId?: string })?.entryId;
+		if (key) scheduleQuarantine('eitr_ledger', key, row);
+	}
+	return valid;
+}
+
 export async function getEitrLedgerEntries(query: EitrLedgerEntryQuery): Promise<EitrLedgerEntry[]> {
 	const candidates = query.account
-		? await idbGetByIndex<EitrLedgerEntry>('eitr_ledger', 'by_account', query.account)
+		? await idbGetByIndex<unknown>('eitr_ledger', 'by_account', query.account)
 		: query.sourceType
-			? await idbGetByIndex<EitrLedgerEntry>('eitr_ledger', 'by_source_type', query.sourceType)
-			: await idbGetAll<EitrLedgerEntry>('eitr_ledger');
+			? await idbGetByIndex<unknown>('eitr_ledger', 'by_source_type', query.sourceType)
+			: await idbGetAll<unknown>('eitr_ledger');
 
-	return candidates
+	return filterValidatedEitrLedgerRows(candidates)
 		.filter(entry => entry.seasonId === query.seasonId)
 		.filter(entry => query.direction === undefined || entry.direction === query.direction)
 		.filter(entry => query.sourceType === undefined || entry.sourceType === query.sourceType)
@@ -999,8 +1241,16 @@ export interface EloRating {
 }
 
 export async function getEloRating(account: string): Promise<EloRating> {
-	const stored = await idbGet<EloRating>('elo_ratings', account);
-	return stored ?? { account, elo: DEFAULT_ELO_RATING, wins: 0, losses: 0, lastMatchBlock: 0 };
+	const raw = await idbGetRaw('elo_ratings', account);
+	if (raw === undefined) {
+		return { account, elo: DEFAULT_ELO_RATING, wins: 0, losses: 0, lastMatchBlock: 0 };
+	}
+	const parsed = parseEloRating(raw, account);
+	if (!parsed) {
+		scheduleQuarantine('elo_ratings', account, raw);
+		return { account, elo: DEFAULT_ELO_RATING, wins: 0, losses: 0, lastMatchBlock: 0 };
+	}
+	return parsed;
 }
 
 export const putEloRating = (rating: EloRating): Promise<void> =>
