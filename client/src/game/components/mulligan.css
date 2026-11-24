@@ -42,8 +42,16 @@
 /* Entrance shells. Framer Motion owns travel; these keep the 3D faces stable. */
 .mulligan-entrance-shell,
 .mulligan-entrance-header,
-.mulligan-entrance-card,
 .mulligan-action-entrance {
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+  transform-origin: 50% 50%;
+}
+
+.mulligan-entrance-card {
+  position: relative;
+  z-index: 2;
   transform-style: preserve-3d;
   backface-visibility: hidden;
   will-change: transform, opacity;
@@ -400,11 +408,6 @@
     left: 115%;
     opacity: 0;
   }
-}
-
-.mulligan-entrance-card {
-  position: relative;
-  z-index: 2;
 }
 
 /* Card placeholder while data loads */

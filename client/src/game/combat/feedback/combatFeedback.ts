@@ -138,8 +138,9 @@ export function countWords(text: string): number {
 }
 
 export function readingDwellMs(text: string): number {
-	const budget = 400 + countWords(text) * FEEDBACK_MS_PER_WORD;
-	return Math.min(FEEDBACK_MAX_DWELL_MS, Math.max(FEEDBACK_MIN_DWELL_MS, budget));
+	const words = countWords(text);
+	const budget = FEEDBACK_MIN_DWELL_MS + Math.max(0, words - 3) * FEEDBACK_MS_PER_WORD;
+	return Math.min(FEEDBACK_MAX_DWELL_MS, budget);
 }
 
 export function overlayHoldMs(text: string): number {

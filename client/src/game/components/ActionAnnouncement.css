@@ -23,12 +23,6 @@
   overflow: hidden;
 }
 
-.action-announcement-victory,
-.action-announcement-defeat {
-  width: min(44%, 780px);
-  max-height: min(26vh, 156px);
-}
-
 .action-announcement::before {
   content: '';
   position: absolute;
@@ -60,6 +54,7 @@
 }
 
 .announcement-rune {
+  display: none;
   position: absolute;
   width: 11px;
   height: 11px;
@@ -76,12 +71,6 @@
 .announcement-rune-bottom {
   bottom: 13px;
   left: 17px;
-}
-
-.announcement-icon-column,
-.announcement-rune,
-.announcement-kicker {
-  display: none;
 }
 
 .announcement-icon-column {
@@ -279,6 +268,8 @@
 }
 
 .action-announcement-victory {
+  width: min(44%, 780px);
+  max-height: min(26vh, 156px);
   --rarity-color: var(--gold-300);
   box-shadow: 0 0 80px var(--gold-glow);
   animation: victoryGlow 0.5s ease-in-out infinite alternate;
@@ -290,6 +281,8 @@
 }
 
 .action-announcement-defeat {
+  width: min(44%, 780px);
+  max-height: min(26vh, 156px);
   --rarity-color: var(--ink-300);
   filter: grayscale(0.3);
 }

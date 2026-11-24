@@ -40,8 +40,23 @@ const createPet = (id: string): PetData => ({
 	equippedSpells: [],
 });
 
+function seedPostMulliganGameStore(): void {
+	const base = initializeGame();
+	useGameStore.setState({
+		gameState: {
+			...base,
+			gamePhase: 'playing',
+			mulliganCompleted: true,
+			mulligan: base.mulligan
+				? { ...base.mulligan, active: false, playerReady: true, opponentReady: true }
+				: base.mulligan,
+		},
+	});
+}
+
 describe('P2P End Turn Poker bridge', () => {
 	beforeEach(() => {
+		seedPostMulliganGameStore();
 		useUnifiedCombatStore.getState().reset();
 		useUnifiedCombatStore.getState().initializePokerCombat(
 			'local-piece',
