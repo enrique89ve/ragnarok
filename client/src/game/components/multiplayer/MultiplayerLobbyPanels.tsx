@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect } from 'react';
 import type { OutgoingFriendChallenge } from '../../stores/friendStore';
 import type { MatchmakingStatus } from '../../stores/matchmakingStore';
 import type { P2PConnectionState } from '../../stores/peerStore';
@@ -9,8 +9,6 @@ import {
 } from '../../../components/ui-norse';
 import {
 	Check,
-	ChevronDown,
-	ChevronUp,
 	Copy,
 	LoaderCircle,
 	Pencil,
@@ -310,7 +308,6 @@ export function IdleMatchControls({
 	onlineFriendCount = 0,
 	friendsOpen = false,
 	onToggleFriends,
-	friendsSlot,
 }: {
 	readonly visible: boolean;
 	readonly manualRoomsEnabled: boolean;
@@ -324,7 +321,6 @@ export function IdleMatchControls({
 	readonly onlineFriendCount?: number;
 	readonly friendsOpen?: boolean;
 	readonly onToggleFriends?: () => void;
-	readonly friendsSlot?: ReactNode;
 }) {
 	if (!visible) return null;
 
@@ -418,24 +414,22 @@ export function IdleMatchControls({
 							<button
 								type="button"
 								onClick={onToggleFriends}
+								aria-haspopup="dialog"
 								aria-expanded={friendsOpen}
-								className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-sm border border-obsidian-600/90 bg-obsidian-950/75 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-ink-100 transition-colors hover:border-bifrost-300/60 hover:text-bifrost-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
+								aria-controls="lobby-warband-drawer"
+								className={`inline-flex min-h-10 shrink-0 items-center gap-2 rounded-sm border px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300 ${
+									friendsOpen
+										? 'border-gold-300/70 bg-gold-300/12 text-gold-100'
+										: 'border-obsidian-600/90 bg-obsidian-950/75 text-ink-100 hover:border-bifrost-300/60 hover:text-bifrost-100'
+								}`}
 							>
 								<Users className="h-3.5 w-3.5 text-bifrost-200" aria-hidden={true} />
 								<span>
 									Warband{friendCount > 0 ? ` (${onlineFriendCount}/${friendCount})` : ''}
 								</span>
-								{friendsOpen
-									? <ChevronUp className="h-3.5 w-3.5 text-ink-400" aria-hidden={true} />
-									: <ChevronDown className="h-3.5 w-3.5 text-ink-400" aria-hidden={true} />}
 							</button>
 						)}
 					</div>
-					{friendsOpen && friendsSlot && (
-						<div className="mt-3 rounded-sm border border-obsidian-700/80 bg-obsidian-950/65 p-3">
-							{friendsSlot}
-						</div>
-					)}
 				</div>
 			)}
 		</div>

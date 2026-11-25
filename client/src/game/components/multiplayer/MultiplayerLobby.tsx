@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePeerStore } from '../../stores/peerStore';
 import { useMatchmaking } from '../../hooks/useMatchmaking';
@@ -18,6 +18,7 @@ import {
 	ArrowLeft,
 	Swords,
 	Users,
+	X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ServerSignedChallenge } from '@shared/p2pAvailability';
@@ -383,6 +384,23 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 	).length;
 	const canEditWarband = idleControlsVisible;
 
+	useEffect(() => {
+		if (!idleControlsVisible && friendsOpen) {
+			setFriendsOpen(false);
+		}
+	}, [idleControlsVisible, friendsOpen]);
+
+	useEffect(() => {
+		if (!friendsOpen) return;
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') {
+				setFriendsOpen(false);
+			}
+		};
+		window.addEventListener('keydown', onKeyDown);
+		return () => window.removeEventListener('keydown', onKeyDown);
+	}, [friendsOpen]);
+
 	return (
 		<div className="multiplayer-lobby-shell min-h-dvh w-full overflow-y-auto px-4 py-4 text-ink-0 sm:px-6 sm:py-6">
 			<div className="mx-auto flex min-h-[calc(100dvh-2rem)] w-full max-w-6xl flex-col justify-between gap-6 sm:min-h-[calc(100dvh-3rem)]">
@@ -511,7 +529,6 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 								onlineFriendCount={onlineFriendCount}
 								friendsOpen={friendsOpen}
 								onToggleFriends={() => setFriendsOpen(open => !open)}
-								friendsSlot={<FriendsPanel />}
 							/>
 							<QueuePanel
 								status={matchmakingStatus}
@@ -568,6 +585,50 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 					</Panel>
 				</div>
 			</div>
+
+			{friendsOpen && (
+				<div
+					className="n-warband-drawer-overlay"
+					onClick={() => setFriendsOpen(false)}
+				>
+					<aside
+						id="lobby-warband-drawer"
+						className="n-warband-drawer"
+						role="dialog"
+						aria-modal="true"
+						aria-labelledby="lobby-warband-title"
+						onClick={event => event.stopPropagation()}
+					>
+						<header className="n-warband-drawer-header">
+							<div className="min-w-0">
+								<p className="font-mono text-[10px] font-semibold uppercase tracking-[0.24em] text-gold-300/80">
+									Direct challenge
+								</p>
+								<h2
+									id="lobby-warband-title"
+									className="font-display text-xl font-black uppercase tracking-wider text-ink-0"
+								>
+									Warband{friends.length > 0 ? ` (${friends.length})` : ''}
+								</h2>
+							</div>
+							<button
+								type="button"
+								className="n-warband-drawer-close"
+								aria-label="Close warband contacts"
+								onClick={() => setFriendsOpen(false)}
+							>
+								<X size={16} strokeWidth={2} />
+							</button>
+						</header>
+						<div className="n-warband-drawer-body">
+							<FriendsPanel
+								hideHeader
+								onChallengeSent={() => setFriendsOpen(false)}
+							/>
+						</div>
+					</aside>
+				</div>
+			)}
 		</div>
 	);
 };

@@ -243,7 +243,45 @@ function FriendCard({
 	);
 }
 
-export default function FriendsPanel() {
+function FriendsPanelToggleHeader({
+	friendCount,
+	expanded,
+	cooldownText,
+	onToggle,
+}: {
+	readonly friendCount: number;
+	readonly expanded: boolean;
+	readonly cooldownText?: string;
+	readonly onToggle: () => void;
+}) {
+	return (
+		<button
+			type="button"
+			onClick={onToggle}
+			className="flex w-full items-center justify-between rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2 text-left"
+		>
+			<div className="flex items-center gap-2">
+				<Users size={15} strokeWidth={2} className="text-amber-300" />
+				<h3 className="text-[11px] font-bold uppercase tracking-[0.18em] text-amber-200/80">
+					Warband ({friendCount})
+				</h3>
+			</div>
+			<span className="text-gray-500 text-xs" title={cooldownText}>
+				{expanded ? <ChevronUp size={15} strokeWidth={2} /> : <ChevronDown size={15} strokeWidth={2} />}
+			</span>
+		</button>
+	);
+}
+
+export interface FriendsPanelProps {
+	readonly hideHeader?: boolean;
+	readonly onChallengeSent?: () => void;
+}
+
+export default function FriendsPanel({
+	hideHeader = false,
+	onChallengeSent,
+}: FriendsPanelProps = {}) {
 	const hiveUsername = useNFTUsername();
 	const authenticatedHiveUsername = useSyncExternalStore(
 		subscribeHiveSessionIdentity,
@@ -362,41 +400,44 @@ export default function FriendsPanel() {
 			clearChallengeCooldown(target);
 			pruneExpiredChallenges(sentAt);
 			toast.success(`Challenge sent to @${target}.`);
+			onChallengeSent?.();
 			navigate(routes.multiplayer);
 		} catch {
 			toast.error('Challenge service is unavailable.');
 		} finally {
 			setSendingTo(null);
 		}
-	}, [hiveUsername, setOutgoingChallenge, setChallengeCooldown, clearChallengeCooldown, pruneExpiredChallenges, navigate]);
+	}, [hiveUsername, setOutgoingChallenge, setChallengeCooldown, clearChallengeCooldown, pruneExpiredChallenges, onChallengeSent, navigate]);
 
 	const acceptedFriends = friends.filter(f => f.relationStatus === 'accepted');
 	const localFriends = friends.filter(f => f.relationStatus !== 'accepted');
 	const onlineFriends = acceptedFriends.filter(f => onlineStatus[f.hiveUsername]?.online);
 	const offlineFriends = acceptedFriends.filter(f => !onlineStatus[f.hiveUsername]?.online);
 
+	const bodyVisible = hideHeader || expanded;
+	const presenceCooldownRemainingMs = presenceCooldownUntil !== null && presenceCooldownUntil > now
+		? presenceCooldownUntil - now
+		: 0;
+	const presenceCooldownText = presenceCooldownRemainingMs > 0
+		? `Refresh cooldown: ${formatRetryAfterMs(presenceCooldownRemainingMs)}`
+		: undefined;
+
 	return (
 		<div className="social-warband-panel w-64 space-y-3">
-			<button
-				onClick={() => setExpanded(!expanded)}
-				className="flex w-full items-center justify-between rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2 text-left"
-			>
-				<div className="flex items-center gap-2">
-					<Users size={15} strokeWidth={2} className="text-amber-300" />
-					<h3 className="text-[11px] font-bold uppercase tracking-[0.18em] text-amber-200/80">
-						Warband ({friends.length})
-					</h3>
-				</div>
-				<span className="text-gray-500 text-xs" title={presenceCooldownUntil !== null && presenceCooldownUntil > now ? `Refresh cooldown: ${formatRetryAfterMs(presenceCooldownUntil - now)}` : undefined}>
-					{expanded ? <ChevronUp size={15} strokeWidth={2} /> : <ChevronDown size={15} strokeWidth={2} />}
-				</span>
-			</button>
+			{!hideHeader && (
+				<FriendsPanelToggleHeader
+					friendCount={friends.length}
+					expanded={expanded}
+					cooldownText={presenceCooldownText}
+					onToggle={() => setExpanded(!expanded)}
+				/>
+			)}
 
-			{expanded && (
+			{bodyVisible && (
 				<div className="space-y-2">
-					{presenceCooldownUntil !== null && presenceCooldownUntil > now && (
+					{presenceCooldownRemainingMs > 0 && (
 						<p className="px-1 text-[11px] text-amber-300">
-							Presence refresh cooldown: wait {formatRetryAfterMs(presenceCooldownUntil - now)}.
+							Presence refresh cooldown: wait {formatRetryAfterMs(presenceCooldownRemainingMs)}.
 						</p>
 					)}
 					{onlineFriends.length > 0 && (
