@@ -332,3 +332,44 @@ export function shouldRunLobbyClock(input: {
 }): boolean {
 	return input.pendingChallengeCount > 0 || input.outgoingChallenge !== null || input.matchOffer !== null;
 }
+
+export type LobbyStatusTone = 'idle' | 'active' | 'syncing' | 'ready' | 'error';
+
+const MATCHMAKING_STATUS_BADGES: Partial<Record<MatchmakingStatus, { readonly label: string; readonly tone: LobbyStatusTone }>> = {
+	error: { label: 'Needs attention', tone: 'error' },
+	connecting: { label: 'Syncing peer', tone: 'syncing' },
+	ready: { label: 'Syncing peer', tone: 'syncing' },
+	offered: { label: 'Match found', tone: 'active' },
+	accepting: { label: 'Match found', tone: 'active' },
+	waiting_opponent: { label: 'Match found', tone: 'active' },
+	authorizing: { label: 'Keychain approval', tone: 'active' },
+	queued: { label: 'Searching relay', tone: 'active' },
+};
+
+export function resolveLobbyStatusBadge(input: {
+	readonly matchmakingStatus: MatchmakingStatus;
+	readonly connectionState: P2PConnectionState;
+	readonly matchReady: boolean;
+	readonly hasError: boolean;
+}): { readonly label: string; readonly tone: LobbyStatusTone } {
+	if (input.hasError || input.connectionState === 'error') {
+		return { label: 'Needs attention', tone: 'error' };
+	}
+	if (input.matchReady) {
+		return { label: 'Battle ready', tone: 'ready' };
+	}
+	if (input.connectionState === 'reconnecting' || input.connectionState === 'grace_period') {
+		return { label: 'Reconnecting', tone: 'active' };
+	}
+	if (input.connectionState === 'connected' || input.connectionState === 'connecting') {
+		return { label: 'Syncing peer', tone: 'syncing' };
+	}
+	return MATCHMAKING_STATUS_BADGES[input.matchmakingStatus] ?? { label: 'Relay ready', tone: 'idle' };
+}
+
+export function formatElapsedSeconds(totalSeconds: number): string {
+	const safe = Math.max(0, Math.floor(totalSeconds));
+	const mins = Math.floor(safe / 60);
+	const secs = safe % 60;
+	return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}

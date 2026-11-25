@@ -422,4 +422,51 @@ describe('MultiplayerLobby direct challenge helpers', () => {
 			matchOffer: offer,
 		})).toBe(true);
 	});
+
+	it('derives accurate status badge tones and formats queue elapsed timers', () => {
+		expect(helpers.resolveLobbyStatusBadge({
+			matchmakingStatus: 'idle',
+			connectionState: 'disconnected',
+			matchReady: false,
+			hasError: false,
+		})).toEqual({ label: 'Relay ready', tone: 'idle' });
+
+		expect(helpers.resolveLobbyStatusBadge({
+			matchmakingStatus: 'authorizing',
+			connectionState: 'disconnected',
+			matchReady: false,
+			hasError: false,
+		})).toEqual({ label: 'Keychain approval', tone: 'active' });
+
+		expect(helpers.resolveLobbyStatusBadge({
+			matchmakingStatus: 'queued',
+			connectionState: 'disconnected',
+			matchReady: false,
+			hasError: false,
+		})).toEqual({ label: 'Searching relay', tone: 'active' });
+
+		expect(helpers.resolveLobbyStatusBadge({
+			matchmakingStatus: 'connecting',
+			connectionState: 'connected',
+			matchReady: false,
+			hasError: false,
+		})).toEqual({ label: 'Syncing peer', tone: 'syncing' });
+
+		expect(helpers.resolveLobbyStatusBadge({
+			matchmakingStatus: 'ready',
+			connectionState: 'connected',
+			matchReady: true,
+			hasError: false,
+		})).toEqual({ label: 'Battle ready', tone: 'ready' });
+
+		expect(helpers.resolveLobbyStatusBadge({
+			matchmakingStatus: 'error',
+			connectionState: 'disconnected',
+			matchReady: false,
+			hasError: true,
+		})).toEqual({ label: 'Needs attention', tone: 'error' });
+
+		expect(helpers.formatElapsedSeconds(0)).toBe('00:00');
+		expect(helpers.formatElapsedSeconds(65)).toBe('01:05');
+	});
 });

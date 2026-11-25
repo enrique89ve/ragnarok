@@ -1,17 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import type { OutgoingFriendChallenge } from '../../stores/friendStore';
 import type { MatchmakingStatus } from '../../stores/matchmakingStore';
 import type { P2PConnectionState } from '../../stores/peerStore';
+import type { ArmySelection } from '../../types/ChessTypes';
 import {
 	Button,
 	Input,
 } from '../../../components/ui-norse';
 import {
 	Check,
+	ChevronDown,
+	ChevronUp,
 	Copy,
 	LoaderCircle,
+	Pencil,
 	Radio,
-	Search,
 	ShieldCheck,
 	Swords,
 	Users,
@@ -21,8 +24,11 @@ import {
 import type { MatchOffer } from '@shared/p2pMatchAcceptance';
 import type { ServerSignedChallenge } from '@shared/p2pAvailability';
 import { getHiveAvatarUrl } from '../../../components/account/hiveAvatar';
+import { resolveHeroPortrait } from '../../utils/art/artMapping';
+import { P2PSessionJsonExportButton } from './P2PSessionJsonExportButton';
 import {
 	formatChallengeTimeRemaining,
+	formatElapsedSeconds,
 	getDirectChallengeBlockCopy,
 	getDirectChallengeRoomAccessFor,
 	getPlayerFacingMatchmakingError,
@@ -30,6 +36,141 @@ import {
 	type ConnectedMatchProgress,
 	type DirectChallengeAccessContext,
 } from './MultiplayerLobby.logic';
+
+const WARBAND_SLOTS: ReadonlyArray<{
+	readonly key: keyof ArmySelection;
+	readonly label: string;
+}> = [
+	{ key: 'king', label: 'King' },
+	{ key: 'queen', label: 'Queen' },
+	{ key: 'rook', label: 'Rook' },
+	{ key: 'bishop', label: 'Bishop' },
+	{ key: 'knight', label: 'Knight' },
+];
+
+const LOBBY_STEPS = [
+	{ code: '01', label: 'Authorize' },
+	{ code: '02', label: 'Match' },
+	{ code: '03', label: 'Sync' },
+	{ code: '04', label: 'Battle' },
+] as const;
+
+export function LobbyStepper({
+	currentStep,
+	matchmakingStatus,
+}: {
+	readonly currentStep: number;
+	readonly matchmakingStatus: MatchmakingStatus;
+}) {
+	const activeIndex = currentStep >= 3
+		? 3
+		: currentStep === 2
+			? 2
+			: currentStep === 1 || matchmakingStatus === 'queued'
+				? 1
+				: 0;
+
+	return (
+		<ol className="p2p-stepper grid grid-cols-4 gap-2" aria-label="Matchmaking progress">
+			{LOBBY_STEPS.map((step, index) => {
+				const done = index < activeIndex || currentStep >= 3;
+				const active = index === activeIndex && !done;
+				const stateClass = done
+					? 'border-rune-300/45 bg-rune-500/10 text-rune-200'
+					: active
+						? 'border-gold-300/60 bg-gold-300/12 text-gold-100'
+						: 'border-obsidian-700/90 bg-obsidian-950/60 text-ink-400';
+
+				return (
+					<li
+						key={step.code}
+						className={`flex flex-col gap-1 rounded-sm border px-2.5 py-2 transition-colors ${stateClass}`}
+						aria-current={active ? 'step' : undefined}
+					>
+						<div className="flex items-center justify-between gap-1">
+							<span className="font-mono text-[10px] font-bold tracking-[0.12em]">{step.code}</span>
+							{done && <Check className="h-3 w-3 text-rune-300" aria-hidden={true} />}
+						</div>
+						<span className="truncate font-display text-[10px] font-black uppercase tracking-[0.1em]">
+							{step.label}
+						</span>
+					</li>
+				);
+			})}
+		</ol>
+	);
+}
+
+export function LobbyWarbandPreview({
+	army,
+	canEdit,
+	onEditWarband,
+}: {
+	readonly army: ArmySelection | null;
+	readonly canEdit: boolean;
+	readonly onEditWarband: () => void;
+}) {
+	if (!army) return null;
+
+	return (
+		<section className="space-y-2.5 border-t border-obsidian-700/80 pt-5" aria-label="Active warband">
+			<div className="flex items-center justify-between gap-2">
+				<div>
+					<p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-ink-300">
+						Active warband
+					</p>
+					<p className="mt-0.5 text-xs text-ink-400">
+						5 heroes locked for this P2P session
+					</p>
+				</div>
+				<button
+					type="button"
+					onClick={onEditWarband}
+					disabled={!canEdit}
+					className="inline-flex min-h-9 items-center gap-1.5 rounded-sm border border-obsidian-600/90 bg-obsidian-900/80 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-ink-200 transition-colors hover:border-gold-400/60 hover:text-gold-200 disabled:cursor-not-allowed disabled:opacity-45 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
+				>
+					<Pencil className="h-3 w-3" aria-hidden={true} />
+					Edit
+				</button>
+			</div>
+			<div className="grid grid-cols-5 gap-2">
+				{WARBAND_SLOTS.map(({ key, label }) => {
+					const hero = army[key];
+					const portrait = resolveHeroPortrait(hero.id, hero.portrait);
+					return (
+						<div
+							key={key}
+							className="p2p-warband-tile group flex flex-col overflow-hidden rounded-sm border border-obsidian-700/90 bg-obsidian-950/75"
+							title={`${label}: ${hero.name}`}
+						>
+							<div className="relative aspect-square w-full overflow-hidden bg-obsidian-900">
+								{portrait ? (
+									<img
+										src={portrait}
+										alt={`${hero.name} (${label})`}
+										className="h-full w-full object-cover object-top"
+										loading="lazy"
+										decoding="async"
+									/>
+								) : (
+									<div className="grid h-full w-full place-items-center font-display text-sm font-black uppercase text-gold-200">
+										{hero.name.charAt(0)}
+									</div>
+								)}
+								<span className="absolute bottom-0 inset-x-0 bg-obsidian-950/85 px-1 py-0.5 text-center font-mono text-[9px] font-bold uppercase tracking-[0.12em] text-gold-200">
+									{label}
+								</span>
+							</div>
+							<p className="truncate px-1.5 py-1 text-center text-[10px] font-medium text-ink-200">
+								{hero.name}
+							</p>
+						</div>
+					);
+				})}
+			</div>
+		</section>
+	);
+}
 
 type AsyncVoidHandler = () => void | Promise<void>;
 
@@ -159,74 +300,144 @@ export function OutgoingChallengePanel({
 export function IdleMatchControls({
 	visible,
 	manualRoomsEnabled,
+	sharedNetwork,
 	joinId,
 	onJoinIdChange,
 	onQuickMatch,
 	onHost,
 	onJoin,
+	friendCount = 0,
+	onlineFriendCount = 0,
+	friendsOpen = false,
+	onToggleFriends,
+	friendsSlot,
 }: {
 	readonly visible: boolean;
 	readonly manualRoomsEnabled: boolean;
+	readonly sharedNetwork: boolean;
 	readonly joinId: string;
 	readonly onJoinIdChange: (value: string) => void;
 	readonly onQuickMatch: AsyncVoidHandler;
 	readonly onHost: AsyncVoidHandler;
 	readonly onJoin: AsyncVoidHandler;
+	readonly friendCount?: number;
+	readonly onlineFriendCount?: number;
+	readonly friendsOpen?: boolean;
+	readonly onToggleFriends?: () => void;
+	readonly friendsSlot?: ReactNode;
 }) {
 	if (!visible) return null;
 
 	return (
 		<div className="space-y-5">
-			<div className="grid gap-3 rounded-md border border-gold-300/45 bg-linear-to-br from-gold-300/14 to-obsidian-900/40 p-4 shadow-[0_0_28px_-12px_color-mix(in_srgb,var(--gold-300)_55%,transparent)]">
+			<div className="grid gap-3.5 rounded-sm border border-gold-300/45 bg-linear-to-br from-gold-300/12 to-obsidian-950/60 p-4 shadow-[0_0_28px_-14px_color-mix(in_srgb,var(--gold-300)_55%,transparent)]">
 				<div className="flex items-start justify-between gap-3">
 					<div className="flex items-start gap-3">
-						<div className="grid h-10 w-10 shrink-0 place-items-center border border-gold-200/70 bg-gold-300 text-obsidian-950">
+						<div className="grid h-10 w-10 shrink-0 place-items-center rounded-sm border border-gold-200/70 bg-gold-300 text-obsidian-950">
 							<Zap className="h-5 w-5" aria-hidden={true} />
 						</div>
 						<div>
-							<p className="font-display text-[10px] font-black uppercase tracking-[0.18em] text-gold-100">Recommended</p>
-							<h3 className="mt-1 font-display text-lg font-black uppercase tracking-[0.08em] text-ink-0">Quick Match</h3>
-							<p className="mt-1 max-w-md text-xs leading-relaxed text-ink-200">Find an opponent.</p>
+							<p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-gold-200">
+								Primary queue
+							</p>
+							<h3 className="mt-0.5 font-display text-lg font-black uppercase tracking-[0.06em] text-ink-0">
+								Quick Match
+							</h3>
+							<p className="mt-1 max-w-md text-xs leading-relaxed text-ink-200">
+								{sharedNetwork
+									? 'Approve once in Hive Keychain to search. Match accept and battle sync run automatically.'
+									: 'Instant peer-to-peer queue on the local relay.'}
+							</p>
 						</div>
 					</div>
-					<span className="shrink-0 rounded-sm border border-gold-200/50 px-2 py-1 font-display text-[10px] font-black uppercase tracking-[0.1em] text-gold-100">Fastest</span>
+					<span className="shrink-0 rounded-sm border border-gold-300/40 bg-obsidian-950/70 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-gold-200">
+						Peer only
+					</span>
 				</div>
-				<Button onClick={() => { void onQuickMatch(); }} variant="primary" className="w-full hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300 active:translate-y-px disabled:opacity-50" size="lg" ornate>
+				<Button
+					onClick={() => { void onQuickMatch(); }}
+					variant="primary"
+					className="w-full hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300 active:translate-y-px disabled:opacity-50"
+					size="lg"
+					ornate
+				>
 					Find opponent
 				</Button>
 			</div>
-			<div className="border-t border-obsidian-700/80 pt-4">
-				<div className="mb-3 flex items-center gap-2">
-					<span className="h-px flex-1 bg-obsidian-700" />
-					<span className="font-display text-[10px] font-black uppercase tracking-[0.18em] text-ink-300">Direct room</span>
-					<span className="h-px flex-1 bg-obsidian-700" />
-				</div>
-				<p id="manual-room-help" className="mb-3 text-xs leading-relaxed text-ink-300">
-					{manualRoomsEnabled ? 'Use a peer ID.' : 'Unavailable on secured relay.'}
-				</p>
-				<div className="grid gap-2 sm:grid-cols-2">
-					<Button onClick={() => { void onHost(); }} variant="outline" disabled={!manualRoomsEnabled} className="hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300 active:translate-y-px disabled:opacity-50">
-						Host
-					</Button>
-					<div className="flex min-w-0 gap-2 sm:col-span-2">
-						<Input
-							className="min-w-0 flex-1"
-							placeholder="Peer ID"
-							aria-label="Peer ID to join"
-							value={joinId}
-							disabled={!manualRoomsEnabled}
-							aria-describedby="manual-room-help"
-							onChange={(event) => onJoinIdChange(event.target.value)}
-							onKeyDown={(event) => {
-								if (event.key === 'Enter') void onJoin();
-							}}
-						/>
-						<Button onClick={() => { void onJoin(); }} variant="outline" disabled={!manualRoomsEnabled || !joinId.trim()} className="hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300 active:translate-y-px disabled:opacity-50">
-							Join
+
+			{manualRoomsEnabled ? (
+				<div className="border-t border-obsidian-700/80 pt-4">
+					<div className="mb-3 flex items-center justify-between gap-2">
+						<span className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-ink-300">
+							Direct room · local dev
+						</span>
+						<span className="font-mono text-[10px] text-ink-400">Peer ID</span>
+					</div>
+					<div className="space-y-2.5">
+						<Button
+							onClick={() => { void onHost(); }}
+							variant="outline"
+							className="w-full hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300 active:translate-y-px"
+						>
+							Host local room
 						</Button>
+						<div className="flex min-w-0 gap-2">
+							<Input
+								className="min-w-0 flex-1"
+								placeholder="Paste opponent Peer ID"
+								aria-label="Peer ID to join"
+								value={joinId}
+								onChange={(event) => onJoinIdChange(event.target.value)}
+								onKeyDown={(event) => {
+									if (event.key === 'Enter') void onJoin();
+								}}
+							/>
+							<Button
+								onClick={() => { void onJoin(); }}
+								variant="outline"
+								disabled={!joinId.trim()}
+								className="shrink-0 hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300 active:translate-y-px disabled:opacity-50"
+							>
+								Join
+							</Button>
+						</div>
 					</div>
 				</div>
-			</div>
+			) : (
+				<div className="border-t border-obsidian-700/80 pt-4">
+					<div className="flex items-center justify-between gap-3">
+						<div className="min-w-0">
+							<p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-ink-300">
+								Direct challenge · Warband
+							</p>
+							<p className="mt-0.5 text-xs text-ink-300">
+								Challenge a specific tester directly via their Hive account.
+							</p>
+						</div>
+						{onToggleFriends && (
+							<button
+								type="button"
+								onClick={onToggleFriends}
+								aria-expanded={friendsOpen}
+								className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-sm border border-obsidian-600/90 bg-obsidian-950/75 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-ink-100 transition-colors hover:border-bifrost-300/60 hover:text-bifrost-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
+							>
+								<Users className="h-3.5 w-3.5 text-bifrost-200" aria-hidden={true} />
+								<span>
+									Warband{friendCount > 0 ? ` (${onlineFriendCount}/${friendCount})` : ''}
+								</span>
+								{friendsOpen
+									? <ChevronUp className="h-3.5 w-3.5 text-ink-400" aria-hidden={true} />
+									: <ChevronDown className="h-3.5 w-3.5 text-ink-400" aria-hidden={true} />}
+							</button>
+						)}
+					</div>
+					{friendsOpen && friendsSlot && (
+						<div className="mt-3 rounded-sm border border-obsidian-700/80 bg-obsidian-950/65 p-3">
+							{friendsSlot}
+						</div>
+					)}
+				</div>
+			)}
 		</div>
 	);
 }
@@ -240,22 +451,54 @@ export function QueuePanel({
 	readonly queuePosition: number | null;
 	readonly onLeaveQueue: AsyncVoidHandler;
 }) {
+	const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+	useEffect(() => {
+		if (status !== 'queued') {
+			setElapsedSeconds(0);
+			return;
+		}
+		setElapsedSeconds(0);
+		const timer = window.setInterval(() => {
+			setElapsedSeconds(prev => prev + 1);
+		}, 1000);
+		return () => window.clearInterval(timer);
+	}, [status]);
+
 	if (status !== 'queued') return null;
 
 	return (
-		<div className="space-y-5" role="status" aria-live="polite">
+		<div className="space-y-4" role="status" aria-live="polite">
 			<div className="flex items-start gap-3">
-				<div className="grid h-10 w-10 shrink-0 place-items-center border border-gold-300/45 bg-gold-300/10 text-gold-200">
+				<div className="grid h-10 w-10 shrink-0 place-items-center rounded-sm border border-gold-300/45 bg-gold-300/10 text-gold-200">
 					<LoaderCircle className="h-5 w-5 animate-spin motion-reduce:animate-none" aria-hidden={true} />
 				</div>
 				<div>
-					<p className="font-display text-sm font-black uppercase tracking-[0.14em] text-ink-0">Searching</p>
-					<p className="mt-1 text-xs leading-relaxed text-ink-200">Peer only. No AI.</p>
+					<p className="font-display text-sm font-black uppercase tracking-[0.12em] text-ink-0">
+						Searching relay
+					</p>
+					<p className="mt-1 text-xs leading-relaxed text-ink-200">
+						Peer-only queue (no bots). Offer accepts automatically when an opponent joins.
+					</p>
 				</div>
 			</div>
-			<div className="flex items-center justify-between border-y border-obsidian-700/80 py-3">
-				<span className="font-display text-[10px] font-black uppercase tracking-[0.16em] text-ink-300">Position</span>
-				<span className="font-mono text-lg text-gold-200">{queuePosition ?? '—'}</span>
+			<div className="grid grid-cols-2 divide-x divide-obsidian-700/80 rounded-sm border border-obsidian-700/80 bg-obsidian-950/60">
+				<div className="px-3.5 py-2.5">
+					<span className="block font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-400">
+						Queue position
+					</span>
+					<span className="mt-1 block font-mono text-lg font-bold text-gold-200 tabular-nums">
+						{queuePosition ?? '—'}
+					</span>
+				</div>
+				<div className="px-3.5 py-2.5">
+					<span className="block font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-400">
+						Elapsed
+					</span>
+					<span className="mt-1 block font-mono text-lg font-bold text-ink-100 tabular-nums">
+						{formatElapsedSeconds(elapsedSeconds)}
+					</span>
+				</div>
 			</div>
 			<Button onClick={() => { void onLeaveQueue(); }} variant="outline" className="w-full hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300 active:translate-y-px disabled:opacity-50">
 				Cancel search
@@ -425,20 +668,22 @@ export function MatchedProgressPanel({
 
 export function MatchmakingErrorPanel({
 	error,
+	manualRoomsEnabled,
 	onTryAgain,
 	onUseManualMatch,
 }: {
 	readonly error: string | null;
+	readonly manualRoomsEnabled: boolean;
 	readonly onTryAgain: AsyncVoidHandler;
 	readonly onUseManualMatch: () => void;
 }) {
 	if (!error) return null;
 
 	return (
-		<div className="space-y-3 border border-blood-300/45 bg-blood-500/10 p-4" role="alert">
+		<div className="space-y-3 rounded-sm border border-blood-300/45 bg-blood-500/10 p-4" role="alert">
 			<div className="flex items-start gap-3">
-				<div className="grid h-8 w-8 shrink-0 place-items-center border border-blood-300/60 bg-blood-500/20 font-display font-black text-blood-200">!</div>
-				<div>
+				<div className="grid h-8 w-8 shrink-0 place-items-center rounded-sm border border-blood-300/60 bg-blood-500/20 font-display font-black text-blood-200">!</div>
+				<div className="min-w-0">
 					<p className="font-display text-xs font-black uppercase tracking-[0.14em] text-blood-200">Could not find opponent</p>
 					<p className="mt-1 text-sm leading-relaxed text-ink-100">{getPlayerFacingMatchmakingError(error)}</p>
 				</div>
@@ -447,9 +692,14 @@ export function MatchmakingErrorPanel({
 				<Button onClick={() => { void onTryAgain(); }} variant="outline" className="flex-1 hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300 active:translate-y-px disabled:opacity-50">
 					Try again
 				</Button>
-				<Button onClick={onUseManualMatch} variant="outline" className="flex-1 hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300 active:translate-y-px disabled:opacity-50">
-					Manual room
-				</Button>
+				{manualRoomsEnabled && (
+					<Button onClick={onUseManualMatch} variant="outline" className="flex-1 hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300 active:translate-y-px disabled:opacity-50">
+						Manual room
+					</Button>
+				)}
+			</div>
+			<div className="flex justify-end border-t border-blood-300/20 pt-2">
+				<P2PSessionJsonExportButton />
 			</div>
 		</div>
 	);
@@ -639,12 +889,20 @@ export function ConnectionErrorPanel({
 	if (connectionState !== 'error' || !error) return null;
 
 	return (
-		<div className="p-4 bg-(--blood-500)/10 border border-(--blood-500)/20 rounded-lg">
-			<p className="font-display text-xs font-black uppercase tracking-[0.14em] text-(--blood-300)">Match interrupted</p>
-			<p className="mt-1 text-sm text-(--ink-200)">We could not reconnect this room.</p>
-				<Button onClick={onDisconnect} variant="outline" className="w-full mt-2 hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300 active:translate-y-px disabled:opacity-50">
-				Leave match
+		<div className="space-y-3 rounded-sm border border-blood-300/45 bg-blood-500/10 p-4" role="alert">
+			<div className="flex items-start gap-3">
+				<div className="grid h-8 w-8 shrink-0 place-items-center rounded-sm border border-blood-300/60 bg-blood-500/20 font-display font-black text-blood-200">!</div>
+				<div className="min-w-0">
+					<p className="font-display text-xs font-black uppercase tracking-[0.14em] text-blood-200">Match interrupted</p>
+					<p className="mt-1 text-sm leading-relaxed text-ink-200">We could not reconnect this room. Export diagnostics if you need to report this session.</p>
+				</div>
+			</div>
+			<Button onClick={onDisconnect} variant="outline" className="w-full hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300 active:translate-y-px disabled:opacity-50">
+				Return to lobby
 			</Button>
+			<div className="flex justify-end border-t border-blood-300/20 pt-2">
+				<P2PSessionJsonExportButton />
+			</div>
 		</div>
 	);
 }

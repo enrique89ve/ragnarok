@@ -30,6 +30,14 @@
 		text-wrap: balance;
 	}
 
+	.p2p-warband-tile {
+		transition: border-color 180ms ease;
+	}
+
+	.p2p-warband-tile:hover {
+		border-color: color-mix(in srgb, var(--gold-300) 45%, var(--obsidian-600));
+	}
+
 	.multiplayer-lobby-panel {
 		box-shadow:
 			0 24px 70px -28px color-mix(in srgb, var(--obsidian-950) 95%, transparent),

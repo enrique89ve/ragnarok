@@ -213,7 +213,7 @@ function FriendCard({
 						<span className="block truncate text-[11px] text-gray-500">{statusLabel}</span>
 					</div>
 				</div>
-				<div className="flex items-center gap-2 opacity-0 transition-opacity group-hover/friend:opacity-100">
+				<div className="flex items-center gap-2 transition-opacity sm:opacity-80 sm:group-hover/friend:opacity-100">
 					{isAccepted && (
 						<button
 							type="button"
