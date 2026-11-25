@@ -4,7 +4,7 @@ import type { MatchContext } from '../match/types';
 import type { GameState } from '../types';
 import { getInitialGameOverSubPhase } from './gameCoordinatorRules';
 
-export const GAME_END_DELAY_MS = 1500;
+export const GAME_END_DELAY_MS = 4000;
 
 export type MatchEndCommitMode = 'phase-checkpoint' | 'local';
 export type MatchEndFromPhase = 'chess' | 'poker_combat';

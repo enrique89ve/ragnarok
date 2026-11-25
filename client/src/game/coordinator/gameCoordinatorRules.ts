@@ -65,6 +65,7 @@ export type ChessCombatFlowGateInput = {
   readonly hasPendingCombat: boolean;
   readonly chessGameStatus: ChessGameStatus;
   readonly flowTag: string | null;
+  readonly hasPendingAttackAnimation?: boolean;
 };
 
 /*
@@ -294,7 +295,8 @@ export function derivePokerCombatHandoff(
 export function shouldTriggerChessCombatFlow(input: ChessCombatFlowGateInput): boolean {
   return input.hasPendingCombat
     && input.chessGameStatus === 'combat'
-    && input.flowTag === 'chess';
+    && input.flowTag === 'chess'
+    && input.hasPendingAttackAnimation !== true;
 }
 
 export function buildPetDataFromChessPiece(input: BuildPetDataInput): PetData {

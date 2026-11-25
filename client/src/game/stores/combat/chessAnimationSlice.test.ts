@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ActiveMine, ChessPiece } from '../../types/ChessTypes';
 import { useUnifiedCombatStore } from '../unifiedCombatStore';
+import { ATTACK_ANIMATION_BUDGET_MS } from './chessAnimationSlice';
 import { initialBoardState } from './types';
 
 const makePiece = (input: Partial<ChessPiece> & Pick<ChessPiece, 'id' | 'type' | 'owner'>): ChessPiece => ({
@@ -205,7 +206,7 @@ describe('chessAnimationSlice', () => {
 			const defender = makePiece({ id: 'd1', type: 'queen', owner: 'opponent' });
 			useUnifiedCombatStore.getState().startAttackAnimation(attacker, defender, true);
 			const oldAnimation = useUnifiedCombatStore.getState().pendingAttackAnimation;
-			vi.advanceTimersByTime(1000);
+			vi.advanceTimersByTime(ATTACK_ANIMATION_BUDGET_MS / 2);
 
 			useUnifiedCombatStore.getState().reset();
 			useUnifiedCombatStore.getState().startAttackAnimation(attacker, defender, true);
@@ -213,10 +214,10 @@ describe('chessAnimationSlice', () => {
 			expect(newAnimation?.timestamp).toBe(oldAnimation?.timestamp);
 			if (!oldAnimation) throw new Error('Expected the previous animation');
 			expect(useUnifiedCombatStore.getState().clearAttackAnimation(oldAnimation)).toBe(false);
-			vi.advanceTimersByTime(1000);
+			vi.advanceTimersByTime(ATTACK_ANIMATION_BUDGET_MS / 2);
 			expect(useUnifiedCombatStore.getState().pendingAttackAnimation).toBe(newAnimation);
 
-			vi.advanceTimersByTime(1000);
+			vi.advanceTimersByTime(ATTACK_ANIMATION_BUDGET_MS / 2);
 			expect(useUnifiedCombatStore.getState().pendingAttackAnimation).toBeNull();
 		} finally {
 			vi.useRealTimers();

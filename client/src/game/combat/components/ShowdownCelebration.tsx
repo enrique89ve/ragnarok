@@ -37,7 +37,7 @@ interface ShowdownCelebrationProps {
 }
 
 const ENTRANCE_DELAY = 400;
-const BADGE_DISPLAY_MS = 3600;
+const BADGE_DISPLAY_MS = 5000;
 
 const NorseResultFrame = () => (
 	<svg

@@ -9,8 +9,12 @@
 	justify-content: center;
 	padding: 24px;
 	box-sizing: border-box;
-	pointer-events: none;
+	pointer-events: auto;
 	overflow: hidden;
+}
+
+.hero-death-overlay--dismissible {
+	cursor: pointer;
 }
 
 .hero-death-overlay--defeat {
@@ -362,6 +366,16 @@
 	line-height: 1.35;
 	color: rgba(226, 218, 202, 0.78);
 	max-width: 36ch;
+}
+
+.hero-death-dismiss-hint {
+	margin-top: 10px;
+	font-family: var(--font-mono, monospace);
+	font-size: 0.72rem;
+	font-weight: 600;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	color: rgba(226, 218, 202, 0.56);
 }
 
 @media (prefers-reduced-motion: reduce) {

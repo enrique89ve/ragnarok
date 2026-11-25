@@ -437,6 +437,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     boardState,
     initializeBoard,
     pendingCombat,
+    pendingAttackAnimation,
     clearPendingCombat,
     resolveCombat,
     setSharedDeck,
@@ -985,10 +986,12 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     }
   }, [flowState, boardState.currentTurn, boardState.gameStatus, incrementPlayerTurn]);
 
-  // AI driver — fires only when the chess phase is active AND there's no
-  // P2P match (the hook gates internally on `matchSeed`, see useChessAITurn
-  // for the full contract).
-  useChessAITurn({ enabled: flowState?.tag === 'chess' });
+  // AI driver — fires only when the chess phase is active, no strike
+  // animation or post-combat Victory/Defeat banner is covering the board,
+  // and there's no P2P match (the hook gates internally on `matchSeed`).
+  useChessAITurn({
+    enabled: flowState?.tag === 'chess' && !heroDeathPresentation && !pendingAttackAnimation,
+  });
 
   const matchOnScreen = flow?.mode === 'campaign'
     || Boolean(effectiveInitialArmy || playerArmy);
@@ -1010,6 +1013,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       hasPendingCombat: true,
       chessGameStatus: currentCombat.boardState.gameStatus,
       flowTag: currentFlow?.tag ?? null,
+      hasPendingAttackAnimation: currentCombat.pendingAttackAnimation !== null,
     })) return;
     const attacker = currentCombat.boardState.pieces.find(piece => piece.id === pendingCombat.attacker.id);
     const defender = currentCombat.boardState.pieces.find(piece => piece.id === pendingCombat.defender.id);
@@ -1017,7 +1021,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
 
     dispatchFlow({ type: 'COMBAT_TRIGGERED', pieces: { attacker, defender } });
     playSoundEffect('card_draw');
-  }, [pendingCombat, boardState.gameStatus, flowState, playSoundEffect, dispatchFlow]);
+  }, [pendingCombat, pendingAttackAnimation, boardState.gameStatus, flowState, playSoundEffect, dispatchFlow]);
 
   useEffect(() => {
     if (flowState?.tag === 'chess' && boardState.gameStatus === 'playing') {

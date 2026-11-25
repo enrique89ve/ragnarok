@@ -31,7 +31,7 @@ import {
   type GameEffectHandle,
 } from '@/game/effects/core/gameEffectCoordinator';
 
-const ATTACK_ANIMATION_BUDGET_MS = 2000;
+export const ATTACK_ANIMATION_BUDGET_MS = 4500;
 let pendingAttackBudgetHandle: GameEffectHandle | null = null;
 
 function cancelAttackAnimationBudget(): void {

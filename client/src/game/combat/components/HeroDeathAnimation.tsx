@@ -7,14 +7,15 @@
  * and enough hold time for the player to read the outcome cleanly.
  */
 
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Howl } from 'howler';
 import { assetPath } from '../../utils/assetPath';
 import { proceduralAudio } from '../../audio/proceduralAudio';
 import '../styles/hero-death.css';
 
-export const HERO_DEATH_DISPLAY_MS = 4400;
+export const HERO_DEATH_DISPLAY_MS = 9400;
+export const HERO_DEATH_DISMISS_UNLOCK_MS = 1500;
 
 interface HeroDeathAnimationProps {
 	heroName: string;
@@ -96,8 +97,15 @@ export const HeroDeathAnimation: React.FC<HeroDeathAnimationProps> = ({
 }) => {
 	const onCompleteRef = useRef(onComplete);
 	const hasCompletedRef = useRef(false);
+	const [canDismiss, setCanDismiss] = useState(false);
 	const isDefeat = isPlayer;
 	const variant = isDefeat ? 'defeat' : 'victory';
+
+	const completeOnce = useCallback(() => {
+		if (hasCompletedRef.current) return;
+		hasCompletedRef.current = true;
+		onCompleteRef.current();
+	}, []);
 
 	useEffect(() => {
 		onCompleteRef.current = onComplete;
@@ -115,20 +123,33 @@ export const HeroDeathAnimation: React.FC<HeroDeathAnimationProps> = ({
 			proceduralAudio.play(isDefeat ? 'defeat' : 'victory');
 		}, 240);
 
+		const dismissUnlockTimer = setTimeout(() => {
+			setCanDismiss(true);
+		}, HERO_DEATH_DISMISS_UNLOCK_MS);
+
 		const completeTimer = setTimeout(() => {
-			if (!hasCompletedRef.current) {
-				hasCompletedRef.current = true;
-				onCompleteRef.current();
-			}
+			completeOnce();
 		}, HERO_DEATH_DISPLAY_MS);
 
 		return () => {
 			clearTimeout(stingerTimer);
+			clearTimeout(dismissUnlockTimer);
 			clearTimeout(completeTimer);
 			hitSound.stop();
 			hitSound.unload();
 		};
-	}, [isDefeat]);
+	}, [isDefeat, completeOnce]);
+
+	useEffect(() => {
+		if (!canDismiss) return;
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+				completeOnce();
+			}
+		};
+		window.addEventListener('keydown', onKeyDown);
+		return () => window.removeEventListener('keydown', onKeyDown);
+	}, [canDismiss, completeOnce]);
 
 	const embers = useMemo(
 		() =>
@@ -154,15 +175,16 @@ export const HeroDeathAnimation: React.FC<HeroDeathAnimationProps> = ({
 
 	return (
 		<motion.div
-			className={`hero-death-overlay hero-death-overlay--${variant}`}
+			className={`hero-death-overlay hero-death-overlay--${variant}${canDismiss ? ' hero-death-overlay--dismissible' : ''}`}
 			role="status"
 			aria-live="assertive"
+			onClick={canDismiss ? completeOnce : undefined}
 			initial={{ opacity: 0 }}
 			animate={{ opacity: [0, 1, 1, 0] }}
 			exit={{ opacity: 0 }}
 			transition={{
 				duration: HERO_DEATH_DISPLAY_MS / 1000,
-				times: [0, 0.1, 0.84, 1],
+				times: [0, 0.05, 0.91, 1],
 				ease: 'easeInOut',
 			}}
 		>
@@ -201,7 +223,7 @@ export const HeroDeathAnimation: React.FC<HeroDeathAnimationProps> = ({
 				}}
 				transition={{
 					duration: HERO_DEATH_DISPLAY_MS / 1000,
-					times: [0, 0.11, 0.82, 1],
+					times: [0, 0.055, 0.9, 1],
 					ease: [0.22, 1, 0.36, 1],
 				}}
 			>
@@ -241,6 +263,9 @@ export const HeroDeathAnimation: React.FC<HeroDeathAnimationProps> = ({
 
 					<div className="hero-death-name">{heroName}</div>
 					<div className="hero-death-caption">{captionText}</div>
+					{canDismiss && (
+						<div className="hero-death-dismiss-hint">Click anywhere to continue</div>
+					)}
 				</div>
 			</motion.div>
 		</motion.div>

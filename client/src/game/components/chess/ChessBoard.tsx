@@ -15,7 +15,7 @@ import {
 } from './chessBoardPresentation';
 
 const PIECE_SLIDE_TRANSITION = {
-  duration: 0.5,
+  duration: 0.68,
   ease: [0.215, 0.61, 0.355, 1],
   times: [0, 0.58, 0.86, 1],
 };
@@ -155,6 +155,12 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ disabled = false }) => {
     const cellTone = getCellTone(row, col);
     const canPlaceHere = canPlaceAtHoveredPosition && isMinePreview;
     const isPieceLocked = piece ? disabled || piece.owner !== myCanonicalSide || isPlacementMode : false;
+    const isHiddenDuringStrike = Boolean(
+      shouldAnimateBoard
+      && pendingAttackAnimation
+      && piece
+      && (piece.id === pendingAttackAnimation.attacker.id || piece.id === pendingAttackAnimation.defender.id),
+    );
     const pieceMoveOffset = piece ? getPieceMoveOffset(piece) : null;
     const isPieceMoving = pieceMoveOffset !== null;
     const targetAttackFrame = isAttack
@@ -180,7 +186,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ disabled = false }) => {
         onMouseEnter={() => handleCellHover(row, col)}
         onMouseLeave={handleCellLeave}
       >
-        {piece && (
+        {piece && !isHiddenDuringStrike && (
           shouldAnimateBoard ? (
             <motion.div
               key={piece.id}
@@ -267,6 +273,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ disabled = false }) => {
     handleCellHover,
     handleCellLeave,
     isMyTurn,
+    pendingAttackAnimation,
     getPieceMoveOffset,
   ]);
 

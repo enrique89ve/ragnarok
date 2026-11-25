@@ -67,7 +67,7 @@ const getDefenderReactionProfile = (pieceType: ChessPiece['type']): AttackWeight
   };
 
 const getAttackSpeedScale = (pieceType: ChessPiece['type']): number =>
-  pieceType === 'king' ? 0.2 * 0.7 : 1; // 30% slower king strike
+  pieceType === 'king' ? 0.82 : 1; // King strike is weightier and ~22% slower
 
 const makeSeed = (source: string): number =>
   [...source].reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) >>> 0, 2166136261);
@@ -112,17 +112,16 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
   const speedDurationScale = 1 / attackSpeedScale;
 
   const chargeDurationMs = Math.round(
-    120 * qualityTimeScale * (0.95 + attackWeight * 0.06) * speedDurationScale,
+    300 * qualityTimeScale * (0.95 + attackWeight * 0.06) * speedDurationScale,
   );
   const lungeDurationMs = Math.round(
-    560 * qualityTimeScale * (0.9 + attackWeight * 0.11) * speedDurationScale,
+    920 * qualityTimeScale * (0.92 + attackWeight * 0.08) * speedDurationScale,
   );
   const impactDurationMs = Math.round(
-    240 * qualityTimeScale * (0.85 + attackWeight * 0.15) * speedDurationScale,
+    480 * qualityTimeScale * (0.88 + attackWeight * 0.12) * speedDurationScale,
   );
-  const settleDurationMs = Math.max(900, Math.round(260 * qualityTimeScale * speedDurationScale));
-  const impactLabelHoldMs = Math.max(1200, Math.round(900 * qualityTimeScale * speedDurationScale));
-  const strikeSafeDelayMs = 1500;
+  const settleDurationMs = Math.max(900, Math.round(900 * qualityTimeScale * speedDurationScale));
+  const totalDurationMs = chargeDurationMs + lungeDurationMs + impactDurationMs + settleDurationMs;
 
   // Canonical->visual coordinate mapping must mirror ChessBoard's
   // iteration order (commit 6d62811): canonical 'player' viewer renders
@@ -184,7 +183,7 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
     const completeTimeout = window.setTimeout(() => {
       setPhase('done');
       onAnimationComplete(animation);
-    }, strikeSafeDelayMs);
+    }, totalDurationMs);
 
     return () => {
       clearTimeout(chargeTimeout);
@@ -200,7 +199,7 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
     lungeDurationMs,
     impactDurationMs,
     settleDurationMs,
-    strikeSafeDelayMs,
+    totalDurationMs,
   ]);
 
   const isPlayer = animation ? animation.attacker.owner === myCanonicalSide : false;
@@ -461,11 +460,28 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
           />
         )}
 
-        {(phase === 'impact' || phase === 'settle') && (
+        {(phase === 'charge' || phase === 'lunge' || phase === 'impact' || phase === 'settle') && (
           <motion.div
-            initial={{ scale: 0, opacity: 1 }}
-            animate={{ scale: 1 + normalizedDefenderProfile.impactScale * 0.25, opacity: 0.74 }}
-            transition={{ duration: (impactDurationMs + settleDurationMs) / 1000, ease: 'easeOut' }}
+            initial={{ scale: 1, opacity: 1 }}
+            animate={
+              phase === 'charge' || phase === 'lunge'
+                ? { scale: 1, opacity: 1 }
+                : phase === 'impact'
+                  ? { scale: 1 + normalizedDefenderProfile.impactScale * 0.22, opacity: 0.9 }
+                  : {
+                      scale: animation.isInstantKill ? 0.55 : 1,
+                      opacity: animation.isInstantKill ? 0 : 0.78,
+                    }
+            }
+            transition={{
+              duration:
+                phase === 'charge' || phase === 'lunge'
+                  ? 0.16
+                  : phase === 'impact'
+                    ? impactDurationMs / 1000
+                    : settleDurationMs / 1000,
+              ease: 'easeOut',
+            }}
             className={`chess-attack-defender-shell ${isKingDefender ? 'chess-attack-defender-shell--king' : ''}`}
             style={{
               left: defenderPos.x,
@@ -476,16 +492,16 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
               filter: qualityIntensity < 0.8 ? 'blur(0.45px)' : 'none',
             }}
           >
-          <PieceGlyph
-            pieceType={animation.defender.type}
-            fallbackColor={PIECE_COLOR_BY_TYPE[animation.defender.type]}
-            size="clamp(35px, 7vw, 67px)"
-            className="relative"
-            style={{
-              transform: `rotate(${defenderRotation}deg)`,
-              '--piece-glyph-text-shadow': 'var(--attack-defender-shadow)',
-              '--piece-glyph-color': 'var(--attack-defender-color)',
-            }}
+            <PieceGlyph
+              pieceType={animation.defender.type}
+              fallbackColor={PIECE_COLOR_BY_TYPE[animation.defender.type]}
+              size="clamp(35px, 7vw, 67px)"
+              className="relative"
+              style={{
+                transform: `rotate(${defenderRotation}deg)`,
+                '--piece-glyph-text-shadow': 'var(--attack-defender-shadow)',
+                '--piece-glyph-color': 'var(--attack-defender-color)',
+              }}
             />
           </motion.div>
         )}
